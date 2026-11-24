@@ -25,7 +25,8 @@ fn major_turkish_cities_resolve() {
         ("ankara", "Europe/Istanbul"),
         ("izmir", "Europe/Istanbul"),
     ] {
-        let p = &a.search(q, 1).unwrap()[0];
+        let hits = a.search(q, 1).unwrap();
+        let p = hits.first().unwrap_or_else(|| panic!("{q}: no result"));
         assert_eq!(p.country_code, "TR", "{q}");
         assert_eq!(p.timezone, tz, "{q}");
     }
@@ -38,7 +39,8 @@ fn every_sampled_place_has_a_resolvable_time_zone() {
     for q in [
         "paris", "london", "new york", "delhi", "tokyo", "sydney", "konya", "trabzon",
     ] {
-        let p = &a.search(q, 1).unwrap()[0];
+        let hits = a.search(q, 1).unwrap();
+        let p = hits.first().unwrap_or_else(|| panic!("{q}: no result"));
         resolve_moment(d, t, &TzSpec::Iana(p.timezone.clone()), p.lon, None)
             .unwrap_or_else(|e| panic!("{q}: {e}"));
     }

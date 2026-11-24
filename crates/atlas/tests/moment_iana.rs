@@ -214,8 +214,8 @@ fn overlap_fold_selects_instant() {
     let at = Some(time(1, 30, 0, 0));
     let e = resolve_moment(date(2021, 11, 7), at, &z, -74.0, Some(Fold::Earlier)).unwrap();
     let l = resolve_moment(date(2021, 11, 7), at, &z, -74.0, Some(Fold::Later)).unwrap();
-    assert_eq!(e.jd_ut, 2459525.7291666665);
-    assert_eq!(l.jd_ut, 2459525.7708333335);
+    assert!((e.jd_ut - 2459525.7291666665).abs() < 1e-9);
+    assert!((l.jd_ut - 2459525.7708333335).abs() < 1e-9);
 }
 
 #[test]
@@ -258,7 +258,7 @@ fn gap_is_error_with_forward_suggestion() {
 }
 
 #[test]
-fn reference_city_mean_time_is_replaced_by_birthplace_lmt() {
+fn tzdb_lmt_is_replaced_by_birthplace_lmt() {
     // tzdb: İstanbul 1870 LMT +1:55:52; doğum yeri boylamı 28.9784° → 6954.816 s.
     let m = resolve_moment(
         date(1870, 5, 1),
@@ -273,18 +273,6 @@ fn reference_city_mean_time_is_replaced_by_birthplace_lmt() {
     assert_eq!(m.warnings, vec![MomentWarning::LmtFromLongitude]);
     assert!((m.jd_ut - 2404183.9195044446).abs() < 1e-9);
 
-    // tzdb: 1900'de IMT +1:56:56 (İstanbul ortalama saati); Ankara 32.8597° → 7886.328 s.
-    let m = resolve_moment(
-        date(1900, 1, 1),
-        Some(time(12, 0, 0, 0)),
-        &iana("Europe/Istanbul"),
-        32.8597,
-        None,
-    )
-    .unwrap();
-    assert_eq!(m.offset_secs, 7886);
-    assert_eq!(m.warnings, vec![MomentWarning::LmtFromLongitude]);
-
     // tzdb: New York 1880 LMT -4:56:02; -74.006° → -17761.44 s.
     let m = resolve_moment(
         date(1880, 1, 1),
@@ -295,6 +283,87 @@ fn reference_city_mean_time_is_replaced_by_birthplace_lmt() {
     )
     .unwrap();
     assert_eq!(m.offset_secs, -17_761);
+    assert_eq!(m.abbrev, "LMT");
+    assert_eq!(m.warnings, vec![MomentWarning::LmtFromLongitude]);
+}
+
+#[test]
+fn whole_minute_tzdb_lmt_is_replaced_by_birthplace_lmt() {
+    // tzdb: Varşova 1870 LMT +1:24:00 (tam dakika); Kraków 19.94° → 4785.6 s.
+    let m = resolve_moment(
+        date(1870, 6, 1),
+        Some(time(12, 0, 0, 0)),
+        &iana("Europe/Warsaw"),
+        19.94,
+        None,
+    )
+    .unwrap();
+    assert_eq!(m.offset_secs, 4786);
+    assert_eq!(m.abbrev, "LMT");
+    assert_eq!(m.warnings, vec![MomentWarning::LmtFromLongitude]);
+}
+
+#[test]
+fn named_mean_time_keeps_tzdb_offset() {
+    // tzdb: 1900'de IMT +1:56:56 (İstanbul ortalama saati). Ankara boylamı verilse de
+    // tzdb ofseti korunur; doğum yeri LMT'si isteyen TzSpec::Lmt kullanır.
+    let m = resolve_moment(
+        date(1900, 1, 1),
+        Some(time(12, 0, 0, 0)),
+        &iana("Europe/Istanbul"),
+        32.8597,
+        None,
+    )
+    .unwrap();
+    assert_eq!(m.offset_secs, 7016);
+    assert_eq!(m.abbrev, "IMT");
+    assert_eq!(m.utc, ts("1900-01-01T10:03:04Z"));
+    assert_eq!(m.warnings, vec![MomentWarning::PreTzdbReliability]);
+}
+
+#[test]
+fn non_minute_dst_offset_is_kept() {
+    // tzdb: Dublin 1916 yazı IST +0:34:39 (Dunsink ortalama saati + 1 saat).
+    let m = resolve_moment(
+        date(1916, 7, 1),
+        Some(time(12, 0, 0, 0)),
+        &iana("Europe/Dublin"),
+        -6.26,
+        None,
+    )
+    .unwrap();
+    assert_eq!(m.offset_secs, 2079);
+    assert_eq!(m.abbrev, "IST");
+    assert_eq!(m.warnings, vec![MomentWarning::PreTzdbReliability]);
+
+    // tzdb: St. John's 1925 yazı NDT -2:30:52.
+    let m = resolve_moment(
+        date(1925, 7, 1),
+        Some(time(12, 0, 0, 0)),
+        &iana("America/St_Johns"),
+        -52.71,
+        None,
+    )
+    .unwrap();
+    assert_eq!(m.offset_secs, -9052);
+    assert_eq!(m.abbrev, "NDT");
+    assert_eq!(m.warnings, vec![MomentWarning::PreTzdbReliability]);
+}
+
+#[test]
+fn named_mean_time_after_1970_warns_reliability() {
+    // tzdb: Monrovia 1972'ye kadar MMT -0:44:30.
+    let m = resolve_moment(
+        date(1971, 6, 1),
+        Some(time(12, 0, 0, 0)),
+        &iana("Africa/Monrovia"),
+        -10.8,
+        None,
+    )
+    .unwrap();
+    assert_eq!(m.offset_secs, -2670);
+    assert_eq!(m.utc, ts("1971-06-01T12:44:30Z"));
+    assert_eq!(m.warnings, vec![MomentWarning::PreTzdbReliability]);
 }
 
 #[test]

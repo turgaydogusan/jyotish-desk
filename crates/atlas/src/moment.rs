@@ -3,6 +3,15 @@
 //! Belirsizlik sessizce düzeltilmez: DST boşluğu ve örtüşmesi hata olarak döner,
 //! karar kullanıcıya bırakılır (spec §7). tzdb binary'ye gömülüdür; sistem
 //! zoneinfo'su kullanılmaz, sonuç her makinede aynıdır.
+//!
+//! IANA bölgelerinde LMT kuralı: tzdb'nin seçilen ofsetinin kısaltması "LMT" ise ve
+//! yaz saati değilse, bu değer bölgenin referans şehrinin boylamıdır; yerine doğum
+//! yerinin boylamından LMT hesaplanır (`LmtFromLongitude`). Diğer tüm ofsetler —
+//! adlandırılmış ortalama saatler (IMT, PMT, DMT, MMT, NST…) ve dakikaya tam
+//! bölünmeyen yaz saatleri (Dublin 1916 IST, St. John's NDT) dahil — tzdb'deki ofset
+//! ve kısaltmayla aynen kullanılır. Ofset dakikaya tam bölünmüyorsa (adlandırılmış
+//! ortalama saat) ya da yerel yıl 1970'ten önceyse `PreTzdbReliability` eklenir.
+//! Doğum yerinin LMT'sini isteyen kullanıcı `TzSpec::Lmt` seçer.
 
 use std::sync::OnceLock;
 
@@ -50,7 +59,7 @@ pub enum Fold {
 pub enum MomentWarning {
     /// Doğum saati bilinmiyor; yerel 12:00 kullanıldı.
     TimeUnknownNoon,
-    /// tzdb referans şehrin ortalama saatini veriyordu; doğum yerinin boylamından LMT hesaplandı.
+    /// tzdb referans şehrin LMT'sini veriyordu; doğum yerinin boylamından LMT hesaplandı.
     LmtFromLongitude,
     /// 1970 öncesi tzdb verisi garanti değil; manuel ofset önerilir.
     PreTzdbReliability,
@@ -158,18 +167,22 @@ fn resolve_iana(
         }
     };
     let offset_secs = offset.seconds();
-    // Dakikaya tam bölünmeyen ofset, referans şehrin ortalama saatidir (LMT, IMT…).
-    if offset_secs % 60 != 0 {
-        warnings.push(MomentWarning::LmtFromLongitude);
-        return lmt(local, lon_deg, warnings);
-    }
-    if local.year() < 1970 {
-        warnings.push(MomentWarning::PreTzdbReliability);
-    }
     let utc = offset
         .to_timestamp(local)
         .map_err(|_| MomentError::DateOutOfRange)?;
-    let abbrev = tz.to_offset_info(utc).abbreviation().to_owned();
+    let info = tz.to_offset_info(utc);
+    // Yalnızca tzdb'nin "LMT" kaydı referans şehrin boylamına bağlıdır; doğum yerininkiyle değiştirilir.
+    if info.abbreviation() == "LMT" && !info.dst().is_dst() {
+        warnings.push(MomentWarning::LmtFromLongitude);
+        return lmt(local, lon_deg, warnings);
+    }
+    // Adlandırılmış ortalama saatler (IMT, MMT…) dakikaya tam bölünmez; tzdb ofseti korunur.
+    if (offset_secs % 60 != 0 || local.year() < 1970)
+        && !warnings.contains(&MomentWarning::PreTzdbReliability)
+    {
+        warnings.push(MomentWarning::PreTzdbReliability);
+    }
+    let abbrev = info.abbreviation().to_owned();
     Ok(moment(utc, offset_secs, abbrev, warnings))
 }
 
