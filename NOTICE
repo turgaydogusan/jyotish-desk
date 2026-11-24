@@ -7,3 +7,7 @@ This product includes third-party components:
 - Swiss Ephemeris, Copyright (C) 1997-2021 Astrodienst AG, Switzerland.
   Used under the GNU Affero General Public License v3.0.
   https://www.astro.com/swisseph/
+
+Swiss Ephemeris source code is from tag v2.10.03; the ephemeris data files in data/ephe
+(sepl_18.se1, semo_18.se1, sefstars.txt) come from aloistr/swisseph at commit
+e308765d10b9463ab0ed53b102ad454820ee0b43.
