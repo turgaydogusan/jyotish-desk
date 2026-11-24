@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard, TryLockError};
 
 use crate::{
     ffi, Ayanamsa, Body, BodyPosition, EphError, Ephemeris, Precision, SiderealMode, Zodiac,
@@ -56,10 +56,27 @@ impl SwissEph {
     ///
     /// Dikkat: aynı iş parçacığında başka bir `SwissEph` yaşarken çağırmak
     /// kilitlenir; önce onu düşürün. Dönen örnek `!Send`'dir.
+    /// Beklemek istemeyen çağıranlar `try_open` kullanır.
     pub fn open(path: &Path) -> Result<Self, EphError> {
         let guard = SWE_LOCK
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        Self::open_locked(guard, path)
+    }
+
+    /// `open` gibi, ama süreçte başka bir örnek açıksa beklemez:
+    /// `EphError::AlreadyOpen` döner.
+    pub fn try_open(path: &Path) -> Result<Self, EphError> {
+        let guard = match SWE_LOCK.try_lock() {
+            Ok(g) => g,
+            Err(TryLockError::Poisoned(p)) => p.into_inner(),
+            Err(TryLockError::WouldBlock) => return Err(EphError::AlreadyOpen),
+        };
+        Self::open_locked(guard, path)
+    }
+
+    /// Kilit zaten alınmış; `open` ve `try_open` için ortak gövde.
+    fn open_locked(guard: MutexGuard<'static, ()>, path: &Path) -> Result<Self, EphError> {
         if std::env::var_os("SE_EPHE_PATH").is_some() {
             return Err(EphError::EnvOverride);
         }

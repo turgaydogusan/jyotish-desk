@@ -10,4 +10,10 @@ pub enum EphError {
     DataFilesMissing { path: String, detail: String },
     #[error("swiss ephemeris error: {0}")]
     Calc(String),
+    #[error("a SwissEph instance is already open in this process")]
+    AlreadyOpen,
+    #[error("ephemeris engine thread has stopped")]
+    EngineStopped,
+    #[error("an ephemeris engine job panicked")]
+    JobPanicked,
 }

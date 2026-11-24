@@ -1,10 +1,12 @@
 //! Swiss Ephemeris için güvenli Rust sarmalayıcı.
 
+mod engine;
 mod error;
 pub(crate) mod ffi;
 mod swiss;
 mod types;
 
+pub use engine::Engine;
 pub use error::EphError;
 pub use swiss::SwissEph;
 pub use types::{Ayanamsa, Body, BodyPosition, Precision, SiderealMode, Zodiac};

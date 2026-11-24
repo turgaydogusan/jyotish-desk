@@ -5,6 +5,7 @@ pub fn ephe_dir() -> PathBuf {
 }
 
 /// İki açı arasındaki en kısa fark, derece.
+#[allow(dead_code)] // her test ikilisi `common`ı ayrı derler; hepsi bunu kullanmaz
 pub fn angle_diff_deg(a: f64, b: f64) -> f64 {
     let d = (a - b).rem_euclid(360.0);
     d.min(360.0 - d)
