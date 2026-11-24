@@ -15,12 +15,7 @@ vi.mock("./api", () => ({
   },
 }));
 
-import { App, unixMsToJdUt } from "./App";
-
-test("unixMsToJdUt maps the Unix epoch to JD 2440587.5", () => {
-  expect(unixMsToJdUt(0)).toBe(2440587.5);
-  expect(unixMsToJdUt(86_400_000)).toBe(2440588.5);
-});
+import { App } from "./App";
 
 test("shows engine version and planet rows", async () => {
   render(<App />);

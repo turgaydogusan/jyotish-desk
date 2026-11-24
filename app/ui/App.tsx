@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "./api";
 import type { CommandError, PlanetRow } from "./bindings";
 import { PrintSpike } from "./PrintSpike";
-
-/** Unix milisaniyesini UT Jülyen gününe çevirir (1970-01-01T00:00Z = JD 2440587.5). */
-export function unixMsToJdUt(ms: number): number {
-  return ms / 86_400_000 + 2440587.5;
-}
+import { unixMsToJdUt } from "./time";
 
 export function App() {
   const [version, setVersion] = useState<string | null>(null);

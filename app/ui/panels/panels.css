@@ -1,0 +1,61 @@
+.panel-message,
+.panel-notice {
+  margin: 0;
+  color: var(--text-2);
+}
+.panel-notice {
+  padding: 4px 0;
+}
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 4px;
+}
+.chart-panel-figure {
+  flex: 1;
+  min-height: 0;
+}
+.graha-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.graha-table th,
+.graha-table td {
+  text-align: left;
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.graha-table td.num {
+  text-align: right;
+}
+.graha-table tr.is-highlighted th,
+.graha-table tr.is-highlighted td {
+  background: var(--select);
+  color: var(--ink-strong);
+  font-weight: var(--fw-medium);
+}
+.link-button {
+  all: unset;
+  cursor: default;
+}
+.link-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.panel-skeleton {
+  display: grid;
+  gap: 8px;
+  padding: 8px 0;
+}
+.panel-skeleton-bar {
+  height: 12px;
+  background: var(--select);
+  border-radius: 2px;
+}
+.panel-error {
+  color: var(--danger);
+}
+.panel-error p {
+  margin: 0 0 8px;
+}
