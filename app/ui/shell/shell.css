@@ -1,0 +1,71 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+.topbar-title {
+  margin: 0;
+  font-size: var(--fs-client);
+  font-weight: var(--fw-medium);
+}
+.topbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.topbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+}
+.layout-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+.layout-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-width: 200px;
+}
+.layout-menu button {
+  width: 100%;
+  text-align: left;
+}
+.layout-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shell-main {
+  flex: 1;
+  padding: 8px;
+  background: var(--bg);
+}
+.print-view-actions {
+  margin-bottom: 8px;
+}
