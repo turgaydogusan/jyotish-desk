@@ -14,6 +14,8 @@ use crate::CoreError;
 pub const VIMSHOTTARI_TOTAL_YEARS: f64 = 120.0;
 /// 1 mahadasha, 2 antardasha, 3 pratyantardasha, 4 sookshma, 5 prana.
 pub const MAX_DASHA_LEVEL: u8 = 5;
+/// `Chart.dasha`'nın taşıdığı seviye sayısı (spec §4: "Dasha 3 seviye gelir").
+pub const CHART_DASHA_LEVELS: u8 = 3;
 
 /// Ashwini'den başlayarak nakshatra lordları; sıra her 9 nakshatrada tekrar eder.
 pub const VIMSHOTTARI_ORDER: [Graha; 9] = [
@@ -99,6 +101,15 @@ pub struct DashaPeriod {
     pub has_children: bool,
 }
 
+/// Haritanın Vimshottari ağacı: 1–3. seviyeler ön-sırada (her dönemin ardından alt
+/// dönemleri). 4. ve 5. seviyeler `dasha_children(seed, path)` ile istenir.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct Dasha {
+    pub seed: DashaSeed,
+    pub periods: Vec<DashaPeriod>,
+}
+
 /// Doğum mahadashasının lordu ve geçen kesri, [0, 1]. Lord `nakshatra_pada` ile aynı
 /// nakshatradan seçilir; gösterilen nakshatra ile dasha lordu asla ayrışmaz.
 pub fn birth_dasha(moon_sidereal_lon: f64) -> (Graha, f64) {
@@ -176,6 +187,27 @@ pub fn dasha_children(seed: &DashaSeed, path: &[Graha]) -> Result<Vec<DashaPerio
         periods = children_of(&parent);
     }
     Ok(periods)
+}
+
+/// Haritaya giden üç seviyeli ağaç (9 + 81 + 729 dönem).
+pub fn vimshottari(seed: DashaSeed) -> Result<Dasha, CoreError> {
+    let mut periods = Vec::with_capacity(9 + 81 + 729);
+    for maha in mahadashas(&seed)? {
+        push_preorder(&mut periods, maha, CHART_DASHA_LEVELS);
+    }
+    Ok(Dasha { seed, periods })
+}
+
+fn push_preorder(out: &mut Vec<DashaPeriod>, period: DashaPeriod, levels: u8) {
+    let children = if period.level < levels {
+        children_of(&period)
+    } else {
+        Vec::new()
+    };
+    out.push(period);
+    for child in children {
+        push_preorder(out, child, levels);
+    }
 }
 
 #[cfg(test)]
@@ -337,5 +369,29 @@ mod tests {
                 "{y}"
             );
         }
+    }
+
+    #[test]
+    fn chart_dasha_has_three_levels_in_preorder() {
+        let d = vimshottari(seed(NAKSHATRA_SPAN_DEG / 2.0)).unwrap();
+        assert_eq!(d.periods.len(), 9 + 81 + 729);
+        assert_eq!(d.periods[0].lords, [Graha::Ketu]);
+        assert_eq!(d.periods[1].lords, [Graha::Ketu, Graha::Ketu]);
+        assert_eq!(d.periods[2].lords, [Graha::Ketu, Graha::Ketu, Graha::Ketu]);
+        // Ke, Ke-Ke, 9 × Ke-Ke-*, sonra Ke-Ve: indeks 11.
+        assert_eq!(d.periods[11].lords, [Graha::Ketu, Graha::Venus]);
+        // Ketu bloğu 1 + 9 × (1 + 9) = 91 dönem; ardından Venüs mahadashası.
+        assert_eq!(d.periods[91].lords, [Graha::Venus]);
+        assert!(d.periods.iter().all(|p| p.has_children && p.level <= 3));
+        let level3: Vec<DashaPeriod> = d
+            .periods
+            .iter()
+            .filter(|p| p.level == 3 && p.lords[..2] == [Graha::Moon, Graha::Mars])
+            .cloned()
+            .collect();
+        assert_eq!(
+            level3,
+            dasha_children(&d.seed, &[Graha::Moon, Graha::Mars]).unwrap()
+        );
     }
 }

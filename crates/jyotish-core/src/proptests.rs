@@ -138,3 +138,108 @@ mod varga_properties {
         }
     }
 }
+
+mod dasha_properties {
+    use proptest::prelude::*;
+
+    use crate::dasha::{
+        dasha_children, mahadashas, vimshottari, vimshottari_years, DashaPeriod, DashaSeed,
+        VIMSHOTTARI_ORDER, VIMSHOTTARI_TOTAL_YEARS,
+    };
+    use crate::graha::Graha;
+
+    /// JD ~2.4e6 civarında f64 çözünürlüğü ~5e-10 gün; 1e-6 gün (~0.09 sn) bol paydır.
+    const TOL_DAYS: f64 = 1e-6;
+
+    fn seed_strategy() -> impl Strategy<Value = DashaSeed> {
+        (
+            0.0f64..360.0,
+            2_300_000.0f64..2_500_000.0,
+            prop::sample::select(vec![360.0, 365.2422, 365.25]),
+        )
+            .prop_map(|(moon, jd, year)| DashaSeed {
+                birth_jd_ut: jd,
+                moon_sidereal_lon: moon,
+                year_days: year,
+            })
+    }
+
+    fn lord() -> impl Strategy<Value = Graha> {
+        prop::sample::select(VIMSHOTTARI_ORDER.to_vec())
+    }
+
+    /// Alt dönemler ebeveyni boşluksuz ve örtüşmesiz böler; paylar yıl oranındadır.
+    fn check_partition(
+        start: f64,
+        end: f64,
+        children: &[DashaPeriod],
+    ) -> Result<(), TestCaseError> {
+        prop_assert_eq!(children.len(), 9);
+        prop_assert_eq!(children[0].start_jd_ut, start);
+        prop_assert_eq!(children[8].end_jd_ut, end);
+        for w in children.windows(2) {
+            prop_assert_eq!(w[0].end_jd_ut, w[1].start_jd_ut);
+        }
+        let span = end - start;
+        let mut sum = 0.0;
+        for c in children {
+            let d = c.end_jd_ut - c.start_jd_ut;
+            prop_assert!(d > 0.0, "{:?}", c.lords);
+            let lord = *c.lords.last().unwrap();
+            let want = span * vimshottari_years(lord) / VIMSHOTTARI_TOTAL_YEARS;
+            prop_assert!((d - want).abs() < TOL_DAYS, "{:?}: {d} vs {want}", c.lords);
+            sum += d;
+        }
+        prop_assert!((sum - span).abs() < TOL_DAYS);
+        Ok(())
+    }
+
+    proptest! {
+        #[test]
+        fn mahadashas_total_120_years_and_contain_birth(seed in seed_strategy()) {
+            let m = mahadashas(&seed).unwrap();
+            check_partition(m[0].start_jd_ut, m[8].end_jd_ut, &m)?;
+            let total = m[8].end_jd_ut - m[0].start_jd_ut;
+            prop_assert!((total - VIMSHOTTARI_TOTAL_YEARS * seed.year_days).abs() < TOL_DAYS);
+            prop_assert!(m[0].start_jd_ut <= seed.birth_jd_ut);
+            prop_assert!(seed.birth_jd_ut <= m[0].end_jd_ut + TOL_DAYS);
+        }
+
+        #[test]
+        fn sub_periods_partition_their_parent(
+            seed in seed_strategy(),
+            path in proptest::collection::vec(lord(), 1..=4),
+        ) {
+            let (last, parent_path) = path.split_last().unwrap();
+            let siblings = dasha_children(&seed, parent_path).unwrap();
+            let parent = siblings.iter().find(|p| p.lords.last() == Some(last)).unwrap();
+            let children = dasha_children(&seed, &path).unwrap();
+            check_partition(parent.start_jd_ut, parent.end_jd_ut, &children)?;
+            for c in &children {
+                prop_assert_eq!(&c.lords[..path.len()], &path[..]);
+                prop_assert_eq!(usize::from(c.level), path.len() + 1);
+            }
+        }
+    }
+
+    proptest! {
+        // Her durumda 90 ebeveyn × 819 dönem taranır; debug derlemede süreyi sınırlı tut.
+        #![proptest_config(ProptestConfig::with_cases(32))]
+        #[test]
+        fn chart_dasha_matches_dasha_children(seed in seed_strategy()) {
+            let d = vimshottari(seed).unwrap();
+            prop_assert_eq!(d.periods.len(), 9 + 81 + 729);
+            for p in d.periods.iter().filter(|p| p.level < 3) {
+                let kids: Vec<DashaPeriod> = d
+                    .periods
+                    .iter()
+                    .filter(|c| {
+                        c.level == p.level + 1 && c.lords[..p.lords.len()] == p.lords[..]
+                    })
+                    .cloned()
+                    .collect();
+                prop_assert_eq!(kids, dasha_children(&seed, &p.lords).unwrap());
+            }
+        }
+    }
+}

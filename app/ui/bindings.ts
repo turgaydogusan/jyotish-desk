@@ -48,7 +48,7 @@ export type CalcSettings = {
 	ayanamsa: AyanamsaSystem,
 	node: NodeKind,
 	house_system: HouseSystem,
-	/**  Vimshottari yıl uzunluğu, gün. Bu planda kullanılmaz (M3 dasha). */
+	/**  Vimshottari yıl uzunluğu, gün; `DASHA_YEAR_RANGE` içinde. */
 	dasha_year: number | null,
 	combustion_orbs: CombustionOrbs,
 	sunrise_def: SunriseDef,
@@ -71,6 +71,8 @@ export type Chart = {
 	bhavas: Bhavas,
 	/**  Her zaman 16 eleman, `Varga::ALL` sırasında; rasi çerçevesindeki boylamlardan. */
 	vargas: VargaChart[],
+	/**  Vimshottari, 1–3. seviyeler. Ay'ın sidereal boylamından (her zodyak kipinde). */
+	dasha: Dasha,
 };
 
 export type ChartMeta = {
@@ -104,6 +106,37 @@ export type CombustionOrbs = {
 export type CommandError = {
 	code: string,
 	params: { [key in string]: string },
+};
+
+/**
+ *  Haritanın Vimshottari ağacı: 1–3. seviyeler ön-sırada (her dönemin ardından alt
+ *  dönemleri). 4. ve 5. seviyeler `dasha_children(seed, path)` ile istenir.
+ */
+export type Dasha = {
+	seed: DashaSeed,
+	periods: DashaPeriod[],
+};
+
+/**  Bir dasha dönemi (spec §5 `DashaPeriod`). Zamanlar UT Jülyen günüdür. */
+export type DashaPeriod = {
+	/**  Kökten bu döneme lordlar: `[maha]`, `[maha, antar]`, … */
+	lords: Graha[],
+	/**  1 mahadasha … 5 prana; `lords.len()` ile aynı. */
+	level: number,
+	start_jd_ut: number | null,
+	end_jd_ut: number | null,
+	/**  `dasha_children` ile alt dönem istenebilir (`level < MAX_DASHA_LEVEL`). */
+	has_children: boolean,
+};
+
+/**  Dasha ağacını tek başına belirleyen girdiler. */
+export type DashaSeed = {
+	/**  Doğum anı, UT Jülyen günü. */
+	birth_jd_ut: number | null,
+	/**  Doğumdaki Ay'ın sidereal boylamı (her zodyak kipinde sidereal). */
+	moon_sidereal_lon: number | null,
+	/**  Yıl uzunluğu, gün (`CalcSettings::dasha_year`). */
+	year_days: number | null,
 };
 
 export type Dignity = "Exalted" | "Moolatrikona" | "OwnSign" | "GreatFriend" | "Friend" | "Neutral" | "Enemy" | "GreatEnemy" | "Debilitated";

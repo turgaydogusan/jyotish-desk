@@ -146,7 +146,7 @@ pub struct CalcSettings {
     pub ayanamsa: AyanamsaSystem,
     pub node: NodeKind,
     pub house_system: HouseSystem,
-    /// Vimshottari yıl uzunluğu, gün. Bu planda kullanılmaz (M3 dasha).
+    /// Vimshottari yıl uzunluğu, gün; `DASHA_YEAR_RANGE` içinde.
     pub dasha_year: f64,
     pub combustion_orbs: CombustionOrbs,
     pub sunrise_def: SunriseDef,

@@ -5,6 +5,7 @@ use ephemeris::{Body, Ephemeris, Precision, Zodiac};
 use serde::{Deserialize, Serialize};
 
 use crate::combustion::is_combust;
+use crate::dasha::{vimshottari, Dasha, DashaSeed};
 use crate::dignity::{dignity, sign_lord};
 use crate::graha::{Graha, GrahaPosition};
 use crate::houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
@@ -53,6 +54,8 @@ pub struct Chart {
     pub bhavas: Bhavas,
     /// Her zaman 16 eleman, `Varga::ALL` sırasında; rasi çerçevesindeki boylamlardan.
     pub vargas: Vec<VargaChart>,
+    /// Vimshottari, 1–3. seviyeler. Ay'ın sidereal boylamından (her zodyak kipinde).
+    pub dasha: Dasha,
 }
 
 const PLANETS: [(Graha, Body); 7] = [
@@ -221,6 +224,12 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
 
     let points: Vec<(Graha, f64)> = raw.iter().map(|r| (r.graha, r.lon)).collect();
     let vargas = all_vargas(lagna.lon, &points);
+    // raw[1] her zaman Ay'dır (PLANETS sırası); nakshatra her kipte sidereal'dir.
+    let dasha = vimshottari(DashaSeed {
+        birth_jd_ut: jd_ut,
+        moon_sidereal_lon: to_sidereal(raw[1].lon),
+        year_days: settings.dasha_year,
+    })?;
     Ok(Chart {
         meta: ChartMeta {
             engine_version: ENGINE_VERSION.to_owned(),
@@ -239,12 +248,14 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
             cusps,
         },
         vargas,
+        dasha,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dasha::DashaSeed;
     use crate::dignity::Dignity;
     use crate::fake::FakeEph;
     use crate::settings::NodeKind;
@@ -538,5 +549,25 @@ mod tests {
             .map(|p| p.graha)
             .collect();
         assert_eq!(vargottama, [Graha::Jupiter]);
+    }
+
+    #[test]
+    fn dasha_comes_from_the_sidereal_moon_in_both_modes() {
+        for s in [CalcSettings::default(), tropical_rasi()] {
+            let c = chart(&mut FakeEph::default(), &s);
+            // Ay sidereal 71°: Ardra (6.), lord Rahu; kesir (71 − 66.6̄) / 13.3̄ = 0.325.
+            assert_eq!(
+                c.dasha.seed,
+                DashaSeed {
+                    birth_jd_ut: JD,
+                    moon_sidereal_lon: 71.0,
+                    year_days: 365.25
+                }
+            );
+            let first = &c.dasha.periods[0];
+            assert_eq!(first.lords, [Graha::Rahu]);
+            assert!((first.start_jd_ut - (JD - 0.325 * 18.0 * 365.25)).abs() < 1e-6);
+            assert_eq!(c.dasha.periods.len(), 819);
+        }
     }
 }
