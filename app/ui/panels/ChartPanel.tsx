@@ -21,8 +21,8 @@ export function ChartPanel({ panel }: PanelProps) {
   const { t } = useTranslation();
   const sky = useSky();
   const highlight = useHighlight();
-  const phase = usePanelLoadPhase(sky.state.status === "loading");
   const varga = chartVarga(panel.settings);
+  const phase = usePanelLoadPhase(varga === "D1" && sky.state.status === "loading");
   const style = isChartStyle(panel.settings.style) ? panel.settings.style : "north";
 
   if (varga !== "D1") return <p className="panel-message">{t("chart.vargaUnavailable", { varga })}</p>;
@@ -43,6 +43,7 @@ export function ChartPanel({ panel }: PanelProps) {
           style={style}
           labels={chartLabels(t, varga)}
           highlight={highlight.active}
+          pressed={highlight.pinned}
           onHover={highlight.hover}
           onPin={highlight.togglePin}
         />

@@ -44,10 +44,17 @@ export function PanelSkeleton() {
   );
 }
 
+// Arka uçtan gelen parametreler i18next seçeneklerini (dil, çoğul, bağlam…) değiştirememeli.
+const RESERVED_OPTIONS = new Set(["count", "context", "lng", "lngs", "defaultValue", "ns", "replace", "returnObjects", "joinArrays", "postProcess", "interpolation", "fallbackLng"]);
+
+function safeParams(params: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(params).filter(([k]) => !RESERVED_OPTIONS.has(k)));
+}
+
 export function PanelError({ error, onRetry }: { error: CommandError; onRetry: () => void }) {
   const { t, i18n } = useTranslation();
   const key = `errors.${error.code}`;
-  const message = i18n.exists(key) ? t(key, error.params) : t("errors.unknown", { code: error.code });
+  const message = i18n.exists(key) ? t(key, safeParams(error.params)) : t("errors.unknown", { code: error.code });
   return (
     <div className="panel-error" role="alert">
       <p>{message}</p>

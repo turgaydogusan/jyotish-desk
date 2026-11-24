@@ -24,6 +24,7 @@ import { ChartPanel } from "./ChartPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { panelDefinition, PANEL_REGISTRY } from "./registry";
 import { SkyProvider } from "./sky";
+import { PanelStatusContext } from "./states";
 import { UnavailablePanel } from "./UnavailablePanel";
 
 const chartPanel = (settings: Record<string, unknown> = { varga: "D1", style: "north" }): Panel => ({
@@ -46,6 +47,7 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 beforeEach(() => vi.mocked(api.planetLongitudes).mockClear());
+afterEach(() => vi.useRealTimers());
 
 test("registry covers the seven kinds; only chart and graha_table are implemented here", () => {
   expect(Object.keys(PANEL_REGISTRY).sort()).toEqual([...PANEL_KINDS].sort());
@@ -175,7 +177,6 @@ test("a slow load shows a skeleton after one second", async () => {
   expect(screen.queryByLabelText("Yükleniyor")).toBeNull();
   act(() => vi.advanceTimersByTime(1000));
   expect(screen.getByLabelText("Yükleniyor")).toHaveAttribute("aria-busy", "true");
-  vi.useRealTimers();
 });
 
 test("unavailable and unknown panels explain themselves without an error", () => {
@@ -196,4 +197,51 @@ test("labels follow the selected language", async () => {
   );
   expect(await screen.findByRole("button", { name: "Su, Sg 16°" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Sun" }).closest("tr")).toHaveTextContent("Sg");
+});
+
+test("chart aria-pressed follows the pin only: focus hovers, Enter pins, Enter again unpins", async () => {
+  render(
+    <Providers>
+      <ChartPanel panel={chartPanel()} />
+    </Providers>,
+  );
+  const planet = await screen.findByRole("button", { name: "Gü, Yay 16°" });
+  act(() => planet.focus());
+  expect(planet).toHaveAttribute("aria-pressed", "false");
+  fireEvent.keyDown(planet, { key: "Enter" });
+  expect(planet).toHaveAttribute("aria-pressed", "true");
+  fireEvent.keyDown(planet, { key: "Enter" });
+  expect(planet).toHaveAttribute("aria-pressed", "false");
+});
+
+test("a non-D1 chart reports no loading phase to the panel frame", () => {
+  vi.useFakeTimers();
+  vi.mocked(api.planetLongitudes).mockReturnValueOnce(new Promise(() => {}));
+  const reported: string[] = [];
+  render(
+    <PanelStatusContext.Provider value={(p) => reported.push(p)}>
+      <Providers>
+        <ChartPanel panel={chartPanel({ varga: "D9" })} />
+      </Providers>
+    </PanelStatusContext.Provider>,
+  );
+  act(() => vi.advanceTimersByTime(2000));
+  expect(reported.every((p) => p === "none")).toBe(true);
+});
+
+test("unmounting SkyProvider before the load resolves neither sets state nor warns", async () => {
+  let resolve!: (v: Awaited<ReturnType<typeof api.planetLongitudes>>) => void;
+  vi.mocked(api.planetLongitudes).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const { unmount } = render(
+    <SkyProvider now={() => 0}>
+      <span />
+    </SkyProvider>,
+  );
+  unmount();
+  await act(async () => {
+    resolve({ status: "ok", data: [] });
+  });
+  expect(spy).not.toHaveBeenCalled();
+  spy.mockRestore();
 });

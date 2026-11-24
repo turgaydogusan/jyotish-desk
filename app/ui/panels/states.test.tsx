@@ -53,3 +53,8 @@ test("PanelError falls back to a generic message for unknown codes", () => {
   render(<PanelError error={{ code: "weird", params: {} }} onRetry={() => {}} />);
   expect(screen.getByRole("alert")).toHaveTextContent("Beklenmeyen bir sorun oluştu (weird).");
 });
+
+test("PanelError cannot let backend params override i18next options", () => {
+  render(<PanelError error={{ code: "data_files_missing", params: { path: "/eph", lng: "en" } }} onRetry={() => {}} />);
+  expect(screen.getByRole("alert")).toHaveTextContent("Ephemeris dosyaları bulunamadı: /eph");
+});

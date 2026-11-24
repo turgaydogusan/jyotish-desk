@@ -13,6 +13,8 @@ export interface ChartSvgProps {
   style: ChartStyle;
   labels: ChartLabels;
   highlight?: HighlightTarget | null;
+  /** Yalnızca `aria-pressed` için: sabitlenen öğe. Varsayılan `highlight`. */
+  pressed?: HighlightTarget | null;
   onHover?: (target: HighlightTarget | null) => void;
   onPin?: (target: HighlightTarget) => void;
 }
@@ -40,7 +42,7 @@ function planetName(p: ChartPlanet, labels: ChartLabels): string {
   return parts.join(", ");
 }
 
-export function ChartSvg({ data, style, labels, highlight = null, onHover, onPin }: ChartSvgProps) {
+export function ChartSvg({ data, style, labels, highlight = null, pressed = highlight, onHover, onPin }: ChartSvgProps) {
   const asc = data.ascSign ?? 0;
   const cells = useMemo(() => chartCells(style, asc), [style, asc]);
   // Yerleşim yalnızca kısaltmalara ve lagna işaretine bağlıdır; `labels` nesnesi her
@@ -81,6 +83,7 @@ export function ChartSvg({ data, style, labels, highlight = null, onHover, onPin
       {cells.map((cell) => {
         const house: HighlightTarget = { type: "house", house: cell.house };
         const on = cellHighlighted(cell, highlight);
+        const isPressed = cellHighlighted(cell, pressed);
         const classes = ["chart-cell"];
         if (cell.house === 1) classes.push("chart-cell--lagna");
         if (on) classes.push("chart-cell--highlight");
@@ -92,7 +95,7 @@ export function ChartSvg({ data, style, labels, highlight = null, onHover, onPin
             data-sign={cell.sign}
             role="button"
             tabIndex={0}
-            aria-pressed={on}
+            aria-pressed={isPressed}
             aria-label={labels.house(cell.house, labels.signs[cell.sign])}
             onMouseEnter={() => onHover?.(house)}
             onMouseLeave={() => onHover?.(null)}
@@ -119,6 +122,7 @@ export function ChartSvg({ data, style, labels, highlight = null, onHover, onPin
         planets.map((p, i) => {
           const target: HighlightTarget = { type: "graha", id: p.id };
           const on = sameTarget(highlight, target);
+          const isPressed = sameTarget(pressed, target);
           const { x, y, width, height } = layout.boxes[i];
           return (
             <g
@@ -130,7 +134,7 @@ export function ChartSvg({ data, style, labels, highlight = null, onHover, onPin
               data-y={y}
               role="button"
               tabIndex={0}
-              aria-pressed={on}
+              aria-pressed={isPressed}
               aria-label={planetName(p, labels)}
               onMouseEnter={() => onHover?.(target)}
               onMouseLeave={() => onHover?.(null)}

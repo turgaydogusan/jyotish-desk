@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { HighlightProvider, useHighlight } from "./store";
 import { sameTarget } from "./target";
 
@@ -41,4 +41,15 @@ test("hover wins over pin while it lasts; pin toggles; Esc clears both", () => {
   fireEvent.keyDown(window, { key: "Escape" });
   expect(text("active")).toBe("null");
   expect(text("pinned")).toBe("null");
+});
+
+test("Esc with a prevented default does not clear", () => {
+  render(<HighlightProvider><Probe /></HighlightProvider>);
+  fireEvent.click(screen.getByText("pin house 4"));
+  const ev = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+  ev.preventDefault();
+  act(() => {
+    window.dispatchEvent(ev);
+  });
+  expect(text("pinned")).toBe('{"type":"house","house":4}');
 });

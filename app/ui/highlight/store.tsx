@@ -26,7 +26,7 @@ export function HighlightProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") clear();
+      if (e.key === "Escape" && !e.defaultPrevented) clear();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
