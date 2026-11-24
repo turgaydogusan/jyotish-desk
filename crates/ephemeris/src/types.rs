@@ -52,7 +52,11 @@ impl SiderealMode {
             Self::Custom {
                 t0_jd_ut,
                 ayan_t0_deg,
-            } => (ffi::SE_SIDM_USER, t0_jd_ut, ayan_t0_deg),
+            } => (
+                ffi::SE_SIDM_USER | ffi::SE_SIDBIT_USER_UT,
+                t0_jd_ut,
+                ayan_t0_deg,
+            ),
         }
     }
 }
@@ -69,6 +73,13 @@ pub enum Precision {
     SwissEph,
     /// Dosya aralığı dışında Moshier analitik yedeği (düşük hassasiyet).
     Moshier,
+}
+
+/// Ayanamsa değeri ve hesabın hassasiyeti.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Ayanamsa {
+    pub deg: f64,
+    pub precision: Precision,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -15,6 +15,8 @@ pub const SE_SIDM_RAMAN: i32 = 3;
 pub const SE_SIDM_KRISHNAMURTI: i32 = 5;
 pub const SE_SIDM_TRUE_CITRA: i32 = 27;
 pub const SE_SIDM_USER: i32 = 255;
+/// `SE_SIDM_USER` ile birlikte: `t0` UT olarak okunur (swephexp.h; varsayılan TT).
+pub const SE_SIDBIT_USER_UT: i32 = 1024;
 
 /// `serr` tamponları için SE'nin `AS_MAXCH` değeri.
 pub const AS_MAXCH: usize = 256;

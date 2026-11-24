@@ -3,7 +3,9 @@ use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 
-use crate::{ffi, Body, BodyPosition, EphError, Ephemeris, Precision, SiderealMode, Zodiac};
+use crate::{
+    ffi, Ayanamsa, Body, BodyPosition, EphError, Ephemeris, Precision, SiderealMode, Zodiac,
+};
 
 /// SE global durumunu koruyan süreç çapında kilit.
 static SWE_LOCK: Mutex<()> = Mutex::new(());
@@ -48,8 +50,9 @@ impl SwissEph {
     /// eksikse `DataFilesMissing` döner; sessiz Moshier yedeği yoktur.
     ///
     /// `SE_EPHE_PATH` ortam değişkeni tanımlıysa (SE onu argümana tercih eder)
-    /// `EnvOverride`; yol UTF-8 değilse, NUL içeriyorsa ya da SE tamponuna
-    /// sığmıyorsa (> 242 bayt) `InvalidPath` döner.
+    /// `EnvOverride` (boş değer de reddedilir; bilinçli olarak katıdır); yol UTF-8 değilse, NUL içeriyorsa ya da SE tamponuna
+    /// sığmıyorsa (> 242 bayt) ya da SE yol ayırıcısı içeriyorsa (`;`, Unix'te ayrıca `:`)
+    /// `InvalidPath` döner.
     ///
     /// Dikkat: aynı iş parçacığında başka bir `SwissEph` yaşarken çağırmak
     /// kilitlenir; önce onu düşürün. Dönen örnek `!Send`'dir.
@@ -62,6 +65,10 @@ impl SwissEph {
         }
         let s = path.to_str().ok_or(EphError::InvalidPath)?;
         if s.len() > MAX_PATH_BYTES {
+            return Err(EphError::InvalidPath);
+        }
+        // SE yolu PATH_SEPARATOR ile böler (sweodef.h): ';' her yerde, ':' Unix'te.
+        if s.contains(';') || (cfg!(not(windows)) && s.contains(':')) {
             return Err(EphError::InvalidPath);
         }
         let c_path = CString::new(s).map_err(|_| EphError::InvalidPath)?;
@@ -141,7 +148,7 @@ impl Ephemeris for SwissEph {
         })
     }
 
-    fn ayanamsa(&mut self, jd_ut: f64, mode: SiderealMode) -> Result<f64, EphError> {
+    fn ayanamsa(&mut self, jd_ut: f64, mode: SiderealMode) -> Result<Ayanamsa, EphError> {
         Self::set_sid_mode(mode);
         let mut daya = 0.0_f64;
         let mut serr: [c_char; ffi::AS_MAXCH] = [0; ffi::AS_MAXCH];
@@ -152,7 +159,15 @@ impl Ephemeris for SwissEph {
         if ret < 0 {
             return Err(EphError::Calc(read_cstr(&serr)));
         }
-        Ok(daya)
+        let precision = if ret & ffi::SEFLG_MOSEPH != 0 {
+            Precision::Moshier
+        } else {
+            Precision::SwissEph
+        };
+        Ok(Ayanamsa {
+            deg: daya,
+            precision,
+        })
     }
 }
 
