@@ -10,6 +10,15 @@ Lisans: AGPL-3.0-or-later. Ayrıntılar: `docs/superpowers/specs/`.
 Vendor edilmiş Swiss Ephemeris kaynakları ve veri dosyaları depoda commit'lidir;
 `./scripts/vendor-swisseph.sh` yalnızca Swiss Ephemeris'i yükseltmek için gerekir.
 
+### Atlas
+
+`data/atlas/atlas.sqlite` GeoNames `cities1000` dökümünden üretilir ve commit'lidir.
+Yeniden üretmek için (ağ gerekir):
+
+```bash
+./scripts/fetch-geonames.sh
+```
+
 ### Uygulama
 
     cd app
