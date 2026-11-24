@@ -13,6 +13,11 @@ use crate::{EphError, SwissEph};
 
 type Job = Box<dyn FnOnce(&mut SwissEph) + Send>;
 
+///
+/// Tehlikeler: (1) Bir işin (`call` kapanışı) içinden aynı motorda `call` çağırmak
+/// kilitlenir; motor iş parçacığı kendi sonucunu bekler. (2) Son tutamağı motor iş
+/// parçacığının kendisinde düşürmek de sorunludur; `Drop` bu durumda kendini `join`
+/// etmez, tutamağı yalnızca bırakır.
 pub struct Engine {
     tx: Option<mpsc::Sender<Job>>,
     thread: Option<JoinHandle<()>>,
@@ -41,7 +46,7 @@ impl Engine {
                     job(&mut se);
                 }
             })
-            .map_err(|e| EphError::Calc(format!("cannot start engine thread: {e}")))?;
+            .map_err(|_| EphError::EngineStopped)?;
         match ready_rx.recv() {
             Ok(Ok(())) => Ok(Engine {
                 tx: Some(tx),
@@ -84,7 +89,10 @@ impl Drop for Engine {
         // Göndericiyi düşürmek döngüyü bitirir; join, SE kilidinin bırakılmasını bekler.
         self.tx.take();
         if let Some(t) = self.thread.take() {
-            let _ = t.join();
+            // Motor iş parçacığı kendini join ederse kilitlenir; o durumda tutamağı bırak.
+            if std::thread::current().id() != t.thread().id() {
+                let _ = t.join();
+            }
         }
     }
 }
