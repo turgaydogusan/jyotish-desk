@@ -1,15 +1,32 @@
 //! Yerel doğum zamanı → UTC ve Jülyen günü (UT).
 //!
 //! Belirsizlik sessizce düzeltilmez: DST boşluğu ve örtüşmesi hata olarak döner,
-//! karar kullanıcıya bırakılır (spec §7).
+//! karar kullanıcıya bırakılır (spec §7). tzdb binary'ye gömülüdür; sistem
+//! zoneinfo'su kullanılmaz, sonuç her makinede aynıdır.
 
-use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use std::sync::OnceLock;
 
-/// Paketlenen IANA tzdb sürümü (ör. "2025b"); haritayla birlikte saklanır.
-pub const TZDB_VERSION: &str = chrono_tz::IANA_TZDB_VERSION;
+use jiff::civil::{Date, DateTime, Time};
+use jiff::tz::{AmbiguousOffset, Offset, TimeZoneDatabase};
+use jiff::{SignedDuration, Timestamp};
 
 const MAX_FIXED_OFFSET_SECS: i32 = 18 * 3600;
 const UNIX_EPOCH_JD: f64 = 2440587.5;
+
+fn tzdb() -> &'static TimeZoneDatabase {
+    static DB: OnceLock<TimeZoneDatabase> = OnceLock::new();
+    DB.get_or_init(TimeZoneDatabase::bundled)
+}
+
+/// Gömülü IANA tzdb sürümü (ör. "2026f"); haritayla birlikte saklanır.
+pub fn tzdb_version() -> &'static str {
+    jiff_tzdb::VERSION
+}
+
+/// IANA kimliği gömülü tzdb'de var mı?
+pub fn is_known_time_zone(id: &str) -> bool {
+    tzdb().get(id).is_ok()
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TzSpec {
@@ -41,7 +58,7 @@ pub enum MomentWarning {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedMoment {
-    pub utc: DateTime<Utc>,
+    pub utc: Timestamp,
     pub jd_ut: f64,
     /// Gösterim için saniyeye yuvarlanmış ofset; hesap `utc`/`jd_ut` ile yapılır.
     pub offset_secs: i32,
@@ -55,12 +72,12 @@ pub enum MomentError {
     UnknownTimeZone(String),
     #[error("local time {local} does not exist (DST gap); nearest valid: {suggestion}")]
     NonexistentLocalTime {
-        local: NaiveDateTime,
-        suggestion: NaiveDateTime,
+        local: DateTime,
+        suggestion: DateTime,
     },
     #[error("local time {local} occurs twice (DST overlap): earlier {earlier_offset_secs}s, later {later_offset_secs}s")]
     AmbiguousLocalTime {
-        local: NaiveDateTime,
+        local: DateTime,
         earlier_offset_secs: i32,
         later_offset_secs: i32,
     },
@@ -68,11 +85,13 @@ pub enum MomentError {
     OffsetOutOfRange(i32),
     #[error("longitude out of range: {0}")]
     LongitudeOutOfRange(f64),
+    #[error("date out of supported range")]
+    DateOutOfRange,
 }
 
 pub fn resolve_moment(
-    date: NaiveDate,
-    time: Option<NaiveTime>,
+    date: Date,
+    time: Option<Time>,
     tz: &TzSpec,
     lon_deg: f64,
     fold: Option<Fold>,
@@ -85,49 +104,98 @@ pub fn resolve_moment(
         Some(t) => t,
         None => {
             warnings.push(MomentWarning::TimeUnknownNoon);
-            NaiveTime::from_hms_opt(12, 0, 0).expect("12:00:00 is a valid time")
+            Time::constant(12, 0, 0, 0)
         }
     };
-    let local = date.and_time(time);
+    let local = date.to_datetime(time);
     match tz {
         TzSpec::Fixed(secs) => {
             if secs.abs() > MAX_FIXED_OFFSET_SECS {
                 return Err(MomentError::OffsetOutOfRange(*secs));
             }
-            let utc = local.and_utc() - Duration::seconds(i64::from(*secs));
+            let offset =
+                Offset::from_seconds(*secs).map_err(|_| MomentError::OffsetOutOfRange(*secs))?;
+            let utc = offset
+                .to_timestamp(local)
+                .map_err(|_| MomentError::DateOutOfRange)?;
             Ok(moment(utc, *secs, fmt_utc_offset(*secs), warnings))
         }
-        TzSpec::Lmt => Ok(lmt(local, lon_deg, warnings)),
+        TzSpec::Lmt => lmt(local, lon_deg, warnings),
         TzSpec::Iana(id) => resolve_iana(local, id, lon_deg, fold, warnings),
     }
 }
 
 fn resolve_iana(
-    _local: NaiveDateTime,
+    local: DateTime,
     id: &str,
-    _lon_deg: f64,
-    _fold: Option<Fold>,
-    _warnings: Vec<MomentWarning>,
+    lon_deg: f64,
+    fold: Option<Fold>,
+    mut warnings: Vec<MomentWarning>,
 ) -> Result<ResolvedMoment, MomentError> {
-    // Task 2'de gerçek çözüm gelir.
-    Err(MomentError::UnknownTimeZone(id.to_owned()))
+    let tz = tzdb()
+        .get(id)
+        .map_err(|_| MomentError::UnknownTimeZone(id.to_owned()))?;
+    let offset = match tz.to_ambiguous_timestamp(local).offset() {
+        AmbiguousOffset::Unambiguous { offset } => offset,
+        AmbiguousOffset::Fold { before, after } => match fold {
+            Some(Fold::Earlier) => before,
+            Some(Fold::Later) => after,
+            None => {
+                return Err(MomentError::AmbiguousLocalTime {
+                    local,
+                    earlier_offset_secs: before.seconds(),
+                    later_offset_secs: after.seconds(),
+                })
+            }
+        },
+        AmbiguousOffset::Gap { before, after } => {
+            // Boşluk kadar ileri kaydır: 02:30 + (after − before) → 03:30.
+            let shift = SignedDuration::from_secs(i64::from(after.seconds() - before.seconds()));
+            return Err(MomentError::NonexistentLocalTime {
+                local,
+                suggestion: local.checked_add(shift).unwrap_or(local),
+            });
+        }
+    };
+    let offset_secs = offset.seconds();
+    // Dakikaya tam bölünmeyen ofset, referans şehrin ortalama saatidir (LMT, IMT…).
+    if offset_secs % 60 != 0 {
+        warnings.push(MomentWarning::LmtFromLongitude);
+        return lmt(local, lon_deg, warnings);
+    }
+    if local.year() < 1970 {
+        warnings.push(MomentWarning::PreTzdbReliability);
+    }
+    let utc = offset
+        .to_timestamp(local)
+        .map_err(|_| MomentError::DateOutOfRange)?;
+    let abbrev = tz.to_offset_info(utc).abbreviation().to_owned();
+    Ok(moment(utc, offset_secs, abbrev, warnings))
 }
 
 /// Boylamdan yerel ortalama saat: 1° = 240 s. Saniye kesirleri korunur.
-fn lmt(local: NaiveDateTime, lon_deg: f64, warnings: Vec<MomentWarning>) -> ResolvedMoment {
+fn lmt(
+    local: DateTime,
+    lon_deg: f64,
+    warnings: Vec<MomentWarning>,
+) -> Result<ResolvedMoment, MomentError> {
     let offset_ns = (lon_deg * 240.0 * 1e9).round() as i64;
-    let utc = local.and_utc() - Duration::nanoseconds(offset_ns);
+    let utc = Offset::UTC
+        .to_timestamp(local)
+        .and_then(|t| t.checked_sub(SignedDuration::from_nanos(offset_ns)))
+        .map_err(|_| MomentError::DateOutOfRange)?;
     let offset_secs = (lon_deg * 240.0).round() as i32;
-    moment(utc, offset_secs, "LMT".to_owned(), warnings)
+    Ok(moment(utc, offset_secs, "LMT".to_owned(), warnings))
 }
 
 fn moment(
-    utc: DateTime<Utc>,
+    utc: Timestamp,
     offset_secs: i32,
     abbrev: String,
     warnings: Vec<MomentWarning>,
 ) -> ResolvedMoment {
-    let secs = utc.timestamp() as f64 + f64::from(utc.timestamp_subsec_nanos()) / 1e9;
+    // as_second sıfıra doğru keser, subsec işaretlidir; toplam her iki yönde de doğrudur.
+    let secs = utc.as_second() as f64 + f64::from(utc.subsec_nanosecond()) / 1e9;
     ResolvedMoment {
         utc,
         jd_ut: secs / 86_400.0 + UNIX_EPOCH_JD,
