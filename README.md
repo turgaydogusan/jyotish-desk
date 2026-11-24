@@ -5,5 +5,7 @@ Lisans: AGPL-3.0-or-later. Ayrıntılar: `docs/superpowers/specs/`.
 
 ## Geliştirme
 
-    ./scripts/vendor-swisseph.sh   # bir kez
     cargo test --workspace
+
+Vendor edilmiş Swiss Ephemeris kaynakları ve veri dosyaları depoda commit'lidir;
+`./scripts/vendor-swisseph.sh` yalnızca Swiss Ephemeris'i yükseltmek için gerekir.
