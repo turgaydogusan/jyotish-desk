@@ -1,0 +1,16 @@
+[package]
+name = "atlas"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+chrono = { version = "0.4.41", default-features = false, features = ["std"] }
+chrono-tz = "0.10"
+rusqlite = { version = "0.43", features = ["bundled"] }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
