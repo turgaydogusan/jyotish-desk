@@ -61,6 +61,13 @@
   align-items: center;
   gap: 6px;
 }
+.layout-error {
+  color: var(--danger);
+  font-size: var(--fs-table);
+}
+.layout-error:empty {
+  display: none;
+}
 .shell-main {
   flex: 1;
   padding: 8px;

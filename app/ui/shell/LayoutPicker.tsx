@@ -1,6 +1,9 @@
 // Düzen seçici ve işlemler menüsü: farklı kaydet, yeniden adlandır, kopyala, sil, sıfırla.
 // Ad girişi ve silme onayı satır içinde açılır (WKWebView'da window.prompt'a güvenilmez).
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+// Menü ARIA menü düzenini izler: açılınca ilk etkin öğe odaklanır, oklar/Home/End gezdirir,
+// Esc kapatır (preventDefault: vurgu sabitlemesi korunur), Tab ve dış tıklama kapatır.
+// Menü, form ve onay kapanınca odak tetik düğmesine döner.
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import type { Layout } from "../layout/model";
@@ -11,33 +14,135 @@ export function layoutLabel(t: TFunction, layout: Layout): string {
 }
 
 type Mode = null | "saveAs" | "rename" | "confirmDelete";
+type NameError = null | "nameEmpty" | "nameTaken";
 
 export function LayoutPicker() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const store = useLayoutStore();
   const active = store.active;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [focusOnOpen, setFocusOnOpen] = useState<"first" | "last">("first");
   const [mode, setMode] = useState<Mode>(null);
   const [name, setName] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const menuId = useId();
+  const errorId = useId();
   const activeLabel = layoutLabel(t, active);
 
-  const open = (next: Mode, initialName = "") => {
+  const sameName = (a: string, b: string) =>
+    a.trim().localeCompare(b.trim(), i18n.language, { sensitivity: "accent" }) === 0;
+  const isTaken = (candidate: string, exceptId?: string) =>
+    store.state.layouts.some((l) => l.id !== exceptId && sameName(layoutLabel(t, l), candidate));
+  /** "X kopyası", doluysa "X kopyası 2", "X kopyası 3"… */
+  const uniqueCopyName = () => {
+    const first = t("layout.copyName", { name: activeLabel });
+    if (!isTaken(first)) return first;
+    for (let n = 2; ; n++) {
+      const next = t("layout.copyNameN", { name: activeLabel, n });
+      if (!isTaken(next)) return next;
+    }
+  };
+
+  const nameError: NameError =
+    name.trim() === "" ? "nameEmpty" : isTaken(name, mode === "rename" ? active.id : undefined) ? "nameTaken" : null;
+
+  const focusTrigger = () => triggerRef.current?.focus();
+  const enabledItems = () =>
+    [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])].filter((b) => !b.disabled);
+
+  const openMenu = (focus: "first" | "last") => {
+    setFocusOnOpen(focus);
+    setMenuOpen(true);
+  };
+  const closeMenu = (returnFocus: boolean) => {
+    setMenuOpen(false);
+    if (returnFocus) focusTrigger();
+  };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const items = enabledItems();
+    (focusOnOpen === "first" ? items[0] : items[items.length - 1])?.focus();
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (menuRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+    // Yalnızca açılışta çalışır; focusOnOpen açılıştan önce ayarlanır.
+  }, [menuOpen]);
+
+  const startMode = (next: Mode, initialName = "") => {
     setMenuOpen(false);
     setName(initialName);
     setMode(next);
   };
-  const close = () => setMode(null);
+  const endMode = () => {
+    setMode(null);
+    focusTrigger();
+  };
 
   const submitName = (e: FormEvent) => {
     e.preventDefault();
-    if (name.trim() === "") return;
-    if (mode === "saveAs") store.saveAs(name);
-    if (mode === "rename") store.rename(active.id, name);
-    close();
+    if (nameError !== null) return;
+    if (mode === "saveAs") store.saveAs(name.trim());
+    if (mode === "rename") store.rename(active.id, name.trim());
+    endMode();
+  };
+
+  const onTriggerKey = (e: KeyboardEvent) => {
+    // Enter ve Boşluk yerel tıklamayla açar (onClick); oklar da açar.
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      openMenu("first");
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      openMenu("last");
+    }
   };
 
   const onMenuKey = (e: KeyboardEvent) => {
-    if (e.key === "Escape") setMenuOpen(false);
+    const items = enabledItems();
+    const current = items.indexOf(document.activeElement as HTMLButtonElement);
+    const move = (index: number) => {
+      e.preventDefault();
+      items[(index + items.length) % items.length]?.focus();
+    };
+    switch (e.key) {
+      case "Escape":
+        e.preventDefault();
+        closeMenu(true);
+        break;
+      case "Tab":
+        closeMenu(false);
+        break;
+      case "ArrowDown":
+        move(current + 1);
+        break;
+      case "ArrowUp":
+        move(current < 0 ? items.length - 1 : current - 1);
+        break;
+      case "Home":
+        move(0);
+        break;
+      case "End":
+        move(items.length - 1);
+        break;
+    }
+  };
+
+  const onInlineKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      endMode();
+    }
+  };
+
+  const runItem = (action: () => void) => {
+    action();
+    closeMenu(true);
   };
 
   return (
@@ -52,18 +157,39 @@ export function LayoutPicker() {
           ))}
         </select>
       </label>
-      <button type="button" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        aria-controls={menuOpen ? menuId : undefined}
+        onClick={() => (menuOpen ? closeMenu(false) : openMenu("first"))}
+        onKeyDown={onTriggerKey}
+      >
         {t("layout.actions")}
       </button>
       {menuOpen && (
-        <ul className="layout-menu" role="menu" aria-label={t("layout.actions")} onKeyDown={onMenuKey}>
+        <ul
+          ref={menuRef}
+          id={menuId}
+          className="layout-menu"
+          role="menu"
+          aria-label={t("layout.actions")}
+          onKeyDown={onMenuKey}
+        >
           <li role="none">
-            <button type="button" role="menuitem" onClick={() => open("saveAs", t("layout.copyName", { name: activeLabel }))}>
+            <button type="button" role="menuitem" tabIndex={-1} onClick={() => startMode("saveAs", uniqueCopyName())}>
               {t("layout.saveAs")}
             </button>
           </li>
           <li role="none">
-            <button type="button" role="menuitem" disabled={active.builtin} onClick={() => open("rename", active.name)}>
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              disabled={active.builtin}
+              onClick={() => startMode("rename", active.name)}
+            >
               {t("layout.rename")}
             </button>
           </li>
@@ -71,16 +197,20 @@ export function LayoutPicker() {
             <button
               type="button"
               role="menuitem"
-              onClick={() => {
-                store.duplicate(active.id, t("layout.copyName", { name: activeLabel }));
-                setMenuOpen(false);
-              }}
+              tabIndex={-1}
+              onClick={() => runItem(() => store.duplicate(active.id, uniqueCopyName()))}
             >
               {t("layout.duplicate")}
             </button>
           </li>
           <li role="none">
-            <button type="button" role="menuitem" disabled={active.builtin} onClick={() => open("confirmDelete")}>
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              disabled={active.builtin}
+              onClick={() => startMode("confirmDelete")}
+            >
               {t("layout.delete")}
             </button>
           </li>
@@ -88,11 +218,9 @@ export function LayoutPicker() {
             <button
               type="button"
               role="menuitem"
+              tabIndex={-1}
               disabled={!active.builtin}
-              onClick={() => {
-                store.resetBuiltin(active.id);
-                setMenuOpen(false);
-              }}
+              onClick={() => runItem(() => store.resetBuiltin(active.id))}
             >
               {t("layout.reset")}
             </button>
@@ -100,32 +228,45 @@ export function LayoutPicker() {
         </ul>
       )}
       {(mode === "saveAs" || mode === "rename") && (
-        <form className="layout-inline" onSubmit={submitName}>
+        <form className="layout-inline" onSubmit={submitName} onKeyDown={onInlineKey}>
           <label>
             {t("layout.name")}
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+            <input
+              autoFocus
+              value={name}
+              aria-invalid={nameError !== null}
+              aria-describedby={errorId}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                // Kaydet devre dışıyken tarayıcı Enter ile göndermez; hata metni zaten görünür.
+                if (e.key === "Enter" && nameError !== null) e.preventDefault();
+              }}
+            />
           </label>
-          <button type="submit" disabled={name.trim() === ""}>
+          <span id={errorId} className="layout-error" aria-live="polite">
+            {nameError !== null ? t(`layout.${nameError}`) : ""}
+          </span>
+          <button type="submit" disabled={nameError !== null}>
             {t("layout.save")}
           </button>
-          <button type="button" onClick={close}>
+          <button type="button" onClick={endMode}>
             {t("layout.cancel")}
           </button>
         </form>
       )}
       {mode === "confirmDelete" && (
-        <div className="layout-inline" role="group" aria-label={t("layout.delete")}>
+        <div className="layout-inline" role="group" aria-label={t("layout.delete")} onKeyDown={onInlineKey}>
           <span>{t("layout.confirmDelete", { name: activeLabel })}</span>
           <button
             type="button"
             onClick={() => {
               store.remove(active.id);
-              close();
+              endMode();
             }}
           >
             {t("layout.deleteNamed", { name: activeLabel })}
           </button>
-          <button type="button" autoFocus onClick={close}>
+          <button type="button" autoFocus onClick={endMode}>
             {t("layout.cancel")}
           </button>
         </div>

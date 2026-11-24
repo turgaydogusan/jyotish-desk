@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Dashboard } from "../dashboard/Dashboard";
+import { isEditableTarget } from "../keyboard";
 import { useLayoutStore } from "../layout/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
 import { PrintView } from "./PrintView";
@@ -21,9 +22,12 @@ export function Shell() {
     setThemePref(pref);
   };
 
-  // Cmd+Shift+N: notlar panelini etkin düzende aç/kapat (spec §3.2).
+  // Cmd+Shift+N: notlar panelini etkin düzende aç/kapat (spec §3.2). Yazı alanlarında,
+  // tuş tekrarında, IME bileşiminde ve baskı görünümünde (pano yokken) yok sayılır.
   useEffect(() => {
+    if (printView) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.isComposing || isEditableTarget(e.target)) return;
       if (e.metaKey && e.shiftKey && !e.altKey && !e.ctrlKey && e.key.toLowerCase() === "n") {
         e.preventDefault();
         toggleNotes();
@@ -31,7 +35,7 @@ export function Shell() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleNotes]);
+  }, [toggleNotes, printView]);
 
   return (
     <div className="shell">
