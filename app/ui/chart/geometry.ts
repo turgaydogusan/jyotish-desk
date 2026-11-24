@@ -7,14 +7,6 @@ export interface Point {
   y: number;
 }
 
-export interface StackRule {
-  /** Birden çok gezegen bu eksen boyunca dizilir. */
-  axis: "x" | "y";
-  step: number;
-  perLine: number;
-  lineGap: number;
-}
-
 export interface ChartCell {
   house: number; // 1…12
   sign: number; // 0…11
@@ -24,7 +16,6 @@ export interface ChartCell {
   signAnchor: Point | null;
   /** Lagna işaretinin yeri (Güney Hint ve daire, yalnızca 1. ev). */
   lagnaAnchor: Point | null;
-  stack: StackRule;
   /** Daire stilinde hücrenin tam halka dilimi (açılar matematiksel, derece). Çokgen yalnızca yaklaşıktır. */
   sector?: Sector;
 }
@@ -59,23 +50,19 @@ const TL = pt(0, 0), TR = pt(100, 0), BR = pt(100, 100), BL = pt(0, 100);
 const T = pt(50, 0), R = pt(100, 50), B = pt(50, 100), L = pt(0, 50), C = pt(50, 50);
 const PTL = pt(25, 25), PTR = pt(75, 25), PBR = pt(75, 75), PBL = pt(25, 75);
 
-// Baklavalar ve yan üçgenler dikey, üst/alt üçgenler yatay dizer.
-const VERTICAL: StackRule = { axis: "y", step: 5.5, perLine: 4, lineGap: 9 };
-const HORIZONTAL: StackRule = { axis: "x", step: 7.5, perLine: 4, lineGap: 5.5 };
-
-const NORTH: ReadonlyArray<{ points: Point[]; planet: Point; sign: Point; stack: StackRule }> = [
-  { points: [T, PTR, C, PTL], planet: pt(50, 22), sign: pt(50, 42), stack: VERTICAL }, // 1
-  { points: [TL, T, PTL], planet: pt(25, 7), sign: pt(25, 19), stack: HORIZONTAL }, // 2
-  { points: [TL, PTL, L], planet: pt(7, 25), sign: pt(19, 25), stack: VERTICAL }, // 3
-  { points: [L, PTL, C, PBL], planet: pt(22, 50), sign: pt(42, 50), stack: VERTICAL }, // 4
-  { points: [L, PBL, BL], planet: pt(7, 75), sign: pt(19, 75), stack: VERTICAL }, // 5
-  { points: [BL, PBL, B], planet: pt(25, 93), sign: pt(25, 81), stack: HORIZONTAL }, // 6
-  { points: [B, PBL, C, PBR], planet: pt(50, 78), sign: pt(50, 58), stack: VERTICAL }, // 7
-  { points: [B, PBR, BR], planet: pt(75, 93), sign: pt(75, 81), stack: HORIZONTAL }, // 8
-  { points: [BR, PBR, R], planet: pt(93, 75), sign: pt(81, 75), stack: VERTICAL }, // 9
-  { points: [R, PBR, C, PTR], planet: pt(78, 50), sign: pt(58, 50), stack: VERTICAL }, // 10
-  { points: [R, PTR, TR], planet: pt(93, 25), sign: pt(81, 25), stack: VERTICAL }, // 11
-  { points: [TR, PTR, T], planet: pt(75, 7), sign: pt(75, 19), stack: HORIZONTAL }, // 12
+const NORTH: ReadonlyArray<{ points: Point[]; planet: Point; sign: Point }> = [
+  { points: [T, PTR, C, PTL], planet: pt(50, 22), sign: pt(50, 42) }, // 1
+  { points: [TL, T, PTL], planet: pt(25, 7), sign: pt(25, 19) }, // 2
+  { points: [TL, PTL, L], planet: pt(7, 25), sign: pt(19, 25) }, // 3
+  { points: [L, PTL, C, PBL], planet: pt(22, 50), sign: pt(42, 50) }, // 4
+  { points: [L, PBL, BL], planet: pt(7, 75), sign: pt(19, 75) }, // 5
+  { points: [BL, PBL, B], planet: pt(25, 93), sign: pt(25, 81) }, // 6
+  { points: [B, PBL, C, PBR], planet: pt(50, 78), sign: pt(50, 58) }, // 7
+  { points: [B, PBR, BR], planet: pt(75, 93), sign: pt(75, 81) }, // 8
+  { points: [BR, PBR, R], planet: pt(93, 75), sign: pt(81, 75) }, // 9
+  { points: [R, PBR, C, PTR], planet: pt(78, 50), sign: pt(58, 50) }, // 10
+  { points: [R, PTR, TR], planet: pt(93, 25), sign: pt(81, 25) }, // 11
+  { points: [TR, PTR, T], planet: pt(75, 7), sign: pt(75, 19) }, // 12
 ];
 
 export function northCells(asc: number): ChartCell[] {
@@ -86,7 +73,6 @@ export function northCells(asc: number): ChartCell[] {
     planetAnchor: h.planet,
     signAnchor: h.sign,
     lagnaAnchor: null,
-    stack: h.stack,
   }));
 }
 
@@ -106,8 +92,6 @@ export const SOUTH_SIGN_CELLS: ReadonlyArray<{ sign: number; row: number; col: n
   { sign: 10, row: 1, col: 0 },
 ];
 
-const SOUTH_STACK: StackRule = { axis: "y", step: 5, perLine: 3, lineGap: 9 };
-
 export function southCells(asc: number): ChartCell[] {
   const cells = SOUTH_SIGN_CELLS.map(({ sign, row, col }) => {
     const x = col * 25;
@@ -120,7 +104,6 @@ export function southCells(asc: number): ChartCell[] {
       planetAnchor: pt(x + 12.5, y + 14),
       signAnchor: null,
       lagnaAnchor: house === 1 ? pt(x + 4, y + 6) : null,
-      stack: SOUTH_STACK,
     };
   });
   return cells.sort((a, b) => a.house - b.house);
@@ -128,7 +111,6 @@ export function southCells(asc: number): ChartCell[] {
 
 const CIRCLE_R_OUTER = 48;
 const CIRCLE_R_INNER = 18;
-const CIRCLE_STACK: StackRule = { axis: "y", step: 5, perLine: 3, lineGap: 7 };
 
 function polar(r: number, deg: number): Point {
   const rad = (deg * Math.PI) / 180;
@@ -156,7 +138,6 @@ export function circleCells(asc: number): ChartCell[] {
       // Burç numarası dış çemberin hemen içinde, evin ortasında.
       signAnchor: polar(CIRCLE_R_OUTER - 4.5, center),
       lagnaAnchor: house === 1 ? polar(CIRCLE_R_INNER + 4, center) : null,
-      stack: CIRCLE_STACK,
       sector: { rInner: CIRCLE_R_INNER, rOuter: CIRCLE_R_OUTER, startDeg: start, endDeg: start + 30 },
     });
   }
@@ -167,21 +148,6 @@ export function chartCells(style: ChartStyle, asc: number): ChartCell[] {
   if (style === "south") return southCells(asc);
   if (style === "circle") return circleCells(asc);
   return northCells(asc);
-}
-
-/** Aynı evdeki n gezegenin etiket konumları: kural eksenine dizilir, sığmazsa yeni satır. */
-export function stackPositions(anchor: Point, n: number, rule: StackRule): Point[] {
-  const lines = Math.ceil(n / rule.perLine);
-  const out: Point[] = [];
-  for (let i = 0; i < n; i++) {
-    const line = Math.floor(i / rule.perLine);
-    const idx = i % rule.perLine;
-    const inLine = Math.min(rule.perLine, n - line * rule.perLine);
-    const along = (idx - (inLine - 1) / 2) * rule.step;
-    const across = (line - (lines - 1) / 2) * rule.lineGap;
-    out.push(rule.axis === "y" ? pt(anchor.x + across, anchor.y + along) : pt(anchor.x + along, anchor.y + across));
-  }
-  return out;
 }
 
 // ---------------------------------------------------------------------------

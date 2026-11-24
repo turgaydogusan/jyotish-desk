@@ -63,6 +63,13 @@ html {
   background: var(--bg);
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 body {
   margin: 0;
 }

@@ -9,7 +9,6 @@ import {
   pointInPolygon,
   signHouse,
   southCells,
-  stackPositions,
   type Point,
 } from "./geometry";
 import type { ChartStyle } from "./types";
@@ -102,31 +101,6 @@ test("circle: house 1 sits on the left and houses run counter-clockwise", () => 
   // 2. ev ekranda sol altta (y aşağı büyür).
   expect(cells[1].planetAnchor.y).toBeGreaterThan(50);
   expect(cells[3].planetAnchor.y).toBeGreaterThan(cells[1].planetAnchor.y);
-});
-
-test("stackPositions centres on the anchor and never puts two labels on the same spot", () => {
-  const rule = { axis: "y" as const, step: 5, perLine: 3, lineGap: 9 };
-  expect(stackPositions({ x: 10, y: 10 }, 1, rule)).toEqual([{ x: 10, y: 10 }]);
-  expect(stackPositions({ x: 10, y: 10 }, 2, rule)).toEqual([
-    { x: 10, y: 7.5 },
-    { x: 10, y: 12.5 },
-  ]);
-  const nine = stackPositions({ x: 50, y: 50 }, 9, rule);
-  const keys = new Set(nine.map((p) => `${p.x},${p.y}`));
-  expect(keys.size).toBe(9);
-  for (let i = 0; i < nine.length; i++)
-    for (let j = i + 1; j < nine.length; j++) {
-      const d = Math.hypot(nine[i].x - nine[j].x, nine[i].y - nine[j].y);
-      expect(d).toBeGreaterThanOrEqual(5);
-    }
-});
-
-test.each(STYLES)("%s: up to three planets in a house stay inside it", (style) => {
-  for (const c of chartCells(style, 0)) {
-    for (const p of stackPositions(c.planetAnchor, 3, c.stack)) {
-      expect(pointInPolygon(p, c.points), `house ${c.house}`).toBe(true);
-    }
-  }
 });
 
 test("circle: every house has a sign anchor inside the outer ring", () => {

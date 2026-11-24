@@ -155,3 +155,14 @@ test("localStorage persistence round-trips and survives corrupt data", () => {
   localStorage.setItem(LAYOUT_STORAGE_KEY, "{not json");
   expect(p.load()).toBeNull();
 });
+
+test("Cmd+digit typed in an input does not switch layouts", () => {
+  render(
+    <LayoutProvider persistence={memoryPersistence()}>
+      <Probe />
+      <input aria-label="field" />
+    </LayoutProvider>,
+  );
+  fireEvent.keyDown(screen.getByLabelText("field"), { key: "3", code: "Digit3", metaKey: true });
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.interview);
+});

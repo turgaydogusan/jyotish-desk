@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type Dispatch, type ReactNode } from "react";
 import { parseLayoutState, type Layout, type LayoutState, type Panel } from "./model";
 import type { LayoutPersistence } from "./persistence";
+import { isEditableTarget } from "../keyboard";
 import { activeLayout, layoutReducer, newId, normalizeState, type LayoutAction } from "./reducer";
 
 export const SAVE_DEBOUNCE_MS = 500;
@@ -78,7 +79,7 @@ export function LayoutProvider({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.isComposing) return;
+      if (e.repeat || e.isComposing || isEditableTarget(e.target)) return;
       if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) return;
       // Fiziksel tuş (`code`): AZERTY'de `key` rakam değildir.
       if (!/^Digit[1-9]$/.test(e.code)) return;

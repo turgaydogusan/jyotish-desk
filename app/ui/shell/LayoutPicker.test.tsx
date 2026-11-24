@@ -277,3 +277,44 @@ describe("inline name validation", () => {
     expect(screen.getByRole("textbox", { name: "Düzen adı" })).toHaveValue("Görüşme kopyası 3");
   });
 });
+
+describe("form target is pinned to the layout it was opened for", () => {
+  const twoUserLayouts = () => {
+    setup();
+    saveAsNamed("A");
+    saveAsNamed("B");
+    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "A", "B"]);
+  };
+  const switchAway = () => fireEvent.keyDown(window, { key: "4", code: "Digit4", metaKey: true });
+
+  test("rename: switching layouts while the form is open never renames another layout", () => {
+    twoUserLayouts();
+    menu();
+    fireEvent.click(item("Yeniden adlandır…"));
+    switchAway();
+    expect(picker()).toHaveDisplayValue("A");
+    const input = screen.queryByRole("textbox", { name: "Düzen adı" });
+    if (input) {
+      fireEvent.change(input, { target: { value: "Yeni" } });
+      fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+    }
+    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "A", "B"]);
+  });
+
+  test("delete: switching layouts while the confirmation is open never deletes another layout", () => {
+    twoUserLayouts();
+    menu();
+    fireEvent.click(item("Sil…"));
+    switchAway();
+    for (const b of screen.queryAllByRole("button", { name: /düzenini sil/ })) fireEvent.click(b);
+    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "A", "B"]);
+  });
+
+  test("the open form closes when the layout select changes", () => {
+    twoUserLayouts();
+    menu();
+    fireEvent.click(item("Yeniden adlandır…"));
+    fireEvent.change(picker(), { target: { value: BUILTIN_LAYOUT_IDS.transit } });
+    expect(screen.queryByRole("textbox", { name: "Düzen adı" })).not.toBeInTheDocument();
+  });
+});

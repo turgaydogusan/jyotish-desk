@@ -24,11 +24,15 @@ export function LayoutPicker() {
   const [focusOnOpen, setFocusOnOpen] = useState<"first" | "last">("first");
   const [mode, setMode] = useState<Mode>(null);
   const [name, setName] = useState("");
+  // Yeniden adlandırma/silme formu açıldığı andaki düzeni hedefler (etkin düzen sonradan değişebilir).
+  const [targetId, setTargetId] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   const menuId = useId();
   const errorId = useId();
   const activeLabel = layoutLabel(t, active);
+  const target = store.state.layouts.find((l) => l.id === targetId) ?? active;
+  const targetLabel = layoutLabel(t, target);
 
   const sameName = (a: string, b: string) =>
     a.trim().localeCompare(b.trim(), i18n.language, { sensitivity: "accent" }) === 0;
@@ -45,7 +49,7 @@ export function LayoutPicker() {
   };
 
   const nameError: NameError =
-    name.trim() === "" ? "nameEmpty" : isTaken(name, mode === "rename" ? active.id : undefined) ? "nameTaken" : null;
+    name.trim() === "" ? "nameEmpty" : isTaken(name, mode === "rename" ? target.id : undefined) ? "nameTaken" : null;
 
   const focusTrigger = () => triggerRef.current?.focus();
   const enabledItems = () =>
@@ -74,8 +78,14 @@ export function LayoutPicker() {
     // Yalnızca açılışta çalışır; focusOnOpen açılıştan önce ayarlanır.
   }, [menuOpen]);
 
+  // Etkin düzen değişirse (Cmd+rakam, seçici) açık form kapanır; yanlış düzene işlem yapılmaz.
+  useEffect(() => {
+    setMode(null);
+  }, [active.id]);
+
   const startMode = (next: Mode, initialName = "") => {
     setMenuOpen(false);
+    setTargetId(active.id);
     setName(initialName);
     setMode(next);
   };
@@ -88,7 +98,7 @@ export function LayoutPicker() {
     e.preventDefault();
     if (nameError !== null) return;
     if (mode === "saveAs") store.saveAs(name.trim());
-    if (mode === "rename") store.rename(active.id, name.trim());
+    if (mode === "rename") store.rename(target.id, name.trim());
     endMode();
   };
 
@@ -256,15 +266,15 @@ export function LayoutPicker() {
       )}
       {mode === "confirmDelete" && (
         <div className="layout-inline" role="group" aria-label={t("layout.delete")} onKeyDown={onInlineKey}>
-          <span>{t("layout.confirmDelete", { name: activeLabel })}</span>
+          <span>{t("layout.confirmDelete", { name: targetLabel })}</span>
           <button
             type="button"
             onClick={() => {
-              store.remove(active.id);
+              store.remove(target.id);
               endMode();
             }}
           >
-            {t("layout.deleteNamed", { name: activeLabel })}
+            {t("layout.deleteNamed", { name: targetLabel })}
           </button>
           <button type="button" autoFocus onClick={endMode}>
             {t("layout.cancel")}
