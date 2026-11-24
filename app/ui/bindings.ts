@@ -13,7 +13,7 @@ export const commands = {
 	 */
 	planetLongitudes: (jdUt: number | null, options?: InvokeOptions) => typedError<PlanetRow[], CommandError>(__TAURI_INVOKE("planet_longitudes", { jdUt }, options)),
 	/**  Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir. */
-	computeChart: (jdUt: number | null, lat: number | null, lon: number | null, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart_Serialize, CommandError>(__TAURI_INVOKE("compute_chart", { jdUt, lat, lon, settings }, options)),
+	computeChart: (jdUt: number | null, lat: number | null, lon: number | null, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("compute_chart", { jdUt, lat, lon, settings }, options)),
 	/**
 	 *  macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
 	 *  Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
@@ -55,7 +55,18 @@ export type CalcSettings = {
 };
 
 /**  M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir. */
-export type Chart = Chart_Serialize | Chart_Deserialize;
+export type Chart = {
+	meta: ChartMeta,
+	jd_ut: number | null,
+	geo_lat: number | null,
+	geo_lon: number | null,
+	/**  Nütasyon dahil (gerçek) ayanamsa, derece. */
+	ayanamsa_deg: number | null,
+	lagna: Lagna,
+	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
+	grahas: GrahaPosition[],
+	bhavas: Bhavas,
+};
 
 export type ChartMeta = {
 	engine_version: string,
@@ -71,34 +82,6 @@ export type ChartWarning =
 "LowPrecision" | 
 /**  Placidus kutup dairesinde hesaplanamadı; bhava başlangıçları Porphyry. */
 "PlacidusPolarFallback";
-
-/**  M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir. */
-export type Chart_Deserialize = {
-	meta: ChartMeta,
-	jd_ut: number | null,
-	geo_lat: number | null,
-	geo_lon: number | null,
-	/**  Nütasyon dahil (gerçek) ayanamsa, derece. */
-	ayanamsa_deg: number | null,
-	lagna: Lagna,
-	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
-	grahas: GrahaPosition_Deserialize[],
-	bhavas: Bhavas,
-};
-
-/**  M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir. */
-export type Chart_Serialize = {
-	meta: ChartMeta,
-	jd_ut: number | null,
-	geo_lat: number | null,
-	geo_lon: number | null,
-	/**  Nütasyon dahil (gerçek) ayanamsa, derece. */
-	ayanamsa_deg: number | null,
-	lagna: Lagna,
-	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
-	grahas: GrahaPosition_Serialize[],
-	bhavas: Bhavas,
-};
 
 /**  Yanma orbları, derece (BPHS). */
 export type CombustionOrbs = {
@@ -127,35 +110,7 @@ export type EngineStatus = {
 export type Graha = "Sun" | "Moon" | "Mars" | "Mercury" | "Jupiter" | "Venus" | "Saturn" | "Rahu" | "Ketu";
 
 /**  Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`). */
-export type GrahaPosition = GrahaPosition_Serialize | GrahaPosition_Deserialize;
-
-/**  Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`). */
-export type GrahaPosition_Deserialize = {
-	graha: Graha,
-	/**
-	 *  Rasi çerçevesinde boylam, [0, 360): `Sidereal` kipinde sidereal,
-	 *  `TropicalRasiSiderealNakshatra` kipinde tropikal.
-	 */
-	lon: number | null,
-	/**  Her kipte sidereal boylam; nakshatra ve pada buradan. */
-	sidereal_lon: number | null,
-	/**  Ekliptik enlem, derece. */
-	lat: number | null,
-	/**  Rasi çerçevesinde boylam hızı, derece/gün. */
-	speed: number | null,
-	retrograde: boolean,
-	sign: Sign,
-	deg_in_sign: number | null,
-	nakshatra: number,
-	pada: number,
-	combust: boolean,
-	/**  Düğümler için `None`. */
-	dignity?: Dignity | null,
-	house: number,
-};
-
-/**  Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`). */
-export type GrahaPosition_Serialize = {
+export type GrahaPosition = {
 	graha: Graha,
 	/**
 	 *  Rasi çerçevesinde boylam, [0, 360): `Sidereal` kipinde sidereal,

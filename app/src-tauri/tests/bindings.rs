@@ -12,6 +12,11 @@ fn bindings_ts_is_up_to_date() {
         .expect("export bindings");
     let fresh_text = std::fs::read_to_string(&fresh).expect("read fresh");
     let _ = std::fs::remove_file(&fresh);
+    // Her IPC tipi tek bir TS tipidir: `X_Serialize | X_Deserialize` ayrımı yok.
+    assert!(
+        !fresh_text.contains("_Serialize") && !fresh_text.contains("_Deserialize"),
+        "bindings split a type into serde phases; keep disable_serde_phases() in specta_builder"
+    );
     if std::env::var_os("UPDATE_BINDINGS").is_some() {
         std::fs::write(&committed, &fresh_text).expect("write bindings.ts");
         return;
