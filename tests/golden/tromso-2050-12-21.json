@@ -1,0 +1,41 @@
+{
+  "id": "tromso-2050-12-21",
+  "source": "swetest",
+  "source_version": "2.10.03",
+  "notes": "yüksek enlem (kutup dairesi içi); swetest -sid1 (Lahiri), mean node, UT 21.12.2050 18:15",
+  "settings": {
+    "schema_version": 1,
+    "zodiac": "Sidereal",
+    "ayanamsa": "Lahiri",
+    "node": "Mean",
+    "house_system": "WholeSign",
+    "dasha_year": 365.25,
+    "combustion_orbs": {
+      "moon": 12.0,
+      "mars": 17.0,
+      "mercury": 14.0,
+      "mercury_retro": 12.0,
+      "jupiter": 11.0,
+      "venus": 10.0,
+      "venus_retro": 8.0,
+      "saturn": 15.0
+    },
+    "sunrise_def": "DiskCenterNoRefraction"
+  },
+  "input": { "jd_ut": 2470162.2604166665, "lat": 69.6492, "lon": 18.9553 },
+  "expected": {
+    "ayanamsa_deg": 24.5722322,
+    "lagna_lon": 122.7704081,
+    "grahas": {
+      "Sun": 245.4957913,
+      "Moon": 343.1305929,
+      "Mars": 334.4084367,
+      "Mercury": 226.9308496,
+      "Jupiter": 131.2939590,
+      "Venus": 198.7634636,
+      "Saturn": 282.1128758,
+      "Rahu": 194.6218058,
+      "Ketu": 14.6218058
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "istanbul-1987-03-17",
+  "source": "swetest",
+  "source_version": "2.10.03",
+  "notes": "Türkiye, gün sonu; swetest -sid1 (Lahiri), mean node, UT 17.3.1987 23:59",
+  "settings": {
+    "schema_version": 1,
+    "zodiac": "Sidereal",
+    "ayanamsa": "Lahiri",
+    "node": "Mean",
+    "house_system": "WholeSign",
+    "dasha_year": 365.25,
+    "combustion_orbs": {
+      "moon": 12.0,
+      "mars": 17.0,
+      "mercury": 14.0,
+      "mercury_retro": 12.0,
+      "jupiter": 11.0,
+      "venus": 10.0,
+      "venus_retro": 8.0,
+      "saturn": 15.0
+    },
+    "sunrise_def": "DiskCenterNoRefraction"
+  },
+  "input": { "jd_ut": 2446872.4993055556, "lat": 41.0082, "lon": 28.9784 },
+  "expected": {
+    "ayanamsa_deg": 23.6773972,
+    "lagna_lon": 247.7970775,
+    "grahas": {
+      "Sun": 333.1795889,
+      "Moon": 182.9775858,
+      "Mars": 23.7079505,
+      "Mercury": 307.5125709,
+      "Jupiter": 339.9651178,
+      "Venus": 293.6062281,
+      "Saturn": 237.3395267,
+      "Rahu": 348.7926660,
+      "Ketu": 168.7926660
+    }
+  }
+}

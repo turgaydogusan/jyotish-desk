@@ -1,0 +1,41 @@
+{
+  "id": "buenos-aires-1923-06-15",
+  "source": "swetest",
+  "source_version": "2.10.03",
+  "notes": "güney yarıküre, UT gece yarısı; swetest -sid1 (Lahiri), mean node, UT 15.6.1923 0:00",
+  "settings": {
+    "schema_version": 1,
+    "zodiac": "Sidereal",
+    "ayanamsa": "Lahiri",
+    "node": "Mean",
+    "house_system": "WholeSign",
+    "dasha_year": 365.25,
+    "combustion_orbs": {
+      "moon": 12.0,
+      "mars": 17.0,
+      "mercury": 14.0,
+      "mercury_retro": 12.0,
+      "jupiter": 11.0,
+      "venus": 10.0,
+      "venus_retro": 8.0,
+      "saturn": 15.0
+    },
+    "sunrise_def": "DiskCenterNoRefraction"
+  },
+  "input": { "jd_ut": 2423585.5000000000, "lat": -34.6037, "lon": -58.3816 },
+  "expected": {
+    "ayanamsa_deg": 22.7866605,
+    "lagna_lon": 282.4427481,
+    "grahas": {
+      "Sun": 60.0914573,
+      "Moon": 65.5530117,
+      "Mars": 77.1168396,
+      "Mercury": 40.3151302,
+      "Jupiter": 197.0139964,
+      "Venus": 36.6202567,
+      "Saturn": 170.5716061,
+      "Rahu": 142.8186144,
+      "Ketu": 322.8186144
+    }
+  }
+}

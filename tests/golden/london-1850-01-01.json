@@ -1,0 +1,41 @@
+{
+  "id": "london-1850-01-01",
+  "source": "swetest",
+  "source_version": "2.10.03",
+  "notes": "19. yüzyıl, kuzey yarıküre, batı boylamı; swetest -sid1 (Lahiri), mean node, UT 1.1.1850 6:30",
+  "settings": {
+    "schema_version": 1,
+    "zodiac": "Sidereal",
+    "ayanamsa": "Lahiri",
+    "node": "Mean",
+    "house_system": "WholeSign",
+    "dasha_year": 365.25,
+    "combustion_orbs": {
+      "moon": 12.0,
+      "mars": 17.0,
+      "mercury": 14.0,
+      "mercury_retro": 12.0,
+      "jupiter": 11.0,
+      "venus": 10.0,
+      "venus_retro": 8.0,
+      "saturn": 15.0
+    },
+    "sunrise_def": "DiskCenterNoRefraction"
+  },
+  "input": { "jd_ut": 2396758.7708333335, "lat": 51.5074, "lon": -0.1278 },
+  "expected": {
+    "ayanamsa_deg": 21.7600039,
+    "lagna_lon": 235.3259541,
+    "grahas": {
+      "Sun": 258.8037833,
+      "Moon": 116.6412478,
+      "Mars": 59.5901560,
+      "Mercury": 266.3967455,
+      "Jupiter": 151.2515298,
+      "Venus": 244.1668035,
+      "Saturn": 340.1191625,
+      "Rahu": 124.4238814,
+      "Ketu": 304.4238814
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "new-delhi-2000-01-01",
+  "source": "swetest",
+  "source_version": "2.10.03",
+  "notes": "J2000; swetest -sid1 (Lahiri), mean node, UT 1.1.2000 12:00",
+  "settings": {
+    "schema_version": 1,
+    "zodiac": "Sidereal",
+    "ayanamsa": "Lahiri",
+    "node": "Mean",
+    "house_system": "WholeSign",
+    "dasha_year": 365.25,
+    "combustion_orbs": {
+      "moon": 12.0,
+      "mars": 17.0,
+      "mercury": 14.0,
+      "mercury_retro": 12.0,
+      "jupiter": 11.0,
+      "venus": 10.0,
+      "venus_retro": 8.0,
+      "saturn": 15.0
+    },
+    "sunrise_def": "DiskCenterNoRefraction"
+  },
+  "input": { "jd_ut": 2451545.0000000000, "lat": 28.6139, "lon": 77.2090 },
+  "expected": {
+    "ayanamsa_deg": 23.8532225,
+    "lagna_lon": 76.3380905,
+    "grahas": {
+      "Sun": 256.5156960,
+      "Moon": 199.4705290,
+      "Mars": 304.1100800,
+      "Mercury": 248.0360544,
+      "Jupiter": 1.3998647,
+      "Venus": 217.7125658,
+      "Saturn": 16.5424409,
+      "Rahu": 101.1874236,
+      "Ketu": 281.1874236
+    }
+  }
+}
