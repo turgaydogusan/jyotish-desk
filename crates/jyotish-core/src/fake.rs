@@ -15,6 +15,8 @@ pub(crate) struct FakeEph {
     /// Tropikal lagna.
     pub asc: f64,
     pub precision: Precision,
+    /// Yalnızca bu cisimler `Moshier` hassasiyetinde döner (`precision` ne olursa olsun).
+    pub moshier_bodies: Vec<Body>,
     pub porphyry_fallback: bool,
     /// Son `houses` çağrısında istenen sistem.
     pub last_house_system: Option<HouseSystem>,
@@ -37,6 +39,7 @@ impl Default for FakeEph {
             ayanamsa: 24.0,
             asc: 70.0,
             precision: Precision::SwissEph,
+            moshier_bodies: Vec::new(),
             porphyry_fallback: false,
             last_house_system: None,
         }
@@ -76,7 +79,13 @@ impl Ephemeris for FakeEph {
             lon_speed: speed,
             lat_speed: 0.0,
             dist_speed: 0.0,
-            precision: self.precision,
+            precision: if self.precision == Precision::Moshier
+                || self.moshier_bodies.contains(&body)
+            {
+                Precision::Moshier
+            } else {
+                self.precision
+            },
         })
     }
 

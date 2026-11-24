@@ -79,6 +79,9 @@ impl From<CoreError> for CommandError {
             CoreError::InvalidJulianDay(jd) => {
                 Self::new("invalid_julian_day", &[("jd", jd.to_string())])
             }
+            CoreError::NonFiniteResult(what) => {
+                Self::new("non_finite_result", &[("what", what.to_owned())])
+            }
         }
     }
 }
@@ -316,6 +319,9 @@ mod tests {
         let e = CommandError::from(CoreError::InvalidSettings("dasha_year"));
         assert_eq!(e.code, "invalid_settings");
         assert_eq!(e.params["field"], "dasha_year");
+        let e = CommandError::from(CoreError::NonFiniteResult("ayanamsa"));
+        assert_eq!(e.code, "non_finite_result");
+        assert_eq!(e.params["what"], "ayanamsa");
         assert_eq!(
             CommandError::from(CoreError::InvalidJulianDay(f64::NAN)).code,
             "invalid_julian_day"

@@ -13,4 +13,6 @@ pub enum CoreError {
     InvalidLocation { lat: f64, lon: f64 },
     #[error("invalid julian day: {0}")]
     InvalidJulianDay(f64),
+    #[error("non-finite ephemeris result: {0}")]
+    NonFiniteResult(&'static str),
 }

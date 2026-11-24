@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use ephemeris::SwissEph;
-use jyotish_core::{angular_distance, compute_chart, CalcSettings, Chart, Graha};
+use jyotish_core::{angular_distance, compute_chart, CalcSettings, Chart, ChartWarning, Graha};
 use serde::Deserialize;
 
 const GRAHA_TOL_ARCSEC: f64 = 2.0;
@@ -182,4 +182,15 @@ fn golden_charts_match_references() {
         "golden mismatches:\n{}",
         failures.join("\n")
     );
+}
+
+#[test]
+fn out_of_file_range_date_warns_low_precision() {
+    let mut eph = SwissEph::open(&ephe_dir()).expect("open ephemeris");
+    let settings = CalcSettings::default();
+    // 1700-01-01: ephemeris dosyalarının dışında, Moshier'e düşer.
+    let old = compute_chart(&mut eph, 2_341_972.5, 41.0, 29.0, &settings).expect("1700 chart");
+    assert_eq!(old.meta.warnings, [ChartWarning::LowPrecision]);
+    let j2000 = compute_chart(&mut eph, 2_451_545.0, 41.0, 29.0, &settings).expect("J2000 chart");
+    assert!(j2000.meta.warnings.is_empty());
 }

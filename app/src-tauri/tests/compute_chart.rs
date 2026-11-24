@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use ephemeris::{Engine, SwissEph};
-use jyotish_core::{CalcSettings, Graha};
+use jyotish_core::{AyanamsaSystem, CalcSettings, Graha};
 use jyotish_desk_lib::commands::compute_chart_blocking;
 
 #[test]
@@ -49,4 +49,15 @@ fn compute_chart_runs_on_the_engine_thread_and_maps_errors() {
     let err = compute_chart_blocking(&engine, 2_451_545.0, 0.0, 0.0, old).unwrap_err();
     assert_eq!(err.code, "unsupported_schema_version");
     assert_eq!(err.params["found"], "2");
+
+    let absurd = CalcSettings {
+        ayanamsa: AyanamsaSystem::Custom {
+            t0_jd: 1e300,
+            deg: 0.0,
+        },
+        ..CalcSettings::default()
+    };
+    let err = compute_chart_blocking(&engine, 2_451_545.0, 41.0, 29.0, absurd).unwrap_err();
+    assert_eq!(err.code, "invalid_settings");
+    assert_eq!(err.params["field"], "ayanamsa");
 }

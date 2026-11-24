@@ -167,6 +167,9 @@ impl Default for CalcSettings {
     }
 }
 
+/// Custom ayanamsa referans anı aralığı: yaklaşık −3000…+3000 yılları (Moshier aralığı).
+pub const CUSTOM_T0_JD_RANGE: std::ops::RangeInclusive<f64> = 625_000.0..=2_818_000.0;
+
 impl CalcSettings {
     /// Sürüm ve değer aralıklarını denetler. Sürüm göçü `store` planında yapılır;
     /// burada yalnızca desteklenen sürüm kabul edilir.
@@ -190,7 +193,8 @@ impl CalcSettings {
             return Err(CoreError::InvalidSettings("combustion_orbs"));
         }
         if let AyanamsaSystem::Custom { t0_jd, deg } = self.ayanamsa {
-            if !(t0_jd.is_finite() && deg.is_finite()) {
+            // NaN ve sonsuz her iki denetimde de dışarıda kalır.
+            if !(CUSTOM_T0_JD_RANGE.contains(&t0_jd) && deg.abs() < 360.0) {
                 return Err(CoreError::InvalidSettings("ayanamsa"));
             }
         }
@@ -347,5 +351,29 @@ mod tests {
             ..CalcSettings::default()
         };
         assert_eq!(s.validate(), Err(CoreError::InvalidSettings("ayanamsa")));
+    }
+
+    #[test]
+    fn validate_rejects_out_of_range_custom_ayanamsa() {
+        let custom = |t0_jd: f64, deg: f64| CalcSettings {
+            ayanamsa: AyanamsaSystem::Custom { t0_jd, deg },
+            ..CalcSettings::default()
+        };
+        for t0 in [1e300, -1e10, f64::MAX] {
+            assert_eq!(
+                custom(t0, 0.0).validate(),
+                Err(CoreError::InvalidSettings("ayanamsa")),
+                "t0_jd {t0}"
+            );
+        }
+        for deg in [1e300, 360.0, -360.0] {
+            assert_eq!(
+                custom(2_451_545.0, deg).validate(),
+                Err(CoreError::InvalidSettings("ayanamsa")),
+                "deg {deg}"
+            );
+        }
+        assert_eq!(custom(2_451_545.0, 23.85).validate(), Ok(()));
+        assert_eq!(custom(2_415_020.0, -4.0).validate(), Ok(()));
     }
 }

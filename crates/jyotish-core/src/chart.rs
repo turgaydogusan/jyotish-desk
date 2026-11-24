@@ -61,6 +61,22 @@ const PLANETS: [(Graha, Body); 7] = [
     (Graha::Saturn, Body::Saturn),
 ];
 
+/// Ephemeris çıktısı sonlu değilse hata verir; yanlış harita başarı gibi dönmesin.
+fn finite(v: f64, what: &'static str) -> Result<f64, CoreError> {
+    if v.is_finite() {
+        Ok(v)
+    } else {
+        Err(CoreError::NonFiniteResult(what))
+    }
+}
+
+fn finite_body(p: &ephemeris::BodyPosition) -> Result<(), CoreError> {
+    finite(p.lon, "graha")?;
+    finite(p.lat, "graha")?;
+    finite(p.lon_speed, "graha")?;
+    Ok(())
+}
+
 /// Rasi çerçevesinde ham konum.
 struct Raw {
     graha: Graha,
@@ -94,6 +110,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
 
     let mode = settings.ayanamsa.sidereal_mode();
     let ayanamsa = eph.ayanamsa(jd_ut, mode)?;
+    finite(ayanamsa.deg, "ayanamsa")?;
     let frame = match settings.zodiac {
         ZodiacMode::Sidereal => Zodiac::Sidereal(mode),
         ZodiacMode::TropicalRasiSiderealNakshatra => Zodiac::Tropical,
@@ -107,6 +124,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
     let mut raw = Vec::with_capacity(9);
     for (graha, body) in PLANETS {
         let p = eph.body(jd_ut, body, frame)?;
+        finite_body(&p)?;
         // Hassasiyet Güneş/Ay'dan alınır (Plan 01 notu: ayanamsa bayrağı güvenilmez).
         if matches!(graha, Graha::Sun | Graha::Moon)
             && p.precision == Precision::Moshier
@@ -122,6 +140,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         });
     }
     let rahu = eph.body(jd_ut, settings.node.body(), frame)?;
+    finite_body(&rahu)?;
     raw.push(Raw {
         graha: Graha::Rahu,
         lon: rahu.lon,
@@ -143,6 +162,10 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         settings.house_system.ephemeris_system(),
         frame,
     )?;
+    finite(houses.asc, "lagna")?;
+    for c in houses.cusps {
+        finite(c, "bhavas")?;
+    }
     if houses.porphyry_fallback {
         warnings.push(ChartWarning::PlacidusPolarFallback);
     }
@@ -347,6 +370,58 @@ mod tests {
         };
         let c = chart(&mut eph, &CalcSettings::default());
         assert_eq!(c.meta.warnings, [ChartWarning::LowPrecision]);
+    }
+
+    #[test]
+    fn low_precision_ignores_bodies_other_than_sun_and_moon() {
+        let warnings = |bodies: Vec<Body>| {
+            let mut eph = FakeEph {
+                moshier_bodies: bodies,
+                ..FakeEph::default()
+            };
+            chart(&mut eph, &CalcSettings::default()).meta.warnings
+        };
+        assert_eq!(warnings(vec![Body::Mars]), []);
+        assert_eq!(warnings(vec![Body::MeanNode]), []);
+        assert_eq!(warnings(vec![Body::Moon]), [ChartWarning::LowPrecision]);
+        assert_eq!(
+            warnings(vec![Body::Sun, Body::Moon]),
+            [ChartWarning::LowPrecision]
+        );
+    }
+
+    #[test]
+    fn non_finite_ephemeris_output_is_an_error() {
+        for zodiac in [
+            ZodiacMode::Sidereal,
+            ZodiacMode::TropicalRasiSiderealNakshatra,
+        ] {
+            let s = CalcSettings {
+                zodiac,
+                ..CalcSettings::default()
+            };
+            let mut eph = FakeEph {
+                ayanamsa: f64::NAN,
+                ..FakeEph::default()
+            };
+            assert_eq!(
+                compute_chart(&mut eph, JD, 41.0, 29.0, &s).unwrap_err(),
+                CoreError::NonFiniteResult("ayanamsa")
+            );
+            let mut eph = FakeEph::default().with(Body::Mars, f64::NAN, 1.0);
+            assert_eq!(
+                compute_chart(&mut eph, JD, 41.0, 29.0, &s).unwrap_err(),
+                CoreError::NonFiniteResult("graha")
+            );
+            let mut eph = FakeEph {
+                asc: f64::NAN,
+                ..FakeEph::default()
+            };
+            assert_eq!(
+                compute_chart(&mut eph, JD, 41.0, 29.0, &s).unwrap_err(),
+                CoreError::NonFiniteResult("lagna")
+            );
+        }
     }
 
     #[test]
