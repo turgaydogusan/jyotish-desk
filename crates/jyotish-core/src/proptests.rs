@@ -35,3 +35,67 @@ proptest! {
         prop_assert!((rebuilt - normalize(lon)).abs() < 1e-9);
     }
 }
+
+mod chart_properties {
+    use ephemeris::Body;
+    use proptest::prelude::*;
+
+    use crate::chart::compute_chart;
+    use crate::fake::FakeEph;
+    use crate::houses::house_from_cusps;
+    use crate::settings::{CalcSettings, ZodiacMode};
+    use crate::zodiac::{angular_distance, normalize};
+
+    const PLANETS: [Body; 7] = [
+        Body::Sun,
+        Body::Moon,
+        Body::Mars,
+        Body::Mercury,
+        Body::Jupiter,
+        Body::Venus,
+        Body::Saturn,
+    ];
+
+    proptest! {
+        #[test]
+        fn rahu_and_ketu_are_exactly_opposite(
+            node in 0.0f64..360.0,
+            ayan in 20.0f64..26.0,
+            tropical in any::<bool>(),
+        ) {
+            let mut eph = FakeEph { ayanamsa: ayan, ..FakeEph::default() }
+                .with(Body::MeanNode, node, -0.053);
+            let mut s = CalcSettings::default();
+            if tropical {
+                s.zodiac = ZodiacMode::TropicalRasiSiderealNakshatra;
+            }
+            let c = compute_chart(&mut eph, 2_451_545.0, 0.0, 0.0, &s).unwrap();
+            let (rahu, ketu) = (&c.grahas[7], &c.grahas[8]);
+            prop_assert_eq!(ketu.lon, normalize(rahu.lon + 180.0));
+            prop_assert!((angular_distance(rahu.lon, ketu.lon) - 180.0).abs() < 1e-9);
+            prop_assert!(
+                (angular_distance(rahu.sidereal_lon, ketu.sidereal_lon) - 180.0).abs() < 1e-9
+            );
+        }
+
+        #[test]
+        fn whole_sign_house_is_sign_offset_from_lagna(
+            lons in proptest::array::uniform7(0.0f64..360.0),
+            asc in 0.0f64..360.0,
+            node in 0.0f64..360.0,
+        ) {
+            let mut eph = FakeEph { asc, ..FakeEph::default() };
+            for (body, lon) in PLANETS.iter().zip(lons) {
+                eph = eph.with(*body, lon, 1.0);
+            }
+            eph = eph.with(Body::MeanNode, node, -0.053);
+            let c = compute_chart(&mut eph, 2_451_545.0, 0.0, 0.0, &CalcSettings::default())
+                .unwrap();
+            for p in &c.grahas {
+                let expected = (p.sign.index() + 12 - c.lagna.sign.index()) % 12 + 1;
+                prop_assert_eq!(usize::from(p.house), expected, "{:?}", p.graha);
+                prop_assert_eq!(p.house, house_from_cusps(p.lon, &c.bhavas.cusps));
+            }
+        }
+    }
+}

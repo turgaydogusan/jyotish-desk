@@ -2,6 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::dignity::Dignity;
+use crate::zodiac::Sign;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Graha {
     Sun,
@@ -32,6 +35,30 @@ impl Graha {
     pub fn is_node(self) -> bool {
         matches!(self, Self::Rahu | Self::Ketu)
     }
+}
+
+/// Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GrahaPosition {
+    pub graha: Graha,
+    /// Rasi çerçevesinde boylam, [0, 360): `Sidereal` kipinde sidereal,
+    /// `TropicalRasiSiderealNakshatra` kipinde tropikal.
+    pub lon: f64,
+    /// Her kipte sidereal boylam; nakshatra ve pada buradan.
+    pub sidereal_lon: f64,
+    /// Ekliptik enlem, derece.
+    pub lat: f64,
+    /// Rasi çerçevesinde boylam hızı, derece/gün.
+    pub speed: f64,
+    pub retrograde: bool,
+    pub sign: Sign,
+    pub deg_in_sign: f64,
+    pub nakshatra: u8,
+    pub pada: u8,
+    pub combust: bool,
+    /// Düğümler için `None`.
+    pub dignity: Option<Dignity>,
+    pub house: u8,
 }
 
 #[cfg(test)]
