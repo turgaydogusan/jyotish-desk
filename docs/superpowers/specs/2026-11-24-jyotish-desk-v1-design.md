@@ -4,7 +4,7 @@ Tarih: 2026-11-24 · Durum: Onay bekliyor · Kod adı: `jyotish-desk` (geçici)
 
 ## 1. Amaç
 
-Profesyonel Jyotish (Vedik astroloji) yazılımı. İşlevsel hedef: Kala (Ernst Wilhelm) seviyesi. Kala'nın adı, arayüz düzeni ve yorum metinleri kopyalanmaz. Klasik hesap yöntemleri (Parashara, Jaimini, dasha) özgün olarak uygulanır (clean-room).
+Profesyonel Jyotish (Vedik astroloji) yazılımı. İşlevsel hedef: piyasadaki profesyonel Jyotish yazılımları seviyesi. Başka ürünlerin adı, arayüz düzeni ve yorum metinleri kopyalanmaz. Klasik hesap yöntemleri (Parashara, Jaimini, dasha) özgün olarak uygulanır (clean-room).
 
 - **Kitle:** Profesyonel astrologlar. Yoğun tablolar, danışan veritabanı, raporlar, klavye ağırlıklı masaüstü kullanımı.
 - **Lisans:** AGPL-3.0-or-later. Ephemeris: Swiss Ephemeris (AGPL). Katkı DCO ile, CLA yok.
@@ -29,7 +29,7 @@ Bu belge yalnızca 1 ve 2 numaralı alt projeleri kapsar.
 
 **Kapsama girenler:**
 - Doğum verisi girişi. Çevrimdışı atlas (GeoNames `cities1000`), geçmişe dönük saat dilimleri (IANA tzdb), LMT, manuel koordinat ve manuel UTC ofseti.
-- Zodyak: Sidereal (varsayılan) ve tropikal rasi + sidereal nakshatra (Kala yaklaşımı).
+- Zodyak: Sidereal (varsayılan) ve tropikal rasi + sidereal nakshatra (karma yaklaşım).
 - Ayanamsa: Lahiri (varsayılan), Raman, KP, True Chitrapaksha ve özel değer.
 - Rasi ve 16 varga (Shodasavarga, Parashara tanımları). Çizim stili Kuzey, Güney veya Doğu Hint.
 - Graha tablosu: boylam, enlem, hız, retro, burç, burç içi derece, nakshatra, pada, yanma (combust), dignity ve ev.
@@ -100,7 +100,7 @@ LICENSE, NOTICE
 - **`BirthData`**: `name`, `gender?`, `date`, `time: Option`, `time_certainty {Exact, Approx, Unknown}`, `place {name, country, admin1, lat, lon, geoname_id?}`, `tz {Iana(id) | Fixed(secs) | Lmt}`, `fold: Option<Earlier|Later>`, `notes`
 - **`ResolvedMoment`**: `utc`, `jd_ut`, `offset_secs`, `abbrev`, `warnings[]`
 - **`CalcSettings`** (sürümlü): `schema_version`, `zodiac {Sidereal, TropicalRasiSiderealNakshatra}`, `ayanamsa {Lahiri, Raman, KP, TrueChitra, Custom{t0_jd, deg}}`, `node {Mean, True}`, `house_system`, `dasha_year`, `combustion_orbs`, `sunrise_def`
-- **`ViewState`** (sürümlü, toleranslı ayrıştırma): `schema_version`, `chart_style`, `active_tab`, `open_tabs[]`, `open_vargas[]`, `dasha_expanded_path[]`, `transit_overlay {on}`, `panel_layout`
+- **`ViewState`** (sürümlü, toleranslı ayrıştırma): `schema_version`, `panel_layout` (düzenler, paneller ve panel başına varga/stil/transit ayarları; bkz. `2026-11-24-ui-design.md` §3.2), `dasha_expanded_path[]`
 - **`AppPrefs`** (genel): `locale`, varsayılan `CalcSettings`, varsayılan `ViewState`
 - **`GrahaPosition`**: `graha`, `lon`, `lat`, `speed`, `retrograde`, `sign`, `deg_in_sign`, `nakshatra`, `pada`, `combust`, `dignity`, `house`
 - **`VargaChart`**: `varga (D1..D60)`, `lagna_sign`, `placements[(graha, sign, deg)]`
@@ -233,7 +233,7 @@ FTS5: clients.name, client_notes.body
 ## 12. Riskler
 
 - **CLA olmadığı için lisans sonradan değiştirilemez.** iPad kapısı kalıcı olarak kapanır. Bu bilinçli bir kabul; fikir değişirse CLA'ya şimdi geçilmeli.
-- **"Tam eşdeğer" iddiası v1'i aşıyor.** v1 sonrası için Kala özellik envanteri çıkarılacak (clean-room, yalnızca klasik kaynaklardan).
+- **"Tam eşdeğer" iddiası v1'i aşıyor.** v1 sonrası için profesyonel Jyotish özellik envanteri çıkarılacak (clean-room, yalnızca klasik kaynaklardan).
 - **JHora kapalı kaynak.** Ayar uyumsuzluğu sahte farklar üretebilir. Bu yüzden her fixture'a ayar dökümü eklenir ve `swetest` ikinci kaynak olarak kullanılır.
 - **tzdb bayatlayabilir ve 1970 öncesinde hatalı olabilir.** Updater ve manuel ofset bu riski hafifletir.
 - **GeoNames küçük köyleri kapsamıyor.** Manuel koordinat girişi birinci sınıf bir özellik olmalı.
