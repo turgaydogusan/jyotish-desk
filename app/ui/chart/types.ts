@@ -34,7 +34,7 @@ export function isChartStyle(v: unknown): v is ChartStyle {
 
 /** Çizimde kullanılan metinler; çağıran i18n'den doldurur. */
 export interface ChartLabels {
-  /** Erişilebilir ad (svg `aria-label`). */
+  /** Erişilebilir ad (svg `role="group"` + `aria-label`). */
   title: string;
   /** Graha kısaltmaları. */
   graha: Record<GrahaId, string>;
@@ -44,4 +44,10 @@ export interface ChartLabels {
   lagna: string;
   /** Ev hücresinin erişilebilir adı. */
   house: (house: number, sign: string) => string;
+  /** Erişilebilir adda `℞` yerine okunan sözcük (örn. "retro"). */
+  retro: string;
+  /** Erişilebilir adda `c` yerine okunan sözcük (örn. "yanık"). */
+  combust: string;
+  /** Erişilebilir adda alt çizgi yerine okunan sözcük (örn. "vargottama"). */
+  vargottama: string;
 }

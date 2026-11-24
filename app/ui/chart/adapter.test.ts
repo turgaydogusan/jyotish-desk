@@ -25,3 +25,13 @@ test("rows map to chart planets; null longitudes and unknown bodies are skipped"
     { id: "Ketu", sign: 9, degInSign: 10, retrograde: true },
   ]);
 });
+
+test("non-finite longitudes are skipped explicitly", () => {
+  const data = chartDataFromPlanetRows([
+    { body: "Sun", lon: Number.NaN, retrograde: false },
+    { body: "Moon", lon: Number.POSITIVE_INFINITY, retrograde: false },
+    { body: "Mars", lon: Number.NEGATIVE_INFINITY, retrograde: false },
+    { body: "Venus", lon: 45, retrograde: false },
+  ]);
+  expect(data.planets).toEqual([{ id: "Venus", sign: 1, degInSign: 15, retrograde: false }]);
+});

@@ -15,32 +15,57 @@
   fill: var(--select);
   stroke-width: 1;
 }
+/* Lagna evi zaten --select zeminli: vurgu orada kalın çizgi ve 500 ağırlıkla ayrışır. */
+.chart-cell--lagna.chart-cell--highlight {
+  stroke: var(--ink-strong);
+  stroke-width: 1.4;
+}
+.chart-text, .chart-sign {
+  font-variant-numeric: tabular-nums;
+}
 .chart-text {
   fill: var(--ink-strong);
   font-size: 4.2px;
   font-weight: var(--fw-regular);
 }
 .chart-sign {
-  fill: var(--ink);
+  fill: var(--ink-strong);
   font-size: 3.4px;
+  font-weight: var(--fw-regular);
 }
+.chart-house--highlight .chart-sign {
+  font-weight: var(--fw-medium);
+}
+.chart-house,
 .chart-planet {
   cursor: default;
 }
+.chart-house:focus,
 .chart-planet:focus {
   outline: none;
+}
+/* Odak halkası 2 px --ink (spec §6); viewBox ölçeğinden bağımsız. */
+.chart-house:focus-visible .chart-cell {
+  stroke: var(--ink);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
 }
 .chart-planet:focus-visible .chart-text,
 .chart-planet--highlight .chart-text {
   font-weight: var(--fw-medium);
 }
-.chart-planet--highlight .chart-planet-bg {
-  fill: var(--select);
-}
 .chart-planet-bg {
   fill: transparent;
 }
+/* Vurgulu gezegen lagna evinin --select zemininde de çerçeveyle seçilir. */
+.chart-planet--highlight .chart-planet-bg {
+  fill: var(--select);
+  stroke: var(--ink);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
 .chart-planet:focus-visible .chart-planet-bg {
   stroke: var(--ink);
-  stroke-width: 0.5;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
 }

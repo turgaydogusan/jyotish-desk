@@ -1,7 +1,10 @@
 import {
   chartCells,
   circleCells,
+  estimateLabelWidth,
   houseSign,
+  layoutLabels,
+  LABEL_FONT,
   northCells,
   pointInPolygon,
   signHouse,
@@ -24,6 +27,21 @@ test("house ↔ sign mapping is whole-sign from the ascendant", () => {
   expect(houseSign(4, 1)).toBe(4);
   expect(houseSign(10, 5)).toBe(2);
   for (let asc = 0; asc < 12; asc++) for (let h = 1; h <= 12; h++) expect(signHouse(asc, houseSign(asc, h))).toBe(h);
+});
+
+test("house ↔ sign mapping normalises out-of-range ascendants", () => {
+  expect(houseSign(12, 1)).toBe(0);
+  expect(houseSign(-1, 1)).toBe(11);
+  expect(houseSign(-1, 3)).toBe(1);
+  expect(signHouse(12, 0)).toBe(1);
+  expect(signHouse(-1, 0)).toBe(2);
+  expect(signHouse(13, 0)).toBe(12);
+  for (const asc of [12, -1, 25, -13]) for (let h = 1; h <= 12; h++) {
+    const s = houseSign(asc, h);
+    expect(s).toBeGreaterThanOrEqual(0);
+    expect(s).toBeLessThan(12);
+    expect(signHouse(asc, s)).toBe(h);
+  }
 });
 
 test.each(STYLES)("%s: 12 houses, each sign exactly once, house 1 holds the ascendant", (style) => {
@@ -107,6 +125,86 @@ test.each(STYLES)("%s: up to three planets in a house stay inside it", (style) =
   for (const c of chartCells(style, 0)) {
     for (const p of stackPositions(c.planetAnchor, 3, c.stack)) {
       expect(pointInPolygon(p, c.points), `house ${c.house}`).toBe(true);
+    }
+  }
+});
+
+test("circle: every house has a sign anchor inside the outer ring", () => {
+  for (const c of circleCells(2)) {
+    expect(c.signAnchor, `house ${c.house}`).not.toBeNull();
+    const r = Math.hypot(c.signAnchor!.x - 50, c.signAnchor!.y - 50);
+    expect(r).toBeGreaterThan(36);
+    expect(r).toBeLessThan(48);
+    expect(pointInPolygon(c.signAnchor!, c.points)).toBe(true);
+  }
+});
+
+test("label width estimate grows with character count and font size", () => {
+  expect(estimateLabelWidth("Ra℞", LABEL_FONT)).toBeGreaterThan(estimateLabelWidth("Ra", LABEL_FONT));
+  expect(estimateLabelWidth("Me℞c", LABEL_FONT)).toBeCloseTo((4 / 3) * estimateLabelWidth("Ra℞", LABEL_FONT) - (1 / 3) * estimateLabelWidth("", LABEL_FONT), 6);
+  expect(estimateLabelWidth("Me℞c", 2)).toBeLessThan(estimateLabelWidth("Me℞c", 4));
+});
+
+// Beş gezegen, hepsi retro ve yanık: en uzun gerçekçi etiketler.
+const CROWD = ["Ra℞c", "Me℞c", "Ma℞c", "Ju℞c", "Sa℞c"];
+
+type Box = { x: number; y: number; width: number; height: number };
+const corners = (b: Box): Point[] => [
+  { x: b.x - b.width / 2, y: b.y - b.height / 2 },
+  { x: b.x + b.width / 2, y: b.y - b.height / 2 },
+  { x: b.x + b.width / 2, y: b.y + b.height / 2 },
+  { x: b.x - b.width / 2, y: b.y + b.height / 2 },
+];
+const overlap = (a: Box, b: Box) =>
+  Math.abs(a.x - b.x) < (a.width + b.width) / 2 && Math.abs(a.y - b.y) < (a.height + b.height) / 2;
+
+function expectPairwiseDisjoint(boxes: Box[], what: string) {
+  for (let i = 0; i < boxes.length; i++)
+    for (let j = i + 1; j < boxes.length; j++) expect(overlap(boxes[i], boxes[j]), `${what}: ${i}×${j}`).toBe(false);
+}
+
+test.each(["north", "south"] as const)("%s: five marked planets fit in every house without overlapping", (style) => {
+  for (const asc of [0, 7]) {
+    for (const c of chartCells(style, asc)) {
+      const n = CROWD.slice(0, 5);
+      const { boxes, fontSize } = layoutLabels(c, n, "As");
+      expect(boxes).toHaveLength(5);
+      boxes.forEach((b, i) => expect(b.width).toBeGreaterThanOrEqual(estimateLabelWidth(n[i], fontSize) - 1e-9));
+      expectPairwiseDisjoint(boxes, `house ${c.house}`);
+      for (const b of boxes)
+        for (const p of corners(b)) expect(pointInPolygon(p, c.points), `house ${c.house} corner ${p.x},${p.y}`).toBe(true);
+    }
+  }
+});
+
+test("circle: five marked planets stay within the radial and angular bounds of every house", () => {
+  for (const c of circleCells(0)) {
+    const { boxes } = layoutLabels(c, CROWD, "As");
+    expect(boxes).toHaveLength(5);
+    expectPairwiseDisjoint(boxes, `house ${c.house}`);
+    const centre = 180 + (c.house - 1) * 30;
+    for (const b of boxes) {
+      for (const p of corners(b)) {
+        const r = Math.hypot(p.x - 50, p.y - 50);
+        expect(r, `house ${c.house} r`).toBeLessThanOrEqual(48);
+        const a = (Math.atan2(-(p.y - 50), p.x - 50) * 180) / Math.PI;
+        const d = ((a - centre + 540) % 360) - 180;
+        expect(Math.abs(d), `house ${c.house} angle`).toBeLessThanOrEqual(15);
+      }
+      // Kutunun merkeze en yakın noktası bile iç çemberin dışında kalır.
+      const nx = Math.min(Math.max(50, b.x - b.width / 2), b.x + b.width / 2);
+      const ny = Math.min(Math.max(50, b.y - b.height / 2), b.y + b.height / 2);
+      expect(Math.hypot(nx - 50, ny - 50), `house ${c.house} inner`).toBeGreaterThanOrEqual(18);
+    }
+  }
+});
+
+test("a single short label keeps the full font size at the planet anchor", () => {
+  for (const style of STYLES) {
+    for (const c of chartCells(style, 0)) {
+      const { boxes, fontSize } = layoutLabels(c, ["Su"]);
+      expect(fontSize).toBe(LABEL_FONT);
+      expect(Math.hypot(boxes[0].x - c.planetAnchor.x, boxes[0].y - c.planetAnchor.y), `${style} ${c.house}`).toBeLessThan(6);
     }
   }
 });

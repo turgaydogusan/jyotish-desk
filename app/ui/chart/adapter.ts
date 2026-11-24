@@ -13,8 +13,11 @@ export function signAndDegree(lon: number): { sign: number; degInSign: number } 
 export function chartDataFromPlanetRows(rows: readonly PlanetRow[]): ChartData {
   const planets: ChartData["planets"] = [];
   for (const r of rows) {
-    if (r.lon === null || !isGrahaId(r.body)) continue;
-    planets.push({ id: r.body, ...signAndDegree(r.lon), retrograde: r.retrograde });
+    // Sonlu olmayan boylam (NaN, ±∞) gösterilemez; açıkça atlanır.
+    if (r.lon === null || !Number.isFinite(r.lon) || !isGrahaId(r.body)) continue;
+    const pos = signAndDegree(r.lon);
+    if (!Number.isInteger(pos.sign) || pos.sign < 0 || pos.sign > 11) continue;
+    planets.push({ id: r.body, ...pos, retrograde: r.retrograde });
   }
   return { ascSign: null, planets };
 }
