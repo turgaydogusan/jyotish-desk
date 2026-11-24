@@ -6,6 +6,7 @@ use crate::settings::HouseSystem;
 use crate::zodiac::{deg_in_sign, nakshatra_pada, normalize, Sign};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Lagna {
     /// Rasi çerçevesinde boylam.
     pub lon: f64,
@@ -34,6 +35,7 @@ impl Lagna {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Bhavas {
     pub system: HouseSystem,
     /// İlk bhavadan başlayarak 12 bhavanın başlangıç boylamı (rasi çerçevesi).

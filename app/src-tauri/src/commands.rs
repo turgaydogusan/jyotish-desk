@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use ephemeris::{Body, Engine, EphError, Ephemeris, SiderealMode, SwissEph, Zodiac};
+use jyotish_core::{CalcSettings, Chart, CoreError};
 use serde::Serialize;
 use specta::Type;
 use tauri::State;
@@ -57,6 +58,31 @@ impl From<EphError> for CommandError {
     }
 }
 
+impl From<CoreError> for CommandError {
+    fn from(e: CoreError) -> Self {
+        match e {
+            CoreError::Ephemeris(e) => e.into(),
+            CoreError::UnsupportedSchemaVersion { found, supported } => Self::new(
+                "unsupported_schema_version",
+                &[
+                    ("found", found.to_string()),
+                    ("supported", supported.to_string()),
+                ],
+            ),
+            CoreError::InvalidSettings(field) => {
+                Self::new("invalid_settings", &[("field", field.to_owned())])
+            }
+            CoreError::InvalidLocation { lat, lon } => Self::new(
+                "invalid_location",
+                &[("lat", lat.to_string()), ("lon", lon.to_string())],
+            ),
+            CoreError::InvalidJulianDay(jd) => {
+                Self::new("invalid_julian_day", &[("jd", jd.to_string())])
+            }
+        }
+    }
+}
+
 const GRAHAS: [(Body, &str); 8] = [
     (Body::Sun, "Sun"),
     (Body::Moon, "Moon"),
@@ -69,7 +95,7 @@ const GRAHAS: [(Body, &str); 8] = [
 ];
 
 /// Dokuz grahanın Lahiri sidereal boylamları. Ketu = Rahu + 180°.
-/// Spike amaçlıdır; gerçek hesap Plan 04'te `jyotish-core`'a taşınır.
+/// Spike amaçlıdır; arayüz `compute_chart`'a geçince kaldırılır.
 pub fn planet_rows(eph: &mut dyn Ephemeris, jd_ut: f64) -> Result<Vec<PlanetRow>, EphError> {
     let zodiac = Zodiac::Sidereal(SiderealMode::Lahiri);
     let mut rows = Vec::with_capacity(9);
@@ -119,6 +145,39 @@ pub async fn planet_longitudes(
     .await
     .map_err(|e| CommandError::new("engine_stopped", &[("detail", e.to_string())]))???;
     Ok(rows)
+}
+
+/// `compute_chart` komutunun gövdesi: hesap motor iş parçacığında yapılır, burada iş
+/// mantığı yoktur. Bloklar; async bağlamdan `spawn_blocking` içinde çağrılmalıdır.
+pub fn compute_chart_blocking(
+    engine: &Engine,
+    jd_ut: f64,
+    lat: f64,
+    lon: f64,
+    settings: CalcSettings,
+) -> Result<Chart, CommandError> {
+    let chart = engine.call(move |se: &mut SwissEph| {
+        jyotish_core::compute_chart(se, jd_ut, lat, lon, &settings)
+    })??;
+    Ok(chart)
+}
+
+/// Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir.
+#[tauri::command]
+#[specta::specta]
+pub async fn compute_chart(
+    engine: State<'_, Arc<Engine>>,
+    jd_ut: f64,
+    lat: f64,
+    lon: f64,
+    settings: CalcSettings,
+) -> Result<Chart, CommandError> {
+    let engine = Arc::clone(&engine);
+    tauri::async_runtime::spawn_blocking(move || {
+        compute_chart_blocking(&engine, jd_ut, lat, lon, settings)
+    })
+    .await
+    .map_err(|e| CommandError::new("engine_stopped", &[("detail", e.to_string())]))?
 }
 
 /// macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
@@ -237,5 +296,33 @@ mod tests {
         let sun = rows.iter().find(|r| r.body == "Sun").unwrap();
         // J2000 tropikal Güneş ≈ 280.37°, Lahiri ≈ 23.86° → sidereal ≈ 256.5°.
         assert!((256.0..257.0).contains(&sun.lon), "sun {}", sun.lon);
+    }
+
+    #[test]
+    fn core_error_codes_are_stable() {
+        use jyotish_core::CoreError;
+        let e = CommandError::from(CoreError::InvalidLocation {
+            lat: 91.0,
+            lon: 0.0,
+        });
+        assert_eq!(e.code, "invalid_location");
+        assert_eq!(e.params["lon"], "0");
+        let e = CommandError::from(CoreError::UnsupportedSchemaVersion {
+            found: 2,
+            supported: 1,
+        });
+        assert_eq!(e.code, "unsupported_schema_version");
+        assert_eq!(e.params["supported"], "1");
+        let e = CommandError::from(CoreError::InvalidSettings("dasha_year"));
+        assert_eq!(e.code, "invalid_settings");
+        assert_eq!(e.params["field"], "dasha_year");
+        assert_eq!(
+            CommandError::from(CoreError::InvalidJulianDay(f64::NAN)).code,
+            "invalid_julian_day"
+        );
+        assert_eq!(
+            CommandError::from(CoreError::Ephemeris(EphError::EngineStopped)).code,
+            "engine_stopped"
+        );
     }
 }

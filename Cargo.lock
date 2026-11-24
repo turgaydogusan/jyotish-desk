@@ -1845,6 +1845,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+ "specta",
  "thiserror 2.0.21",
 ]
 
@@ -1853,6 +1854,7 @@ name = "jyotish-desk"
 version = "0.1.0"
 dependencies = [
  "ephemeris",
+ "jyotish-core",
  "serde",
  "specta",
  "specta-typescript",

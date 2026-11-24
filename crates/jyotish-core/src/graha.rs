@@ -6,6 +6,7 @@ use crate::dignity::Dignity;
 use crate::zodiac::Sign;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Graha {
     Sun,
     Moon,
@@ -39,6 +40,7 @@ impl Graha {
 
 /// Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct GrahaPosition {
     pub graha: Graha,
     /// Rasi çerçevesinde boylam, [0, 360): `Sidereal` kipinde sidereal,

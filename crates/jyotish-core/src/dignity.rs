@@ -7,6 +7,7 @@ use crate::graha::Graha;
 use crate::zodiac::Sign;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Dignity {
     Exalted,
     Moolatrikona,
@@ -21,6 +22,7 @@ pub enum Dignity {
 
 /// Doğal (naisargika) ilişki.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Relation {
     Friend,
     Neutral,

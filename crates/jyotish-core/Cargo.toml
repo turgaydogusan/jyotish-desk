@@ -6,7 +6,12 @@ license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 
+[features]
+# Uygulama katmanı TS tipleri üretmek için açar (tauri-specta). Çekirdek hesap etkilenmez.
+specta = ["dep:specta"]
+
 [dependencies]
+specta = { version = "=2.0.0-rc.28", features = ["derive"], optional = true }
 ephemeris = { path = "../ephemeris" }
 serde = { version = "1", features = ["derive"] }
 thiserror.workspace = true

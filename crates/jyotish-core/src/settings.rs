@@ -9,6 +9,7 @@ use crate::CoreError;
 pub const CALC_SETTINGS_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum ZodiacMode {
     /// Burç, nakshatra ve evler sidereal boylamdan.
     Sidereal,
@@ -17,6 +18,7 @@ pub enum ZodiacMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum AyanamsaSystem {
     Lahiri,
     Raman,
@@ -47,6 +49,7 @@ impl AyanamsaSystem {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum NodeKind {
     Mean,
     True,
@@ -62,6 +65,7 @@ impl NodeKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum HouseSystem {
     WholeSign,
     /// Bhava chalit: Porphyry madhyaları, sandhi'ler bhava başlangıcı.
@@ -82,6 +86,7 @@ impl HouseSystem {
 
 /// Yanma orbları, derece (BPHS).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct CombustionOrbs {
     pub moon: f64,
     pub mars: f64,
@@ -125,6 +130,7 @@ impl CombustionOrbs {
 
 /// Gün doğumu tanımı. Bu planda kullanılmaz (M3 panchang); ayar olarak saklanır.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum SunriseDef {
     /// Disk merkezi, kırılmasız (`SE_BIT_HINDU_RISING`).
     DiskCenterNoRefraction,
@@ -133,6 +139,7 @@ pub enum SunriseDef {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct CalcSettings {
     pub schema_version: u32,
     pub zodiac: ZodiacMode,

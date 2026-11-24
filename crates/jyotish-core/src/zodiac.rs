@@ -24,6 +24,7 @@ pub fn angular_distance(a: f64, b: f64) -> f64 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Sign {
     Aries,
     Taurus,

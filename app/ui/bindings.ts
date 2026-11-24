@@ -12,6 +12,8 @@ export const commands = {
 	 *  `State<'_, _>` `'static` olmadığından motor `Arc` olarak yönetilir ve kapanışa klonlanır.
 	 */
 	planetLongitudes: (jdUt: number | null, options?: InvokeOptions) => typedError<PlanetRow[], CommandError>(__TAURI_INVOKE("planet_longitudes", { jdUt }, options)),
+	/**  Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir. */
+	computeChart: (jdUt: number | null, lat: number | null, lon: number | null, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart_Serialize, CommandError>(__TAURI_INVOKE("compute_chart", { jdUt, lat, lon, settings }, options)),
 	/**
 	 *  macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
 	 *  Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
@@ -20,21 +22,202 @@ export const commands = {
 };
 
 /* Types */
+export type AyanamsaSystem = "Lahiri" | "Raman" | 
+/**  Krishnamurti (KP). */
+"Kp" | 
+/**  True Chitrapaksha (Spica 180°). */
+"TrueChitra" | 
+/**  `t0_jd` (UT) anında ayanamsa `deg` derecedir; SE presesyonla ilerletir. */
+{ Custom: {
+	t0_jd: number | null,
+	deg: number | null,
+} };
+
+export type Bhavas = {
+	system: HouseSystem,
+	/**
+	 *  İlk bhavadan başlayarak 12 bhavanın başlangıç boylamı (rasi çerçevesi).
+	 *  Whole Sign: burç başları. Sripati: sandhi. Placidus: cusp.
+	 */
+	cusps: (number | null)[],
+};
+
+export type CalcSettings = {
+	schema_version: number,
+	zodiac: ZodiacMode,
+	ayanamsa: AyanamsaSystem,
+	node: NodeKind,
+	house_system: HouseSystem,
+	/**  Vimshottari yıl uzunluğu, gün. Bu planda kullanılmaz (M3 dasha). */
+	dasha_year: number | null,
+	combustion_orbs: CombustionOrbs,
+	sunrise_def: SunriseDef,
+};
+
+/**  M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir. */
+export type Chart = Chart_Serialize | Chart_Deserialize;
+
+export type ChartMeta = {
+	engine_version: string,
+	swe_version: string,
+	/**  Hesapta kullanılan ayarların tam kopyası. */
+	settings: CalcSettings,
+	warnings: ChartWarning[],
+};
+
+/**  Ölümcül olmayan durumlar (spec §7); arayüz kodları i18n ile çevirir. */
+export type ChartWarning = 
+/**  Güneş veya Ay Moshier yedeğiyle hesaplandı (paketlenen ephemeris aralığı dışında). */
+"LowPrecision" | 
+/**  Placidus kutup dairesinde hesaplanamadı; bhava başlangıçları Porphyry. */
+"PlacidusPolarFallback";
+
+/**  M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir. */
+export type Chart_Deserialize = {
+	meta: ChartMeta,
+	jd_ut: number | null,
+	geo_lat: number | null,
+	geo_lon: number | null,
+	/**  Nütasyon dahil (gerçek) ayanamsa, derece. */
+	ayanamsa_deg: number | null,
+	lagna: Lagna,
+	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
+	grahas: GrahaPosition_Deserialize[],
+	bhavas: Bhavas,
+};
+
+/**  M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir. */
+export type Chart_Serialize = {
+	meta: ChartMeta,
+	jd_ut: number | null,
+	geo_lat: number | null,
+	geo_lon: number | null,
+	/**  Nütasyon dahil (gerçek) ayanamsa, derece. */
+	ayanamsa_deg: number | null,
+	lagna: Lagna,
+	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
+	grahas: GrahaPosition_Serialize[],
+	bhavas: Bhavas,
+};
+
+/**  Yanma orbları, derece (BPHS). */
+export type CombustionOrbs = {
+	moon: number | null,
+	mars: number | null,
+	mercury: number | null,
+	mercury_retro: number | null,
+	jupiter: number | null,
+	venus: number | null,
+	venus_retro: number | null,
+	saturn: number | null,
+};
+
 /**  Arayüze giden hata: `code` sabit bir anahtar, çeviri i18n katmanında yapılır. */
 export type CommandError = {
 	code: string,
 	params: { [key in string]: string },
 };
 
+export type Dignity = "Exalted" | "Moolatrikona" | "OwnSign" | "GreatFriend" | "Friend" | "Neutral" | "Enemy" | "GreatEnemy" | "Debilitated";
+
 export type EngineStatus = {
 	seVersion: string,
 };
+
+export type Graha = "Sun" | "Moon" | "Mars" | "Mercury" | "Jupiter" | "Venus" | "Saturn" | "Rahu" | "Ketu";
+
+/**  Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`). */
+export type GrahaPosition = GrahaPosition_Serialize | GrahaPosition_Deserialize;
+
+/**  Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`). */
+export type GrahaPosition_Deserialize = {
+	graha: Graha,
+	/**
+	 *  Rasi çerçevesinde boylam, [0, 360): `Sidereal` kipinde sidereal,
+	 *  `TropicalRasiSiderealNakshatra` kipinde tropikal.
+	 */
+	lon: number | null,
+	/**  Her kipte sidereal boylam; nakshatra ve pada buradan. */
+	sidereal_lon: number | null,
+	/**  Ekliptik enlem, derece. */
+	lat: number | null,
+	/**  Rasi çerçevesinde boylam hızı, derece/gün. */
+	speed: number | null,
+	retrograde: boolean,
+	sign: Sign,
+	deg_in_sign: number | null,
+	nakshatra: number,
+	pada: number,
+	combust: boolean,
+	/**  Düğümler için `None`. */
+	dignity?: Dignity | null,
+	house: number,
+};
+
+/**  Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`). */
+export type GrahaPosition_Serialize = {
+	graha: Graha,
+	/**
+	 *  Rasi çerçevesinde boylam, [0, 360): `Sidereal` kipinde sidereal,
+	 *  `TropicalRasiSiderealNakshatra` kipinde tropikal.
+	 */
+	lon: number | null,
+	/**  Her kipte sidereal boylam; nakshatra ve pada buradan. */
+	sidereal_lon: number | null,
+	/**  Ekliptik enlem, derece. */
+	lat: number | null,
+	/**  Rasi çerçevesinde boylam hızı, derece/gün. */
+	speed: number | null,
+	retrograde: boolean,
+	sign: Sign,
+	deg_in_sign: number | null,
+	nakshatra: number,
+	pada: number,
+	combust: boolean,
+	/**  Düğümler için `None`. */
+	dignity: Dignity | null,
+	house: number,
+};
+
+export type HouseSystem = "WholeSign" | 
+/**  Bhava chalit: Porphyry madhyaları, sandhi'ler bhava başlangıcı. */
+"Sripati" | 
+/**  KP. */
+"Placidus";
+
+export type Lagna = {
+	/**  Rasi çerçevesinde boylam. */
+	lon: number | null,
+	/**  Sidereal boylam; nakshatra ve pada buradan. */
+	sidereal_lon: number | null,
+	sign: Sign,
+	deg_in_sign: number | null,
+	nakshatra: number,
+	pada: number,
+};
+
+export type NodeKind = "Mean" | "True";
 
 export type PlanetRow = {
 	body: string,
 	lon: number | null,
 	retrograde: boolean,
 };
+
+export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | "Libra" | "Scorpio" | "Sagittarius" | "Capricorn" | "Aquarius" | "Pisces";
+
+/**  Gün doğumu tanımı. Bu planda kullanılmaz (M3 panchang); ayar olarak saklanır. */
+export type SunriseDef = 
+/**  Disk merkezi, kırılmasız (`SE_BIT_HINDU_RISING`). */
+"DiskCenterNoRefraction" | 
+/**  Üst kenar, atmosfer kırılmasıyla (batı konvansiyonu). */
+"UpperLimbRefracted";
+
+export type ZodiacMode = 
+/**  Burç, nakshatra ve evler sidereal boylamdan. */
+"Sidereal" | 
+/**  Burç, burç içi derece ve evler tropikal boylamdan; nakshatra ve pada sidereal boylamdan. */
+"TropicalRasiSiderealNakshatra";
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

@@ -17,6 +17,7 @@ pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Ölümcül olmayan durumlar (spec §7); arayüz kodları i18n ile çevirir.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum ChartWarning {
     /// Güneş veya Ay Moshier yedeğiyle hesaplandı (paketlenen ephemeris aralığı dışında).
     LowPrecision,
@@ -25,6 +26,7 @@ pub enum ChartWarning {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct ChartMeta {
     pub engine_version: String,
     pub swe_version: String,
@@ -35,6 +37,7 @@ pub struct ChartMeta {
 
 /// M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Chart {
     pub meta: ChartMeta,
     pub jd_ut: f64,
