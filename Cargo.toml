@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = []
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+rust-version = "1.80"
+repository = "https://github.com/OWNER/jyotish-desk"
+
+[workspace.dependencies]
+thiserror = "2"
