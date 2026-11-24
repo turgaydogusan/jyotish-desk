@@ -1,0 +1,15 @@
+[package]
+name = "jyotish-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+ephemeris = { path = "../ephemeris" }
+serde = { version = "1", features = ["derive"] }
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json = "1"
