@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { BUILTIN_LAYOUT_IDS, serializeLayoutState, type LayoutState } from "./model";
-import { LAYOUT_STORAGE_KEY, localStoragePersistence, memoryPersistence } from "./persistence";
+import { LAYOUT_STORAGE_KEY, localStoragePersistence, memoryPersistence, type LayoutPersistence } from "./persistence";
 import { LayoutProvider, SAVE_DEBOUNCE_MS, useLayoutStore } from "./store";
 
 function Probe() {
@@ -54,14 +54,88 @@ test("a pending save is flushed on pagehide", () => {
 
 test("Cmd+1…9 selects layouts by order", () => {
   render(<LayoutProvider persistence={memoryPersistence()}><Probe /></LayoutProvider>);
-  fireEvent.keyDown(window, { key: "3", metaKey: true });
+  fireEvent.keyDown(window, { key: "3", code: "Digit3", metaKey: true });
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
-  fireEvent.keyDown(window, { key: "2", metaKey: true, shiftKey: true });
+  fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true, shiftKey: true });
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
-  fireEvent.keyDown(window, { key: "1" });
+  fireEvent.keyDown(window, { key: "1", code: "Digit1" });
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
-  fireEvent.keyDown(window, { key: "1", metaKey: true });
+  fireEvent.keyDown(window, { key: "1", code: "Digit1", metaKey: true });
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.interview);
+});
+
+test("Cmd+digit uses the physical key (AZERTY) and ignores out-of-range, Ctrl, Alt, 0, repeat and IME", () => {
+  render(<LayoutProvider persistence={memoryPersistence()}><Probe /></LayoutProvider>);
+  const before = BUILTIN_LAYOUT_IDS.research;
+  fireEvent.click(screen.getByText("research"));
+  // AZERTY: the "&" key is Digit1, so `key` is not a digit.
+  fireEvent.keyDown(window, { key: "&", code: "Digit3", metaKey: true });
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
+  fireEvent.click(screen.getByText("research"));
+  const ignored = [
+    { key: "1", code: "Digit1", ctrlKey: true },
+    { key: "1", code: "Digit1", altKey: true },
+    { key: "0", code: "Digit0", metaKey: true },
+    { key: "3", code: "Digit3", metaKey: true, repeat: true },
+    { key: "3", code: "Digit3", metaKey: true, isComposing: true },
+  ];
+  for (const init of ignored) {
+    fireEvent.keyDown(window, init);
+    expect(screen.getByTestId("active")).toHaveTextContent(before);
+  }
+});
+
+test("Cmd+9 with 3 layouts keeps the selection and does not preventDefault", () => {
+  render(<LayoutProvider persistence={memoryPersistence()}><Probe /></LayoutProvider>);
+  fireEvent.click(screen.getByText("research"));
+  const missing = new KeyboardEvent("keydown", { key: "9", code: "Digit9", metaKey: true, cancelable: true });
+  act(() => void window.dispatchEvent(missing));
+  expect(missing.defaultPrevented).toBe(false);
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.research);
+  const present = new KeyboardEvent("keydown", { key: "1", code: "Digit1", metaKey: true, cancelable: true });
+  act(() => void window.dispatchEvent(present));
+  expect(present.defaultPrevented).toBe(true);
+});
+
+test("a fresh persistence object each parent render does not defeat the debounce", () => {
+  const saved: LayoutState[] = [];
+  const mk = (): LayoutPersistence => ({ load: () => null, save: (s) => void saved.push(s) });
+  function Parent({ tick }: { tick: number }) {
+    return <LayoutProvider persistence={mk()}><span>{tick}</span><Probe /></LayoutProvider>;
+  }
+  const { rerender } = render(<Parent tick={0} />);
+  fireEvent.click(screen.getByText("research"));
+  rerender(<Parent tick={1} />);
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS - 1));
+  expect(saved).toHaveLength(0);
+  rerender(<Parent tick={2} />);
+  expect(saved).toHaveLength(0);
+  act(() => vi.advanceTimersByTime(1));
+  expect(saved).toHaveLength(1);
+});
+
+test("unmount flushes exactly once; later timers, pagehide and keydown do nothing", () => {
+  const p = memoryPersistence();
+  const { unmount } = render(<LayoutProvider persistence={p}><Probe /></LayoutProvider>);
+  fireEvent.click(screen.getByText("research"));
+  unmount();
+  expect(p.saved).toHaveLength(1);
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
+  fireEvent(window, new Event("pagehide"));
+  fireEvent.keyDown(window, { key: "1", code: "Digit1", metaKey: true });
+  expect(p.saved).toHaveLength(1);
+});
+
+test("a pending save is flushed when the document becomes hidden", () => {
+  const p = memoryPersistence();
+  render(<LayoutProvider persistence={p}><Probe /></LayoutProvider>);
+  fireEvent.click(screen.getByText("research"));
+  const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+  fireEvent(document, new Event("visibilitychange"));
+  expect(p.saved).toHaveLength(1);
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS));
+  expect(p.saved).toHaveLength(1);
+  spy.mockRestore();
 });
 
 test("useLayoutStore outside the provider throws", () => {

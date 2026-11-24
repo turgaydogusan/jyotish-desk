@@ -34,6 +34,13 @@ export function LayoutProvider({
 }) {
   const [state, dispatch] = useReducer(layoutReducer, persistence, (p) => normalizeState(parseLayoutState(p.load())));
 
+  // Üst bileşen her render'da yeni bir `persistence` nesnesi verebilir; efektler buna bağlanırsa
+  // debounce her render'da sıfırlanır. Bu yüzden son değer ref üzerinden okunur.
+  const persistenceRef = useRef(persistence);
+  persistenceRef.current = persistence;
+  const layoutCount = useRef(state.layouts.length);
+  layoutCount.current = state.layouts.length;
+
   // İlk durum zaten kayıtlıdır; yalnızca değişiklikler kaydedilir.
   const initial = useRef(state);
   const pending = useRef<LayoutState | null>(null);
@@ -43,31 +50,42 @@ export function LayoutProvider({
     const timer = setTimeout(() => {
       if (pending.current !== state) return; // pagehide ile zaten yazıldı
       pending.current = null;
-      persistence.save(state);
+      persistenceRef.current.save(state);
     }, debounceMs);
     return () => clearTimeout(timer);
-  }, [state, persistence, debounceMs]);
+  }, [state, debounceMs]);
 
-  // Pencere kapanırken bekleyen kayıt hemen yazılır.
+  // Pencere kapanırken ya da gizlenirken bekleyen kayıt hemen yazılır. Tauri webview kapanışı
+  // `pagehide` atlayabildiği için `visibilitychange` de dinlenir.
   useEffect(() => {
     const flush = () => {
       if (pending.current) {
-        persistence.save(pending.current);
+        persistenceRef.current.save(pending.current);
         pending.current = null;
       }
     };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
     window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
       flush();
     };
-  }, [persistence]);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey || !/^[1-9]$/.test(e.key)) return;
+      if (e.repeat || e.isComposing) return;
+      if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) return;
+      // Fiziksel tuş (`code`): AZERTY'de `key` rakam değildir.
+      if (!/^Digit[1-9]$/.test(e.code)) return;
+      const index = Number(e.code.slice(5)) - 1;
+      if (index >= layoutCount.current) return;
       e.preventDefault();
-      dispatch({ type: "selectIndex", index: Number(e.key) - 1 });
+      dispatch({ type: "selectIndex", index });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
