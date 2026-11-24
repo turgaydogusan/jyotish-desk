@@ -2,7 +2,7 @@
   "id": "new-delhi-2000-01-01",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "J2000; swetest -sid1 (Lahiri), mean node, UT 1.1.2000 12:00",
+  "notes": "J2000; swetest -sid1 (Lahiri), mean node, UT 1.1.2000 12:00; d9_signs ve dasha awk ile türetildi (Plan 06)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -36,6 +36,19 @@
       "Saturn": 16.5424409,
       "Rahu": 101.1874236,
       "Ketu": 281.1874236
-    }
+    },
+    "d9_signs": {
+      "Lagna": "Aquarius",
+      "Sun": "Leo",
+      "Moon": "Pisces",
+      "Mars": "Scorpio",
+      "Mercury": "Gemini",
+      "Jupiter": "Aries",
+      "Venus": "Virgo",
+      "Saturn": "Leo",
+      "Rahu": "Libra",
+      "Ketu": "Aries"
+    },
+    "dasha": { "first_lord": "Rahu", "first_start_jd": 2445231.575532 }
   }
 }

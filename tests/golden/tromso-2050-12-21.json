@@ -2,7 +2,7 @@
   "id": "tromso-2050-12-21",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "yüksek enlem (kutup dairesi içi); swetest -sid1 (Lahiri), mean node, UT 21.12.2050 18:15",
+  "notes": "yüksek enlem (kutup dairesi içi); swetest -sid1 (Lahiri), mean node, UT 21.12.2050 18:15; d9_signs ve dasha awk ile türetildi (Plan 06)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -36,6 +36,19 @@
       "Saturn": 282.1128758,
       "Rahu": 194.6218058,
       "Ketu": 14.6218058
-    }
+    },
+    "d9_signs": {
+      "Lagna": "Aries",
+      "Sun": "Taurus",
+      "Moon": "Libra",
+      "Mars": "Leo",
+      "Mercury": "Sagittarius",
+      "Jupiter": "Cancer",
+      "Venus": "Pisces",
+      "Saturn": "Aries",
+      "Rahu": "Aquarius",
+      "Ketu": "Leo"
+    },
+    "dasha": { "first_lord": "Saturn", "first_start_jd": 2465062.970511 }
   }
 }

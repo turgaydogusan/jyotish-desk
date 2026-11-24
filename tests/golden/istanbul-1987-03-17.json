@@ -2,7 +2,7 @@
   "id": "istanbul-1987-03-17",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "Türkiye, gün sonu; swetest -sid1 (Lahiri), mean node, UT 17.3.1987 23:59",
+  "notes": "Türkiye, gün sonu; swetest -sid1 (Lahiri), mean node, UT 17.3.1987 23:59; d9_signs ve dasha awk ile türetildi (Plan 06)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -36,6 +36,19 @@
       "Saturn": 237.3395267,
       "Rahu": 348.7926660,
       "Ketu": 168.7926660
-    }
+    },
+    "d9_signs": {
+      "Lagna": "Gemini",
+      "Sun": "Cancer",
+      "Moon": "Libra",
+      "Mars": "Scorpio",
+      "Mercury": "Sagittarius",
+      "Jupiter": "Virgo",
+      "Venus": "Leo",
+      "Saturn": "Pisces",
+      "Rahu": "Sagittarius",
+      "Ketu": "Gemini"
+    },
+    "dasha": { "first_lord": "Mars", "first_start_jd": 2445023.153618 }
   }
 }

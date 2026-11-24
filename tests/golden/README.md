@@ -8,6 +8,7 @@
 - Graha boylamı ≤ 2″
 - Ayanamsa ≤ 1″
 - Lagna ≤ 5″
+- İlk mahadasha başlangıcı ≤ 1 gün; D9 burçları birebir
 
 Bir fixture tolerans dışına çıkarsa tolerans gevşetilmez. Önce ayar farkı aranır:
 ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
@@ -26,7 +27,9 @@ ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
     "ayanamsa_deg": 23.8532225,
     "lagna_lon": 76.3380905,
     "grahas": { "Sun": 0.0, "Moon": 0.0, "Mars": 0.0, "Mercury": 0.0, "Jupiter": 0.0,
-                "Venus": 0.0, "Saturn": 0.0, "Rahu": 0.0, "Ketu": 0.0 }
+                "Venus": 0.0, "Saturn": 0.0, "Rahu": 0.0, "Ketu": 0.0 },
+    "d9_signs": { "Lagna": "Aquarius", "Sun": "Leo", "...": "dokuz grahanın hepsi" },
+    "dasha": { "first_lord": "Rahu", "first_start_jd": 2445231.575532 }
   }
 }
 ```
@@ -35,6 +38,11 @@ ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
 - `lat` kuzey +, `lon` doğu +, ondalık derece.
 - `jd_ut`, UT Jülyen günüdür. Yerel saatten `atlas::resolve_moment` ile hesaplanır; yerel saat ve saat dilimi `notes`'a yazılır.
 - Boylamlar ondalık derecedir ve `settings.zodiac`'ın rasi çerçevesindedir: `Sidereal` ise sidereal, `TropicalRasiSiderealNakshatra` ise tropikal.
+- `d9_signs` ve `dasha` isteğe bağlıdır. `d9_signs` varsa `Lagna` ve dokuz graha zorunludur; burçlar birebir karşılaştırılır.
+- `dasha.first_start_jd`, ilk mahadashanın **teorik** başlangıcıdır (UT JD, doğumdan önce): `jd − geçen_kesir × yıl(lord) × dasha_year`. Tolerans ≤ 1 gün.
+- `swetest` fixture'larında bu iki alan `scripts/gen-golden-swetest.sh` içinde awk ile türetilir (Rust motorundan bağımsız aritmetik, aynı kural). Bağımsız referans değildir; kuralın kendisini JHora seti doğrular.
+- JHora'dan eklerken: D9 burçlarını Navamsa haritasından, ilk mahadasha lordunu ve başlangıç tarihini Vimshottari listesinden oku. JHora'nın dasha yılı ayarını fixture'ın `settings.dasha_year`'ıyla eşleştir; başlangıç tarihini UT JD'ye çevirip `notes`'a yerel tarihi yaz.
+- En az 5 fixture `d9_signs` ve `dasha` taşımalıdır (`MIN_DERIVED_FIXTURES`).
 
 ## Kaynaklar
 

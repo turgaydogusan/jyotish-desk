@@ -2,7 +2,7 @@
   "id": "buenos-aires-1923-06-15",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "güney yarıküre, UT gece yarısı; swetest -sid1 (Lahiri), mean node, UT 15.6.1923 0:00",
+  "notes": "güney yarıküre, UT gece yarısı; swetest -sid1 (Lahiri), mean node, UT 15.6.1923 0:00; d9_signs ve dasha awk ile türetildi (Plan 06)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -36,6 +36,19 @@
       "Saturn": 170.5716061,
       "Rahu": 142.8186144,
       "Ketu": 322.8186144
-    }
+    },
+    "d9_signs": {
+      "Lagna": "Aries",
+      "Sun": "Libra",
+      "Moon": "Scorpio",
+      "Mars": "Pisces",
+      "Mercury": "Aries",
+      "Jupiter": "Pisces",
+      "Venus": "Aquarius",
+      "Saturn": "Cancer",
+      "Rahu": "Libra",
+      "Ketu": "Aries"
+    },
+    "dasha": { "first_lord": "Mars", "first_start_jd": 2421242.300300 }
   }
 }

@@ -2,7 +2,7 @@
   "id": "london-1850-01-01",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "19. yüzyıl, kuzey yarıküre, batı boylamı; swetest -sid1 (Lahiri), mean node, UT 1.1.1850 6:30",
+  "notes": "19. yüzyıl, kuzey yarıküre, batı boylamı; swetest -sid1 (Lahiri), mean node, UT 1.1.1850 6:30; d9_signs ve dasha awk ile türetildi (Plan 06)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -36,6 +36,19 @@
       "Saturn": 340.1191625,
       "Rahu": 124.4238814,
       "Ketu": 304.4238814
-    }
+    },
+    "d9_signs": {
+      "Lagna": "Aquarius",
+      "Sun": "Virgo",
+      "Moon": "Aquarius",
+      "Mars": "Virgo",
+      "Mercury": "Scorpio",
+      "Jupiter": "Capricorn",
+      "Venus": "Taurus",
+      "Saturn": "Libra",
+      "Rahu": "Taurus",
+      "Ketu": "Scorpio"
+    },
+    "dasha": { "first_lord": "Mercury", "first_start_jd": 2392113.670741 }
   }
 }

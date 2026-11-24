@@ -1,22 +1,28 @@
 //! `tests/golden/*.json` referans haritalarını `compute_chart` ile karşılaştırır.
-//! Toleranslar spec §8: graha ≤ 2″, ayanamsa ≤ 1″, lagna ≤ 5″.
+//! Toleranslar spec §8: graha ≤ 2″, ayanamsa ≤ 1″, lagna ≤ 5″, mahadasha başlangıcı
+//! ≤ 1 gün, varga burçları birebir.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use ephemeris::SwissEph;
-use jyotish_core::{angular_distance, compute_chart, CalcSettings, Chart, ChartWarning, Graha};
+use jyotish_core::{
+    angular_distance, compute_chart, CalcSettings, Chart, ChartWarning, Graha, Sign, Varga,
+};
 use serde::Deserialize;
 
 const GRAHA_TOL_ARCSEC: f64 = 2.0;
 const AYANAMSA_TOL_ARCSEC: f64 = 1.0;
 const LAGNA_TOL_ARCSEC: f64 = 5.0;
+const DASHA_START_TOL_DAYS: f64 = 1.0;
 /// Bilinen kaynaklar; yeni kaynak eklemek bilinçli bir karar olmalıdır.
 const SOURCES: [&str; 2] = ["swetest", "jhora"];
 /// Commit'li fixture sayısı bunun altına düşerse test düşer (sessiz silinmeye karşı).
 const MIN_FIXTURES: usize = 5;
+/// `d9_signs` ve `dasha` taşıyan fixture sayısı bunun altına düşerse test düşer.
+const MIN_DERIVED_FIXTURES: usize = 5;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Fixture {
     id: String,
@@ -29,7 +35,7 @@ struct Fixture {
     expected: Expected,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
     jd_ut: f64,
@@ -37,12 +43,25 @@ struct Input {
     lon: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Expected {
     ayanamsa_deg: f64,
     lagna_lon: f64,
     grahas: BTreeMap<String, f64>,
+    /// İsteğe bağlı: "Lagna" ve dokuz graha için D9 burcu. Varsa on anahtar da zorunlu.
+    #[serde(default)]
+    d9_signs: Option<BTreeMap<String, Sign>>,
+    /// İsteğe bağlı: ilk mahadashanın lordu ve teorik başlangıcı (UT JD).
+    #[serde(default)]
+    dasha: Option<ExpectedDasha>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedDasha {
+    first_lord: Graha,
+    first_start_jd: f64,
 }
 
 fn golden_dir() -> PathBuf {
@@ -125,6 +144,49 @@ fn compare(f: &Fixture, chart: &Chart) -> Vec<String> {
     errs
 }
 
+/// Plan 06 beklentileri: D9 burçları birebir, ilk mahadasha lordu birebir ve başlangıcı
+/// ≤ 1 gün. Alan yoksa denetim yapılmaz (eski ve JHora fixture'ları).
+fn compare_derived(f: &Fixture, chart: &Chart) -> Vec<String> {
+    let mut errs = Vec::new();
+    if let Some(want) = &f.expected.d9_signs {
+        match chart.vargas.iter().find(|v| v.varga == Varga::D9) {
+            Some(d9) => {
+                let mut got: BTreeMap<String, Sign> = d9
+                    .placements
+                    .iter()
+                    .map(|p| (format!("{:?}", p.graha), p.sign))
+                    .collect();
+                got.insert("Lagna".to_owned(), d9.lagna_sign);
+                if &got != want {
+                    errs.push(format!("d9_signs: got {got:?}, want {want:?}"));
+                }
+            }
+            None => errs.push("D9 missing from chart.vargas".to_owned()),
+        }
+    }
+    if let Some(want) = &f.expected.dasha {
+        match chart.dasha.periods.first() {
+            Some(first) => {
+                if first.lords != [want.first_lord] {
+                    errs.push(format!(
+                        "dasha first lord: got {:?}, want {:?}",
+                        first.lords, want.first_lord
+                    ));
+                }
+                let diff = (first.start_jd_ut - want.first_start_jd).abs();
+                if diff.is_nan() || diff > DASHA_START_TOL_DAYS {
+                    errs.push(format!(
+                        "dasha first start: got {:.6}, want {:.6}, diff {diff:.3} d > {DASHA_START_TOL_DAYS} d",
+                        first.start_jd_ut, want.first_start_jd
+                    ));
+                }
+            }
+            None => errs.push("dasha has no periods".to_owned()),
+        }
+    }
+    errs
+}
+
 #[test]
 fn tolerance_check_flags_out_of_range_nan_and_wraps() {
     let arcsec = 1.0 / 3600.0;
@@ -145,6 +207,8 @@ fn golden_charts_match_references() {
     );
     let mut eph = SwissEph::open(&ephe_dir()).expect("open ephemeris");
     let mut failures = Vec::new();
+    let mut derived = 0;
+    let mut sample: Option<(Fixture, Chart)> = None;
     for (path, f) in &fixtures {
         assert_eq!(
             path.file_stem().and_then(|s| s.to_str()),
@@ -170,11 +234,20 @@ fn golden_charts_match_references() {
             &f.settings,
         )
         .unwrap_or_else(|e| panic!("{}: {e}", f.id));
-        for e in compare(f, &chart) {
+        for e in compare(f, &chart)
+            .into_iter()
+            .chain(compare_derived(f, &chart))
+        {
             failures.push(format!(
                 "{} [{} {}; {}]: {e}",
                 f.id, f.source, f.source_version, f.notes
             ));
+        }
+        if f.expected.d9_signs.is_some() && f.expected.dasha.is_some() {
+            derived += 1;
+            if sample.is_none() {
+                sample = Some((f.clone(), chart));
+            }
         }
     }
     assert!(
@@ -182,6 +255,31 @@ fn golden_charts_match_references() {
         "golden mismatches:\n{}",
         failures.join("\n")
     );
+    assert!(
+        derived >= MIN_DERIVED_FIXTURES,
+        "found {derived} fixtures with d9_signs and dasha, want >= {MIN_DERIVED_FIXTURES}"
+    );
+
+    // Karşılaştırıcı gerçekten ısırır: beklentiyi üç yerden boz, üç hata bekle.
+    let (mut bad, chart) = sample.expect("a fixture with derived expectations");
+    if let Some(d) = bad.expected.dasha.as_mut() {
+        d.first_lord = if d.first_lord == Graha::Sun {
+            Graha::Moon
+        } else {
+            Graha::Sun
+        };
+        d.first_start_jd += 2.0;
+    }
+    if let Some(s) = bad
+        .expected
+        .d9_signs
+        .as_mut()
+        .and_then(|m| m.get_mut("Lagna"))
+    {
+        *s = Sign::from_index(s.index() + 1);
+    }
+    let errs = compare_derived(&bad, &chart);
+    assert_eq!(errs.len(), 3, "{errs:?}");
 }
 
 #[test]

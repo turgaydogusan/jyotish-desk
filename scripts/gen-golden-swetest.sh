@@ -53,12 +53,26 @@ for row in "${CHARTS[@]}"; do
         printf "      \"%s\": %s,\n", n[i], v[n[i]] }
       k = v["Rahu"] + 180.0; if (k >= 360.0) k -= 360.0;
       printf "      \"Ketu\": %.7f\n", k }')"
+  # Plan 06 türetilmiş beklentileri. Rust motorundan bağımsız awk uygulaması; girdi
+  # yukarıdaki swetest boylamlarıdır.
+  points="$(printf 'Lagna %s\n' "$asc"; echo "$grahas" | tr -d '":,' | awk '{print $1, $2}')"
+  # D9: BPHS navamsa kuralının sürekli biçimi, Koç'tan floor(boylam / 3°20') mod 12.
+  d9="$(echo "$points" | awk '
+    BEGIN { split("Aries Taurus Gemini Cancer Leo Virgo Libra Scorpio Sagittarius Capricorn Aquarius Pisces", S, " ") }
+    { line[NR] = sprintf("      \"%s\": \"%s\"", $1, S[int($2 * 3 / 10) % 12 + 1]) }
+    END { for (i = 1; i <= NR; i++) printf "%s%s\n", line[i], (i < NR ? "," : "") }')"
+  # İlk mahadasha: Ay'ın nakshatrası (13°20') lordu verir; başlangıç = jd − kesir × yıl × 365.25.
+  dasha="$(echo "$points" | awk -v jd="$jd" '$1 == "Moon" {
+    split("Ketu Venus Sun Moon Mars Rahu Jupiter Saturn Mercury", L, " ");
+    split("7 20 6 10 7 18 16 19 17", Y, " ");
+    x = $2 * 3 / 40; n = int(x); f = x - n; i = n % 9 + 1;
+    printf "{ \"first_lord\": \"%s\", \"first_start_jd\": %.6f }", L[i], jd - f * Y[i] * 365.25 }')"
   cat > "$OUT_DIR/$id.json" <<JSON
 {
   "id": "$id",
   "source": "swetest",
   "source_version": "$SE_VERSION",
-  "notes": "$note; swetest -sid1 (Lahiri), mean node, UT $d $t",
+  "notes": "$note; swetest -sid1 (Lahiri), mean node, UT $d $t; d9_signs ve dasha awk ile türetildi (Plan 06)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -84,7 +98,11 @@ for row in "${CHARTS[@]}"; do
     "lagna_lon": $asc,
     "grahas": {
 $grahas
-    }
+    },
+    "d9_signs": {
+$d9
+    },
+    "dasha": $dasha
   }
 }
 JSON
