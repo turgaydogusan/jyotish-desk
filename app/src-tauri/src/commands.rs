@@ -82,6 +82,9 @@ impl From<CoreError> for CommandError {
             CoreError::NonFiniteResult(what) => {
                 Self::new("non_finite_result", &[("what", what.to_owned())])
             }
+            CoreError::InvalidDashaInput(field) => {
+                Self::new("invalid_dasha_input", &[("field", field.to_owned())])
+            }
         }
     }
 }
@@ -319,6 +322,9 @@ mod tests {
         let e = CommandError::from(CoreError::InvalidSettings("dasha_year"));
         assert_eq!(e.code, "invalid_settings");
         assert_eq!(e.params["field"], "dasha_year");
+        let e = CommandError::from(CoreError::InvalidDashaInput("path"));
+        assert_eq!(e.code, "invalid_dasha_input");
+        assert_eq!(e.params["field"], "path");
         let e = CommandError::from(CoreError::NonFiniteResult("ayanamsa"));
         assert_eq!(e.code, "non_finite_result");
         assert_eq!(e.params["what"], "ayanamsa");

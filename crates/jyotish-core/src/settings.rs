@@ -170,6 +170,10 @@ impl Default for CalcSettings {
 /// Custom ayanamsa referans anı aralığı: yaklaşık −3000…+3000 yılları (Moshier aralığı).
 pub const CUSTOM_T0_JD_RANGE: std::ops::RangeInclusive<f64> = 625_000.0..=2_818_000.0;
 
+/// Kabul edilen Vimshottari yıl uzunluğu, gün. Spec §6 seçenekleri 360, 365.2422 ve
+/// 365.25 bu aralıktadır; dışı sonsuz ya da anlamsız tarihler üretir.
+pub const DASHA_YEAR_RANGE: std::ops::RangeInclusive<f64> = 300.0..=400.0;
+
 impl CalcSettings {
     /// Sürüm ve değer aralıklarını denetler. Sürüm göçü `store` planında yapılır;
     /// burada yalnızca desteklenen sürüm kabul edilir.
@@ -180,7 +184,7 @@ impl CalcSettings {
                 supported: CALC_SETTINGS_SCHEMA_VERSION,
             });
         }
-        if !(self.dasha_year.is_finite() && self.dasha_year > 0.0) {
+        if !DASHA_YEAR_RANGE.contains(&self.dasha_year) {
             return Err(CoreError::InvalidSettings("dasha_year"));
         }
         // NaN ve sonsuz aralık dışında kalır.
@@ -375,5 +379,26 @@ mod tests {
         }
         assert_eq!(custom(2_451_545.0, 23.85).validate(), Ok(()));
         assert_eq!(custom(2_415_020.0, -4.0).validate(), Ok(()));
+    }
+
+    #[test]
+    fn validate_rejects_out_of_range_dasha_year() {
+        let with = |dasha_year: f64| {
+            CalcSettings {
+                dasha_year,
+                ..CalcSettings::default()
+            }
+            .validate()
+        };
+        for ok in [360.0, 365.2422, 365.25] {
+            assert_eq!(with(ok), Ok(()), "{ok}");
+        }
+        for bad in [299.9, 400.1, 1e308, f64::NAN, f64::INFINITY] {
+            assert_eq!(
+                with(bad),
+                Err(CoreError::InvalidSettings("dasha_year")),
+                "{bad}"
+            );
+        }
     }
 }

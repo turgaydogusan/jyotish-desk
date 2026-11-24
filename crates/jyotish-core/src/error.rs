@@ -15,4 +15,6 @@ pub enum CoreError {
     InvalidJulianDay(f64),
     #[error("non-finite ephemeris result: {0}")]
     NonFiniteResult(&'static str),
+    #[error("invalid dasha input: {0}")]
+    InvalidDashaInput(&'static str),
 }

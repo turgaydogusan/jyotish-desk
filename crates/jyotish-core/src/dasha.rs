@@ -1,0 +1,341 @@
+//! Vimshottari dasha (BPHS, nakshatra dashaları; Santhanam çevirisinde böl. 46).
+//!
+//! Doğumdaki Ay'ın sidereal nakshatrası ilk mahadashanın lordunu ve geçen kesrini
+//! belirler. Her dönemin dokuz alt dönemi ebeveynin lordundan başlar ve ebeveyn süresini
+//! `yıl(L) / 120` oranıyla böler. Zamanlar UT Jülyen günüdür.
+
+use serde::{Deserialize, Serialize};
+
+use crate::graha::Graha;
+use crate::settings::DASHA_YEAR_RANGE;
+use crate::zodiac::{nakshatra_pada, normalize, NAKSHATRA_SPAN_DEG};
+use crate::CoreError;
+
+pub const VIMSHOTTARI_TOTAL_YEARS: f64 = 120.0;
+/// 1 mahadasha, 2 antardasha, 3 pratyantardasha, 4 sookshma, 5 prana.
+pub const MAX_DASHA_LEVEL: u8 = 5;
+
+/// Ashwini'den başlayarak nakshatra lordları; sıra her 9 nakshatrada tekrar eder.
+pub const VIMSHOTTARI_ORDER: [Graha; 9] = [
+    Graha::Ketu,
+    Graha::Venus,
+    Graha::Sun,
+    Graha::Moon,
+    Graha::Mars,
+    Graha::Rahu,
+    Graha::Jupiter,
+    Graha::Saturn,
+    Graha::Mercury,
+];
+
+/// Mahadasha süresi, yıl.
+pub fn vimshottari_years(lord: Graha) -> f64 {
+    match lord {
+        Graha::Ketu => 7.0,
+        Graha::Venus => 20.0,
+        Graha::Sun => 6.0,
+        Graha::Moon => 10.0,
+        Graha::Mars => 7.0,
+        Graha::Rahu => 18.0,
+        Graha::Jupiter => 16.0,
+        Graha::Saturn => 19.0,
+        Graha::Mercury => 17.0,
+    }
+}
+
+fn order_index(lord: Graha) -> usize {
+    match lord {
+        Graha::Ketu => 0,
+        Graha::Venus => 1,
+        Graha::Sun => 2,
+        Graha::Moon => 3,
+        Graha::Mars => 4,
+        Graha::Rahu => 5,
+        Graha::Jupiter => 6,
+        Graha::Saturn => 7,
+        Graha::Mercury => 8,
+    }
+}
+
+/// Dasha ağacını tek başına belirleyen girdiler.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct DashaSeed {
+    /// Doğum anı, UT Jülyen günü.
+    pub birth_jd_ut: f64,
+    /// Doğumdaki Ay'ın sidereal boylamı (her zodyak kipinde sidereal).
+    pub moon_sidereal_lon: f64,
+    /// Yıl uzunluğu, gün (`CalcSettings::dasha_year`).
+    pub year_days: f64,
+}
+
+impl DashaSeed {
+    pub fn validate(&self) -> Result<(), CoreError> {
+        if !self.birth_jd_ut.is_finite() {
+            return Err(CoreError::InvalidDashaInput("birth_jd_ut"));
+        }
+        if !self.moon_sidereal_lon.is_finite() {
+            return Err(CoreError::InvalidDashaInput("moon_sidereal_lon"));
+        }
+        // NaN ve sonsuz aralık dışında kalır.
+        if !DASHA_YEAR_RANGE.contains(&self.year_days) {
+            return Err(CoreError::InvalidDashaInput("year_days"));
+        }
+        Ok(())
+    }
+}
+
+/// Bir dasha dönemi (spec §5 `DashaPeriod`). Zamanlar UT Jülyen günüdür.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct DashaPeriod {
+    /// Kökten bu döneme lordlar: `[maha]`, `[maha, antar]`, …
+    pub lords: Vec<Graha>,
+    /// 1 mahadasha … 5 prana; `lords.len()` ile aynı.
+    pub level: u8,
+    pub start_jd_ut: f64,
+    pub end_jd_ut: f64,
+    /// `dasha_children` ile alt dönem istenebilir (`level < MAX_DASHA_LEVEL`).
+    pub has_children: bool,
+}
+
+/// Doğum mahadashasının lordu ve geçen kesri, [0, 1]. Lord `nakshatra_pada` ile aynı
+/// nakshatradan seçilir; gösterilen nakshatra ile dasha lordu asla ayrışmaz.
+pub fn birth_dasha(moon_sidereal_lon: f64) -> (Graha, f64) {
+    let lon = normalize(moon_sidereal_lon);
+    let (nakshatra, _) = nakshatra_pada(lon);
+    let index = usize::from(nakshatra).saturating_sub(1);
+    let elapsed = (lon - index as f64 * NAKSHATRA_SPAN_DEG) / NAKSHATRA_SPAN_DEG;
+    (VIMSHOTTARI_ORDER[index % 9], elapsed.clamp(0.0, 1.0))
+}
+
+/// `[start, end)` aralığını `first`'ten başlayan dokuz alt döneme böler. Bitişler
+/// birikimli yıldan hesaplanır; sonuncusu `end`'e tam eşittir.
+fn subdivide(path: &[Graha], first: Graha, start: f64, end: f64) -> Vec<DashaPeriod> {
+    let level = (path.len() + 1) as u8;
+    let span = end - start;
+    let first = order_index(first);
+    let mut periods = Vec::with_capacity(9);
+    let mut from = start;
+    let mut years = 0.0;
+    for k in 0..9 {
+        let lord = VIMSHOTTARI_ORDER[(first + k) % 9];
+        years += vimshottari_years(lord);
+        let to = if k == 8 {
+            end
+        } else {
+            start + span * years / VIMSHOTTARI_TOTAL_YEARS
+        };
+        let mut lords = path.to_vec();
+        lords.push(lord);
+        periods.push(DashaPeriod {
+            lords,
+            level,
+            start_jd_ut: from,
+            end_jd_ut: to,
+            has_children: level < MAX_DASHA_LEVEL,
+        });
+        from = to;
+    }
+    periods
+}
+
+/// Dönemin dokuz alt dönemi; 5. seviyede boş.
+fn children_of(period: &DashaPeriod) -> Vec<DashaPeriod> {
+    match period.lords.last() {
+        Some(&lord) if period.has_children => {
+            subdivide(&period.lords, lord, period.start_jd_ut, period.end_jd_ut)
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// Dokuz mahadasha. İlki doğumdan `f × yıl(lord) × year_days` gün önce başlar; toplam
+/// 120 yıl.
+pub fn mahadashas(seed: &DashaSeed) -> Result<Vec<DashaPeriod>, CoreError> {
+    seed.validate()?;
+    let (lord, elapsed) = birth_dasha(seed.moon_sidereal_lon);
+    let start = seed.birth_jd_ut - elapsed * vimshottari_years(lord) * seed.year_days;
+    let end = start + VIMSHOTTARI_TOTAL_YEARS * seed.year_days;
+    Ok(subdivide(&[], lord, start, end))
+}
+
+/// `path` ile seçilen dönemin alt dönemleri. `[]` mahadashaları, `[maha]` antardashaları,
+/// `[maha, antar, pratyantar, sookshma]` prana dönemlerini verir. Daha uzun yol hatadır.
+pub fn dasha_children(seed: &DashaSeed, path: &[Graha]) -> Result<Vec<DashaPeriod>, CoreError> {
+    if path.len() >= usize::from(MAX_DASHA_LEVEL) {
+        return Err(CoreError::InvalidDashaInput("path"));
+    }
+    let mut periods = mahadashas(seed)?;
+    for lord in path {
+        // Her seviyede dokuz lordun hepsi bulunur; yine de panik yerine hata.
+        let parent = periods
+            .into_iter()
+            .find(|p| p.lords.last() == Some(lord))
+            .ok_or(CoreError::InvalidDashaInput("path"))?;
+        periods = children_of(&parent);
+    }
+    Ok(periods)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const JD: f64 = 2_451_545.0;
+
+    fn seed(moon: f64) -> DashaSeed {
+        DashaSeed {
+            birth_jd_ut: JD,
+            moon_sidereal_lon: moon,
+            year_days: 365.25,
+        }
+    }
+
+    fn close(a: f64, b: f64) -> bool {
+        (a - b).abs() < 1e-6
+    }
+
+    fn last_lords(periods: &[DashaPeriod]) -> Vec<Graha> {
+        periods.iter().map(|p| *p.lords.last().unwrap()).collect()
+    }
+
+    #[test]
+    fn order_and_years_total_120() {
+        assert_eq!(
+            VIMSHOTTARI_ORDER.map(vimshottari_years),
+            [7.0, 20.0, 6.0, 10.0, 7.0, 18.0, 16.0, 19.0, 17.0]
+        );
+        let total: f64 = VIMSHOTTARI_ORDER
+            .iter()
+            .map(|&g| vimshottari_years(g))
+            .sum();
+        assert_eq!(total, VIMSHOTTARI_TOTAL_YEARS);
+    }
+
+    #[test]
+    fn birth_dasha_follows_the_moon_nakshatra() {
+        assert_eq!(birth_dasha(0.0), (Graha::Ketu, 0.0));
+        assert_eq!(birth_dasha(NAKSHATRA_SPAN_DEG / 2.0), (Graha::Ketu, 0.5));
+        assert_eq!(birth_dasha(NAKSHATRA_SPAN_DEG), (Graha::Venus, 0.0));
+        // Magha (10.) ve Mula (19.) yine Ketu ile başlar.
+        assert_eq!(birth_dasha(9.0 * NAKSHATRA_SPAN_DEG + 1.0).0, Graha::Ketu);
+        assert_eq!(birth_dasha(18.0 * NAKSHATRA_SPAN_DEG + 1.0).0, Graha::Ketu);
+        // Revati (27.) Merkür; sona çok yakın.
+        let (lord, elapsed) = birth_dasha(359.999_999);
+        assert_eq!(lord, Graha::Mercury);
+        assert!(elapsed > 0.999_99 && elapsed <= 1.0, "{elapsed}");
+        // Golden new-delhi Ay'ı: 199.470529 / 13.3̄ = 14.96029 → Swati (15.), Rahu,
+        // kesir 0.9602897.
+        let (lord, elapsed) = birth_dasha(199.470_529);
+        assert_eq!(lord, Graha::Rahu);
+        assert!((elapsed - 0.960_289_675).abs() < 1e-9, "{elapsed}");
+    }
+
+    #[test]
+    fn mahadashas_start_before_birth_and_cover_120_years() {
+        let m = mahadashas(&seed(NAKSHATRA_SPAN_DEG / 2.0)).unwrap();
+        assert_eq!(last_lords(&m), VIMSHOTTARI_ORDER);
+        assert!(m
+            .iter()
+            .all(|p| p.level == 1 && p.has_children && p.lords.len() == 1));
+        // Ketu'nun yarısı geçmiş: 0.5 × 7 × 365.25 = 1278.375 gün önce başlar.
+        assert!(close(m[0].start_jd_ut, 2_450_266.625));
+        assert!(close(m[0].end_jd_ut, 2_452_823.375));
+        // Venüs bitişi: başlangıç + 27 × 365.25.
+        assert!(close(m[1].end_jd_ut, 2_460_128.375));
+        assert!(close(m[8].end_jd_ut, 2_450_266.625 + 120.0 * 365.25));
+    }
+
+    #[test]
+    fn sub_periods_start_from_the_parent_lord_and_split_by_years() {
+        let s = seed(NAKSHATRA_SPAN_DEG / 2.0);
+        let antar = dasha_children(&s, &[Graha::Ketu]).unwrap();
+        assert_eq!(last_lords(&antar), VIMSHOTTARI_ORDER);
+        assert!(antar
+            .iter()
+            .all(|p| p.level == 2 && p.lords[0] == Graha::Ketu));
+        // Ketu mahadashası 7 × 365.25 = 2556.75 gün; Ke-Ke 2556.75 × 7 / 120 = 149.14375 gün.
+        assert!(close(antar[0].start_jd_ut, 2_450_266.625));
+        assert!(close(antar[0].end_jd_ut, 2_450_415.768_75));
+        // Ke-Ve bitişi: 2556.75 × 27 / 120 = 575.26875 gün.
+        assert!(close(antar[1].end_jd_ut, 2_450_841.893_75));
+        let venus = dasha_children(&s, &[Graha::Venus]).unwrap();
+        assert_eq!(
+            last_lords(&venus),
+            [
+                Graha::Venus,
+                Graha::Sun,
+                Graha::Moon,
+                Graha::Mars,
+                Graha::Rahu,
+                Graha::Jupiter,
+                Graha::Saturn,
+                Graha::Mercury,
+                Graha::Ketu
+            ]
+        );
+    }
+
+    #[test]
+    fn deeper_levels_and_path_limits() {
+        let s = seed(100.0);
+        assert_eq!(dasha_children(&s, &[]).unwrap(), mahadashas(&s).unwrap());
+        let path = [Graha::Rahu, Graha::Jupiter, Graha::Saturn, Graha::Mercury];
+        let prana = dasha_children(&s, &path).unwrap();
+        assert_eq!(prana.len(), 9);
+        assert!(prana
+            .iter()
+            .all(|p| p.level == 5 && !p.has_children && p.lords[..4] == path));
+        assert_eq!(
+            dasha_children(&s, &[Graha::Sun; 5]),
+            Err(CoreError::InvalidDashaInput("path"))
+        );
+    }
+
+    #[test]
+    fn year_length_scales_every_period() {
+        let m = mahadashas(&DashaSeed {
+            year_days: 360.0,
+            ..seed(0.0)
+        })
+        .unwrap();
+        assert!(close(m[0].start_jd_ut, JD));
+        assert!(close(m[8].end_jd_ut - m[0].start_jd_ut, 43_200.0));
+        let m = mahadashas(&DashaSeed {
+            year_days: 365.2422,
+            ..seed(0.0)
+        })
+        .unwrap();
+        assert!(close(m[0].end_jd_ut, JD + 7.0 * 365.2422));
+    }
+
+    #[test]
+    fn invalid_seed_is_rejected() {
+        let bad = |s: DashaSeed| mahadashas(&s).unwrap_err();
+        assert_eq!(
+            bad(DashaSeed {
+                birth_jd_ut: f64::NAN,
+                ..seed(0.0)
+            }),
+            CoreError::InvalidDashaInput("birth_jd_ut")
+        );
+        assert_eq!(
+            bad(DashaSeed {
+                moon_sidereal_lon: f64::INFINITY,
+                ..seed(0.0)
+            }),
+            CoreError::InvalidDashaInput("moon_sidereal_lon")
+        );
+        for y in [0.0, 299.0, 1e308, f64::NAN] {
+            assert_eq!(
+                bad(DashaSeed {
+                    year_days: y,
+                    ..seed(0.0)
+                }),
+                CoreError::InvalidDashaInput("year_days"),
+                "{y}"
+            );
+        }
+    }
+}
