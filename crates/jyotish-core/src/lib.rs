@@ -15,6 +15,7 @@ mod houses;
 #[cfg(test)]
 mod proptests;
 pub mod settings;
+pub mod varga;
 pub mod zodiac;
 
 pub use chart::{compute_chart, Chart, ChartMeta, ChartWarning, ENGINE_VERSION};
@@ -27,4 +28,5 @@ pub use settings::{
     AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, NodeKind, SunriseDef, ZodiacMode,
     CALC_SETTINGS_SCHEMA_VERSION,
 };
+pub use varga::{varga_position, Varga};
 pub use zodiac::{angular_distance, deg_in_sign, nakshatra_pada, normalize, Sign};

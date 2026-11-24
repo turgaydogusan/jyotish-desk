@@ -99,3 +99,28 @@ mod chart_properties {
         }
     }
 }
+
+mod varga_properties {
+    use proptest::prelude::*;
+
+    use crate::varga::{varga_position, Varga};
+    use crate::zodiac::{normalize, Sign};
+
+    proptest! {
+        #[test]
+        fn varga_degree_is_in_range(lon in -720.0f64..720.0) {
+            for v in Varga::ALL {
+                let (_, deg) = varga_position(v, lon);
+                prop_assert!((0.0..30.0).contains(&deg), "{v:?} at {lon}: {deg}");
+            }
+        }
+
+        #[test]
+        fn navamsa_matches_the_continuous_formula(lon in 0.0f64..360.0) {
+            // BPHS kuralı (hareketli/sabit/çift doğalı başlangıcı) Koç'tan sürekli sayımla
+            // aynıdır. Parça sınırında ulp düzeyinde fark olasılığı ihmal edilebilir.
+            let continuous = Sign::from_index((normalize(lon) * 9.0 / 30.0) as usize);
+            prop_assert_eq!(varga_position(Varga::D9, lon).0, continuous);
+        }
+    }
+}
