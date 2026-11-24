@@ -4,7 +4,7 @@ pub mod db;
 pub mod geonames;
 pub mod moment;
 
-pub use db::AtlasError;
+pub use db::{Atlas, AtlasError, Place};
 
 pub use jiff::civil::{Date, DateTime, Time};
 pub use jiff::Timestamp;
