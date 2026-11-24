@@ -6,7 +6,7 @@
 
 **Architecture:** `SwissEph` `!Send` olduğu için `ephemeris` crate'ine bir `Engine` aktörü eklenir. Bu aktör SE örneğine tek bir iş parçacığında sahip olur, işleri bir kanal (channel) üzerinden alır ve sonucu çağırana geri gönderir. `Engine` `Send + Sync` olduğu için Tauri `State` olarak paylaşılır. `app/src-tauri` ince bir komut katmanıdır. TS bağlamaları (`app/ui/bindings.ts`) tauri-specta ile üretilir; güncel olup olmadıkları bir Rust testiyle doğrulanır. Arayüz yalnızca çizer, hesap yapmaz.
 
-**Tech Stack:** Rust 1.90+, Tauri 2.12 (`tauri` 2.12.x, `tauri-build` 2.7.x), `specta` =2.0.0-rc.28, `tauri-specta` =2.0.0-rc.29, `specta-typescript` 0.0.15, React 19, Vite 8, TypeScript 7, Vitest 5, pnpm 11.
+**Tech Stack:** Rust 1.93+, Tauri 2.12 (`tauri` 2.12.x, `tauri-build` 2.7.x), `specta` =2.0.0-rc.28, `tauri-specta` =2.0.0-rc.29, `specta-typescript` 0.0.15, React 19, Vite 8, TypeScript 7, Vitest 5, pnpm 11.
 
 **Spec:** `docs/superpowers/specs/2026-11-24-jyotish-desk-v1-design.md` (§4 Mimari, §7 Hata yönetimi, §8 CI, §11 M0)
 
@@ -20,7 +20,7 @@
 - FFI sınırında ve iş parçacığı sınırında panik yayılmaz.
 - `src-tauri` ince bir katmandır; iş mantığı içermez. Arayüz hesap yapmaz.
 - Hatalar arayüze `{code, params}` biçiminde gider; çeviri i18n katmanında yapılır (i18n Plan 07'de gelir).
-- MSRV: workspace `rust-version = "1.90"` (Tauri 2.12'nin tabanı). MSRV CI işi `cargo +1.90 check -p ephemeris --all-targets` komutunu çalıştırır.
+- MSRV: workspace `rust-version = "1.93"` (specta rc.28 `fmt::from_fn` tabanı). MSRV CI işi `cargo +1.93 check -p ephemeris --all-targets` komutunu çalıştırır.
 - CI: macOS (`macos-15`) tam seti çalıştırır: fmt, clippy `-D warnings`, test, vitest, build. `ubuntu` ve `windows` yalnızca çekirdek crate'leri (`-p ephemeris`) kapsar. Bir de `cargo deny` işi var.
 - Minimum macOS: 13 (Ventura). `bundle.macOS.minimumSystemVersion = "13.0"`.
 - Tauri spike'larında elle yapılan cihaz testi planın sonuna bırakılır; otomatik testler ilgili görevlerde yazılır.
@@ -30,7 +30,7 @@
 ## Dosya Yapısı (bu plan)
 
 ```
-Cargo.toml                         # members += "app/src-tauri"; rust-version 1.90
+Cargo.toml                         # members += "app/src-tauri"; rust-version 1.93
 deny.toml                          # Tauri grafiği için lisans izinleri
 .github/workflows/ci.yml           # pnpm/node adımları; ubuntu/windows -p ephemeris
 crates/ephemeris/
@@ -657,7 +657,7 @@ git commit -m "feat(app): Vite + React + TS UI skeleton with vitest"
 ### Task 3: Tauri crate'i, tauri-specta komutları ve bağlama testi
 
 **Files:**
-- Modify: `Cargo.toml` (members, rust-version 1.90)
+- Modify: `Cargo.toml` (members, rust-version 1.93)
 - Create: `app/src-tauri/Cargo.toml`, `app/src-tauri/build.rs`, `app/src-tauri/tauri.conf.json`, `app/src-tauri/capabilities/default.json`
 - Create: `app/src-tauri/src/main.rs`, `app/src-tauri/src/lib.rs`, `app/src-tauri/src/commands.rs`
 - Create: `app/src-tauri/tests/bindings.rs`
@@ -690,7 +690,7 @@ members = ["crates/ephemeris", "app/src-tauri"]
 version = "0.1.0"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-rust-version = "1.90"
+rust-version = "1.93"
 repository = "https://github.com/turgaydogusan/jyotish-desk"
 ```
 
@@ -1087,10 +1087,10 @@ Beklenen: `advisories ok, bans ok, licenses ok, sources ok`. Advisory çıkarsa 
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-cargo +1.90 check -p ephemeris --all-targets
+cargo +1.93 check -p ephemeris --all-targets
 ```
 
-Beklenen: Hepsi geçer. `rustup toolchain install 1.90` gerekebilir.
+Beklenen: Hepsi geçer. `rustup toolchain install 1.93` gerekebilir.
 
 Uygulamayı bir kez başlatıp kapat: `cd app && timeout 120 pnpm tauri dev` (pencere açılır; sürüm ve 9 satır görünür). Bu adım ortamda pencere açamıyorsa atla ve rapora "dev çalıştırması yapılmadı" yaz; cihaz testi planın sonunda yapılacak.
 
@@ -1451,7 +1451,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.90
+      - uses: dtolnay/rust-toolchain@1.93
       - uses: Swatinem/rust-cache@v2
       - run: cargo check -p ephemeris --all-targets
 ```
@@ -1483,7 +1483,7 @@ UPDATE_BINDINGS=1 cargo test -p jyotish-desk --test bindings
 
 - [ ] **Step 3: Yerel doğrulama**
 
-Komut: `cargo clippy -p ephemeris --all-targets -- -D warnings && cargo test -p ephemeris && cargo +1.90 check -p ephemeris --all-targets`
+Komut: `cargo clippy -p ephemeris --all-targets -- -D warnings && cargo test -p ephemeris && cargo +1.93 check -p ephemeris --all-targets`
 Beklenen: Geçer.
 
 Workflow sözdizimi: `actionlint` kuruluysa `actionlint .github/workflows/ci.yml` çalıştır. Kurulu değilse YAML'ı `python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/ci.yml'))"` ile kontrol et; PyYAML da yoksa bu adımı atla ve rapora yaz.
