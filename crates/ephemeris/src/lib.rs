@@ -9,7 +9,9 @@ mod types;
 pub use engine::Engine;
 pub use error::EphError;
 pub use swiss::SwissEph;
-pub use types::{Ayanamsa, Body, BodyPosition, Precision, SiderealMode, Zodiac};
+pub use types::{
+    Ayanamsa, Body, BodyPosition, HouseSystem, Houses, Precision, SiderealMode, Zodiac,
+};
 
 /// Gök cismi konumu sağlayan motor. Üst katmanlar testte sahte motor takar.
 pub trait Ephemeris {
@@ -17,6 +19,18 @@ pub trait Ephemeris {
     fn body(&mut self, jd_ut: f64, body: Body, zodiac: Zodiac) -> Result<BodyPosition, EphError>;
     /// Nütasyon dahil (gerçek) ayanamsa, derece; hassasiyet bayrağıyla.
     fn ayanamsa(&mut self, jd_ut: f64, mode: SiderealMode) -> Result<Ayanamsa, EphError>;
+    /// Lagna, MC ve 12 ev başlangıcı. `zodiac` sidereal ise ayanamsa (nütasyon dahil)
+    /// düşülmüştür. `geo_lat` kuzey +, `geo_lon` doğu +, derece.
+    fn houses(
+        &mut self,
+        jd_ut: f64,
+        geo_lat: f64,
+        geo_lon: f64,
+        system: HouseSystem,
+        zodiac: Zodiac,
+    ) -> Result<Houses, EphError>;
+    /// Swiss Ephemeris sürüm dizgisi (ör. "2.10.03").
+    fn swe_version(&self) -> String;
 }
 
 /// Gregoryen takvim tarihini ve UT saatini (ondalık) Jülyen gününe çevirir.

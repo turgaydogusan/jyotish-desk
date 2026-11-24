@@ -18,6 +18,10 @@ pub const SE_SIDM_USER: i32 = 255;
 /// `SE_SIDM_USER` ile birlikte: `t0` UT olarak okunur (swephexp.h; varsayılan TT).
 pub const SE_SIDBIT_USER_UT: i32 = 1024;
 
+/// `ascmc` dizisinde lagna ve MC indeksleri (swephexp.h).
+pub const SE_ASC: usize = 0;
+pub const SE_MC: usize = 1;
+
 /// `serr` tamponları için SE'nin `AS_MAXCH` değeri.
 pub const AS_MAXCH: usize = 256;
 
@@ -46,4 +50,17 @@ extern "C" {
         daya: *mut c_double,
         serr: *mut c_char,
     ) -> i32;
+    /// `cusps` 13 double (1..=12 kullanılır), `ascmc` 10 double; hız dizileri NULL olabilir.
+    pub fn swe_houses_ex2(
+        tjd_ut: c_double,
+        iflag: i32,
+        geolat: c_double,
+        geolon: c_double,
+        hsys: c_int,
+        cusps: *mut c_double,
+        ascmc: *mut c_double,
+        cusp_speed: *mut c_double,
+        ascmc_speed: *mut c_double,
+        serr: *mut c_char,
+    ) -> c_int;
 }

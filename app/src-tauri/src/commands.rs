@@ -134,7 +134,7 @@ pub fn print_window(window: tauri::WebviewWindow) -> Result<(), CommandError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ephemeris::{Ayanamsa, BodyPosition, Precision};
+    use ephemeris::{Ayanamsa, BodyPosition, HouseSystem, Houses, Precision};
 
     /// Her cisme sabit boylam veren sahte motor; Rahu 100°.
     struct Fake;
@@ -165,6 +165,19 @@ mod tests {
                 deg: 24.0,
                 precision: Precision::SwissEph,
             })
+        }
+        fn houses(
+            &mut self,
+            _jd: f64,
+            _lat: f64,
+            _lon: f64,
+            _s: HouseSystem,
+            _z: Zodiac,
+        ) -> Result<Houses, EphError> {
+            Err(EphError::Calc("fake: houses unused".into()))
+        }
+        fn swe_version(&self) -> String {
+            "fake".into()
         }
     }
 

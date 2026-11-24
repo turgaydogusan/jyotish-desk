@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, TryLockError};
 
 use crate::{
-    ffi, Ayanamsa, Body, BodyPosition, EphError, Ephemeris, Precision, SiderealMode, Zodiac,
+    ffi, Ayanamsa, Body, BodyPosition, EphError, Ephemeris, HouseSystem, Houses, Precision,
+    SiderealMode, Zodiac,
 };
 
 /// SE global durumunu koruyan süreç çapında kilit.
@@ -185,6 +186,65 @@ impl Ephemeris for SwissEph {
             deg: daya,
             precision,
         })
+    }
+
+    fn houses(
+        &mut self,
+        jd_ut: f64,
+        geo_lat: f64,
+        geo_lon: f64,
+        system: HouseSystem,
+        zodiac: Zodiac,
+    ) -> Result<Houses, EphError> {
+        // SWIEPH: ΔT ve sidereal ayanamsa `body` ile aynı ephemeris'ten gelir.
+        let mut iflag = ffi::SEFLG_SWIEPH;
+        if let Zodiac::Sidereal(mode) = zodiac {
+            Self::set_sid_mode(mode);
+            iflag |= ffi::SEFLG_SIDEREAL;
+        }
+        let mut cusps = [0.0_f64; 13];
+        let mut ascmc = [0.0_f64; 10];
+        let mut serr: [c_char; ffi::AS_MAXCH] = [0; ffi::AS_MAXCH];
+        // SAFETY: cusps 13, ascmc 10 double (swehouse.c, swe_houses_ex2 açıklaması);
+        // hız dizileri NULL kabul edilir; serr AS_MAXCH; kilit tutuluyor.
+        let ret = unsafe {
+            ffi::swe_houses_ex2(
+                jd_ut,
+                iflag,
+                geo_lat,
+                geo_lon,
+                system.se_code(),
+                cusps.as_mut_ptr(),
+                ascmc.as_mut_ptr(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                serr.as_mut_ptr(),
+            )
+        };
+        let mut porphyry_fallback = false;
+        if ret < 0 {
+            let msg = read_cstr(&serr);
+            // swehouse.c: "within polar circle, switched to Porphyry" ve benzerleri.
+            if system == HouseSystem::Placidus && msg.contains("Porphyry") {
+                porphyry_fallback = true;
+            } else {
+                return Err(EphError::Calc(msg));
+            }
+        }
+        let mut out = [0.0_f64; 12];
+        for (o, c) in out.iter_mut().zip(&cusps[1..]) {
+            *o = norm360(*c);
+        }
+        Ok(Houses {
+            cusps: out,
+            asc: norm360(ascmc[ffi::SE_ASC]),
+            mc: norm360(ascmc[ffi::SE_MC]),
+            porphyry_fallback,
+        })
+    }
+
+    fn swe_version(&self) -> String {
+        Self::version()
     }
 }
 

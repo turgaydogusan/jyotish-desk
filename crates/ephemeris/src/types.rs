@@ -98,3 +98,36 @@ impl BodyPosition {
         self.lon_speed < 0.0
     }
 }
+
+/// Ev sistemi. SE harf kodları `swehouse.c` içindeki `swe_house_name` ile aynıdır.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HouseSystem {
+    /// 'W': lagna burcundan başlayan tam burç evleri.
+    WholeSign,
+    /// 'S': Porphyry bölümlerinin ortaları; dönen cusp'lar bhava başlangıcıdır (sandhi).
+    Sripati,
+    /// 'P': Placidus. Kutup dairesinde SE Porphyry'ye düşer (`Houses::porphyry_fallback`).
+    Placidus,
+}
+
+impl HouseSystem {
+    pub(crate) fn se_code(self) -> i32 {
+        let c = match self {
+            Self::WholeSign => b'W',
+            Self::Sripati => b'S',
+            Self::Placidus => b'P',
+        };
+        i32::from(c)
+    }
+}
+
+/// Lagna, MC ve 12 ev başlangıcı, derece, [0, 360).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Houses {
+    /// `cusps[0]` 1. evin başlangıcı, …, `cusps[11]` 12. evin başlangıcı.
+    pub cusps: [f64; 12],
+    pub asc: f64,
+    pub mc: f64,
+    /// Placidus kutup dairesinde hesaplanamadı; cusp'lar Porphyry'dir.
+    pub porphyry_fallback: bool,
+}
