@@ -2,17 +2,24 @@
 # Swiss Ephemeris kaynağını ve veri dosyalarını sabit bir sürümden getirir.
 set -euo pipefail
 SWE_TAG="v2.10.03"
+# Etiket hareketli olabilir; kaynak bu commit'e sabitlenir (git ls-remote ile çözüldü).
+SWE_COMMIT="175e1fcb3108bcd5c0d146c803f51dcf23508012"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$(mktemp -d)/swisseph"
 DEST="$ROOT/crates/ephemeris/vendor/swisseph"
 EPHE="$ROOT/data/ephe"
 
 git clone --depth 1 --branch "$SWE_TAG" https://github.com/aloistr/swisseph.git "$SRC"
+if [ "$(git -C "$SRC" rev-parse HEAD)" != "$SWE_COMMIT" ]; then
+  echo "HATA: $SWE_TAG beklenen commit'e ($SWE_COMMIT) işaret etmiyor" >&2
+  exit 1
+fi
 
+rm -rf "$DEST"
 mkdir -p "$DEST" "$EPHE"
 cp "$SRC"/*.c "$SRC"/*.h "$DEST"/
 # Etiketteki, kütüphanede kullanılmayan bağımsız örnek/araç programları (build.rs derlemez); swetest.c fixture üretimi için kalır.
-rm -f "$DEST"/swemini.c "$DEST"/swevents.c "$DEST"/swephgen4.c "$DEST"/sweasp.c
+rm -f "$DEST"/swemini.c "$DEST"/swevents.c "$DEST"/swephgen4.c "$DEST"/sweasp.c "$DEST"/sweclips.c "$DEST"/sweephe4.c
 cp "$SRC"/LICENSE "$DEST"/LICENSE
 
 # Veri dosyaları v2.10.03 tag'inde yok (astro.com/ftp/.../ephe da 404); resmi repodan sabit commit SHA ile alınır.
@@ -23,12 +30,15 @@ EPHE_HASHES=(
   1ca07bd67c24374d77226180c20a4f9996cba013697894810518e7eb582ca4f7
   18b0dcafbe5b7240773daba2c038a325f5b3fc4163f61e0a7f4e92abd4f517c6
 )
+sha256() {
+  if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi
+}
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 for i in "${!EPHE_FILES[@]}"; do
   f="${EPHE_FILES[$i]}"
   curl -fsSL -o "$TMP/$f" "https://raw.githubusercontent.com/aloistr/swisseph/$EPHE_SHA/ephe/$f"
-  actual="$(shasum -a 256 "$TMP/$f" | awk '{print $1}')"
+  actual="$(sha256 "$TMP/$f")"
   if [ "$actual" != "${EPHE_HASHES[$i]}" ]; then
     echo "HATA: $f sha256 uyuşmuyor (beklenen ${EPHE_HASHES[$i]}, gelen $actual)" >&2
     exit 1
