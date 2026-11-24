@@ -1,5 +1,7 @@
 pub mod commands;
 
+use std::sync::Arc;
+
 use tauri::path::BaseDirectory;
 use tauri::Manager;
 
@@ -22,9 +24,10 @@ pub fn run() {
         .setup(move |app| {
             builder.mount_events(app);
             let ephe = app.path().resolve("ephe", BaseDirectory::Resource)?;
-            // Eksik veri ölümcül: setup hatası uygulamayı açmadan sonlandırır.
+            // Eksik veri ölümcül: setup hatası Tauri'de "Failed to setup app" paniğine yol
+            // açar (paketlenmiş uygulama sessizce kapanır). Yerel hata penceresi sonra eklenecek.
             let engine = ephemeris::Engine::spawn(ephe)?;
-            app.manage(engine);
+            app.manage(Arc::new(engine));
             Ok(())
         })
         .run(tauri::generate_context!())

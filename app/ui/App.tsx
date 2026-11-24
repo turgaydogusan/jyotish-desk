@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { commands, type CommandError, type PlanetRow } from "./bindings";
+import { api } from "./api";
+import type { CommandError, PlanetRow } from "./bindings";
 import { PrintSpike } from "./PrintSpike";
 
 /** Unix milisaniyesini UT Jülyen gününe çevirir (1970-01-01T00:00Z = JD 2440587.5). */
@@ -15,10 +16,10 @@ export function App() {
 
   useEffect(() => {
     void (async () => {
-      const status = await commands.engineStatus();
+      const status = await api.engineStatus();
       if (status.status === "ok") setVersion(status.data.seVersion);
       else setError(status.error);
-      const planets = await commands.planetLongitudes(unixMsToJdUt(Date.now()));
+      const planets = await api.planetLongitudes(unixMsToJdUt(Date.now()));
       if (planets.status === "ok") setRows(planets.data);
       else setError(planets.error);
     })();
@@ -34,7 +35,7 @@ export function App() {
         {printView && (
           <button
             onClick={async () => {
-              const r = await commands.printWindow();
+              const r = await api.printWindow();
               if (r.status === "error") setError(r.error);
             }}
           >

@@ -6,7 +6,11 @@ import type { InvokeOptions } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	engineStatus: (options?: InvokeOptions) => typedError<EngineStatus, CommandError>(__TAURI_INVOKE("engine_status", undefined, options)),
-	/**  Motor çağrısı milisaniyeler sürer. Async komut, ana iş parçacığını (UI) bloklamaz. */
+	/**
+	 *  Motor çağrısı milisaniyeler sürer ve `engine.call` kanal üzerinde bloklar. Bu yüzden
+	 *  çağrı `spawn_blocking` havuzunda yapılır; async çalışma zamanı iş parçacıkları serbest kalır.
+	 *  `State<'_, _>` `'static` olmadığından motor `Arc` olarak yönetilir ve kapanışa klonlanır.
+	 */
 	planetLongitudes: (jdUt: number | null, options?: InvokeOptions) => typedError<PlanetRow[], CommandError>(__TAURI_INVOKE("planet_longitudes", { jdUt }, options)),
 	/**
 	 *  macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.

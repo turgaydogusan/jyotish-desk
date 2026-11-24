@@ -1,6 +1,7 @@
 //! İnce komut katmanı: girdiyi motora iletir, sonucu DTO'ya çevirir.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use ephemeris::{Body, Engine, EphError, Ephemeris, SiderealMode, SwissEph, Zodiac};
 use serde::Serialize;
@@ -80,7 +81,12 @@ pub fn planet_rows(eph: &mut dyn Ephemeris, jd_ut: f64) -> Result<Vec<PlanetRow>
             retrograde: p.is_retrograde(),
         });
     }
-    let rahu = rows[7].clone();
+    let rahu = rows
+        .iter()
+        .zip(GRAHAS)
+        .find(|(_, (body, _))| *body == Body::MeanNode)
+        .map(|(row, _)| row.clone())
+        .ok_or_else(|| EphError::Calc("rahu missing".into()))?;
     rows.push(PlanetRow {
         body: "Ketu".to_owned(),
         lon: (rahu.lon + 180.0).rem_euclid(360.0),
@@ -97,14 +103,22 @@ pub async fn engine_status() -> Result<EngineStatus, CommandError> {
     })
 }
 
-/// Motor çağrısı milisaniyeler sürer. Async komut, ana iş parçacığını (UI) bloklamaz.
+/// Motor çağrısı milisaniyeler sürer ve `engine.call` kanal üzerinde bloklar. Bu yüzden
+/// çağrı `spawn_blocking` havuzunda yapılır; async çalışma zamanı iş parçacıkları serbest kalır.
+/// `State<'_, _>` `'static` olmadığından motor `Arc` olarak yönetilir ve kapanışa klonlanır.
 #[tauri::command]
 #[specta::specta]
 pub async fn planet_longitudes(
-    engine: State<'_, Engine>,
+    engine: State<'_, Arc<Engine>>,
     jd_ut: f64,
 ) -> Result<Vec<PlanetRow>, CommandError> {
-    Ok(engine.call(move |se: &mut SwissEph| planet_rows(se, jd_ut))??)
+    let engine = Arc::clone(&engine);
+    let rows = tauri::async_runtime::spawn_blocking(move || {
+        engine.call(move |se: &mut SwissEph| planet_rows(se, jd_ut))
+    })
+    .await
+    .map_err(|e| CommandError::new("engine_stopped", &[("detail", e.to_string())]))???;
+    Ok(rows)
 }
 
 /// macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
