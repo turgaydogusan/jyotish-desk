@@ -55,7 +55,7 @@ crates/
                  `Ephemeris` trait'i; veri yolu parametre (Android için).
   jyotish-core/  Saf, yan etkisiz hesap: time, ayanamsa, grahas, houses,
                  vargas, dasha, panchang, ashtakavarga, transit.
-  atlas/         GeoNames SQLite + FTS5; yerel saat → ResolvedMoment (chrono-tz, LMT).
+  atlas/         GeoNames SQLite + FTS5; yerel saat → ResolvedMoment (jiff (bundled tzdb), LMT).
   store/         rusqlite + rusqlite_migration; danışan ve harita kayıtları.
 app/
   src-tauri/     İnce komut katmanı, iş mantığı yok. TS tipleri tauri-specta ile üretilir.
@@ -151,7 +151,7 @@ FTS5: clients.name, client_notes.body
 
 - **DST boşluğu (var olmayan saat):** Kayıt engellenir, tek tıkla düzeltme önerilir. Saat sessizce kaydırılmaz.
 - **DST örtüşmesi (iki kez yaşanan saat):** Kullanıcı Earlier ya da Later seçmek zorundadır. Seçim `fold` alanında saklanır.
-- **Standart saat öncesi tarihler:** LMT, tzdb'nin referans şehrinden değil, doğum yerinin boylamından hesaplanır.
+- **Standart saat öncesi tarihler:** tzdb ofsetinin kısaltması "LMT" ise (yaz saati değil), LMT referans şehirden değil doğum yerinin boylamından hesaplanır. Adlandırılmış ortalama saatler (IMT, MMT…) ve diğer tüm ofsetler tzdb'deki gibi kullanılır; ofset dakikaya tam bölünmüyorsa veya yıl 1970'ten önceyse güvenilirlik uyarısı verilir.
 - **Manuel UTC ofseti:** Her zaman girilebilir. tzdb'nin 1970 öncesi verisi garanti değil.
 - **Bilinmeyen doğum saati:** Yerel 12:00 kullanılır. Lagna, evler ve lagnaya bağlı vargalar gizlenir. Ay, nakshatra ve dasha "yaklaşık" olarak işaretlenir. Ay o gün içinde nakshatra değiştiriyorsa uyarı verilir.
 - **Paketlenen aralık dışındaki tarih:** Moshier yedeğine geçilir ve görünür bir "düşük hassasiyet" uyarısı gösterilir.

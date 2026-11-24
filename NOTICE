@@ -13,7 +13,9 @@ Swiss Ephemeris source code is from tag v2.10.03, pinned to commit
 (sepl_18.se1, semo_18.se1, sefstars.txt) come from aloistr/swisseph at commit
 e308765d10b9463ab0ed53b102ad454820ee0b43.
 
-Atlas verisi (data/atlas/atlas.sqlite): GeoNames (https://www.geonames.org),
-Creative Commons Attribution 4.0 (CC BY 4.0). Kaynak dosyalar ve indirme tarihi:
-data/atlas/SOURCE.md. Veri, ad, ülke, il, koordinat, saat dilimi ve nüfus
-alanlarına kırpılmıştır.
+Atlas data (data/atlas/atlas.sqlite): GeoNames (https://www.geonames.org),
+licensed under Creative Commons Attribution 4.0 (CC BY 4.0,
+https://creativecommons.org/licenses/by/4.0/). Source files and download date:
+data/atlas/SOURCE.md. Changes: the data was trimmed to the fields needed (name,
+country, admin region, coordinates, time zone and population) and built into a
+SQLite database with a full-text search index.
