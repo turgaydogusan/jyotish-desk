@@ -122,5 +122,19 @@ mod varga_properties {
             let continuous = Sign::from_index((normalize(lon) * 9.0 / 30.0) as usize);
             prop_assert_eq!(varga_position(Varga::D9, lon).0, continuous);
         }
+
+        #[test]
+        fn bhamsa_matches_the_continuous_formula(lon in 0.0f64..360.0) {
+            let continuous = Sign::from_index((normalize(lon) * 27.0 / 30.0) as usize);
+            prop_assert_eq!(varga_position(Varga::D27, lon).0, continuous);
+        }
+
+        #[test]
+        fn trimsamsa_never_falls_in_luminary_signs(lon in 0.0f64..360.0) {
+            let (sign, _) = varga_position(Varga::D30, lon);
+            prop_assert!(sign != Sign::Cancer && sign != Sign::Leo, "{sign:?}");
+            let odd = Sign::of(lon).index().is_multiple_of(2);
+            prop_assert_eq!(sign.index().is_multiple_of(2), odd);
+        }
     }
 }
