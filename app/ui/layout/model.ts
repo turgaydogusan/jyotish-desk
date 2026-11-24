@@ -1,0 +1,206 @@
+// Pano düzeni veri modeli (spec §3.2). Kalıcı biçim `ViewState.panel_layout` ile aynıdır;
+// M4'teki store komutu gelene kadar localStorage'da tutulur (bkz. persistence.ts).
+
+/** v1 panel kataloğu (spec §3.3). */
+export const PANEL_KINDS = [
+  "chart",
+  "graha_table",
+  "dasha_tree",
+  "dasha_strip",
+  "transit_table",
+  "notes",
+  "birth_info",
+] as const;
+export type KnownPanelKind = (typeof PANEL_KINDS)[number];
+
+export type PanelSettings = Record<string, unknown>;
+
+/**
+ * `kind` bilinmeyen bir değer de olabilir (ör. daha yeni bir sürümün kaydettiği panel).
+ * Bu paneller atılmaz; pano onları "tanınmıyor" yedeğiyle çizer ve düzen korunur.
+ */
+export interface Panel {
+  id: string;
+  kind: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  settings: PanelSettings;
+}
+
+export interface Layout {
+  id: string;
+  name: string;
+  builtin: boolean;
+  panels: Panel[];
+}
+
+export interface LayoutState {
+  schema_version: number;
+  active_layout_id: string;
+  layouts: Layout[];
+}
+
+export const LAYOUT_SCHEMA_VERSION = 1;
+
+export const BUILTIN_LAYOUT_IDS = {
+  interview: "builtin:interview",
+  research: "builtin:research",
+  transit: "builtin:transit",
+} as const;
+export type BuiltinLayoutId = (typeof BUILTIN_LAYOUT_IDS)[keyof typeof BUILTIN_LAYOUT_IDS];
+
+const BUILTIN_ORDER: readonly BuiltinLayoutId[] = [
+  BUILTIN_LAYOUT_IDS.interview,
+  BUILTIN_LAYOUT_IDS.research,
+  BUILTIN_LAYOUT_IDS.transit,
+];
+
+export function isKnownPanelKind(kind: string): kind is KnownPanelKind {
+  return (PANEL_KINDS as readonly string[]).includes(kind);
+}
+
+export function isBuiltinLayoutId(id: string): id is BuiltinLayoutId {
+  return (BUILTIN_ORDER as readonly string[]).includes(id);
+}
+
+function chart(id: string, varga: string, x: number, y: number, w: number, h: number, transitRing = false): Panel {
+  return { id, kind: "chart", x, y, w, h, settings: { varga, style: "north", transit_ring: transitRing } };
+}
+
+function panel(id: string, kind: KnownPanelKind, x: number, y: number, w: number, h: number, settings: PanelSettings = {}): Panel {
+  return { id, kind, x, y, w, h, settings };
+}
+
+// 12 sütun, 32 px satır. Tarih kaydırıcı ayrı bir panel türü değildir; transit tablosunun
+// `date` ayarıdır (null = şimdi).
+const BUILTIN_FACTORIES: Record<BuiltinLayoutId, () => Layout> = {
+  [BUILTIN_LAYOUT_IDS.interview]: () => ({
+    id: BUILTIN_LAYOUT_IDS.interview,
+    name: "Görüşme",
+    builtin: true,
+    panels: [
+      chart("d1", "D1", 0, 0, 6, 12),
+      chart("d9", "D9", 6, 0, 6, 12),
+      panel("dasha", "dasha_strip", 0, 12, 8, 6, { level: "antar" }),
+      panel("notes", "notes", 8, 12, 4, 6),
+    ],
+  }),
+  [BUILTIN_LAYOUT_IDS.research]: () => ({
+    id: BUILTIN_LAYOUT_IDS.research,
+    name: "Araştırma",
+    builtin: true,
+    panels: [
+      chart("d1", "D1", 0, 0, 4, 10),
+      chart("d9", "D9", 4, 0, 4, 10),
+      chart("d10", "D10", 8, 0, 4, 10),
+      panel("grahas", "graha_table", 0, 10, 6, 9, { columns: ["lon", "nakshatra", "pada", "speed", "retro"] }),
+      panel("dasha", "dasha_tree", 6, 10, 6, 9, { system: "vimshottari", open: [] }),
+    ],
+  }),
+  [BUILTIN_LAYOUT_IDS.transit]: () => ({
+    id: BUILTIN_LAYOUT_IDS.transit,
+    name: "Transit",
+    builtin: true,
+    panels: [
+      chart("d1", "D1", 0, 0, 7, 12, true),
+      panel("transits", "transit_table", 7, 0, 5, 12, { date: null }),
+      panel("dasha", "dasha_strip", 0, 12, 12, 4, { level: "antar" }),
+    ],
+  }),
+};
+
+/** Hazır düzenin taze kopyası; bilinmeyen kimlikte `undefined`. */
+export function builtinLayout(id: string): Layout | undefined {
+  return isBuiltinLayoutId(id) ? BUILTIN_FACTORIES[id]() : undefined;
+}
+
+export function builtinLayouts(): Layout[] {
+  return BUILTIN_ORDER.map((id) => BUILTIN_FACTORIES[id]());
+}
+
+export function defaultLayoutState(): LayoutState {
+  return {
+    schema_version: LAYOUT_SCHEMA_VERSION,
+    active_layout_id: BUILTIN_LAYOUT_IDS.interview,
+    layouts: builtinLayouts(),
+  };
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+function isInt(v: unknown, min: number): v is number {
+  return typeof v === "number" && Number.isInteger(v) && v >= min;
+}
+
+function parsePanel(raw: unknown): Panel | null {
+  if (!isRecord(raw)) return null;
+  const { id, kind, x, y, w, h, settings } = raw;
+  if (!isNonEmptyString(id) || !isNonEmptyString(kind)) return null;
+  if (!isInt(x, 0) || !isInt(y, 0) || !isInt(w, 1) || !isInt(h, 1)) return null;
+  return { id, kind, x, y, w, h, settings: isRecord(settings) ? { ...settings } : {} };
+}
+
+function parsePanels(raw: unknown): Panel[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: Panel[] = [];
+  for (const item of raw) {
+    const p = parsePanel(item);
+    if (p === null || seen.has(p.id)) continue;
+    seen.add(p.id);
+    out.push(p);
+  }
+  return out;
+}
+
+function parseLayout(raw: unknown): Layout | null {
+  if (!isRecord(raw)) return null;
+  const { id, name, panels } = raw;
+  if (!isNonEmptyString(id) || !isNonEmptyString(name)) return null;
+  const fresh = builtinLayout(id);
+  if (fresh) {
+    // Hazır düzenin adı sabittir; panelleri kullanıcı değiştirmiş olabilir.
+    return { ...fresh, panels: Array.isArray(panels) ? parsePanels(panels) : fresh.panels };
+  }
+  return { id, name: name.trim(), builtin: false, panels: parsePanels(panels) };
+}
+
+/**
+ * Toleranslı ayrıştırma (v1 spec §7: bozuk görünüm durumu açılışı asla engellemez):
+ * - bilinmeyen alanlar yok sayılır, geçersiz panel ve düzenler atılır,
+ * - bilinmeyen panel türleri korunur,
+ * - eksik hazır düzenler yeniden eklenir; hazır düzenler her zaman başta ve sabit sıradadır,
+ * - geçersiz `active_layout_id` ilk hazır düzene döner.
+ * `schema_version` yoksa 1 kabul edilir. Daha yeni bir sürüm de aynı kurallarla okunur.
+ */
+export function parseLayoutState(raw: unknown): LayoutState {
+  if (!isRecord(raw)) return defaultLayoutState();
+  const parsed = Array.isArray(raw.layouts) ? raw.layouts.map(parseLayout) : [];
+  const byId = new Map<string, Layout>();
+  for (const l of parsed) if (l !== null && !byId.has(l.id)) byId.set(l.id, l);
+
+  const builtins = BUILTIN_ORDER.map((id) => byId.get(id) ?? BUILTIN_FACTORIES[id]());
+  const users = [...byId.values()].filter((l) => !l.builtin);
+  const layouts = [...builtins, ...users];
+
+  const active = raw.active_layout_id;
+  const activeId =
+    typeof active === "string" && layouts.some((l) => l.id === active) ? active : BUILTIN_LAYOUT_IDS.interview;
+  return { schema_version: LAYOUT_SCHEMA_VERSION, active_layout_id: activeId, layouts };
+}
+
+export function serializeLayoutState(state: LayoutState): string {
+  return JSON.stringify({
+    schema_version: LAYOUT_SCHEMA_VERSION,
+    active_layout_id: state.active_layout_id,
+    layouts: state.layouts,
+  });
+}
