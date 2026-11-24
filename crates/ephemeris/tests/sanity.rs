@@ -106,3 +106,25 @@ fn version_reports_2_10() {
         SwissEph::version()
     );
 }
+
+#[test]
+fn over_long_path_is_rejected() {
+    let long = std::env::temp_dir().join("a".repeat(300));
+    assert!(matches!(SwissEph::open(&long), Err(EphError::InvalidPath)));
+}
+
+#[cfg(unix)]
+#[test]
+fn path_with_nul_byte_is_rejected() {
+    use std::os::unix::ffi::OsStrExt;
+    let p = std::path::Path::new(std::ffi::OsStr::from_bytes(b"/tmp/a\0b"));
+    assert!(matches!(SwissEph::open(p), Err(EphError::InvalidPath)));
+}
+
+#[test]
+fn out_of_range_date_falls_back_to_flagged_moshier() {
+    let mut eph = SwissEph::open(&ephe_dir()).unwrap();
+    let jd = julday_gregorian(3000, 1, 1, 12.0);
+    let sun = eph.body(jd, Body::Sun, Zodiac::Tropical).unwrap();
+    assert_eq!(sun.precision, Precision::Moshier);
+}

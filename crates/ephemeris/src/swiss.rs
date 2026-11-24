@@ -10,8 +10,17 @@ static SWE_LOCK: Mutex<()> = Mutex::new(());
 
 const J2000: f64 = 2_451_545.0;
 
+/// SE'nin yol tamponu sınırı: `AS_MAXCH - 1 - 13` (vendor/swisseph/sweph.c,
+/// `swe_set_ephe_path`); daha uzun yollar sessizce derleme-zamanı varsayılanına düşer.
+const MAX_PATH_BYTES: usize = ffi::AS_MAXCH - 1 - 13;
+
 /// Swiss Ephemeris'in tek sahibi. Var olduğu sürece başka örnek açılamaz
 /// (açmaya çalışan iş parçacığı bekler).
+///
+/// Süreç çapında kilidin `MutexGuard`'ını tuttuğu için `!Send`'dir: örneği
+/// açan iş parçacığında kalmalıdır (üst katmanlar onu özel bir iş
+/// parçacığı/aktör içinde sahiplenmelidir). Aynı iş parçacığında bir örnek
+/// yaşarken yeniden `open` çağırmak kilitlenir (deadlock); önce örneği düşürün.
 pub struct SwissEph {
     path: PathBuf,
     _guard: MutexGuard<'static, ()>,
@@ -24,14 +33,37 @@ fn read_cstr(buf: &[c_char]) -> String {
         .into_owned()
 }
 
+/// [0, 360) aralığına indirger; `rem_euclid` küçük negatiflerde 360.0 verebilir.
+fn norm360(x: f64) -> f64 {
+    let r = x.rem_euclid(360.0);
+    if r >= 360.0 {
+        0.0
+    } else {
+        r
+    }
+}
+
 impl SwissEph {
     /// Veri dizinini ayarlar ve self-check yapar. Güneş ya da Ay dosyası
     /// eksikse `DataFilesMissing` döner; sessiz Moshier yedeği yoktur.
+    ///
+    /// `SE_EPHE_PATH` ortam değişkeni tanımlıysa (SE onu argümana tercih eder)
+    /// `EnvOverride`; yol UTF-8 değilse, NUL içeriyorsa ya da SE tamponuna
+    /// sığmıyorsa (> 242 bayt) `InvalidPath` döner.
+    ///
+    /// Dikkat: aynı iş parçacığında başka bir `SwissEph` yaşarken çağırmak
+    /// kilitlenir; önce onu düşürün. Dönen örnek `!Send`'dir.
     pub fn open(path: &Path) -> Result<Self, EphError> {
         let guard = SWE_LOCK
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if std::env::var_os("SE_EPHE_PATH").is_some() {
+            return Err(EphError::EnvOverride);
+        }
         let s = path.to_str().ok_or(EphError::InvalidPath)?;
+        if s.len() > MAX_PATH_BYTES {
+            return Err(EphError::InvalidPath);
+        }
         let c_path = CString::new(s).map_err(|_| EphError::InvalidPath)?;
         // SAFETY: kilit tutuluyor; SE yolu kendi tamponuna kopyalar.
         unsafe { ffi::swe_set_ephe_path(c_path.as_ptr()) };
@@ -99,7 +131,7 @@ impl Ephemeris for SwissEph {
             Precision::SwissEph
         };
         Ok(BodyPosition {
-            lon: xx[0].rem_euclid(360.0),
+            lon: norm360(xx[0]),
             lat: xx[1],
             distance_au: xx[2],
             lon_speed: xx[3],
@@ -128,5 +160,16 @@ impl Drop for SwissEph {
     fn drop(&mut self) {
         // SAFETY: kilit hâlâ tutuluyor (_guard bu gövdeden sonra düşer).
         unsafe { ffi::swe_close() };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::norm360;
+
+    #[test]
+    fn norm360_never_returns_360() {
+        assert_eq!(norm360(-1e-15), 0.0);
+        assert_eq!(norm360(370.0), 10.0);
     }
 }
