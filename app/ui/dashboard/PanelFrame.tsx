@@ -1,9 +1,13 @@
-import { useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useId, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Panel } from "../layout/model";
 import { panelDefinition } from "../panels/registry";
 import { PanelStatusContext, type LoadPhase } from "../panels/states";
 import { arrowDelta } from "./metrics";
+
+const KEY_SHORTCUTS = ["Alt", "Alt+Shift"]
+  .flatMap((m) => ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].map((k) => `${m}+${k}`))
+  .join(" ");
 
 export type DragMode = "move" | "resize";
 
@@ -17,6 +21,7 @@ export interface PanelFrameProps {
 /** Panel çerçevesi: başlık (sürükleme tutamacı), satır içi yükleme göstergesi, gövde, boyut tutamacı. */
 export function PanelFrame({ panel, editable, onDragStart, onKeyboardEdit }: PanelFrameProps) {
   const { t } = useTranslation();
+  const hintId = useId();
   const [phase, setPhase] = useState<LoadPhase>("none");
   const def = panelDefinition(panel.kind);
   const Body = def.component;
@@ -44,12 +49,26 @@ export function PanelFrame({ panel, editable, onDragStart, onKeyboardEdit }: Pan
       data-editable={editable}
       tabIndex={0}
       aria-label={subtitle ? `${title} ${subtitle}` : title}
-      aria-keyshortcuts={editable ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight" : undefined}
-      title={editable ? t("panel.moveHint") : undefined}
+      aria-keyshortcuts={editable ? KEY_SHORTCUTS : undefined}
+      aria-describedby={editable ? hintId : undefined}
       style={{ gridColumn: `${panel.x + 1} / span ${panel.w}`, gridRow: `${panel.y + 1} / span ${panel.h}` }}
       onKeyDown={onKeyDown}
     >
-      <header className="panel-header" data-testid={`panel-header-${panel.id}`} onPointerDown={(e) => onDragStart(e, panel, "move")}>
+      {editable && (
+        <span id={hintId} className="visually-hidden">
+          {t("panel.moveHint")}
+        </span>
+      )}
+      <header
+        className="panel-header"
+        data-testid={`panel-header-${panel.id}`}
+        title={editable ? t("panel.moveHint") : undefined}
+        onPointerDown={(e) => {
+          // Sürükleme başlangıcı varsayılan odaklanmayı engeller; paneli elle odakla.
+          e.currentTarget.parentElement?.focus({ preventScroll: true });
+          onDragStart(e, panel, "move");
+        }}
+      >
         <span>{title}</span>
         {subtitle && <span className="panel-subtitle">{subtitle}</span>}
         {phase === "inline" && (

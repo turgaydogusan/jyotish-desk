@@ -52,6 +52,7 @@ export const en: Messages = {
     unknownKind: "This version does not recognise the “{{kind}}” panel. The layout is kept as it is.",
     retry: "Try again",
     moveHint: "Alt+arrow moves, Alt+Shift+arrow resizes",
+    announce: "Column {{col}}, row {{row}}, {{w}}×{{h}}",
   },
   table: { graha: "Graha", sign: "Sign", degree: "Degree", retro: "Retro", empty: "No grahas to show." },
   errors: {

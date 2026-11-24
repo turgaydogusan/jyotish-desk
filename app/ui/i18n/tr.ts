@@ -51,6 +51,7 @@ export const tr = {
     unknownKind: "“{{kind}}” paneli bu sürümde tanınmıyor. Düzen olduğu gibi korunuyor.",
     retry: "Yeniden dene",
     moveHint: "Taşımak için Alt+ok, boyutlandırmak için Alt+Shift+ok",
+    announce: "Sütun {{col}}, satır {{row}}, {{w}}×{{h}}",
   },
   table: { graha: "Graha", sign: "Burç", degree: "Derece", retro: "Retro", empty: "Gösterilecek graha yok." },
   errors: {

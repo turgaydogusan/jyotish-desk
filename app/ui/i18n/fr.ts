@@ -52,6 +52,7 @@ export const fr: Messages = {
     unknownKind: "Cette version ne reconnaît pas le panneau « {{kind}} ». La disposition est conservée telle quelle.",
     retry: "Réessayer",
     moveHint: "Alt+flèche déplace, Alt+Maj+flèche redimensionne",
+    announce: "Colonne {{col}}, ligne {{row}}, {{w}}×{{h}}",
   },
   table: { graha: "Graha", sign: "Signe", degree: "Degré", retro: "Rétro", empty: "Aucun graha à afficher." },
   errors: {
