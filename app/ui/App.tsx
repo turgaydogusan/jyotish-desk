@@ -39,7 +39,7 @@ export function App() {
           {rows.map((r) => (
             <tr key={r.body}>
               <td>{r.body}</td>
-              <td>{r.lon.toFixed(4)}</td>
+              <td>{r.lon === null ? "—" : r.lon.toFixed(4)}</td>
               <td>{r.retrograde ? "R" : ""}</td>
             </tr>
           ))}

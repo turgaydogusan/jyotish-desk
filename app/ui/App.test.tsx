@@ -38,3 +38,14 @@ test("shows error code when a command fails", async () => {
   render(<App />);
   expect(await screen.findByRole("alert")).toHaveTextContent("calc");
 });
+
+test("shows a dash when a longitude is not finite (serialized as null)", async () => {
+  const { commands } = await import("./bindings");
+  vi.mocked(commands.planetLongitudes).mockResolvedValueOnce({
+    status: "ok",
+    data: [{ body: "Mars", lon: null, retrograde: false }],
+  });
+  render(<App />);
+  expect(await screen.findByText("Mars")).toBeInTheDocument();
+  expect(screen.getByText("—")).toBeInTheDocument();
+});

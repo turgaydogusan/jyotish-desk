@@ -1,0 +1,21 @@
+[package]
+name = "jyotish-desk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[lib]
+name = "jyotish_desk_lib"
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+ephemeris = { path = "../../crates/ephemeris" }
+tauri = { version = "2.12", features = [] }
+serde = { version = "1", features = ["derive"] }
+specta = { version = "=2.0.0-rc.28", features = ["derive"] }
+tauri-specta = { version = "=2.0.0-rc.29", features = ["derive", "typescript"] }
+specta-typescript = "0.0.15"
