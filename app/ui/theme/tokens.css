@@ -1,0 +1,91 @@
+/* Renk, yazı ve odak belirteçleri (docs/superpowers/specs/2026-11-24-ui-design.md §2).
+   Hex değerleri yalnızca bu dosyada bulunur; bileşenler var(--…) kullanır. */
+
+:root {
+  color-scheme: light;
+  --bg: #FAF9F5;
+  --panel: #FFFFFF;
+  --line: #D3D1C7;
+  --ink: #534AB7;
+  --ink-strong: #3C3489;
+  --select: #EEEDFE;
+  --text: #2C2C2A;
+  --text-2: #5F5E5A;
+  --warn: #BA7517;
+  --danger: #A32D2D;
+
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fs-table: 12px;
+  --fs-body: 13px;
+  --fs-panel-title: 15px;
+  --fs-client: 18px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1B1830;
+  --panel: #26215C;
+  --line: #3C3489;
+  --ink: #AFA9EC;
+  --ink-strong: #CECBF6;
+  --select: #3C3489;
+  --text: #EEEDFE;
+  --text-2: #AFA9EC;
+  --warn: #EF9F27;
+  --danger: #F09595;
+}
+
+/* Baskı her zaman açık temadır ve yalnızca --ink ile --text kullanır (spec §2.1, §7). */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #FFFFFF;
+    --panel: #FFFFFF;
+    --line: #534AB7;
+    --ink: #534AB7;
+    --ink-strong: #534AB7;
+    --select: #FFFFFF;
+    --text: #2C2C2A;
+    --text-2: #2C2C2A;
+    --warn: #2C2C2A;
+    --danger: #2C2C2A;
+  }
+}
+
+html {
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  color: var(--text);
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+th,
+strong {
+  font-weight: var(--fw-medium);
+}
+
+table,
+time,
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+table {
+  font-size: var(--fs-table);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}

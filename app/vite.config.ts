@@ -12,5 +12,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["ui/setupTests.ts"],
     include: ["ui/**/*.test.{ts,tsx}"],
+    // Vitest CSS içe aktarımlarını varsayılan olarak boşaltır; `?raw` ile okunan CSS
+    // (tema ve renk testleri) ham metin olarak gelsin diye bu içe aktarımlar dahil edilir.
+    css: { include: [/\.css\?raw$/] },
   },
 });
