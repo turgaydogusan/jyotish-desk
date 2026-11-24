@@ -11,6 +11,7 @@ vi.mock("./bindings", () => ({
         { body: "Saturn", lon: 10.25, retrograde: true },
       ],
     })),
+    printWindow: vi.fn(async () => ({ status: "ok", data: null })),
   },
 }));
 

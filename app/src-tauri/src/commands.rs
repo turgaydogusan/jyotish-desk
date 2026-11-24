@@ -107,6 +107,16 @@ pub async fn planet_longitudes(
     Ok(engine.call(move |se: &mut SwissEph| planet_rows(se, jd_ut))??)
 }
 
+/// macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
+/// Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
+#[tauri::command]
+#[specta::specta]
+pub fn print_window(window: tauri::WebviewWindow) -> Result<(), CommandError> {
+    window
+        .print()
+        .map_err(|e| CommandError::new("print_failed", &[("detail", e.to_string())]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

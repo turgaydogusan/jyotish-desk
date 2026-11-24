@@ -8,6 +8,11 @@ export const commands = {
 	engineStatus: (options?: InvokeOptions) => typedError<EngineStatus, CommandError>(__TAURI_INVOKE("engine_status", undefined, options)),
 	/**  Motor çağrısı milisaniyeler sürer. Async komut, ana iş parçacığını (UI) bloklamaz. */
 	planetLongitudes: (jdUt: number | null, options?: InvokeOptions) => typedError<PlanetRow[], CommandError>(__TAURI_INVOKE("planet_longitudes", { jdUt }, options)),
+	/**
+	 *  macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
+	 *  Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
+	 */
+	printWindow: (options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("print_window", undefined, options)),
 };
 
 /* Types */

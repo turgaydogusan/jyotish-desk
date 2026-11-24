@@ -11,6 +11,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         .commands(tauri_specta::collect_commands![
             commands::engine_status,
             commands::planet_longitudes,
+            commands::print_window,
         ])
 }
 
