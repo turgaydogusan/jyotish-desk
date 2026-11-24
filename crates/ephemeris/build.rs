@@ -12,6 +12,7 @@ fn main() {
         "swehel.c",
     ];
 
+    println!("cargo:rerun-if-changed={dir}");
     let mut build = cc::Build::new();
     build.include(dir).warnings(false).opt_level(2);
     for f in files {
