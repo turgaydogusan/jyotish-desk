@@ -7,6 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::graha::Graha;
+
 use crate::zodiac::{deg_in_sign, Sign};
 
 const ARIES: usize = Sign::Aries as usize;
@@ -199,6 +201,54 @@ pub fn varga_position(varga: Varga, lon: f64) -> (Sign, f64) {
     (Sign::from_index(sign), within)
 }
 
+/// Bir grahanın varga burcu ve varga içi derecesi (spec §5 `(graha, sign, deg)`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct VargaPlacement {
+    pub graha: Graha,
+    pub sign: Sign,
+    /// Varga içi derece, [0, 30): parçadaki konum 30°'ye ölçeklenmiş (modül belgesi).
+    pub deg: f64,
+}
+
+/// Bir varga haritası (spec §5 `VargaChart`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct VargaChart {
+    pub varga: Varga,
+    pub lagna_sign: Sign,
+    /// Girdi sırasında; haritada `Graha::ALL` sırası.
+    pub placements: Vec<VargaPlacement>,
+}
+
+/// `lagna_lon` ve `grahas` (rasi çerçevesi boylamları) için tek bir varga haritası.
+pub fn varga_chart(varga: Varga, lagna_lon: f64, grahas: &[(Graha, f64)]) -> VargaChart {
+    VargaChart {
+        varga,
+        lagna_sign: varga_position(varga, lagna_lon).0,
+        placements: grahas
+            .iter()
+            .map(|&(graha, lon)| {
+                let (sign, deg) = varga_position(varga, lon);
+                VargaPlacement { graha, sign, deg }
+            })
+            .collect(),
+    }
+}
+
+/// 16 varganın tamamı, `Varga::ALL` sırasında.
+pub fn all_vargas(lagna_lon: f64, grahas: &[(Graha, f64)]) -> Vec<VargaChart> {
+    Varga::ALL
+        .iter()
+        .map(|&v| varga_chart(v, lagna_lon, grahas))
+        .collect()
+}
+
+/// Vargottama: D1 ve D9 burcu aynı.
+pub fn is_vargottama(lon: f64) -> bool {
+    varga_position(Varga::D1, lon).0 == varga_position(Varga::D9, lon).0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,5 +421,35 @@ mod tests {
         assert!((deg(Varga::D30, 14.0) - 15.0).abs() < 1e-9);
         assert!((deg(Varga::D30, 38.5) - 15.0).abs() < 1e-9);
         assert!((deg(Varga::D60, 0.25) - 15.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn varga_chart_places_every_graha_in_order() {
+        let grahas = [(Graha::Sun, 346.0), (Graha::Moon, 71.0)];
+        let c = varga_chart(Varga::D9, 46.0, &grahas);
+        assert_eq!(c.varga, Varga::D9);
+        // Lagna Boğa 16°: floor(46 × 9 / 30) = 13 → Boğa.
+        assert_eq!(c.lagna_sign, Sign::Taurus);
+        assert_eq!(c.placements.len(), 2);
+        assert_eq!(
+            (c.placements[0].graha, c.placements[0].sign),
+            (Graha::Sun, Sign::Scorpio)
+        );
+        assert_eq!(
+            (c.placements[1].graha, c.placements[1].sign),
+            (Graha::Moon, Sign::Capricorn)
+        );
+        // Güneş Balık 16°: 16 × 9 = 144 → 4. parça, parça içi 144 − 120 = 24°.
+        assert!((c.placements[0].deg - 24.0).abs() < 1e-9);
+        let all = all_vargas(46.0, &grahas);
+        assert_eq!(all.iter().map(|v| v.varga).collect::<Vec<_>>(), Varga::ALL);
+    }
+
+    #[test]
+    fn vargottama_compares_d1_and_d9() {
+        assert!(is_vargottama(0.0)); // Koç 0°: D9 Koç
+        assert!(is_vargottama(226.0)); // Akrep 16°: floor(67.8) = 67 → Akrep
+        assert!(is_vargottama(359.9)); // Balık'ın son navamsası Balık
+        assert!(!is_vargottama(346.0)); // Balık 16°: D9 Akrep
     }
 }

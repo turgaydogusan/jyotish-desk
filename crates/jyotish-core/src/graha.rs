@@ -61,6 +61,8 @@ pub struct GrahaPosition {
     /// Düğümler için `None`.
     pub dignity: Option<Dignity>,
     pub house: u8,
+    /// D1 ve D9 burcu aynı (rasi çerçevesinde).
+    pub vargottama: bool,
 }
 
 #[cfg(test)]

@@ -54,7 +54,10 @@ export type CalcSettings = {
 	sunrise_def: SunriseDef,
 };
 
-/**  M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir. */
+/**
+ *  M3 haritası (Plan 06): vargalar ve Vimshottari dahil. Panchang ve ashtakavarga
+ *  Plan 07'de eklenir.
+ */
 export type Chart = {
 	meta: ChartMeta,
 	jd_ut: number | null,
@@ -66,6 +69,8 @@ export type Chart = {
 	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
 	grahas: GrahaPosition[],
 	bhavas: Bhavas,
+	/**  Her zaman 16 eleman, `Varga::ALL` sırasında; rasi çerçevesindeki boylamlardan. */
+	vargas: VargaChart[],
 };
 
 export type ChartMeta = {
@@ -132,6 +137,8 @@ export type GrahaPosition = {
 	/**  Düğümler için `None`. */
 	dignity: Dignity | null,
 	house: number,
+	/**  D1 ve D9 burcu aynı (rasi çerçevesinde). */
+	vargottama: boolean,
 };
 
 export type HouseSystem = "WholeSign" | 
@@ -167,6 +174,56 @@ export type SunriseDef =
 "DiskCenterNoRefraction" | 
 /**  Üst kenar, atmosfer kırılmasıyla (batı konvansiyonu). */
 "UpperLimbRefracted";
+
+export type Varga = 
+/**  Rasi. */
+"D1" | 
+/**  Hora (Parashara). */
+"D2" | 
+/**  Drekkana (Parashara). */
+"D3" | 
+/**  Chaturthamsa. */
+"D4" | 
+/**  Saptamsa. */
+"D7" | 
+/**  Navamsa. */
+"D9" | 
+/**  Dasamsa. */
+"D10" | 
+/**  Dwadasamsa. */
+"D12" | 
+/**  Shodasamsa. */
+"D16" | 
+/**  Vimsamsa. */
+"D20" | 
+/**  Chaturvimsamsa (Siddhamsa). */
+"D24" | 
+/**  Saptavimsamsa (Bhamsa). */
+"D27" | 
+/**  Trimsamsa (eşit olmayan parçalar). */
+"D30" | 
+/**  Khavedamsa. */
+"D40" | 
+/**  Akshavedamsa. */
+"D45" | 
+/**  Shashtyamsa. */
+"D60";
+
+/**  Bir varga haritası (spec §5 `VargaChart`). */
+export type VargaChart = {
+	varga: Varga,
+	lagna_sign: Sign,
+	/**  Girdi sırasında; haritada `Graha::ALL` sırası. */
+	placements: VargaPlacement[],
+};
+
+/**  Bir grahanın varga burcu ve varga içi derecesi (spec §5 `(graha, sign, deg)`). */
+export type VargaPlacement = {
+	graha: Graha,
+	sign: Sign,
+	/**  Varga içi derece, [0, 30): parçadaki konum 30°'ye ölçeklenmiş (modül belgesi). */
+	deg: number | null,
+};
 
 export type ZodiacMode = 
 /**  Burç, nakshatra ve evler sidereal boylamdan. */

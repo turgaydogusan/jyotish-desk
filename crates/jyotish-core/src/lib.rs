@@ -1,8 +1,8 @@
 //! Saf, yan etkisiz Jyotish hesabı. Ephemeris'e yalnızca `ephemeris::Ephemeris`
 //! trait'i üzerinden erişir; I/O, Tauri ve atlas bağımlılığı yoktur.
 //!
-//! Bu sürüm M2 kapsamıdır: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma.
-//! Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda `Chart`'a eklenir.
+//! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga
+//! ve Vimshottari dasha (M3, Plan 06). Panchang ve ashtakavarga Plan 07'de eklenir.
 
 mod chart;
 mod combustion;
@@ -28,5 +28,7 @@ pub use settings::{
     AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, NodeKind, SunriseDef, ZodiacMode,
     CALC_SETTINGS_SCHEMA_VERSION,
 };
-pub use varga::{varga_position, Varga};
+pub use varga::{
+    all_vargas, is_vargottama, varga_chart, varga_position, Varga, VargaChart, VargaPlacement,
+};
 pub use zodiac::{angular_distance, deg_in_sign, nakshatra_pada, normalize, Sign};

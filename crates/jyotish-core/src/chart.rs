@@ -9,6 +9,7 @@ use crate::dignity::{dignity, sign_lord};
 use crate::graha::{Graha, GrahaPosition};
 use crate::houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
 use crate::settings::{CalcSettings, HouseSystem, ZodiacMode};
+use crate::varga::{all_vargas, is_vargottama, VargaChart};
 use crate::zodiac::{deg_in_sign, nakshatra_pada, normalize, Sign};
 use crate::CoreError;
 
@@ -35,7 +36,8 @@ pub struct ChartMeta {
     pub warnings: Vec<ChartWarning>,
 }
 
-/// M2 haritası. Vargalar, dasha, panchang ve ashtakavarga sonraki planlarda eklenir.
+/// M3 haritası (Plan 06): vargalar ve Vimshottari dahil. Panchang ve ashtakavarga
+/// Plan 07'de eklenir.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Chart {
@@ -49,6 +51,8 @@ pub struct Chart {
     /// Her zaman 9 eleman, `Graha::ALL` sırasında.
     pub grahas: Vec<GrahaPosition>,
     pub bhavas: Bhavas,
+    /// Her zaman 16 eleman, `Varga::ALL` sırasında; rasi çerçevesindeki boylamlardan.
+    pub vargas: Vec<VargaChart>,
 }
 
 const PLANETS: [(Graha, Body); 7] = [
@@ -178,7 +182,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
     let sun_lon = raw[0].lon;
     // Burç lordları her zaman ilk 7 grahadan biridir; bulunamaması mümkün değildir.
     let sign_of = |g: Graha| raw.iter().find(|r| r.graha == g).map(|r| Sign::of(r.lon));
-    let grahas = raw
+    let grahas: Vec<GrahaPosition> = raw
         .iter()
         .map(|r| {
             let sign = Sign::of(r.lon);
@@ -210,10 +214,13 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
                     HouseSystem::WholeSign => whole_sign_house(sign, lagna.sign),
                     HouseSystem::Sripati | HouseSystem::Placidus => house_from_cusps(r.lon, &cusps),
                 },
+                vargottama: is_vargottama(r.lon),
             }
         })
         .collect();
 
+    let points: Vec<(Graha, f64)> = raw.iter().map(|r| (r.graha, r.lon)).collect();
+    let vargas = all_vargas(lagna.lon, &points);
     Ok(Chart {
         meta: ChartMeta {
             engine_version: ENGINE_VERSION.to_owned(),
@@ -231,6 +238,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
             system: settings.house_system,
             cusps,
         },
+        vargas,
     })
 }
 
@@ -240,6 +248,7 @@ mod tests {
     use crate::dignity::Dignity;
     use crate::fake::FakeEph;
     use crate::settings::NodeKind;
+    use crate::varga::Varga;
 
     const JD: f64 = 2_451_545.0;
 
@@ -493,5 +502,41 @@ mod tests {
         let json = serde_json::to_string(&c).unwrap();
         let back: Chart = serde_json::from_str(&json).unwrap();
         assert_eq!(back, c);
+    }
+
+    #[test]
+    fn vargas_cover_all_sixteen_from_the_rasi_frame() {
+        let c = chart(&mut FakeEph::default(), &CalcSettings::default());
+        let order: Vec<Varga> = c.vargas.iter().map(|v| v.varga).collect();
+        assert_eq!(order, Varga::ALL);
+        let d1 = &c.vargas[0];
+        assert_eq!(d1.lagna_sign, c.lagna.sign);
+        for (p, g) in d1.placements.iter().zip(&c.grahas) {
+            assert_eq!((p.graha, p.sign), (g.graha, g.sign));
+            assert!((p.deg - g.deg_in_sign).abs() < 1e-12);
+        }
+        let d9 = c.vargas.iter().find(|v| v.varga == Varga::D9).unwrap();
+        assert_eq!(d9.lagna_sign, Sign::Taurus);
+        // Güneş sidereal 346°: floor(103.8) = 103 → Akrep.
+        assert_eq!(d9.placements[0].sign, Sign::Scorpio);
+
+        // Tropikal-rasi kipinde vargalar tropikal boylamdan: Güneş 10° → floor(3.0) = 3 → Yengeç.
+        let t = chart(&mut FakeEph::default(), &tropical_rasi());
+        let d9 = t.vargas.iter().find(|v| v.varga == Varga::D9).unwrap();
+        assert_eq!(d9.placements[0].sign, Sign::Cancer);
+    }
+
+    #[test]
+    fn vargottama_flag_compares_d1_and_d9() {
+        let c = chart(&mut FakeEph::default(), &CalcSettings::default());
+        // Sidereal: Güneş 346, Ay 71, Mars 176, Merkür 356, Jüpiter 226, Venüs 16, Satürn 276,
+        // Rahu 96, Ketu 276. Yalnızca Jüpiter (Akrep 16°) D9'da da Akrep'tir.
+        let vargottama: Vec<Graha> = c
+            .grahas
+            .iter()
+            .filter(|p| p.vargottama)
+            .map(|p| p.graha)
+            .collect();
+        assert_eq!(vargottama, [Graha::Jupiter]);
     }
 }
