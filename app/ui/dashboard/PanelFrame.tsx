@@ -1,0 +1,76 @@
+import { useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useTranslation } from "react-i18next";
+import type { Panel } from "../layout/model";
+import { panelDefinition } from "../panels/registry";
+import { PanelStatusContext, type LoadPhase } from "../panels/states";
+import { arrowDelta } from "./metrics";
+
+export type DragMode = "move" | "resize";
+
+export interface PanelFrameProps {
+  panel: Panel;
+  editable: boolean;
+  onDragStart(e: PointerEvent, panel: Panel, mode: DragMode): void;
+  onKeyboardEdit(panel: Panel, mode: DragMode, dx: number, dy: number): void;
+}
+
+/** Panel çerçevesi: başlık (sürükleme tutamacı), satır içi yükleme göstergesi, gövde, boyut tutamacı. */
+export function PanelFrame({ panel, editable, onDragStart, onKeyboardEdit }: PanelFrameProps) {
+  const { t } = useTranslation();
+  const [phase, setPhase] = useState<LoadPhase>("none");
+  const def = panelDefinition(panel.kind);
+  const Body = def.component;
+  const title = t(def.titleKey);
+  const subtitle = def.subtitle?.(panel) ?? null;
+
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    // Yalnızca panelin kendisi odaktayken; panel içindeki düğme ve alanlar etkilenmez.
+    if (e.target !== e.currentTarget || !e.altKey || !editable) return;
+    const step = arrowDelta(e.key);
+    if (!step) return;
+    e.preventDefault();
+    onKeyboardEdit(panel, e.shiftKey ? "resize" : "move", step.dx, step.dy);
+  };
+
+  return (
+    <section
+      className="panel"
+      data-panel-id={panel.id}
+      data-kind={panel.kind}
+      data-x={panel.x}
+      data-y={panel.y}
+      data-w={panel.w}
+      data-h={panel.h}
+      data-editable={editable}
+      tabIndex={0}
+      aria-label={subtitle ? `${title} ${subtitle}` : title}
+      aria-keyshortcuts={editable ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight" : undefined}
+      title={editable ? t("panel.moveHint") : undefined}
+      style={{ gridColumn: `${panel.x + 1} / span ${panel.w}`, gridRow: `${panel.y + 1} / span ${panel.h}` }}
+      onKeyDown={onKeyDown}
+    >
+      <header className="panel-header" data-testid={`panel-header-${panel.id}`} onPointerDown={(e) => onDragStart(e, panel, "move")}>
+        <span>{title}</span>
+        {subtitle && <span className="panel-subtitle">{subtitle}</span>}
+        {phase === "inline" && (
+          <span className="panel-status" role="status">
+            {t("panel.loading")}…
+          </span>
+        )}
+      </header>
+      <div className="panel-body">
+        <PanelStatusContext.Provider value={setPhase}>
+          <Body panel={panel} />
+        </PanelStatusContext.Provider>
+      </div>
+      {editable && (
+        <div
+          className="panel-resize"
+          data-testid={`panel-resize-${panel.id}`}
+          aria-hidden="true"
+          onPointerDown={(e) => onDragStart(e, panel, "resize")}
+        />
+      )}
+    </section>
+  );
+}
