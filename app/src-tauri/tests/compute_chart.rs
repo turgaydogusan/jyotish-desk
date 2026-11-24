@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use ephemeris::{Engine, SwissEph};
-use jyotish_core::{AyanamsaSystem, CalcSettings, Graha};
+use jyotish_core::{AyanamsaSystem, CalcSettings, Graha, Sign, Varga};
 use jyotish_desk_lib::commands::compute_chart_blocking;
 
 #[test]
@@ -36,6 +36,29 @@ fn compute_chart_runs_on_the_engine_thread_and_maps_errors() {
     assert_eq!(chart.meta.swe_version, SwissEph::version());
     assert_eq!(chart.meta.settings, CalcSettings::default());
     assert!(chart.meta.warnings.is_empty());
+
+    // Plan 06: vargalar ve dasha (tests/golden/new-delhi-2000-01-01.json türetilmiş beklentileri).
+    assert_eq!(chart.vargas.len(), 16);
+    let d9 = chart
+        .vargas
+        .iter()
+        .find(|v| v.varga == Varga::D9)
+        .expect("D9");
+    assert_eq!(d9.lagna_sign, Sign::Aquarius);
+    let sun_d9 = d9
+        .placements
+        .iter()
+        .find(|p| p.graha == Graha::Sun)
+        .unwrap();
+    assert_eq!(sun_d9.sign, Sign::Leo);
+    assert_eq!(chart.dasha.periods.len(), 9 + 81 + 729);
+    let first = &chart.dasha.periods[0];
+    assert_eq!(first.lords, [Graha::Rahu]);
+    assert!(
+        (first.start_jd_ut - 2_445_231.575_532).abs() <= 1.0,
+        "maha start {}",
+        first.start_jd_ut
+    );
 
     let err = compute_chart_blocking(&engine, 2_451_545.0, 91.0, 0.0, CalcSettings::default())
         .unwrap_err();

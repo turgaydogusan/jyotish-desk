@@ -15,6 +15,11 @@ export const commands = {
 	/**  Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir. */
 	computeChart: (jdUt: number | null, lat: number | null, lon: number | null, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("compute_chart", { jdUt, lat, lon, settings }, options)),
 	/**
+	 *  Bir dasha döneminin alt dönemleri (spec §4 `dasha_children(path)`). `seed`
+	 *  `chart.dasha.seed`'den, `path` dönemin `lords`'undan gelir. Saf hesaptır, motora gitmez.
+	 */
+	dashaChildren: (seed: DashaSeed, path: Graha[], options?: InvokeOptions) => typedError<DashaPeriod[], CommandError>(__TAURI_INVOKE("dasha_children", { seed, path }, options)),
+	/**
 	 *  macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
 	 *  Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
 	 */

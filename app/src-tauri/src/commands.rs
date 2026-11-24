@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use ephemeris::{Body, Engine, EphError, Ephemeris, SiderealMode, SwissEph, Zodiac};
-use jyotish_core::{CalcSettings, Chart, CoreError};
+use jyotish_core::{CalcSettings, Chart, CoreError, DashaPeriod, DashaSeed, Graha};
 use serde::Serialize;
 use specta::Type;
 use tauri::State;
@@ -186,6 +186,14 @@ pub async fn compute_chart(
     .map_err(|e| CommandError::new("engine_stopped", &[("detail", e.to_string())]))?
 }
 
+/// Bir dasha döneminin alt dönemleri (spec §4 `dasha_children(path)`). `seed`
+/// `chart.dasha.seed`'den, `path` dönemin `lords`'undan gelir. Saf hesaptır, motora gitmez.
+#[tauri::command]
+#[specta::specta]
+pub fn dasha_children(seed: DashaSeed, path: Vec<Graha>) -> Result<Vec<DashaPeriod>, CommandError> {
+    Ok(jyotish_core::dasha_children(&seed, &path)?)
+}
+
 /// macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
 /// Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
 #[tauri::command]
@@ -336,5 +344,25 @@ mod tests {
             CommandError::from(CoreError::Ephemeris(EphError::EngineStopped)).code,
             "engine_stopped"
         );
+    }
+
+    #[test]
+    fn dasha_children_command_returns_sub_periods_and_maps_errors() {
+        use jyotish_core::{DashaSeed, Graha};
+        // tests/golden/new-delhi-2000-01-01.json Ay'ı: Rahu mahadashası.
+        let seed = DashaSeed {
+            birth_jd_ut: 2_451_545.0,
+            moon_sidereal_lon: 199.470_529,
+            year_days: 365.25,
+        };
+        let path = vec![Graha::Rahu, Graha::Rahu, Graha::Rahu];
+        let kids = dasha_children(seed, path.clone()).expect("children");
+        assert_eq!(kids.len(), 9);
+        assert!(kids
+            .iter()
+            .all(|p| p.level == 4 && p.lords[..3] == path[..] && p.has_children));
+        let err = dasha_children(seed, vec![Graha::Sun; 5]).unwrap_err();
+        assert_eq!(err.code, "invalid_dasha_input");
+        assert_eq!(err.params["field"], "path");
     }
 }

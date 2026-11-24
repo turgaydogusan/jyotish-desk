@@ -19,6 +19,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::engine_status,
             commands::planet_longitudes,
             commands::compute_chart,
+            commands::dasha_children,
             commands::print_window,
         ])
 }
