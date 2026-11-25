@@ -4,3 +4,5 @@
 .superpowers/
 /app/dist
 /app/src-tauri/gen
+/app/test-results
+/app/playwright-report

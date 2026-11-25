@@ -21,6 +21,14 @@ jobs:
       - run: pnpm --dir app install --frozen-lockfile
       - run: pnpm --dir app test
       - run: pnpm --dir app build
+      # Uçtan uca arayüz testleri (WebKit, IPC taklidi). Görsel karşılaştırma yalnızca yerelde.
+      # WebKit önbelleği Playwright sürümüne (kilit dosyası) bağlı; varsa kurulum indirme yapmaz.
+      - uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-webkit-${{ runner.os }}-${{ hashFiles('app/pnpm-lock.yaml') }}
+      - run: pnpm --dir app exec playwright install webkit
+      - run: pnpm --dir app e2e
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
