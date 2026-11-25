@@ -79,6 +79,8 @@ export function NoteEditor({ note, autoFocus, onThisChart, onSaved, onDelete }: 
   // (görünüm deposuyla aynı olaylar; Tauri webview kapanışı `pagehide` atlayabilir).
   // `flush` yalnızca ref ve kararlı değerleri okur (not kimliği anahtardır).
   useEffect(() => {
+    // StrictMode geliştirmede etkiyi kurar, temizler, yeniden kurar: bayrak her kurulumda açılır.
+    mounted.current = true;
     const onVisibility = () => {
       if (document.visibilityState === "hidden") flush();
     };
@@ -111,7 +113,10 @@ export function NoteEditor({ note, autoFocus, onThisChart, onSaved, onDelete }: 
     setConfirm(false);
     latest.current.deleted = true;
     if (latest.current.timer) clearTimeout(latest.current.timer);
-    if (!(await onDelete(note))) latest.current.deleted = false;
+    if (await onDelete(note)) return;
+    // Silinemedi: not yerinde kalır; silme başlarken durdurulan kayıt beklemeden gönderilir.
+    latest.current.deleted = false;
+    flush();
   };
 
   const date = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(note.created_at));

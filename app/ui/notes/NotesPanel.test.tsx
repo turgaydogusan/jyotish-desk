@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import { vi } from "vitest";
 
 vi.mock("../api", () => ({
@@ -166,6 +166,22 @@ test("a failed save is shown at the note and retried on the next leave", async (
   await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
 });
 
+test("under StrictMode a failed save while the panel is open is still shown at the note", async () => {
+  vi.mocked(api.updateNote).mockResolvedValueOnce({ status: "error", error: { code: "store_unavailable", params: {} } });
+  renderWithStores(
+    <StrictMode>
+      <Host />
+    </StrictMode>,
+  );
+  const box = within(await screen.findByRole("list", { name: "Örnek Danışan notları" })).getAllByRole("textbox")[0];
+  fireEvent.change(box, { target: { value: "kaydedilmeyen" } });
+  fireEvent.blur(box);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Not kaydedilemedi: Danışan veritabanı kullanılamıyor.");
+  expect(alert).not.toHaveTextContent("Panel kapanırken");
+  expect(box).toHaveAccessibleDescription(/Not kaydedilemedi/);
+});
+
 test("New note adds an empty note on the open chart and focuses it", async () => {
   const added = note(3, "", "2026-03-01T09:00:00.000Z", 1);
   vi.mocked(api.addNote).mockResolvedValue(ok(added));
@@ -175,6 +191,24 @@ test("New note adds an empty note on the open chart and focuses it", async () =>
   await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
   expect(api.addNote).toHaveBeenCalledWith(1, 1, "");
   expect(document.activeElement).toBe(within(list()).getAllByRole("textbox")[0]);
+});
+
+test("a second New note click while the first is being added adds nothing", async () => {
+  let release!: () => void;
+  vi.mocked(api.addNote).mockImplementation(
+    () => new Promise((resolve) => (release = () => resolve(ok(note(3, "", "2026-03-01T09:00:00.000Z", 1))))),
+  );
+  renderPanel();
+  await screen.findByRole("list", { name: "Örnek Danışan notları" });
+  const add = screen.getByRole("button", { name: "Yeni not" });
+  fireEvent.click(add);
+  fireEvent.click(add);
+  release();
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
+  expect(api.addNote).toHaveBeenCalledOnce();
+  // Ekleme bitince düğme yeniden çalışır.
+  fireEvent.click(add);
+  expect(api.addNote).toHaveBeenCalledTimes(2);
 });
 
 test("deleting asks first; after confirming the note goes away, with no save after it", async () => {
@@ -192,7 +226,56 @@ test("deleting asks first; after confirming the note goes away, with no save aft
   expect(api.updateNote).not.toHaveBeenCalled();
 });
 
-test("a read error has a retry; with no chart open the panel says so", async () => {
+test("deleting waits for the note's queued saves, so none of them runs after the delete", async () => {
+  vi.mocked(api.deleteNote).mockResolvedValue(ok(null));
+  let release!: () => void;
+  vi.mocked(api.updateNote).mockImplementationOnce(
+    (id, body) => new Promise((resolve) => (release = () => resolve(ok({ ...older, id, body })))),
+  );
+  renderPanel();
+  const items = await within(await screen.findByRole("list", { name: "Örnek Danışan notları" })).findAllByRole("listitem");
+  const box = within(items[1]).getByRole("textbox");
+  fireEvent.change(box, { target: { value: "yavaş kayıt" } });
+  fireEvent.blur(box);
+  fireEvent.change(box, { target: { value: "sıradaki kayıt" } });
+  fireEvent.blur(box);
+  fireEvent.click(within(items[1]).getByRole("button", { name: /5 Oca 2026.* tarihli notu sil/ }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Not silinsin mi?" })).getByRole("button", { name: "Notu sil" }));
+  await act(async () => {});
+  // İlk kayıt sürerken silme gönderilmez.
+  expect(api.updateNote).toHaveBeenCalledOnce();
+  expect(api.deleteNote).not.toHaveBeenCalled();
+  release();
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(1));
+  expect(api.updateNote).toHaveBeenCalledTimes(2);
+  expect(api.updateNote).toHaveBeenLastCalledWith(1, "sıradaki kayıt");
+  expect(vi.mocked(api.updateNote).mock.invocationCallOrder[1]).toBeLessThan(vi.mocked(api.deleteNote).mock.invocationCallOrder[0]);
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("a delete that fails is reported, keeps the note and saves its pending text at once", async () => {
+  vi.mocked(api.deleteNote).mockResolvedValue({ status: "error", error: { code: "store_unavailable", params: {} } });
+  renderPanel();
+  const items = await within(await screen.findByRole("list", { name: "Örnek Danışan notları" })).findAllByRole("listitem");
+  fireEvent.change(within(items[1]).getByRole("textbox"), { target: { value: "silinemeyen" } });
+  fireEvent.click(within(items[1]).getByRole("button", { name: /5 Oca 2026.* tarihli notu sil/ }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Not silinsin mi?" })).getByRole("button", { name: "Notu sil" }));
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Silinemedi: Danışan veritabanı kullanılamıyor.");
+  expect(alert).not.toHaveTextContent("silinemeyen");
+  expect(within(list()).getAllByRole("listitem")).toHaveLength(2);
+  // Silme başlarken durdurulan otomatik kayıt, beklemeden gönderilir.
+  await waitFor(() => expect(api.updateNote).toHaveBeenCalledWith(1, "silinemeyen"), { timeout: NOTE_SAVE_DEBOUNCE_MS - 100 });
+});
+
+test("with no chart open the panel says so and reads nothing", () => {
+  renderWithStores(<Host />, { opened: null });
+  expect(screen.getByText("Açık harita yok.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Yeni not" })).toBeNull();
+  expect(api.listNotes).not.toHaveBeenCalled();
+});
+
+test("a read error has a retry", async () => {
   vi.mocked(api.listNotes).mockResolvedValueOnce({ status: "error", error: { code: "store_unavailable", params: {} } });
   renderPanel();
   const alert = await screen.findByRole("alert");

@@ -2,7 +2,7 @@
 // `list_notes` ile okunur (bekleyen kayıtlar bittikten sonra); `open_client`'ın `recent_notes`
 // alanı kullanılmaz, çünkü bu oturumdaki düzenlemelerden sonra eskir. "Yeni not" boş bir not
 // ekler ve ona odaklanır; metin otomatik kaydedilir.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import type { CommandError, Note, OpenedClient } from "../bindings";
@@ -11,7 +11,7 @@ import type { PanelProps } from "../panels/types";
 import { useSession } from "../session/store";
 import { useNotices } from "../shell/notices";
 import { NoteEditor } from "./NoteEditor";
-import { notesIdle } from "./saves";
+import { enqueueNoteSave, notesIdle } from "./saves";
 import "./notes.css";
 
 /** Panelde gösterilen en çok not (Rust `MAX_LIST` 500). */
@@ -49,17 +49,26 @@ function ClientNotes({ opened }: { opened: OpenedClient }) {
     };
   }, [clientId, retry]);
 
+  // Ekleme sürerken ikinci tıklama ikinci bir boş not açmaz.
+  const adding = useRef(false);
   const add = async () => {
-    const r = await api.addNote(clientId, opened.chart_record.id, "");
-    if (r.status === "error") return push({ id: "note", type: "error", messageKey: "notice.noteFailed", error: r.error });
-    setNotes((list) => [r.data, ...(list ?? [])]);
-    setFresh(r.data.id);
+    if (adding.current) return;
+    adding.current = true;
+    try {
+      const r = await api.addNote(clientId, opened.chart_record.id, "");
+      if (r.status === "error") return push({ id: "note", type: "error", messageKey: "notice.noteFailed", error: r.error });
+      setNotes((list) => [r.data, ...(list ?? [])]);
+      setFresh(r.data.id);
+    } finally {
+      adding.current = false;
+    }
   };
 
   const saved = useCallback((n: Note) => setNotes((list) => list && list.map((x) => (x.id === n.id ? n : x))), []);
 
   const remove = async (n: Note) => {
-    const r = await api.deleteNote(n.id);
+    // Silme, kayıtlarla aynı sırada gider: notun bekleyen kaydı silinmiş nota yazmaya çalışmaz.
+    const r = await enqueueNoteSave(() => api.deleteNote(n.id));
     if (r.status === "error") {
       push({ id: "delete", type: "error", messageKey: "notice.deleteFailed", error: r.error });
       return false;
