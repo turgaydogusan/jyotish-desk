@@ -2,9 +2,8 @@
 // Üretilen `typedError` Tauri'nin düz string reddini (bilinmeyen komut, argüman çözme,
 // ACL, yönetilmeyen state) CommandError diye işaretler ve `Error`'ları yeniden fırlatır.
 //
-// Arayüz yalnızca burada listelenen komutları çağırır. İçe ve dışa aktarma komutları
-// (`importJson`, `importJhd`, `exportJson`, `exportCsv`) Plan 08 ertelenen maddeleri 1 ve 3
-// kapanana kadar bilerek yoktur; `api.test.ts` bunu denetler.
+// Arayüz yalnızca burada listelenen komutları çağırır. JHD içe aktarma kayıtsızdır (C2′);
+// `api.test.ts` bunu denetler.
 // Hata parametreleri (`CommandError.params`) kişisel veri içerebilir: hiçbir yerde loglanmaz.
 import {
   commands,

@@ -21,8 +21,6 @@ pub const MAX_PLACE_HITS: u32 = 20;
 /// Arama metninin en çok uzunluğu (karakter); fazlası kesilir.
 pub const MAX_QUERY_CHARS: usize = 100;
 
-/// Atlas durumu. Dosya açılamazsa uygulama yine açılır: yer araması `atlas_unavailable`
-/// döner, elle koordinat girişi çalışır (spec §12 "manuel koordinat birinci sınıf").
 /// Atlasın neden açılamadığı (Plan 11 D18). Yol taşımaz (C1, C2′).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AtlasUnavailable {
@@ -44,6 +42,8 @@ impl AtlasUnavailable {
     }
 }
 
+/// Atlas durumu. Dosya açılamazsa uygulama yine açılır: yer araması `atlas_unavailable`
+/// döner, elle koordinat girişi çalışır (spec §12 "manuel koordinat birinci sınıf").
 pub struct AtlasState(Result<Mutex<Atlas>, AtlasUnavailable>);
 
 impl AtlasState {
