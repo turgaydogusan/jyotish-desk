@@ -18,6 +18,7 @@ pub mod panchang;
 #[cfg(test)]
 mod proptests;
 pub mod settings;
+pub mod transit;
 pub mod varga;
 pub mod zodiac;
 
@@ -43,6 +44,7 @@ pub use settings::{
     AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, NodeKind, SunriseDef, ZodiacMode,
     CALC_SETTINGS_SCHEMA_VERSION, JD_UT_RANGE,
 };
+pub use transit::{compute_transits, TransitGraha, TransitSnapshot};
 pub use varga::{
     all_vargas, is_vargottama, varga_chart, varga_position, Varga, VargaChart, VargaPlacement,
 };

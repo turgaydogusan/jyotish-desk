@@ -11,7 +11,7 @@ use crate::dignity::{dignity, sign_lord};
 use crate::graha::{Graha, GrahaPosition};
 use crate::houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
 use crate::panchang::{compute_panchang, Panchang};
-use crate::settings::{CalcSettings, HouseSystem, ZodiacMode, JD_UT_RANGE};
+use crate::settings::{CalcSettings, HouseSystem, NodeKind, ZodiacMode, JD_UT_RANGE};
 use crate::varga::{all_vargas, is_vargottama, VargaChart};
 use crate::zodiac::{deg_in_sign, nakshatra_pada, normalize, Sign};
 use crate::CoreError;
@@ -78,7 +78,7 @@ const PLANETS: [(Graha, Body); 7] = [
 ];
 
 /// Ephemeris çıktısı sonlu değilse hata verir; yanlış harita başarı gibi dönmesin.
-fn finite(v: f64, what: &'static str) -> Result<f64, CoreError> {
+pub(crate) fn finite(v: f64, what: &'static str) -> Result<f64, CoreError> {
     if v.is_finite() {
         Ok(v)
     } else {
@@ -109,51 +109,48 @@ pub(crate) fn check_moment(jd_ut: f64, geo_lat: f64, geo_lon: f64) -> Result<(),
 }
 
 /// Rasi çerçevesinde ham konum.
-struct Raw {
-    graha: Graha,
-    lon: f64,
-    lat: f64,
-    speed: f64,
+pub(crate) struct Raw {
+    pub graha: Graha,
+    pub lon: f64,
+    pub lat: f64,
+    pub speed: f64,
 }
 
-/// `jd_ut` anı ve (`geo_lat` kuzey +, `geo_lon` doğu +) konumu için haritayı hesaplar.
-///
-/// Rasi çerçevesi `settings.zodiac`'a göre seçilir: `Sidereal` kipinde ephemeris sidereal
-/// sorulur, `TropicalRasiSiderealNakshatra` kipinde tropikal sorulur ve sidereal boylam
-/// `tropikal − ayanamsa` ile bulunur. SE'nin sidereal hesabı da aynı çıkarmayı yapar.
-pub fn compute_chart<E: Ephemeris + ?Sized>(
+/// Ephemeris'in sorulacağı rasi çerçevesi: `Sidereal` kipinde sidereal, tropikal-rasi
+/// kipinde tropikal.
+pub(crate) fn rasi_frame(settings: &CalcSettings) -> Zodiac {
+    match settings.zodiac {
+        ZodiacMode::Sidereal => Zodiac::Sidereal(settings.ayanamsa.sidereal_mode()),
+        ZodiacMode::TropicalRasiSiderealNakshatra => Zodiac::Tropical,
+    }
+}
+
+/// Rasi çerçevesindeki boylamın sidereal karşılığı. SE'nin sidereal hesabı da aynı
+/// çıkarmayı yapar.
+pub(crate) fn to_sidereal(zodiac: ZodiacMode, frame_lon: f64, ayanamsa_deg: f64) -> f64 {
+    match zodiac {
+        ZodiacMode::Sidereal => frame_lon,
+        ZodiacMode::TropicalRasiSiderealNakshatra => normalize(frame_lon - ayanamsa_deg),
+    }
+}
+
+/// Dokuz grahanın rasi çerçevesindeki ham konumu (`Graha::ALL` sırasında) ve Güneş ya da
+/// Ay'ın Moshier yedeğiyle hesaplanıp hesaplanmadığı. `compute_chart` ve `compute_transits`
+/// ortak kullanır.
+pub(crate) fn raw_grahas<E: Ephemeris + ?Sized>(
     eph: &mut E,
     jd_ut: f64,
-    geo_lat: f64,
-    geo_lon: f64,
-    settings: &CalcSettings,
-) -> Result<Chart, CoreError> {
-    settings.validate()?;
-    check_moment(jd_ut, geo_lat, geo_lon)?;
-
-    let mode = settings.ayanamsa.sidereal_mode();
-    let ayanamsa = eph.ayanamsa(jd_ut, mode)?;
-    finite(ayanamsa.deg, "ayanamsa")?;
-    let frame = match settings.zodiac {
-        ZodiacMode::Sidereal => Zodiac::Sidereal(mode),
-        ZodiacMode::TropicalRasiSiderealNakshatra => Zodiac::Tropical,
-    };
-    let to_sidereal = |frame_lon: f64| match settings.zodiac {
-        ZodiacMode::Sidereal => frame_lon,
-        ZodiacMode::TropicalRasiSiderealNakshatra => normalize(frame_lon - ayanamsa.deg),
-    };
-
-    let mut warnings = Vec::new();
+    frame: Zodiac,
+    node: NodeKind,
+) -> Result<(Vec<Raw>, bool), CoreError> {
+    let mut low_precision = false;
     let mut raw = Vec::with_capacity(9);
     for (graha, body) in PLANETS {
         let p = eph.body(jd_ut, body, frame)?;
         finite_body(&p)?;
         // Hassasiyet Güneş/Ay'dan alınır (Plan 01 notu: ayanamsa bayrağı güvenilmez).
-        if matches!(graha, Graha::Sun | Graha::Moon)
-            && p.precision == Precision::Moshier
-            && !warnings.contains(&ChartWarning::LowPrecision)
-        {
-            warnings.push(ChartWarning::LowPrecision);
+        if matches!(graha, Graha::Sun | Graha::Moon) && p.precision == Precision::Moshier {
+            low_precision = true;
         }
         raw.push(Raw {
             graha,
@@ -162,7 +159,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
             speed: p.lon_speed,
         });
     }
-    let rahu = eph.body(jd_ut, settings.node.body(), frame)?;
+    let rahu = eph.body(jd_ut, node.body(), frame)?;
     finite_body(&rahu)?;
     raw.push(Raw {
         graha: Graha::Rahu,
@@ -177,6 +174,34 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         lat: -rahu.lat,
         speed: rahu.lon_speed,
     });
+    Ok((raw, low_precision))
+}
+
+/// `jd_ut` anı ve (`geo_lat` kuzey +, `geo_lon` doğu +) konumu için haritayı hesaplar.
+///
+/// Rasi çerçevesi `settings.zodiac`'a göre seçilir: `Sidereal` kipinde ephemeris sidereal
+/// sorulur, `TropicalRasiSiderealNakshatra` kipinde tropikal sorulur ve sidereal boylam
+/// `tropikal − ayanamsa` ile bulunur.
+pub fn compute_chart<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    jd_ut: f64,
+    geo_lat: f64,
+    geo_lon: f64,
+    settings: &CalcSettings,
+) -> Result<Chart, CoreError> {
+    settings.validate()?;
+    check_moment(jd_ut, geo_lat, geo_lon)?;
+
+    let ayanamsa = eph.ayanamsa(jd_ut, settings.ayanamsa.sidereal_mode())?;
+    finite(ayanamsa.deg, "ayanamsa")?;
+    let frame = rasi_frame(settings);
+    let to_sidereal = |frame_lon: f64| to_sidereal(settings.zodiac, frame_lon, ayanamsa.deg);
+
+    let mut warnings = Vec::new();
+    let (raw, low_precision) = raw_grahas(eph, jd_ut, frame, settings.node)?;
+    if low_precision {
+        warnings.push(ChartWarning::LowPrecision);
+    }
 
     let houses = eph.houses(
         jd_ut,

@@ -21,4 +21,6 @@ pub enum CoreError {
     /// sahte ephemeris'te: gerçek Ay her zaman Güneş'ten hızlıdır).
     #[error("no {0} boundary within the panchang search window")]
     PanchangSearch(&'static str),
+    #[error("invalid transit input: {0}")]
+    InvalidTransitInput(&'static str),
 }

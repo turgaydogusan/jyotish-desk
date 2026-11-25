@@ -88,6 +88,9 @@ impl From<CoreError> for CommandError {
             CoreError::PanchangSearch(what) => {
                 Self::new("panchang_search", &[("what", what.to_owned())])
             }
+            CoreError::InvalidTransitInput(field) => {
+                Self::new("invalid_transit_input", &[("field", field.to_owned())])
+            }
         }
     }
 }
@@ -360,6 +363,9 @@ mod tests {
         let e = CommandError::from(CoreError::PanchangSearch("tithi"));
         assert_eq!(e.code, "panchang_search");
         assert_eq!(e.params["what"], "tithi");
+        let e = CommandError::from(CoreError::InvalidTransitInput("natal_bhavas"));
+        assert_eq!(e.code, "invalid_transit_input");
+        assert_eq!(e.params["field"], "natal_bhavas");
     }
 
     #[test]
