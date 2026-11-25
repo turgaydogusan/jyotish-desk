@@ -49,7 +49,7 @@ Muhafazakâr seçenek seçildi; her karar bir satır gerekçeyle. D3, D5, D10, D
 - **Çalışan `pnpm tauri dev` durdurulmaz** (port 1420); e2e 1421'i kullanır. `pkill -f` kullanılmaz. Üretilen `.app` **çalıştırılmaz**: gerçek veri klasörünü (`~/Library/Application Support/io.github.turgaydogusan.jyotishdesk/`) açar; paket yalnızca `verify-bundle.sh` ile denetlenir. Çalıştırarak denetim elle denetim kapısındadır (Task 9).
 - Yalnızca macOS hedeflenir: Windows ve Android imzası ya da paketi yoktur; `ci.yml`'deki `core (ubuntu-latest, windows-latest)`, `deny`, `msrv` ve `macos-x86_64` işleri değişmez. Yorum metni (astrolojik yorum) eklenmez.
 - **Tabanlar (`70e2324`):** Vitest `Test Files  57 passed (57)`, `Tests  500 passed (500)`; `jyotish-core` lib 110, golden 8; `store` lib 80 (+1 `#[ignore]`); `jyotish-desk` lib 34, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; e2e 11; görsel 10 (yerel, darwin); yayın betiği testi yok.
-- **Sayaç zinciri:** Task 1: `store` lib 81, `jyotish-desk` lib 38. Task 2: `jyotish-desk` lib 44, Vitest 57/501. Task 3: Vitest 60/517. Task 4: e2e 12. Task 5: yayın betiği testleri 4. Task 7: yayın betiği testleri 9. Diğer sayılar değişmez.
+- **Sayaç zinciri:** Task 1: `store` lib 81, `jyotish-desk` lib 38. Task 2: `jyotish-desk` lib 44, Vitest 57/501. Task 3: Vitest 60/517; inceleme düzeltmesi (`b2130c5`) +6 → 60/523. Task 4: e2e 12. Task 5: yayın betiği testleri 4. Task 7: yayın betiği testleri 9. Son inceleme: `jyotish-desk` lib 46 (+2), Vitest 60/525 (+2), yayın betiği testleri 14 (+5) (bkz. "Son inceleme düzeltmeleri"). Diğer sayılar değişmez.
 - **Taşınan kurallar (Plan 09 C1–C14, Plan 10 C2′, C15–C17), her görevin gereksinimidir:**
   - **C1** Gizlilik: danışan adları, not gövdeleri, doğum verisi, dosya yolları ve `CommandError.params` loglanmaz; `no-console.test.ts` durur ve izin listesi büyümez. Güncelleme isteği yalnızca D5'teki adrese gider ve hiçbir kullanıcı ya da danışan verisi taşımaz; eklentinin hata metni arayüze taşınmaz (D8). Yayın notlarına ve betik çıktılarına kişisel veri yazılmaz.
   - **C2′** Hiçbir IPC komutu arayüzden dosya yolu ya da adres almaz. `install_update`'in tek dizgi bağımsız değişkeni kullanıcının onayladığı sürümdür; `api.test.ts`'in dizgi bağımsız değişken listesi bunu kaydeder. Yetenek dosyası `updater:`, `dialog:`, `fs:` izni vermez.
@@ -2277,7 +2277,7 @@ pnpm --dir app build 2>&1 | tail -1
 pnpm --dir app e2e:visual 2>&1 | tail -1
 rm -rf app/test-results
 ```
-Expected: `pass 4`, `fail 0`; `0.9.0`; `version check: tag v0.9.1 does not match version 0.9.0 (expected v0.9.0)` ve `exit 1`; cargo satırı çıktısız; Vitest `60 passed (60)`, `517 passed (517)`; `✓ built`; görsel `10 passed` (kapaktaki sürüm metni eşik içinde durur; kapak temeli düşerse yalnızca o temel `pnpm --dir app exec playwright test --project=visual -g "print sheet cover" --update-snapshots` ile yeniden üretilir ve commit'e eklenir).
+Expected: `pass 4`, `fail 0`; `0.9.0`; `version check: tag v0.9.1 does not match version 0.9.0 (expected v0.9.0)` ve `exit 1`; cargo satırı çıktısız; Vitest `60 passed (60)`, `523 passed (523)` (Task 3 inceleme düzeltmesinden sonra); `✓ built`; görsel `10 passed` (kapaktaki sürüm metni eşik içinde durur; kapak temeli düşerse yalnızca o temel `pnpm --dir app exec playwright test --project=visual -g "print sheet cover" --update-snapshots` ile yeniden üretilir ve commit'e eklenir).
 
 - [ ] **Step 7: Commit**
 
@@ -3177,7 +3177,7 @@ cargo deny check 2>&1 | tail -1
 PATH="$HOME/.rustup/toolchains/1.93-aarch64-apple-darwin/bin:$PATH" cargo check -p store -p jyotish-desk --all-targets 2>&1 | tail -1
 git diff 70e2324..HEAD --stat -- deny.toml app/pnpm-lock.yaml app/src-tauri/capabilities crates/store/src/schema.rs
 ```
-Expected: fmt ve clippy çıktısız; testler: `jyotish-core` lib `110 passed`, golden `8 passed`, `store` lib `81 passed; 0 failed; 1 ignored`, `jyotish-desk` lib `44 passed`, `bindings` `1 passed`, `compute_chart` `1 passed`, `open_client` `1 passed`, `ui_fixture` `2 passed`; deny `advisories ok, bans ok, licenses ok, sources ok`; MSRV `Finished`; son `git diff --stat` çıktısız (lisans listesi, npm kilidi, yetenek dosyası ve şema değişmedi).
+Expected: fmt ve clippy çıktısız; testler: `jyotish-core` lib `110 passed`, golden `8 passed`, `store` lib `81 passed; 0 failed; 1 ignored`, `jyotish-desk` lib `46 passed`, `bindings` `1 passed`, `compute_chart` `1 passed`, `open_client` `1 passed`, `ui_fixture` `2 passed`; deny `advisories ok, bans ok, licenses ok, sources ok`; MSRV `Finished`; son `git diff --stat` çıktısız (lisans listesi, npm kilidi, yetenek dosyası ve şema değişmedi).
 
 - [ ] **Step 2: Arayüz ve betik kapıları**
 
@@ -3192,7 +3192,7 @@ sh scripts/release/build.sh unsigned 2>&1 | tail -3
 sh scripts/release/verify-bundle.sh unsigned
 git status --short
 ```
-Expected: `Test Files  60 passed (60)`, `Tests  517 passed (517)`; `✓ built`; e2e `12 passed`; görsel `10 passed`; betik testleri `pass 9`, `fail 0`; derleme `Finished 1 bundle at:`; denetim beş `ok` satırı ve `unsigned bundle is well formed`; `git status --short` boş.
+Expected: `Test Files  60 passed (60)`, `Tests  525 passed (525)`; `✓ built`; e2e `12 passed`; görsel `10 passed`; betik testleri `pass 14`, `fail 0`; derleme `Finished 1 bundle at:`; denetim beş `ok` satırı ve `unsigned bundle is well formed`; `git status --short` boş.
 
 - [ ] **Step 3: Kural taramaları (`70e2324`'ten bu yana)**
 
@@ -3200,7 +3200,7 @@ Expected: `Test Files  60 passed (60)`, `Tests  517 passed (517)`; `✓ built`; 
 git diff 70e2324..HEAD -U0 -- . ':!Cargo.lock' ':!app/ui/test/fixtures/delhi.json' | grep '^+' | grep -v '^+++' | grep -inE 'k(a|ā|aa)la|\bcala\b'
 git log 70e2324..HEAD --format=%B | grep -inE 'k(a|ā|aa)la|\bcala\b'
 git diff 70e2324..HEAD --name-only | grep -inE 'k(a|ā|aa)la|\bcala\b'
-git diff 70e2324..HEAD --name-only | grep -vE '^(app|crates|scripts|docs|\.github)/|^(Cargo\.(toml|lock)|README\.md)$'
+git diff 70e2324..HEAD --name-only | grep -vE '^(app|crates|scripts|docs|\.github)/|^(Cargo\.(toml|lock)|README\.md|\.gitignore)$'
 echo "trailers: $(git log 70e2324..HEAD --format=%B | grep -c '^Co-Authored-By: ') commits: $(git rev-list --count 70e2324..HEAD)"
 git diff 70e2324..HEAD -U0 -- app/ui | grep '^+' | grep -E 'console\.(log|info|warn|error|debug)'
 git diff 70e2324..HEAD -U0 -- app/ui | grep '^+' | grep -E '\b(alert|confirm|prompt)\(|window\.(print|open)\('
@@ -3257,7 +3257,36 @@ Plan 13 otomatik bölümü tamam. Yayın için sahibin yapacakları (docs/releas
 - Veri klasörü 0700, veritabanı dosyaları 0600'dür; zehirlenmiş store kilidi kendiliğinden toparlanır (Plan 10 kapsam dışı 3 ve 4).
 - Sürüm 0.9.0'dır ve dört yerde aynıdır; ilk yayın notu, not şablonu, yayın rehberi, beta rehberi ve geri bildirim başlıkları depodadır.
 - Depoda sır, anahtar dosyası ya da parola yoktur; insan adımları dokuz madde olarak sahibine devredilmiştir.
-- Kapılar: Vitest 60/517, e2e 12, görsel 10, yayın betiği testleri 9; `store` lib 81, `jyotish-desk` lib 44, diğer Rust sayıları tabandaki gibi; `cargo deny` temiz; imzasız paket denetimi beş `ok`; elle denetim kapısı geçmiştir.
+- Kapılar: Vitest 60/525, e2e 12, görsel 10, yayın betiği testleri 14; `store` lib 81, `jyotish-desk` lib 46, diğer Rust sayıları tabandaki gibi; `cargo deny` temiz; imzasız paket denetimi beş `ok`; elle denetim kapısının otomatik karşılığı olan maddeleri testlerle doğrulanmış, yalnızca insanın bakabileceği maddeleri sahibine devredilmiştir (bkz. "Son inceleme düzeltmeleri").
+
+## Son inceleme düzeltmeleri (2026-11-26)
+
+Dal incelemesi `6bac825` üzerinde yapıldı. Aşağıdaki düzeltmeler ayrı commit'lerdir; bu plandaki
+görev kod blokları ilk yazıldıkları hâliyle durur, depodaki dosyalar esastır.
+
+| Konu | Düzeltme | Plandaki bloktan farkı |
+|---|---|---|
+| Task 7 (Important) | Taslak yayın adımı `github.event_name == 'push'` ister; etiket üzerinde elle başlatılan iş imzalı derler ama taslak oluşturmaz | `release.yml` ve `workflow.test.mjs` bloklarındaki `github.ref_type == 'tag'` koşulu |
+| Task 7 m1, m2, m7 | Sürüm ayrı atamayla okunur (hata adımı durdurur); `${{ … }}` hiçbir betik satırında yoktur, değerler `env:` ile girer; testler `environment: release`'i ve sır değişkeni yazdırılmadığını denetler | `Version, tag and branch` ve derleme adımları |
+| Task 8 (Important) | `RELEASING.md` yerel imzalı derlemenin sekiz ortam değişkenini GitHub sır adlarıyla yan yana verir (`APPLE_API_KEY` = Key ID, `APPLE_API_KEY_PATH` = `.p8` yolu) | "Yerelde deneme" bölümü |
+| Task 8 m1–m5, Task 7 m8 | İlk yayında elle denetimin beklenen iletisi; anahtar dosyaları `~/.jyotish-signing/` altında ve `.gitignore`'da; etiketten önce `git push origin main`; kaldırmada WebKit ve önbellek klasörleri; "kullanıcı ya da danışan verisi taşımaz" ifadesi; ortamda "Required reviewers" önerisi | `RELEASING.md`, `beta-guide.md`, `.gitignore` (Step 3'ün dosya yeri taraması `.gitignore`'u kabul eder) |
+| Task 6 m1, m2, m4, m6 | `build.sh` derlemeden hemen önce paket klasörünü siler, `APPLE_API_KEY_PATH` bir dosya değilse durur, açık anahtarı yapılandırmayı ayrıştırarak okur; `verify-bundle.sh` kipi en başta denetler; `scripts.test.mjs` (3 test) | `build.sh` ve `verify-bundle.sh` blokları |
+| Task 5 m3 | `latest-json.mjs` komut satırı testi (1 test) | `latest-json.test.mjs` |
+| Task 2 m1 | Kurulum işareti `InstallPermit` ile `Drop`'ta kalkar (panik ya da yarıda bırakılan görev işareti açık bırakmaz); 2 test | `install_update` bloğu |
+| Task 2 m2 | `tauri-plugin-updater` özellikleri: `native-tls`, `system-proxy`, `zip`. `Cargo.lock`'a `system-configuration`, `system-configuration-sys`, `core-foundation 0.9.4`, `windows-registry` girer; rustls ve ring girmez; `cargo deny check` temizdir | D3'ün özellik listesi |
+| Yinelenen test dalgalanması | `TransitDate` kutuları etkide değil çizim sırasında eşitlenir; ertelenen etki yazılan tarihi eziyordu (Plan 11 kodu; üç planda yük altında görüldü). 1 test ertelenmiş sırayı zorlar | Plan 13 dışı dosya: `app/ui/transit/TransitDate.tsx` |
+| Elle denetim kapısının otomatik karşılığı | `App.test.tsx`: Hakkında açıkken ⌘2, ⌘K, ⌘N ve ⌘P hiçbir şey yapmaz (1 test) | yeni test |
+
+Son sayılar: Vitest 60/525; `jyotish-desk` lib 46; yayın betiği testleri 14; diğerleri sayaç
+zincirindeki gibidir.
+
+**Elle denetim kapısı (Task 9 Step 4).** Sahibi yokken yapılan inceleme her maddeyi otomatik
+karşılığıyla eşledi: pencerenin içeriği, yapılandırılmamış derleme metni, palet komutu, odak ve
+kısayol engeli, açılışta ve pencere açılırken komut çağrılmaması, izinler ve kapak satırı Vitest,
+e2e ve Rust testleriyle doğrulanır. Yalnızca insanın bakabileceği maddeler (gerçek süreçte ağ
+izleyicisi, VoiceOver, koyu tema ve iki dilde gözle okuma, gerçek veri klasörünün `stat` çıktısı,
+terminal çıktısının gözle taranması) sahibine devredilmiştir ve ilk etiketten önce (İNSAN ADIMI 7)
+yapılır; `git push`'u engellemez, çünkü gönderim hiçbir şey yayımlamaz.
 
 ## Bu planın kapsamadıkları
 
