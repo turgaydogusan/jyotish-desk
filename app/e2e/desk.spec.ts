@@ -44,6 +44,7 @@ test("layout switch with Cmd+2 and a keyboard panel move that is saved with the 
 test("hovering a graha row highlights it in the chart; the style selector redraws", async ({ page }) => {
   await mockIpc(page, { session: true });
   await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
   await page.keyboard.press("Meta+Digit2");
   const row = page.getByRole("region", { name: "Graha tablosu" }).locator('tr[data-graha="Saturn"]');
   await row.hover();
@@ -56,6 +57,7 @@ test("hovering a graha row highlights it in the chart; the style selector redraw
 test("dasha tree by keyboard loads level 4 on demand", async ({ page }) => {
   await mockIpc(page, { session: true });
   await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
   await page.keyboard.press("Meta+Digit2");
   const tree = page.getByRole("tree", { name: "Dasa ağacı" });
   await expect(tree).toBeVisible();
