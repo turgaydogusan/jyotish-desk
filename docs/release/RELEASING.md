@@ -8,6 +8,10 @@ ve `scripts/release/` altındadır.
 yapay zekâ aracına yazılmaz. Sırlar yalnızca sizin terminalinizde, parola yöneticinizde ve GitHub'ın
 sır deposunda durur. Kod yazan ajanlar bu adımları yapamaz ve yapmamalıdır.
 
+Anahtar dosyaları (`.p12`, `.p8`, `.cer`, güncelleme anahtarı) **deponun dışında** durur; bu
+rehberdeki örnekler `~/.jyotish-signing/` (izin `700`) ve `~/.tauri/` klasörlerini kullanır.
+`.gitignore` bu uzantıları yine de dışlar, ama bu yalnızca ikinci bir emniyettir.
+
 ## Akış
 
 1. Sürüm üç dosyada ve `Cargo.lock`'ta aynıdır; `docs/release/notes/v<sürüm>.md` yazılmıştır
@@ -56,7 +60,14 @@ sır deposunda durur. Kod yazan ajanlar bu adımları yapamaz ve yapmamalıdır.
    `Developer ID Application: … (TAKIMKODU)` satırındaki tırnak içindeki metin
    `APPLE_SIGNING_IDENTITY` değeridir.
 4. Anahtar Zinciri Erişimi ▸ "My Certificates" kategorisi ▸ sertifikayı (özel anahtarıyla birlikte) seçin ▸
-   "Dışa Aktar…" ▸ `.p12` ▸ güçlü, yalnızca bu iş için üretilmiş bir parola verin.
+   "Dışa Aktar…" ▸ `.p12` ▸ güçlü, yalnızca bu iş için üretilmiş bir parola verin. Dosyayı
+   deponun dışına kaydedin:
+
+   ```bash
+   mkdir -p ~/.jyotish-signing && chmod 700 ~/.jyotish-signing
+   # dışa aktarırken hedef: ~/.jyotish-signing/DeveloperID.p12
+   chmod 600 ~/.jyotish-signing/DeveloperID.p12
+   ```
 5. Sertifika beş yıl geçerlidir; bitiş tarihini takviminize yazın. `.p12` dosyasını sırları
    GitHub'a ekledikten sonra silin ya da şifreli bir yedekte tutun.
 
@@ -64,7 +75,8 @@ sır deposunda durur. Kod yazan ajanlar bu adımları yapamaz ve yapmamalıdır.
 
 1. <https://appstoreconnect.apple.com/access/integrations/api> ▸ "Team Keys" ▸ "+" ▸ ad:
    `jyotish-desk-notary`, erişim: **Developer**.
-2. `AuthKey_<kimlik>.p8` dosyasını indirin (yalnızca bir kez indirilebilir).
+2. `AuthKey_<kimlik>.p8` dosyasını indirin (yalnızca bir kez indirilebilir) ve
+   `~/.jyotish-signing/` klasörüne taşıyın (`chmod 600`); İndirilenler'de ya da depoda bırakmayın.
 3. Aynı sayfadaki **Key ID** ve **Issuer ID** değerlerini not edin.
 
 Apple kimliği parolası ve uygulamaya özel parola kullanılmaz; API anahtarı istenince iptal edilebilir.
@@ -103,16 +115,19 @@ yeni anahtar, yeni `.dmg`.
 1. Depo ▸ Settings ▸ Environments ▸ "New environment" ▸ ad: `release`.
 2. "Deployment branches and tags" ▸ "Selected branches and tags" ▸ kural: tür **Tag**, desen `v*`.
    Böylece sırlar yalnızca sürüm etiketlerinden başlayan işlere verilir.
+   Önerilir: aynı sayfada "Required reviewers" ▸ kendinizi ekleyin. O zaman sırlara dokunan her iş
+   (etiketle ya da elle başlasın) sizin onayınızı bekler; yanlışlıkla ya da ele geçirilmiş bir
+   hesapla atılan etiket onaysız imza alamaz.
 3. Sekiz sırrı ortam sırrı olarak ekleyin. Değerler komut satırı bağımsız değişkeni olarak değil,
    dosyadan ya da istemden okunur:
 
    ```bash
-   base64 -i DeveloperID.p12 | gh secret set APPLE_CERTIFICATE --env release
+   base64 -i ~/.jyotish-signing/DeveloperID.p12 | gh secret set APPLE_CERTIFICATE --env release
    gh secret set APPLE_CERTIFICATE_PASSWORD --env release          # değeri istem sorar
    gh secret set APPLE_SIGNING_IDENTITY --env release
    gh secret set APPLE_API_KEY_ID --env release
    gh secret set APPLE_API_ISSUER --env release
-   gh secret set APPLE_API_KEY_P8 --env release < AuthKey_XXXXXXXXXX.p8
+   gh secret set APPLE_API_KEY_P8 --env release < ~/.jyotish-signing/AuthKey_XXXXXXXXXX.p8
    gh secret set TAURI_SIGNING_PRIVATE_KEY --env release < ~/.tauri/jyotish-desk-updater.key
    gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --env release
    gh secret list --env release
@@ -132,10 +147,13 @@ veri klasörü de değişir).
 
 ## İNSAN ADIMI 7 — Etiket, denetim ve yayımlama
 
-1. Ana dal yeşil olmalı; sürüm ve notlar hazır olmalı:
+1. Sürüm ve notlar hazır olmalı; **önce ana dal gönderilir**, CI yeşile döner, etiket ondan sonra
+   atılır. İş, etiketin `origin/main` üzerindeki bir commit'i gösterdiğini denetler; ana dal
+   gönderilmeden atılan etiket işi durdurur.
 
    ```bash
    node scripts/release/check-version.mjs      # ör. 0.9.0
+   git push origin main                        # Actions ▸ ci yeşil olana dek bekleyin
    git tag -a v0.9.0 -m "Jyotish Desk 0.9.0"
    git push origin v0.9.0
    ```
@@ -148,8 +166,15 @@ veri klasörü de değişir).
    (Safari ile; karantina bayrağı böyle konur). Açın, uygulamayı Uygulamalar'a sürükleyin, çift
    tıklayın. Gatekeeper yalnızca "internetten indirildi" sorusunu sormalı; "geliştiricisi
    doğrulanamıyor" uyarısı çıkarsa yayımlamayın.
-5. Hakkında penceresinde sürümü ve "Şimdi denetle"nin "Kurulu sürüm güncel." dediğini görün
-   (taslak yayımlanmadan önce bir önceki yayına göre).
+5. Hakkında penceresinde sürümü görün ve "Şimdi denetle"ye basın. Taslak henüz yayımlanmadığı
+   için güncelleyici yalnızca bir önceki yayını görür:
+   - **İlk yayında** (yayımlanmış hiçbir sürüm yokken) `latest.json` bulunmaz; beklenen ileti
+     "Güncelleme denetlenemedi (yayın bilgisi okunamadı)." olur. Bu aşamada hata değildir.
+   - **Sonraki yayınlarda** beklenen ileti "Kurulu sürüm güncel."dir.
+   - "Bu derlemede güncelleme denetimi yok" görürseniz açık anahtar gömülmemiştir (İNSAN ADIMI 4);
+     yayımlamayın.
+
+   Yayımladıktan sonra aynı düğme her iki durumda da "Kurulu sürüm güncel." demelidir.
 6. Taslakta "Set as the latest release" işaretli, "Set as a pre-release" işaretsiz olmalı;
    "Publish release".
 
@@ -176,14 +201,54 @@ doğum verisi ve not içeriği yazmayın.
 
 - İmzasız: `sh scripts/release/build.sh unsigned && sh scripts/release/verify-bundle.sh unsigned`
   (sır gerekmez; yaklaşık on dakika).
-- İmzalı (isteğe bağlı, kendi Mac'inizde): sekiz ortam değişkenini kendi kabuğunuzda verip
-  `sh scripts/release/build.sh signed`, ardından `.dmg` için işteki `notarytool` ve `stapler`
-  komutları ve `sh scripts/release/verify-bundle.sh signed`.
+- İmzalı (isteğe bağlı, kendi Mac'inizde): `build.sh signed` sekiz ortam değişkeni ister. Adlar
+  Tauri CLI'nin okuduğu adlardır ve **ikisi GitHub sır adlarından farklıdır**:
+
+  | Ortam değişkeni (`build.sh signed`) | GitHub sırrı | Değer |
+  |---|---|---|
+  | `APPLE_CERTIFICATE` | aynı ad | `.p12` dosyasının base64'ü |
+  | `APPLE_CERTIFICATE_PASSWORD` | aynı ad | `.p12` parolası |
+  | `APPLE_SIGNING_IDENTITY` | aynı ad | `Developer ID Application: Ad Soyad (TAKIMKODU)` |
+  | `APPLE_API_KEY` | `APPLE_API_KEY_ID` | **Key ID** (10 karakter); anahtarın kendisi değil |
+  | `APPLE_API_ISSUER` | aynı ad | Issuer ID (UUID) |
+  | `APPLE_API_KEY_PATH` | yok (iş, `APPLE_API_KEY_P8` içeriğini geçici bir dosyaya yazar) | `.p8` dosyasının **tam yolu**; dosya deponun dışında durur |
+  | `TAURI_SIGNING_PRIVATE_KEY` | aynı ad | güncelleme özel anahtarı dosyasının içeriği |
+  | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | aynı ad | o anahtarın parolası |
+
+  Yeni bir terminal penceresinde (iş bitince pencereyi kapatın; parolalar komut satırına ve kabuk
+  geçmişine yazılmaz, `read -rs` sorar):
+
+  ```bash
+  export APPLE_CERTIFICATE="$(base64 -i ~/.jyotish-signing/DeveloperID.p12)"
+  read -rs APPLE_CERTIFICATE_PASSWORD && export APPLE_CERTIFICATE_PASSWORD
+  export APPLE_SIGNING_IDENTITY="Developer ID Application: Ad Soyad (TAKIMKODU)"
+  export APPLE_API_KEY="XXXXXXXXXX"                                   # Key ID
+  export APPLE_API_ISSUER="00000000-0000-0000-0000-000000000000"      # Issuer ID
+  export APPLE_API_KEY_PATH="$HOME/.jyotish-signing/AuthKey_XXXXXXXXXX.p8"
+  export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/jyotish-desk-updater.key)"
+  read -rs TAURI_SIGNING_PRIVATE_KEY_PASSWORD && export TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+
+  sh scripts/release/build.sh signed
+  # Tauri .app'i notarize eder ve damgalar; .dmg ayrıca gönderilir (işteki adımın aynısı).
+  DMG="target/universal-apple-darwin/release/bundle/dmg/Jyotish Desk_$(node scripts/release/check-version.mjs)_universal.dmg"
+  xcrun notarytool submit "$DMG" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait
+  xcrun stapler staple "$DMG"
+  sh scripts/release/verify-bundle.sh signed
+  ```
+
+  `build.sh` bir değer eksikse, `APPLE_API_KEY_PATH` bir dosyayı göstermiyorsa ya da açık anahtar
+  gömülü değilse derlemeye başlamadan durur; değerleri yazdırmaz. Her derleme önceki paket
+  klasörünü (`target/universal-apple-darwin/release/bundle`) siler.
 
 ## Sorun giderme
 
 - **İş imzasız derledi:** `release` ortamında sekiz sırdan biri eksik ya da iş bir etiketten
   başlamadı (ortam kuralı sırları vermez).
+- **İş imzalı derledi ama taslak yok:** iş elle başlatılmıştır (Actions ▸ "Run workflow"). Elle
+  çalıştırma bir etiket üzerinde olsa bile yayın oluşturmaz; taslak yalnızca etiket gönderilince
+  oluşur.
+- **"Version, tag and branch" adımı durdu:** etiket sürümle aynı değil, yayın notu dosyası yok ya
+  da etiketlenen commit `origin/main` üzerinde değil (önce ana dalı gönderin).
 - **Notarizasyon reddedildi:** iş günlüğündeki gönderim kimliğiyle
   `xcrun notarytool log <kimlik> --key … --key-id … --issuer …` ayrıntıyı verir.
 - **"A public key has been found, but no private key":** `TAURI_SIGNING_PRIVATE_KEY` boş.

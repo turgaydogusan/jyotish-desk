@@ -19,7 +19,7 @@ macOS 13 (Ventura) ya da sonrası; Apple silicon ya da Intel Mac.
 - Danışanlarınız, haritalar ve notlar yalnızca bu Mac'te durur:
   `~/Library/Application Support/io.github.turgaydogusan.jyotishdesk/`.
 - Uygulama hiçbir kullanım verisi, hata raporu ya da danışan bilgisi göndermez. Güncelleme
-  denetimi dışında ağa bağlanmaz.
+  denetimi ve onayladığınız güncellemenin indirilmesi dışında ağa bağlanmaz.
 - Veritabanı şifrelenmemiştir. Mac'inizde **FileVault**'un açık olduğundan emin olun
   (Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ FileVault).
 - Yedek: kenar çubuğu ▸ Veri ▸ "JSON olarak dışa aktar" (notlarla birlikte). Beta süresince her
@@ -33,8 +33,9 @@ Uygulama kendiliğinden güncelleme aramaz. İki yol vardır:
 - **Elle:** üst çubuk ▸ "Hakkında" ▸ "Şimdi denetle". Yeni sürüm varsa notları okuyup
   "indir ve kur"a basın; kurulum bitince uygulamayı kapatıp yeniden açın.
 - **Açılışta:** aynı pencerede "Açılışta güncellemeleri denetle"yi işaretleyin. Beta boyunca bunu
-  açmanızı öneririz. Denetim github.com'a tek bir istek gönderir; istekte sizinle ya da
-  danışanlarınızla ilgili hiçbir bilgi yoktur.
+  açmanızı öneririz. Denetim github.com'a tek bir istek gönderir; istek hiçbir kullanıcı ya da
+  danışan verisi taşımaz. Her ağ bağlantısında olduğu gibi GitHub, isteğin geldiği IP adresini
+  görür.
 
 İndirilen her paket, uygulamaya gömülü anahtarla imza denetiminden geçmeden kurulmaz.
 
@@ -63,3 +64,11 @@ kolaylaştırır. Lütfen:
 
 Uygulamayı Uygulamalar klasöründen çöpe atın. Verilerinizi de silmek isterseniz yukarıdaki veri
 klasörünü silin (önce yedek alın).
+
+Arayüz tercihleri (ör. "Açılışta güncellemeleri denetle") ve web görünümünün önbelleği ayrı
+klasörlerdedir; iz bırakmamak için varsa bunları da silin:
+
+- `~/Library/WebKit/io.github.turgaydogusan.jyotishdesk/`
+- `~/Library/Caches/io.github.turgaydogusan.jyotishdesk/`
+
+Danışan kayıtları bu klasörlerde değil, yukarıdaki veri klasöründedir.
