@@ -57,3 +57,13 @@ test("every listed shortcut has a description", () => {
     SHORTCUT_LIST.map((s) => s.id),
   );
 });
+
+test("⌘, opens the settings, also from a text field", () => {
+  const input = document.createElement("input");
+  document.body.append(input);
+  const e = new KeyboardEvent("keydown", { key: ",", code: "Comma", metaKey: true, bubbles: true });
+  Object.defineProperty(e, "target", { value: input });
+  expect(matchShortcut(e)).toEqual({ id: "settings" });
+  expect(SHORTCUT_LIST.some((s) => s.id === "settings" && s.keys === "⌘,")).toBe(true);
+  input.remove();
+});

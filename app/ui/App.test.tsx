@@ -29,7 +29,7 @@ import { memoryPersistence } from "./view/persistence";
 
 /** `store: true` gerçek store kalıcılığını (taklit `api`) kullanır; varsayılan bellek içi. */
 function renderApp(boot: Partial<Boot> = {}, { store = false } = {}) {
-  const full: Boot = { layout: null, layoutError: null, opened: fixture().opened, error: null, ...boot };
+  const full: Boot = { layout: null, layoutError: null, prefs: null, prefsError: null, opened: fixture().opened, error: null, ...boot };
   return render(<App boot={full} persistence={store ? undefined : memoryPersistence()} />);
 }
 

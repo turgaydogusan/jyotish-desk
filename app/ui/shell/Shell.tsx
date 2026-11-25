@@ -1,3 +1,4 @@
+import { SettingsDialog } from "../settings/SettingsDialog";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BirthForm } from "../birth/BirthForm";
 import { Sidebar, SIDEBAR_ID } from "../clients/Sidebar";
@@ -32,6 +33,7 @@ export function Shell() {
   const [themePref, setThemePref] = useState<ThemePref>(() => loadThemePref());
   const [printView, setPrintView] = useState(false);
   const [help, setHelp] = useState(false);
+  const [settings, setSettings] = useState(false);
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
   const [sidebar, setSidebar] = useState(true);
   const [palette, setPalette] = useState(false);
@@ -68,6 +70,9 @@ export function Shell() {
       } else if (command?.id === "help") {
         e.preventDefault();
         setHelp(true);
+      } else if (command?.id === "settings") {
+        e.preventDefault();
+        setSettings(true);
       } else if (command?.id === "newChart") {
         e.preventDefault();
         setForm("new");
@@ -109,6 +114,7 @@ export function Shell() {
           return setForm(item.command === "newChart" ? "new" : item.command === "addChart" ? "add" : "edit");
         }
         // Kısayollarındaki gibi: baskı görünümünde (pano ve kenar çubuğu yokken) yok sayılır.
+        if (item.command === "settings") return setSettings(true);
         if (item.command === "toggleNotes") return printView ? undefined : toggleNotes();
         if (item.command === "sidebar") return printView ? undefined : toggleSidebar();
         return setHelp(true);
@@ -128,6 +134,7 @@ export function Shell() {
         sidebarOpen={sidebar}
         onToggleSidebar={toggleSidebar}
         onPalette={() => setPalette(true)}
+        onSettings={() => setSettings(true)}
       />
       <NoticeBar />
       <div className="shell-body">
@@ -138,6 +145,7 @@ export function Shell() {
       </div>
       {help && <HelpDialog onClose={() => setHelp(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onRun={runPalette} />}
+      {settings && <SettingsDialog onClose={() => setSettings(false)} />}
       {form && <BirthForm mode={form} onClose={() => setForm(null)} />}
     </div>
   );

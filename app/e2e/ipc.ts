@@ -60,6 +60,10 @@ export async function mockIpc(page: Page, { session }: IpcOptions) {
         },
         restore_session: () => (session ? fixture.opened : null),
         load_panel_layout: () => null,
+        get_app_prefs: () => fixture.prefs,
+        set_app_prefs: () => null,
+        // Yeniden hesap taklit edilmez: aynı harita, yeni ayarların kopyasıyla döner.
+        save_calc_settings: (args) => ({ ...fixture.opened.chart, meta: { ...fixture.opened.chart.meta, settings: args.settings } }),
         save_panel_layout: () => null,
         save_view_state: () => null,
         create_client: () => fixture.opened,

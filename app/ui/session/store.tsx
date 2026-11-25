@@ -3,7 +3,7 @@
 // önceki haritanın bekleyen görünüm kaydı önce ona yazılır (carried rule C5).
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
-import type { CommandError, OpenedClient } from "../bindings";
+import type { CalcSettings, Chart, CommandError, OpenedClient } from "../bindings";
 import { storeWarningNotices, useNotices } from "../shell/notices";
 import { useViewStore } from "../view/store";
 
@@ -30,6 +30,8 @@ export interface Session {
   setTags(chartId: number, tags: string[]): void;
   /** Liste yenilemesi gerektiren, açık haritayı değiştirmeyen kayıt (ör. başka harita silindi). */
   touch(): void;
+  /** Ayar kaydı yeniden hesapladı (`save_calc_settings` dönüşü): açık harita bu haritaysa ayar ve harita değişir. */
+  updateSettings(chartId: number, settings: CalcSettings, chart: Chart): void;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -88,7 +90,14 @@ export function SessionProvider({ initial, children }: { initial: OpenedClient |
     [touch],
   );
 
-  const value = useMemo(() => ({ opened, revision, open, openClient, close, setTags, touch }), [opened, revision, open, openClient, close, setTags, touch]);
+  const updateSettings = useCallback((chartId: number, settings: CalcSettings, chart: Chart) => {
+    setOpened((o) => (o && o.chart_record.id === chartId ? { ...o, calc_settings: settings, chart } : o));
+  }, []);
+
+  const value = useMemo(
+    () => ({ opened, revision, open, openClient, close, setTags, touch, updateSettings }),
+    [opened, revision, open, openClient, close, setTags, touch, updateSettings],
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

@@ -97,6 +97,7 @@ export function Palette({ onClose, onRun }: PaletteProps) {
           ]
         : []),
       { command: "sidebar", label: t("palette.command.sidebar") },
+      { command: "settings", label: t("palette.command.settings") },
       { command: "help", label: t("palette.command.help") },
     ];
     const clients = clientItems(hits, (h) => (h.matched === "Note" && h.snippet ? t("clients.matchedNote", { snippet: h.snippet }) : h.matched === "Tag" ? t("clients.matchedTag") : null));

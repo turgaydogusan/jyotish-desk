@@ -2,9 +2,10 @@
 // oturum (fikstür haritası) ve vurgu. Arayüz hesap yapmaz; testler fikstürü çizer.
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
-import type { OpenedClient } from "../bindings";
+import type { AppPrefs, OpenedClient } from "../bindings";
 import { HighlightProvider } from "../highlight/store";
 import type { LayoutState } from "../layout/model";
+import { PrefsProvider } from "../settings/prefs";
 import { SessionProvider } from "../session/store";
 import { NoticeProvider } from "../shell/notices";
 import { initialViewModel } from "../view/model";
@@ -17,9 +18,11 @@ export interface RenderOptions {
   opened?: OpenedClient | null;
   layout?: LayoutState | null;
   debounceMs?: number;
+  /** Varsayılan: fikstürün tercihleri. */
+  prefs?: AppPrefs | null;
 }
 
-export function renderWithStores(ui: ReactNode, { opened = fixture().opened, layout = null, debounceMs = 0 }: RenderOptions = {}) {
+export function renderWithStores(ui: ReactNode, { opened = fixture().opened, layout = null, debounceMs = 0, prefs = fixture().prefs.prefs }: RenderOptions = {}) {
   const persistence = memoryPersistence();
   const initial = initialViewModel(
     layout,
@@ -27,11 +30,13 @@ export function renderWithStores(ui: ReactNode, { opened = fixture().opened, lay
   );
   const utils = render(
     <NoticeProvider>
-      <ViewStateProvider initial={initial} persistence={persistence} debounceMs={debounceMs}>
-        <SessionProvider initial={opened}>
-          <HighlightProvider>{ui}</HighlightProvider>
-        </SessionProvider>
-      </ViewStateProvider>
+      <PrefsProvider initial={prefs}>
+        <ViewStateProvider initial={initial} persistence={persistence} debounceMs={debounceMs}>
+          <SessionProvider initial={opened}>
+            <HighlightProvider>{ui}</HighlightProvider>
+          </SessionProvider>
+        </ViewStateProvider>
+      </PrefsProvider>
     </NoticeProvider>,
   );
   return { ...utils, persistence };

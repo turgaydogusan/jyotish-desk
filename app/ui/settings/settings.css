@@ -1,0 +1,43 @@
+.settings-form {
+  display: grid;
+  gap: 8px;
+  min-width: 420px;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 10rem 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-row--differs {
+  border-left: 2px solid var(--ink);
+  padding-left: 6px;
+}
+
+.settings-differs,
+.settings-hint,
+.settings-scope,
+.settings-status {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.settings-orbs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px 12px;
+  border: 1px solid var(--line);
+  padding: 8px;
+}
+
+.settings-orb {
+  display: grid;
+  gap: 2px;
+}
+
+.settings-orb input {
+  width: 5rem;
+  font-variant-numeric: tabular-nums;
+}

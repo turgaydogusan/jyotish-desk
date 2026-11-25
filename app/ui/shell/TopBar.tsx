@@ -17,10 +17,11 @@ export interface TopBarProps {
   sidebarOpen: boolean;
   onToggleSidebar(): void;
   onPalette(): void;
+  onSettings(): void;
 }
 
 /** Üst çubuk (spec §4): solda danışan ve harita (uyarı rozetleriyle), ortada düzen seçici, sağda tema, dil ve baskı. */
-export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp, onNewChart, onEditChart, sidebarOpen, onToggleSidebar, onPalette }: TopBarProps) {
+export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp, onNewChart, onEditChart, sidebarOpen, onToggleSidebar, onPalette, onSettings }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : DEFAULT_LANGUAGE;
   return (
@@ -45,6 +46,9 @@ export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onH
       <div className="topbar-right">
         <button type="button" aria-keyshortcuts="Meta+K" onClick={onPalette}>
           {t("palette.open")}
+        </button>
+        <button type="button" aria-keyshortcuts="Meta+Comma" onClick={onSettings}>
+          {t("settings.open")}
         </button>
         <label>
           {t("theme.label")}

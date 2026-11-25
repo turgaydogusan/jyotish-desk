@@ -4,7 +4,7 @@
 import type { ChartRecord, SearchHit, Varga } from "../bindings";
 import type { Layout } from "../layout/model";
 
-export type PaletteCommand = "newChart" | "addChart" | "editChart" | "toggleNotes" | "sidebar" | "help";
+export type PaletteCommand = "newChart" | "addChart" | "editChart" | "settings" | "toggleNotes" | "sidebar" | "help";
 
 export type PaletteItem =
   | { kind: "client"; key: string; label: string; detail: string | null; clientId: number }
