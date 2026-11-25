@@ -483,3 +483,51 @@ fn last_sunrise_before_the_polar_night_is_found() {
     assert!((set - 2_440_878.563_773).abs() * 86_400.0 <= 60.0, "{set}");
     assert_eq!(p.vara, Vara::Monday);
 }
+
+#[test]
+fn sunrise_minutes_before_birth_is_exact_at_sixty_degrees() {
+    let mut eph = SwissEph::open(&ephe_dir()).expect("open ephemeris");
+    // Helsinki 60.1699 K, 24.9384 D; 25 Aralık 1990 07:40:10 UT, gün doğumundan 4 dk sonra.
+    // SE'nin hızlı yöntemi doğumdan 24 saat önce başlayan aramada bu doğuşu 301 sn erken
+    // verir (2448250.813293); ephemeris katmanı 50°'nin üstünde tam aramayı zorlar.
+    // target/swetest -rise -hindu -bj2448249.9 -n2 -p0 -geopos24.9384,60.1699,0 -head -eswe -edirdata/ephe
+    // rise 25.12.1990 07:36:09.9
+    let p = jyotish_core::compute_panchang(
+        &mut eph,
+        2_448_250.819_559,
+        60.1699,
+        24.9384,
+        &CalcSettings::default(),
+    )
+    .expect("panchang");
+    let rise = p.sunrise_jd_ut.expect("sunrise");
+    assert!(
+        (rise - 2_448_250.816_781).abs() * 86_400.0 <= 60.0,
+        "{rise}"
+    );
+    assert_eq!(p.vara, Vara::Tuesday);
+}
+
+#[test]
+fn birth_two_minutes_before_sunrise_keeps_the_previous_vara() {
+    let mut eph = SwissEph::open(&ephe_dir()).expect("open ephemeris");
+    // Reykjavik 64.1466 K, 21.9426 B; 19 Kasım 1990 10:18:15 UT, o günün doğuşundan
+    // (10:20:14.6 UT) 2 dk önce: gün hâlâ 18 Kasım Pazar'dır. SE'nin hızlı yöntemi 19 Kasım
+    // doğuşunu 132 sn erken (2448214.929193, doğumdan önce) verir ve vara Pazartesi çıkar.
+    // target/swetest -rise -hindu -bj2448213.5 -n2 -p0 -geopos-21.9426,64.1466,0 -head -eswe -edirdata/ephe
+    // rise 18.11.1990 10:16:50.9   rise 19.11.1990 10:20:14.6
+    let p = jyotish_core::compute_panchang(
+        &mut eph,
+        2_448_214.929_336,
+        64.1466,
+        -21.9426,
+        &CalcSettings::default(),
+    )
+    .expect("panchang");
+    let rise = p.sunrise_jd_ut.expect("sunrise");
+    assert!(
+        (rise - 2_448_213.928_367).abs() * 86_400.0 <= 60.0,
+        "{rise}"
+    );
+    assert_eq!(p.vara, Vara::Sunday);
+}

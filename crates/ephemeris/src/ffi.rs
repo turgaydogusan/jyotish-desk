@@ -34,6 +34,8 @@ pub const SE_BIT_GEOCTR_NO_ECL_LAT: i32 = 128;
 /// Hint gün doğumu: disk merkezi, kırılmasız, jeosantrik ve ekliptik enlemsiz (swephexp.h).
 pub const SE_BIT_HINDU_RISING: i32 =
     SE_BIT_DISC_CENTER | SE_BIT_NO_REFRACTION | SE_BIT_GEOCTR_NO_ECL_LAT;
+/// `swe_rise_trans`'ı hızlı yöntem yerine tam (yavaş) aramaya zorlar (swephexp.h).
+pub const SE_BIT_FORCE_SLOW_METHOD: i32 = 32768;
 /// `swe_rise_trans` dönüşü: cisim bu aramada doğmuyor ya da batmıyor (swecl.c,
 /// `swe_rise_trans_true_hor`: "rise or set not found"). Hata değildir.
 pub const RISE_TRANS_NOT_FOUND: i32 = -2;

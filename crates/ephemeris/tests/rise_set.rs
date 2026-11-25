@@ -12,6 +12,7 @@ const TOLERANCE_SECONDS: f64 = 0.1;
 const DELHI: (f64, f64) = (28.6139, 77.2090);
 const ISTANBUL: (f64, f64) = (41.0082, 28.9784);
 const TROMSO: (f64, f64) = (69.6492, 18.9553);
+const HELSINKI: (f64, f64) = (60.1699, 24.9384);
 
 fn ut(y: i32, mo: u32, d: u32, h: f64, mi: f64, s: f64) -> f64 {
     julday_gregorian(y, mo, d, h + mi / 60.0 + s / 3600.0)
@@ -109,4 +110,25 @@ fn next_event_comes_after_the_start() {
     // Bulunan doğuşun hemen sonrasından aramak ertesi günün doğuşunu verir (≈ 2451545.575167).
     let next = event(&mut eph, first + 0.01, RiseSet::Rise, DELHI, hindu).unwrap();
     assert!((0.99..1.01).contains(&(next - first)), "{}", next - first);
+}
+
+#[test]
+fn sunrise_above_fifty_degrees_does_not_depend_on_the_search_start() {
+    let mut eph = SwissEph::open(&ephe_dir()).unwrap();
+    // Helsinki. target/swetest -rise -hindu -bj2448249.9 -n2 -p0 -geopos24.9384,60.1699,0 -head -eswe -edirdata/ephe
+    // rise 25.12.1990 07:36:09.9
+    // SE'nin hızlı yöntemi, arama bir önceki doğuşun hemen ardından başlarsa (ilk başlangıç:
+    // 24.12.1990 07:40 UT) aynı doğuşu 301 sn erken verir (07:31:08.5); 50°'nin üstünde tam
+    // arama zorlanır ve sonuç başlangıçtan bağımsızdır.
+    let want = ut(1990, 12, 25, 7.0, 36.0, 9.9);
+    for start in [2_448_249.819_559, 2_448_249.9, 2_448_250.3, 2_448_250.7] {
+        let rise = event(
+            &mut eph,
+            start,
+            RiseSet::Rise,
+            HELSINKI,
+            SunDisc::CenterNoRefraction,
+        );
+        assert_at(&format!("helsinki rise from {start}"), rise, want);
+    }
 }

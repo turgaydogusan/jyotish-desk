@@ -22,6 +22,14 @@ const MAX_PATH_BYTES: usize = ffi::AS_MAXCH - 1 - 13;
 const STD_PRESSURE_HPA: f64 = 1013.25;
 const STD_TEMPERATURE_C: f64 = 15.0;
 
+/// |enlem| bu değerin üstündeyse `swe_rise_trans` tam (yavaş) aramaya zorlanır. SE'nin hızlı
+/// yöntemi (`rise_set_fast`, Güneş için 65°'ye dek varsayılan) iki Newton adımıdır ve sonucu
+/// arama başlangıcına bağlıdır. Hint tanımında, arama bir önceki doğuşun hemen ardından
+/// başlarsa hata 50°'ye dek ≤ 10 sn, 50–55°'de ≤ 30 sn, 60°'de 5 dk, 64°'de 14 dk olur
+/// (ölçüldü, 1900–2100); `swetest -rise` de aynı yöntemi kullanır. Tam arama her enlemde
+/// bağımsız bir ufuk geçişi hesabıyla < 0.1 sn uyuşur; maliyeti çağrı başına ~0.3 ms.
+const SLOW_RISE_ABOVE_LAT_DEG: f64 = 50.0;
+
 /// Swiss Ephemeris'in tek sahibi. Var olduğu sürece başka örnek açılamaz
 /// (açmaya çalışan iş parçacığı bekler).
 ///
@@ -256,6 +264,10 @@ impl Ephemeris for SwissEph {
         geo_lon: f64,
         disc: SunDisc,
     ) -> Result<Option<f64>, EphError> {
+        let mut rsmi = event.se_code() | disc.rsmi_bits();
+        if geo_lat.abs() > SLOW_RISE_ABOVE_LAT_DEG {
+            rsmi |= ffi::SE_BIT_FORCE_SLOW_METHOD;
+        }
         let mut geopos = [geo_lon, geo_lat, 0.0_f64];
         let mut tret = 0.0_f64;
         let mut serr: [c_char; ffi::AS_MAXCH] = [0; ffi::AS_MAXCH];
@@ -267,7 +279,7 @@ impl Ephemeris for SwissEph {
                 Body::Sun.se_id(),
                 std::ptr::null_mut(),
                 ffi::SEFLG_SWIEPH,
-                event.se_code() | disc.rsmi_bits(),
+                rsmi,
                 geopos.as_mut_ptr(),
                 STD_PRESSURE_HPA,
                 STD_TEMPERATURE_C,
