@@ -14,6 +14,8 @@ test("global commands", () => {
   expect(key({ key: "n", metaKey: true })).toEqual({ id: "newChart" });
   expect(key({ key: "e", metaKey: true })).toEqual({ id: "editChart" });
   expect(key({ key: "k", metaKey: true })).toEqual({ id: "palette" });
+  expect(key({ key: "p", metaKey: true })).toEqual({ id: "print" });
+  expect(key({ key: "P", metaKey: true, shiftKey: true })).toBeNull();
   expect(key({ key: "\\", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });
   expect(key({ key: ",", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });
   expect(key({ key: "?", shiftKey: true })).toEqual({ id: "help" });
@@ -49,6 +51,16 @@ test("Cmd shortcuts and ? work from a select, checkbox or radio, and Cmd shortcu
     expect(key({ key: "N", metaKey: true, shiftKey: true }, target)).toEqual({ id: "toggleNotes" });
     expect(key({ key: "?", shiftKey: true }, target)).toBeNull();
   }
+});
+
+test("layout shortcuts are off while the print preview is open; Cmd+P still works", () => {
+  const preview = document.createElement("div");
+  preview.setAttribute("data-print-preview", "");
+  document.body.append(preview);
+  expect(key({ key: "2", code: "Digit2", metaKey: true })).toBeNull();
+  expect(key({ key: "p", metaKey: true })).toEqual({ id: "print" });
+  preview.remove();
+  expect(key({ key: "2", code: "Digit2", metaKey: true })).toEqual({ id: "selectLayout", index: 1 });
 });
 
 test("every listed shortcut has a description", () => {

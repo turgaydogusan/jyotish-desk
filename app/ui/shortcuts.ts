@@ -9,13 +9,14 @@ export type Command =
   | { id: "newChart" }
   | { id: "editChart" }
   | { id: "settings" }
+  | { id: "print" }
   | { id: "palette" }
   | { id: "sidebar" }
   | { id: "help" };
 
 export interface ShortcutInfo {
   /** i18n anahtarı: `shortcuts.<id>`. */
-  id: "palette" | "sidebar" | "selectLayout" | "toggleNotes" | "newChart" | "editChart" | "settings" | "help" | "escape" | "movePanel" | "resizePanel" | "tree";
+  id: "palette" | "sidebar" | "selectLayout" | "toggleNotes" | "newChart" | "editChart" | "settings" | "print" | "help" | "escape" | "movePanel" | "resizePanel" | "tree";
   keys: string;
 }
 
@@ -25,6 +26,7 @@ export const SHORTCUT_LIST: readonly ShortcutInfo[] = [
   { id: "newChart", keys: "⌘N" },
   { id: "editChart", keys: "⌘E" },
   { id: "settings", keys: "⌘," },
+  { id: "print", keys: "⌘P" },
   { id: "selectLayout", keys: "⌘1 … ⌘9" },
   { id: "toggleNotes", keys: "⌘⇧N" },
   { id: "help", keys: "?" },
@@ -39,6 +41,11 @@ export function modalOpen(): boolean {
   return document.querySelector('[aria-modal="true"]') !== null;
 }
 
+/** Baskı önizlemesi açık mı (`PrintView` kökü). Önizlemede pano yoktur: düzen kısayolları kapalıdır. */
+export function printPreviewOpen(): boolean {
+  return document.querySelector("[data-print-preview]") !== null;
+}
+
 /**
  * Klavye olayı → genel komut. Tuş tekrarında, IME bileşiminde (WebKit'in 229 kodu dahil) ve modal açıkken `null`;
  * ⌘ kısayolları yazı alanında da çalışır, değiştiricisiz `?` yazı alanında yazıdır. Rakamlar ve ters bölü fiziksel tuştan (`code`) okunur: AZERTY'de `key`
@@ -49,13 +56,15 @@ export function matchShortcut(e: KeyboardEvent): Command | null {
   if (e.ctrlKey || e.altKey) return null;
   if (e.metaKey) {
     if (e.shiftKey) return e.key.toLowerCase() === "n" ? { id: "toggleNotes" } : null;
-    if (/^Digit[1-9]$/.test(e.code)) return { id: "selectLayout", index: Number(e.code.slice(5)) - 1 };
+    // Önizlemenin ardındaki düzen görünmeden değişmesin (Plan 04 incelemesi M4).
+    if (/^Digit[1-9]$/.test(e.code)) return printPreviewOpen() ? null : { id: "selectLayout", index: Number(e.code.slice(5)) - 1 };
     if (e.code === "Backslash" || e.key === "\\") return { id: "sidebar" };
     if (e.code === "Comma" || e.key === ",") return { id: "settings" };
     const k = e.key.toLowerCase();
     if (k === "k") return { id: "palette" };
     if (k === "n") return { id: "newChart" };
     if (k === "e") return { id: "editChart" };
+    if (k === "p") return { id: "print" };
     return null;
   }
   // Değiştiricisiz tuş yazıdır: metin girişinde komut sayılmaz. ⌘ kısayolları her yerde çalışır.

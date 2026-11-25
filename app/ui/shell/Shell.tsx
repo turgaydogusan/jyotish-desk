@@ -15,6 +15,7 @@ import { EmptyState } from "./EmptyState";
 import { leaveNotes, leaveSidebar, MAIN_ID } from "./focus";
 import { HelpDialog } from "./HelpDialog";
 import { NoticeBar, useNotices } from "./notices";
+import { loadSidebarOpen, saveSidebarOpen } from "./sidebarPref";
 import { PrintView } from "../print/PrintView";
 import "./shell.css";
 import { TopBar } from "./TopBar";
@@ -29,7 +30,9 @@ export function Shell() {
   const [help, setHelp] = useState(false);
   const [settings, setSettings] = useState(false);
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
-  const [sidebar, setSidebar] = useState(true);
+  const [sidebar, setSidebar] = useState(() => loadSidebarOpen());
+  // Açık/kapalı durumu bir sonraki açılışta da geçerlidir (Plan 12 D11).
+  useEffect(() => saveSidebarOpen(sidebar), [sidebar]);
   const [palette, setPalette] = useState(false);
   const toggleSidebar = () => {
     leaveSidebar();
@@ -64,8 +67,8 @@ export function Shell() {
   // (spec §3.2); baskı görünümünde (pano yokken) yok sayılır. `?` yardımı açar. Dinleyici bir
   // kez kurulur ve güncel durumu `latest`'ten okur: kayıttan hemen sonra basılan ⌘E, effect
   // yeniden kurulmadan önce de açık haritayı görür.
-  const latest = useRef({ toggleNotes, printView, opened });
-  latest.current = { toggleNotes, printView, opened };
+  const latest = useRef({ toggleNotes, printView, opened, togglePrint, printNow });
+  latest.current = { toggleNotes, printView, opened, togglePrint, printNow };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const command = matchShortcut(e);
@@ -93,6 +96,12 @@ export function Shell() {
       } else if (command?.id === "palette") {
         e.preventDefault();
         setPalette(true);
+      } else if (command?.id === "print") {
+        // ⌘P her zaman tüketilir: web görünümü panoyu kendi başına yazdırmaz.
+        e.preventDefault();
+        if (!now.opened) return;
+        if (now.printView) void now.printNow();
+        else now.togglePrint();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -122,6 +131,7 @@ export function Shell() {
         }
         // Kısayollarındaki gibi: baskı görünümünde (pano ve kenar çubuğu yokken) yok sayılır.
         if (item.command === "settings") return setSettings(true);
+        if (item.command === "print") return printView ? undefined : togglePrint();
         if (item.command === "toggleNotes") {
           if (printView) return;
           leaveNotes();

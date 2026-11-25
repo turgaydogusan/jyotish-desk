@@ -94,6 +94,7 @@ export function Palette({ onClose, onRun }: PaletteProps) {
             { command: "addChart" as const, label: t("palette.command.addChart") },
             { command: "editChart" as const, label: t("palette.command.editChart") },
             { command: "toggleNotes" as const, label: t("palette.command.toggleNotes") },
+            { command: "print" as const, label: t("palette.command.print") },
           ]
         : []),
       { command: "sidebar", label: t("palette.command.sidebar") },

@@ -35,6 +35,8 @@ function renderApp(boot: Partial<Boot> = {}, { store = false } = {}) {
 }
 
 const toggleNotes = () => fireEvent.keyDown(window, { key: "N", metaKey: true, shiftKey: true });
+/** Baskı önizlemesinin araç çubuğu; önizleme açık değilse hata verir. */
+const printToolbar = () => screen.getByRole("group", { name: "Baskı seçenekleri" });
 
 test("opens on the interview layout with the restored chart", () => {
   renderApp();
@@ -357,4 +359,62 @@ test("? opens the shortcut help as a modal that traps focus, blocks shortcuts an
 test("preference warnings from boot are shown in the notice bar", () => {
   renderApp({ opened: null, prefs: { ...fixture().prefs, warnings: [{ TooNew: { found: 2 } }] } });
   expect(screen.getByText(/Tercihler daha yeni bir uygulama sürümüyle kaydedilmiş \(sürüm 2\)/)).toBeInTheDocument();
+});
+
+test("Cmd+P opens the print preview, and inside it asks for the print dialog", () => {
+  vi.mocked(api.printWindow).mockClear();
+  renderApp();
+  // `fireEvent` varsayılan davranış engellendiyse `false` döner: web görünümü kendisi yazdırmaz.
+  expect(fireEvent.keyDown(window, { key: "p", metaKey: true })).toBe(false);
+  expect(printToolbar()).toBeInTheDocument();
+  expect(api.printWindow).not.toHaveBeenCalled();
+  fireEvent.keyDown(window, { key: "p", metaKey: true });
+  expect(api.printWindow).toHaveBeenCalledOnce();
+  expect(printToolbar()).toBeInTheDocument();
+});
+
+test("Cmd+P without an open chart is swallowed and opens nothing", () => {
+  vi.mocked(api.printWindow).mockClear();
+  renderApp({ opened: null });
+  expect(fireEvent.keyDown(window, { key: "p", metaKey: true })).toBe(false);
+  expect(screen.queryByRole("group", { name: "Baskı seçenekleri" })).toBeNull();
+  expect(api.printWindow).not.toHaveBeenCalled();
+});
+
+test("a layout shortcut pressed in the preview does not change the layout behind it", async () => {
+  renderApp();
+  fireEvent.keyDown(window, { key: "p", metaKey: true });
+  fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });
+  fireEvent.click(screen.getByRole("button", { name: "Panoya dön" }));
+  expect(await screen.findByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
+  fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Araştırma");
+});
+
+test("the palette opens the print preview; leaving it from the keyboard moves focus to main", async () => {
+  renderApp();
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "baskı" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /Baskı önizleme/ }));
+  expect(printToolbar()).toBeInTheDocument();
+  const back = screen.getByRole("button", { name: "Panoya dön" });
+  expect(back).not.toHaveAttribute("aria-keyshortcuts");
+  // Odak önizlemenin içindeyken (Yazdır… düğmesi) önizleme kapanır: odak `body`'ye düşmez.
+  expect(screen.getByRole("button", { name: "Yazdır…" })).toHaveFocus();
+  fireEvent.click(back);
+  expect(document.activeElement).toBe(document.getElementById("shell-main"));
+  expect(screen.getByRole("button", { name: "Baskı önizleme" })).toHaveAttribute("aria-keyshortcuts", "Meta+P");
+});
+
+test("the sidebar's closed state is remembered at the next start", () => {
+  const first = renderApp();
+  fireEvent.keyDown(window, { key: "\\", code: "Backslash", metaKey: true });
+  expect(screen.queryByRole("complementary", { name: "Danışanlar" })).toBeNull();
+  first.unmount();
+  renderApp();
+  expect(screen.queryByRole("complementary", { name: "Danışanlar" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Danışanlar" })).toHaveAttribute("aria-expanded", "false");
+  fireEvent.keyDown(window, { key: "\\", code: "Backslash", metaKey: true });
+  expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
 });

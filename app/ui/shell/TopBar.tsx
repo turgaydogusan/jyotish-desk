@@ -75,7 +75,7 @@ export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onH
           {t("shortcuts.open")}
         </button>
         {onTogglePrint && (
-          <button type="button" onClick={onTogglePrint}>
+          <button type="button" aria-keyshortcuts={printView ? undefined : "Meta+P"} onClick={onTogglePrint}>
             {printView ? t("print.back") : t("print.open")}
           </button>
         )}
