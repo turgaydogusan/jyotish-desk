@@ -35,6 +35,8 @@ export const commands = {
 	deleteClient: (clientId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_client", { clientId }, options)),
 	deleteChart: (chartId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_chart", { chartId }, options)),
 	listClients: (limit: number, options?: InvokeOptions) => typedError<Client[], CommandError>(__TAURI_INVOKE("list_clients", { limit }, options)),
+	/**  Kenar çubuğu etiket süzgeci: etiketin tam adıyla (büyük/küçük harf ve NFC duyarsız). */
+	listClientsByTag: (tag: string, limit: number, options?: InvokeOptions) => typedError<Client[], CommandError>(__TAURI_INVOKE("list_clients_by_tag", { tag, limit }, options)),
 	listCharts: (clientId: number, options?: InvokeOptions) => typedError<ChartRecord[], CommandError>(__TAURI_INVOKE("list_charts", { clientId }, options)),
 	searchClients: (query: string, limit: number, options?: InvokeOptions) => typedError<SearchHit[], CommandError>(__TAURI_INVOKE("search_clients", { query, limit }, options)),
 	addNote: (clientId: number, chartId: number | null, body: string, options?: InvokeOptions) => typedError<Note, CommandError>(__TAURI_INVOKE("add_note", { clientId, chartId, body }, options)),

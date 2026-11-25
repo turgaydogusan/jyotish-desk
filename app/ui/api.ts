@@ -4,7 +4,7 @@
 //
 // Arayüz yalnızca burada listelenen komutları çağırır. İçe ve dışa aktarma komutları
 // (`importJson`, `importJhd`, `exportJson`, `exportCsv`) Plan 08 ertelenen maddeleri 1 ve 3
-// kapanana kadar (M6) bilerek yoktur; `api.test.ts` bunu denetler.
+// kapanana kadar bilerek yoktur; `api.test.ts` bunu denetler.
 // Hata parametreleri (`CommandError.params`) kişisel veri içerebilir: hiçbir yerde loglanmaz.
 import {
   commands,
@@ -42,8 +42,22 @@ export const api = {
   engineStatus: () => wrap(() => commands.engineStatus()),
   printWindow: () => wrap(() => commands.printWindow()),
   restoreSession: () => wrap(() => commands.restoreSession()),
+  openClient: (clientId: number, chartId: number | null) => wrap(() => commands.openClient(clientId, chartId)),
   createClient: (input: NewClient) => wrap(() => commands.createClient(input)),
+  addChart: (clientId: number, chart: NewChart) => wrap(() => commands.addChart(clientId, chart)),
   updateChart: (chartId: number, chart: NewChart) => wrap(() => commands.updateChart(chartId, chart)),
+  deleteClient: (clientId: number) => wrap(() => commands.deleteClient(clientId)),
+  deleteChart: (chartId: number) => wrap(() => commands.deleteChart(chartId)),
+  listClients: (limit: number) => wrap(() => commands.listClients(limit)),
+  listClientsByTag: (tag: string, limit: number) => wrap(() => commands.listClientsByTag(tag, limit)),
+  listCharts: (clientId: number) => wrap(() => commands.listCharts(clientId)),
+  searchClients: (query: string, limit: number) => wrap(() => commands.searchClients(query, limit)),
+  listTags: () => wrap(() => commands.listTags()),
+  setChartTags: (chartId: number, tags: string[]) => wrap(() => commands.setChartTags(chartId, tags)),
+  listNotes: (clientId: number, limit: number) => wrap(() => commands.listNotes(clientId, limit)),
+  addNote: (clientId: number, chartId: number | null, body: string) => wrap(() => commands.addNote(clientId, chartId, body)),
+  updateNote: (noteId: number, body: string) => wrap(() => commands.updateNote(noteId, body)),
+  deleteNote: (noteId: number) => wrap(() => commands.deleteNote(noteId)),
   saveViewState: (chartId: number, viewState: ViewState) => wrap(() => commands.saveViewState(chartId, viewState)),
   loadPanelLayout: () => wrap(() => commands.loadPanelLayout()),
   savePanelLayout: (layout: PanelLayout | null) => wrap(() => commands.savePanelLayout(layout)),

@@ -83,6 +83,7 @@ export const tr = {
     ipc: "Uygulama çekirdeğine ulaşılamadı.",
     calc: "Hesap tamamlanamadı ({{detail}}).",
     engine_stopped: "Hesap motoru durdu. Sorun sürerse uygulamayı yeniden başlatın.",
+    task_failed: "Arka plandaki iş beklenmedik biçimde durdu. İşlemi yeniden deneyin.",
     data_files_missing: "Ephemeris dosyaları bulunamadı: {{path}}",
     invalid_path: "Ephemeris klasörünün yolu kullanılamıyor.",
     env_override: "Ephemeris yolu bir ortam değişkeniyle değiştirilmiş; bu desteklenmiyor.",

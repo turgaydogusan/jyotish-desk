@@ -84,6 +84,7 @@ export const fr: Messages = {
     ipc: "Impossible de joindre le cœur de l’application.",
     calc: "Le calcul n’a pas pu aboutir ({{detail}}).",
     engine_stopped: "Le moteur de calcul s’est arrêté. Si le problème persiste, redémarrez l’application.",
+    task_failed: "Une tâche d’arrière-plan s’est arrêtée de façon inattendue. Réessayez l’action.",
     data_files_missing: "Fichiers d’éphémérides introuvables : {{path}}",
     invalid_path: "Le chemin du dossier des éphémérides est inutilisable.",
     env_override: "Le chemin des éphémérides a été modifié par une variable d’environnement ; ce n’est pas pris en charge.",

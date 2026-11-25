@@ -84,6 +84,7 @@ export const en: Messages = {
     ipc: "Could not reach the application core.",
     calc: "The calculation could not finish ({{detail}}).",
     engine_stopped: "The calculation engine stopped. If this persists, restart the application.",
+    task_failed: "A background task stopped unexpectedly. Try the action again.",
     data_files_missing: "Ephemeris files were not found: {{path}}",
     invalid_path: "The ephemeris folder path cannot be used.",
     env_override: "The ephemeris path was changed by an environment variable; this is not supported.",

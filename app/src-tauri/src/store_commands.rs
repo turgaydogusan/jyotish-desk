@@ -126,6 +126,17 @@ pub async fn list_clients(
     with_store(&store, move |s| s.list_clients(limit)).await
 }
 
+/// Kenar çubuğu etiket süzgeci: etiketin tam adıyla (büyük/küçük harf ve NFC duyarsız).
+#[tauri::command]
+#[specta::specta]
+pub async fn list_clients_by_tag(
+    store: State<'_, StoreState>,
+    tag: String,
+    limit: u32,
+) -> Result<Vec<Client>, CommandError> {
+    with_store(&store, move |s| s.clients_with_tag(&tag, limit)).await
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn list_charts(

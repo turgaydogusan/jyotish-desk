@@ -200,13 +200,14 @@ pub fn save_calc_settings_blocking(
     compute_chart_blocking(engine, rec.resolved.jd_ut, place.lat, place.lon, settings)
 }
 
-/// Bloklayan gövdeyi havuzda çalıştırır; `JoinError` `engine_stopped` olur.
+/// Bloklayan gövdeyi havuzda çalıştırır. Görev paniklerse (`JoinError`) `task_failed` döner
+/// (Plan 08 ertelenen madde 11); panik iletisi parametreye konmaz, kişisel veri taşıyabilir.
 pub(crate) async fn blocking<T: Send + 'static>(
     f: impl FnOnce() -> Result<T, CommandError> + Send + 'static,
 ) -> Result<T, CommandError> {
     tauri::async_runtime::spawn_blocking(f)
         .await
-        .map_err(|e| CommandError::new("engine_stopped", &[("detail", e.to_string())]))?
+        .map_err(|_| CommandError::new("task_failed", &[]))?
 }
 
 /// Yalnızca store işi yapan komutlar için: kilit, çağrı, hata eşleme.
@@ -301,6 +302,13 @@ pub async fn save_view_state(
 mod tests {
     use super::*;
     use atlas::Date;
+
+    #[test]
+    fn a_panicking_blocking_task_is_task_failed_without_its_message() {
+        let e = tauri::async_runtime::block_on(blocking::<()>(|| panic!("Ayşe"))).unwrap_err();
+        assert_eq!(e.code, "task_failed");
+        assert!(e.params.is_empty());
+    }
 
     #[test]
     fn store_error_codes_are_stable() {

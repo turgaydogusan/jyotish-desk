@@ -69,7 +69,7 @@ test("chart accessible-name words exist in every language", () => {
 // Arka ucun döndürebildiği her `CommandError.code` (commands.rs, client_commands.rs,
 // atlas_commands.rs). Dosya ve içe aktarma kodları M6'da arayüze açılınca eklenir.
 const BACKEND_CODES = [
-  "ipc", "calc", "engine_stopped", "data_files_missing", "invalid_path", "env_override", "already_open", "job_panicked", "print_failed",
+  "ipc", "calc", "engine_stopped", "task_failed", "data_files_missing", "invalid_path", "env_override", "already_open", "job_panicked", "print_failed",
   "store_sqlite", "store_migration", "store_json", "store_too_new", "store_unavailable", "not_found", "invalid_input",
   "unknown_time_zone", "nonexistent_local_time", "ambiguous_local_time", "offset_out_of_range", "longitude_out_of_range",
   "date_out_of_range", "last_chart", "unsupported_schema_version", "invalid_settings", "invalid_location", "invalid_julian_day",

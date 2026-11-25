@@ -35,6 +35,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store_commands::delete_client,
             store_commands::delete_chart,
             store_commands::list_clients,
+            store_commands::list_clients_by_tag,
             store_commands::list_charts,
             store_commands::search_clients,
             store_commands::add_note,
