@@ -24,7 +24,7 @@ export interface NoteEditorProps {
   /** Bu haritaya bağlı not (açık harita). */
   onThisChart: boolean;
   onSaved(note: Note): void;
-  /** "Yeni not" ile eklendi ve henüz bu oturumda yazılmadı: boş bırakılırsa silinir (D17). */
+  /** "Yeni not" ile bu oturumda eklendi: hiç yazılmadan boş bırakılırsa silinir (D17). */
   discardWhenEmpty: boolean;
   /** Onaylı silme; `false`: silinemedi (bildirim panelin işidir), not yerinde kalır. `quiet`: boş taze notun onaysız silinmesi, odak taşınmaz. */
   onDelete(note: Note, quiet?: boolean): Promise<boolean>;
@@ -39,18 +39,21 @@ export function NoteEditor({ note, autoFocus, onThisChart, discardWhenEmpty, onS
   const [confirm, setConfirm] = useState(false);
   // `saved`: Rust'a gönderilmiş son metin; `null` son kayıt başarısız oldu demektir.
   // `dirtyAt`: kaydedilmemiş ilk değişikliğin zamanı (en uzun bekleme bundan sayılır).
+  // `written`: bu oturumda nota metin yazıldı; yazılıp bilerek boşaltılan not onaysız silinmez.
   const latest = useRef<{
     body: string;
     saved: string | null;
     timer: ReturnType<typeof setTimeout> | null;
     dirtyAt: number | null;
     deleted: boolean;
+    written: boolean;
   }>({
     body: note.body,
     saved: note.body,
     timer: null,
     dirtyAt: null,
     deleted: false,
+    written: note.body.trim() !== "",
   });
   const mounted = useRef(true);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -78,7 +81,8 @@ export function NoteEditor({ note, autoFocus, onThisChart, discardWhenEmpty, onS
   };
 
   // Boş taze not: odak çıkınca ya da panel kapanınca onaysız silinir. Silme sürüyorsa tekrar edilmez.
-  const discardable = () => discardWhenEmpty && !latest.current.deleted && latest.current.body.trim() === "";
+  // Yalnızca hiç yazılmamış not: yazılıp boşaltılan not durur, silmek isteyen "Sil"i kullanır (onaylı).
+  const discardable = () => discardWhenEmpty && !latest.current.deleted && !latest.current.written && latest.current.body.trim() === "";
   const discard = () => {
     const now = latest.current;
     now.deleted = true;
@@ -124,6 +128,7 @@ export function NoteEditor({ note, autoFocus, onThisChart, discardWhenEmpty, onS
     setBody(text);
     const now = latest.current;
     now.body = text;
+    if (text.trim() !== "") now.written = true;
     if (now.timer) clearTimeout(now.timer);
     now.dirtyAt ??= Date.now();
     // Kesintisiz yazımda da en geç NOTE_SAVE_MAX_WAIT_MS'de bir kaydedilir.
@@ -165,7 +170,10 @@ export function NoteEditor({ note, autoFocus, onThisChart, discardWhenEmpty, onS
         onChange={(e) => change(e.target.value)}
         onBlur={(e) => {
           // Odak notun kendi düğmesine (Sil) geçiyorsa boş taze not silinmez; kullanıcı orada.
-          if (discardable() && !e.currentTarget.closest("li")?.contains(e.relatedTarget as Node | null)) discard();
+          // Pencere odağını yitirdiyse (başka uygulamaya geçiş) de silinmez: kullanıcı dönünce alan
+          // yine odaktadır.
+          const away = !document.hasFocus();
+          if (discardable() && !away && !e.currentTarget.closest("li")?.contains(e.relatedTarget as Node | null)) discard();
           else flush();
         }}
       />

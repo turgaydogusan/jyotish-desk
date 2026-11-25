@@ -383,3 +383,44 @@ test("a second confirmed delete while the first is running is ignored", async ()
   await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(1));
   expect(api.deleteNote).toHaveBeenCalledOnce();
 });
+
+test("a new note that was written and then cleared is kept: only a never-written one is removed without asking", async () => {
+  vi.mocked(api.addNote).mockResolvedValue(ok(note(3, "", "2026-03-01T09:00:00.000Z", 1)));
+  vi.mocked(api.updateNote).mockImplementation(async (id, body) => ok({ ...note(3, "", "2026-03-01T09:00:00.000Z", 1), id, body }));
+  renderPanel();
+  await screen.findByRole("list", { name: "Örnek Danışan notları" });
+  fireEvent.click(screen.getByRole("button", { name: "Yeni not" }));
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
+  const box = within(list()).getAllByRole("textbox")[0];
+  fireEvent.change(box, { target: { value: "seans notu" } });
+  fireEvent.change(box, { target: { value: "" } });
+  fireEvent.blur(box);
+  await act(async () => {});
+  expect(api.deleteNote).not.toHaveBeenCalled();
+  expect(within(list()).getAllByRole("listitem")).toHaveLength(3);
+  // Silmek isteyen "Sil" düğmesini kullanır (onaylı).
+  expect(within(within(list()).getAllByRole("listitem")[0]).getByRole("button", { name: /tarihli notu sil/ })).toBeInTheDocument();
+});
+
+test("an empty new note survives the window losing focus and is removed when focus really moves on", async () => {
+  vi.mocked(api.addNote).mockResolvedValue(ok(note(3, "", "2026-03-01T09:00:00.000Z", 1)));
+  renderPanel();
+  await screen.findByRole("list", { name: "Örnek Danışan notları" });
+  fireEvent.click(screen.getByRole("button", { name: "Yeni not" }));
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
+  const box = within(list()).getAllByRole("textbox")[0];
+  const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+  try {
+    // Başka uygulamaya geçiş (⌘Tab): alan `blur` alır ama belge odağı yoktur.
+    fireEvent.blur(box);
+    await act(async () => {});
+    expect(api.deleteNote).not.toHaveBeenCalled();
+    expect(within(list()).getAllByRole("listitem")).toHaveLength(3);
+    hasFocus.mockReturnValue(true);
+    fireEvent.blur(box);
+    await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(2));
+    expect(api.deleteNote).toHaveBeenCalledWith(3);
+  } finally {
+    hasFocus.mockRestore();
+  }
+});
