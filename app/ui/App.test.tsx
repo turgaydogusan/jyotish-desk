@@ -157,7 +157,9 @@ test("? opens the shortcut help as a modal that traps focus, blocks shortcuts an
   expect(within(dialog).getByRole("row", { name: /⌘⇧N Notlar panelini aç\/kapat/ })).toBeInTheDocument();
   const close = within(dialog).getByRole("button", { name: "Kapat" });
   expect(document.activeElement).toBe(close);
-  fireEvent.keyDown(close, { key: "Tab" });
+  // Tek odaklanabilir öğe: Tab ve Shift+Tab tutulur (jsdom odağı kendisi taşımaz; ayrıntı Dialog.test.tsx'te).
+  expect(fireEvent.keyDown(close, { key: "Tab" })).toBe(false);
+  expect(fireEvent.keyDown(close, { key: "Tab", shiftKey: true })).toBe(false);
   expect(document.activeElement).toBe(close);
   // Modal açıkken arkadaki düzen değişmez.
   fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });

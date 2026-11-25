@@ -7007,7 +7007,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 9: Kısayol kaydı, odak tuzaklı modal pencere ve ? yardımı
 
-Dağınık klavye dinleyicileri tek kayda toplanır (D16): `matchShortcut` bir `KeyboardEvent`'i komuta çevirir; yazı alanında, tekrar ve IME sırasında ya da modal açıkken `null` döner. `Dialog` ortak modal penceredir (odak tuzağı, Esc, kapanınca odağın geri dönüşü, `center` ya da `sheet` biçimi; ilk odak `[data-autofocus]:not([disabled])`, yoksa ilk etkin öğe: devre dışı bir alan odağı pencerenin dışında bırakmaz); `?` ile açılan `HelpDialog` listeyi `SHORTCUT_LIST`'ten çizer. Üst çubukta "Kısayollar" düğmesi vardır.
+Dağınık klavye dinleyicileri tek kayda toplanır (D16): `matchShortcut` bir `KeyboardEvent`'i komuta çevirir; yazı alanında, tekrar ve IME sırasında ya da modal açıkken `null` döner. `Dialog` ortak modal penceredir (odak tuzağı, Esc, kapanınca odağın geri dönüşü, `center` ya da `sheet` biçimi; ilk odak `[data-autofocus]:not([disabled])`, yoksa ilk etkin öğe: devre dışı bir alan odağı pencerenin dışında bırakmaz; tuşlar pencerenin ömrü boyunca `document` üzerinde dinlenir, böylece odak pencereden çıksa ya da pencerenin kendisinde olsa da Esc ve Tab çalışır; IME bileşimi sırasındaki Esc yok sayılır; arka plana basmak odağı almaz); `?` ile açılan `HelpDialog` listeyi `SHORTCUT_LIST`'ten çizer. Üst çubukta "Kısayollar" düğmesi vardır.
 
 **Files:**
 - Modify: `app/ui/App.test.tsx`
@@ -7015,6 +7015,7 @@ Dağınık klavye dinleyicileri tek kayda toplanır (D16): `matchShortcut` bir `
 - Modify: `app/ui/i18n/fr.ts`
 - Modify: `app/ui/i18n/tr.ts`
 - Create: `app/ui/shell/Dialog.tsx`
+- Create: `app/ui/shell/Dialog.test.tsx`
 - Create: `app/ui/shell/HelpDialog.tsx`
 - Modify: `app/ui/shell/Shell.tsx`
 - Modify: `app/ui/shell/TopBar.tsx`
@@ -7036,7 +7037,7 @@ Dağınık klavye dinleyicileri tek kayda toplanır (D16): `matchShortcut` bir `
 ```diff
 --- a/app/ui/App.test.tsx
 +++ b/app/ui/App.test.tsx
-@@ -145,3 +145,24 @@ test("a print failure is shown with a retry", async () => {
+@@ -145,3 +145,26 @@ test("a print failure is shown with a retry", async () => {
    fireEvent.click(screen.getByRole("button", { name: "Yazdır…" }));
    expect(await screen.findByRole("alert")).toHaveTextContent("Yazdırma penceresi açılamadı.");
  });
@@ -7052,7 +7053,9 @@ Dağınık klavye dinleyicileri tek kayda toplanır (D16): `matchShortcut` bir `
 +  expect(within(dialog).getByRole("row", { name: /⌘⇧N Notlar panelini aç\/kapat/ })).toBeInTheDocument();
 +  const close = within(dialog).getByRole("button", { name: "Kapat" });
 +  expect(document.activeElement).toBe(close);
-+  fireEvent.keyDown(close, { key: "Tab" });
++  // Tek odaklanabilir öğe: Tab ve Shift+Tab tutulur (jsdom odağı kendisi taşımaz; ayrıntı Dialog.test.tsx'te).
++  expect(fireEvent.keyDown(close, { key: "Tab" })).toBe(false);
++  expect(fireEvent.keyDown(close, { key: "Tab", shiftKey: true })).toBe(false);
 +  expect(document.activeElement).toBe(close);
 +  // Modal açıkken arkadaki düzen değişmez.
 +  fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });
@@ -7061,6 +7064,169 @@ Dağınık klavye dinleyicileri tek kayda toplanır (D16): `matchShortcut` bir `
 +  expect(screen.queryByRole("dialog")).toBeNull();
 +  expect(document.activeElement).toBe(opener);
 +});
+```
+
+`app/ui/shell/Dialog.test.tsx` oluştur:
+
+```tsx
+import { fireEvent, render, screen } from "@testing-library/react";
+import { useState, type ReactNode } from "react";
+import { vi } from "vitest";
+import { Dialog } from "./Dialog";
+
+const onClose = vi.fn();
+beforeEach(() => onClose.mockReset());
+
+function open(children: ReactNode) {
+  render(
+    <Dialog title="Deneme" onClose={onClose}>
+      {children}
+    </Dialog>,
+  );
+  return screen.getByRole("dialog", { name: "Deneme" });
+}
+const button = (name: string) => screen.getByRole("button", { name });
+/** jsdom Tab'da odağı taşımaz: tuzak `preventDefault` ile ölçülür (`fireEvent` o zaman `false` döner). */
+const tab = (target: Element, shiftKey = false) => !fireEvent.keyDown(target, { key: "Tab", shiftKey });
+
+const three = (
+  <>
+    <button>bir</button>
+    <button>iki</button>
+    <button>üç</button>
+  </>
+);
+
+test("Tab wraps from the last element to the first and is left alone in between", () => {
+  open(three);
+  expect(document.activeElement).toBe(button("bir"));
+  expect(tab(button("bir"))).toBe(false);
+  expect(document.activeElement).toBe(button("bir"));
+  button("iki").focus();
+  expect(tab(button("iki"))).toBe(false);
+  expect(tab(button("iki"), true)).toBe(false);
+  button("üç").focus();
+  expect(tab(button("üç"))).toBe(true);
+  expect(document.activeElement).toBe(button("bir"));
+});
+
+test("Shift+Tab wraps from the first element to the last", () => {
+  open(three);
+  expect(tab(button("bir"), true)).toBe(true);
+  expect(document.activeElement).toBe(button("üç"));
+  expect(tab(button("üç"), true)).toBe(false);
+});
+
+test("a disabled autofocus target is skipped and disabled elements are not trap edges", () => {
+  open(
+    <>
+      <input aria-label="ad" data-autofocus disabled />
+      <button>iki</button>
+      <button>üç</button>
+      <button disabled>dört</button>
+    </>,
+  );
+  expect(document.activeElement).toBe(button("iki"));
+  expect(tab(button("iki"), true)).toBe(true);
+  expect(document.activeElement).toBe(button("üç"));
+  expect(tab(button("üç"))).toBe(true);
+  expect(document.activeElement).toBe(button("iki"));
+});
+
+test("an enabled autofocus target wins over the first element", () => {
+  open(
+    <>
+      <button>bir</button>
+      <button data-autofocus>iki</button>
+    </>,
+  );
+  expect(document.activeElement).toBe(button("iki"));
+});
+
+test("with focus on the dialog itself Tab enters at the first element and Shift+Tab at the last", () => {
+  const dialog = open(three);
+  dialog.focus();
+  expect(tab(dialog, true)).toBe(true);
+  expect(document.activeElement).toBe(button("üç"));
+  dialog.focus();
+  expect(tab(dialog)).toBe(true);
+  expect(document.activeElement).toBe(button("bir"));
+});
+
+test("a dialog without focusable content keeps focus on itself", () => {
+  const dialog = open(<p>metin</p>);
+  expect(document.activeElement).toBe(dialog);
+  expect(tab(dialog)).toBe(true);
+  expect(tab(dialog, true)).toBe(true);
+  expect(document.activeElement).toBe(dialog);
+});
+
+test("after focus leaves the dialog Tab brings it back and Esc still closes", () => {
+  open(three);
+  (document.activeElement as HTMLElement).blur();
+  expect(document.activeElement).toBe(document.body);
+  expect(tab(document.body)).toBe(true);
+  expect(document.activeElement).toBe(button("bir"));
+  (document.activeElement as HTMLElement).blur();
+  expect(tab(document.body, true)).toBe(true);
+  expect(document.activeElement).toBe(button("üç"));
+  (document.activeElement as HTMLElement).blur();
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  expect(onClose).toHaveBeenCalledOnce();
+});
+
+test("a backdrop press does not take focus; a press inside the dialog is left alone", () => {
+  const dialog = open(three);
+  expect(fireEvent.mouseDown(dialog.parentElement!)).toBe(false);
+  expect(fireEvent.mouseDown(dialog)).toBe(true);
+  expect(fireEvent.mouseDown(button("iki"))).toBe(true);
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+test("Esc closes without reaching window listeners; composition and inner handlers keep it", () => {
+  const onWindowKey = vi.fn();
+  window.addEventListener("keydown", onWindowKey);
+  open(
+    <>
+      <button>bir</button>
+      <input aria-label="liste" onKeyDown={(e) => e.key === "Escape" && e.stopPropagation()} />
+    </>,
+  );
+  fireEvent.keyDown(button("bir"), { key: "Escape", isComposing: true });
+  fireEvent.keyDown(button("bir"), { key: "Escape", keyCode: 229 });
+  fireEvent.keyDown(screen.getByRole("textbox", { name: "liste" }), { key: "Escape" });
+  expect(onClose).not.toHaveBeenCalled();
+  onWindowKey.mockReset();
+  expect(fireEvent.keyDown(button("bir"), { key: "Escape" })).toBe(false);
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(onWindowKey).not.toHaveBeenCalled();
+  window.removeEventListener("keydown", onWindowKey);
+});
+
+test("closing returns focus to the opener and removes the key listener", () => {
+  function Host() {
+    const [shown, setShown] = useState(false);
+    return (
+      <>
+        <button onClick={() => setShown(true)}>aç</button>
+        {shown && (
+          <Dialog title="Deneme" onClose={() => (onClose(), setShown(false))}>
+            <button>bir</button>
+          </Dialog>
+        )}
+      </>
+    );
+  }
+  render(<Host />);
+  button("aç").focus();
+  fireEvent.click(button("aç"));
+  expect(document.activeElement).toBe(button("bir"));
+  fireEvent.keyDown(button("bir"), { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(button("aç"));
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  expect(onClose).toHaveBeenCalledOnce();
+});
 ```
 
 `app/ui/shortcuts.test.ts` oluştur:
@@ -7111,9 +7277,9 @@ test("every listed shortcut has a description", () => {
 - [ ] **Step 2: Testlerin düştüğünü gör**
 
 ```bash
-pnpm --dir app exec vitest run ui/shortcuts.test.ts ui/App.test.tsx
+pnpm --dir app exec vitest run ui/shortcuts.test.ts ui/shell/Dialog.test.tsx ui/App.test.tsx
 ```
-Expected: FAIL — `Failed to resolve import "./shortcuts"`; `?` tuşu yardım penceresini açmıyor.
+Expected: FAIL — `Failed to resolve import "./shortcuts"` ve `Failed to resolve import "./Dialog"`; `?` tuşu yardım penceresini açmıyor.
 
 - [ ] **Step 3: Uygulamayı yaz**
 
@@ -7211,7 +7377,7 @@ Expected: FAIL — `Failed to resolve import "./shortcuts"`; `?` tuşu yardım p
 // Modal pencere (WAI-ARIA dialog): açılınca ilk alana odaklanır, Tab içeride döner, Esc
 // kapatır, kapanınca odak açan öğeye döner. `variant="sheet"` sağdan kayan paneldir
 // (doğum formu); arka plan tıklamayla kapanmaz (yarım form kaybolmasın).
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -7233,37 +7399,43 @@ export function Dialog({ title, onClose, variant = "center", children }: DialogP
     return () => previous?.focus();
   }, []);
 
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
+  // Tuşlar belge düzeyinde dinlenir: odak pencereden çıksa da (odaktaki düğme kaybolur ya da
+  // kilitlenir) Esc kapatır, Tab odağı içeri alır. İçerideki bir bileşen Esc'i kendisi
+  // tüketmek için React olayında `stopPropagation` çağırır (ör. yer arama listesi).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const root = ref.current;
+      if (!root) return;
+      if (e.key === "Escape") {
+        // IME bileşimini iptal eden Esc pencereyi kapatmaz (WebKit bunu 229 koduyla bildirir).
+        if (e.isComposing || e.keyCode === 229) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const items = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      const active = document.activeElement;
+      // Odak pencerenin kendisinde (tabIndex=-1) ya da dışındaysa uç öğedeymiş gibi davranılır.
+      const loose = active === root || !root.contains(active);
+      const edge = e.shiftKey ? items[0] : items[items.length - 1];
+      if (!loose && active !== edge) return;
       e.preventDefault();
-      e.stopPropagation();
-      onClose();
-      return;
-    }
-    if (e.key !== "Tab" || !ref.current) return;
-    const items = [...ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-    if (items.length === 0) return;
-    const [first, last] = [items[0], items[items.length - 1]];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
+      ((e.shiftKey ? items[items.length - 1] : items[0]) ?? root).focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  // Arka plana tıklamak odağı pencereden çıkarmaz.
+  const keepFocus = (e: MouseEvent) => {
+    if (e.target === e.currentTarget) e.preventDefault();
   };
 
   return (
-    <div className="dialog-backdrop no-print">
-      <div
-        ref={ref}
-        className={`dialog dialog--${variant}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        onKeyDown={onKeyDown}
-      >
+    <div className="dialog-backdrop no-print" onMouseDown={keepFocus}>
+      <div ref={ref} className={`dialog dialog--${variant}`} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <h2 id={titleId} className="dialog-title">
           {title}
         </h2>
@@ -7568,16 +7740,16 @@ export function matchShortcut(e: KeyboardEvent): Command | null {
 - [ ] **Step 4: Testlerin geçtiğini gör**
 
 ```bash
-pnpm --dir app exec vitest run ui/shortcuts.test.ts ui/App.test.tsx
+pnpm --dir app exec vitest run ui/shortcuts.test.ts ui/shell/Dialog.test.tsx ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  32 passed (32)`, `Tests  266 passed (266)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  33 passed (33)`, `Tests  276 passed (276)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A app/ui/App.test.tsx app/ui/i18n/en.ts app/ui/i18n/fr.ts app/ui/i18n/tr.ts app/ui/shell/Dialog.tsx app/ui/shell/HelpDialog.tsx app/ui/shell/Shell.tsx app/ui/shell/TopBar.tsx app/ui/shell/shell.css app/ui/shortcuts.test.ts app/ui/shortcuts.ts app/ui/view/store.tsx
+git add -A app/ui/App.test.tsx app/ui/i18n/en.ts app/ui/i18n/fr.ts app/ui/i18n/tr.ts app/ui/shell/Dialog.test.tsx app/ui/shell/Dialog.tsx app/ui/shell/HelpDialog.tsx app/ui/shell/Shell.tsx app/ui/shell/TopBar.tsx app/ui/shell/shell.css app/ui/shortcuts.test.ts app/ui/shortcuts.ts app/ui/view/store.tsx
 git diff --cached -U0 -- . ':!app/pnpm-lock.yaml' ':!*.png' ':!app/ui/test/fixtures/delhi.json' | grep '^+' | grep -inE 'k(a|ā|aa)la|\bcala\b'   # boş olmalı
 git commit -m "feat(ui): central shortcut registry, modal dialog with focus trap and the ? shortcut help
 
@@ -7925,7 +8097,7 @@ pnpm --dir app exec vitest run ui/birth/model.test.ts
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  33 passed (33)`, `Tests  272 passed (272)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  34 passed (34)`, `Tests  282 passed (282)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -8313,7 +8485,7 @@ pnpm --dir app exec vitest run ui/birth
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  34 passed (34)`, `Tests  276 passed (276)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  35 passed (35)`, `Tests  286 passed (286)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9330,7 +9502,7 @@ pnpm --dir app exec vitest run ui/birth ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  35 passed (35)`, `Tests  284 passed (284)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  36 passed (36)`, `Tests  294 passed (294)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9680,7 +9852,7 @@ pnpm --dir app e2e:visual
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: `e2e` iki çalıştırmada da `4 passed` (kararsızlık yok); `e2e:visual` `6 passed`; vitest `35 passed (35)` / `279 passed (279)`; `build` hatasız. `git status` `app/test-results` ve `app/playwright-report`'u göstermez (`.gitignore`).
+Expected: `e2e` iki çalıştırmada da `4 passed` (kararsızlık yok); `e2e:visual` `6 passed`; vitest `36 passed (36)` / `294 passed (294)`; `build` hatasız. `git status` `app/test-results` ve `app/playwright-report`'u göstermez (`.gitignore`).
 
 - [ ] **Step 7: Commit**
 
@@ -9728,7 +9900,7 @@ pnpm --dir app build
 pnpm --dir app e2e
 pnpm --dir app e2e:visual
 ```
-Expected: `Test Files  35 passed (35)`, `Tests  284 passed (284)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
+Expected: `Test Files  36 passed (36)`, `Tests  294 passed (294)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
 
 - [ ] **Step 4: Yasak dizgi taraması ve temiz çalışma ağacı**
 
@@ -9769,7 +9941,7 @@ Expected: yedi madde de beklendiği gibi; biri tutmazsa ilgili görevin testine 
 - `ViewState` tek depodan serileştirilir ve store'a yazılır; localStorage düzeni bir kez taşınır.
 - Plan 08 ertelenen madde 2 (harita olmadan düzen kaydı) ve 12 (ayrıştırıcı eşliği) kapanır.
 - Düzen sınırı yazarken de uygulanır: arayüz 64'ten fazla düzen yazmaz, yeniden açılışta düzen kaybolmaz.
-- Task 14'ün bütün adımları beklenen çıktıyı verir; vitest 279, e2e 4, görsel 6 (yerel, PNG temelleri yalnızca bu adımda karşılaştırılır).
+- Task 14'ün bütün adımları beklenen çıktıyı verir; vitest 294, e2e 4, görsel 6 (yerel, PNG temelleri yalnızca bu adımda karşılaştırılır).
 
 ## Bu planın kapsamadıkları
 
@@ -9842,10 +10014,10 @@ Belirsiz ya da ertelenmiş adım yok; her kod adımı tam kodu ya da birleşik f
 | 6 | 27 | 237 | — |
 | 7 | 29 | 245 | — |
 | 8 | 31 | 262 | — |
-| 9 | 32 | 266 | — |
-| 10 | 33 | 272 | — |
-| 11 | 34 | 276 | — |
-| 12 | 35 | 284 | — |
-| 13 | 35 | 284 | + Playwright e2e 4, görsel 6 (yerel) |
+| 9 | 33 | 276 | — |
+| 10 | 34 | 282 | — |
+| 11 | 35 | 286 | — |
+| 12 | 36 | 294 | — |
+| 13 | 36 | 294 | + Playwright e2e 4, görsel 6 (yerel) |
 
-Plan kopyada (`/Users/ttd/jd-p09`) iki kez uygulandı; ikincisinde plan dosyasından (yeni dosyalar ve farklar betikle uygulanarak) yeniden kuruldu, inceleme düzeltmeleri ilgili görevlere işlendi ve her commit'te vitest + `build` ölçüldü: bütün kapılar geçti, e2e üç kez kararsızlıksız çalıştı, görsel temeller birebir yeniden üretildi. Yeniden kurulum iki plan hatasını da gösterdi ve ikisi düzeltildi: `pnpm --dir app vitest run` pnpm 11'de çalışmaz (`Command "app" not found`), komutlar `pnpm --dir app exec vitest run`'dır; `ui_fixture` fikstür klasörünü kendisi oluşturur. Doğrulama sırasında bulunan iki hata Task 8 koduna işlendi: (1) klavye tembel yüklenen 4. seviyeye ulaşamıyordu (`loaded()` yardımcısı), (2) istenen yolun bir alt seviyesi olmayan yanıt sonsuz özyinelemeye yol açıyordu (`childrenOf` süzgeci); ikisinin de gerileme testi vardır. Task 8 incelemesi iki klavye hatası daha buldu ve ikisi Task 8 koduna işlendi: (3) "Yeniden dene" düğmesinin tuşlarını ağaç yutuyordu, (4) odaklı öğe ağaçtan çıkınca sekme durağı kayboluyordu; ikisinin ve geç gelen eski yanıtın testi vardır.
+Plan kopyada (`/Users/ttd/jd-p09`) iki kez uygulandı; ikincisinde plan dosyasından (yeni dosyalar ve farklar betikle uygulanarak) yeniden kuruldu, inceleme düzeltmeleri ilgili görevlere işlendi ve her commit'te vitest + `build` ölçüldü: bütün kapılar geçti, e2e üç kez kararsızlıksız çalıştı, görsel temeller birebir yeniden üretildi. Yeniden kurulum iki plan hatasını da gösterdi ve ikisi düzeltildi: `pnpm --dir app vitest run` pnpm 11'de çalışmaz (`Command "app" not found`), komutlar `pnpm --dir app exec vitest run`'dır; `ui_fixture` fikstür klasörünü kendisi oluşturur. Doğrulama sırasında bulunan iki hata Task 8 koduna işlendi: (1) klavye tembel yüklenen 4. seviyeye ulaşamıyordu (`loaded()` yardımcısı), (2) istenen yolun bir alt seviyesi olmayan yanıt sonsuz özyinelemeye yol açıyordu (`childrenOf` süzgeci); ikisinin de gerileme testi vardır. Task 8 incelemesi iki klavye hatası daha buldu ve ikisi Task 8 koduna işlendi: (3) "Yeniden dene" düğmesinin tuşlarını ağaç yutuyordu, (4) odaklı öğe ağaçtan çıkınca sekme durağı kayboluyordu; ikisinin ve geç gelen eski yanıtın testi vardır. Task 9 incelemesi, tuzağın ve Esc'in odağın pencerede kalmasına bağlı olduğunu ve Tab testinin boş (vacuous) olduğunu buldu; ikisi de Task 9 koduna işlendi, gerileme testi `Dialog.test.tsx`'tir.
