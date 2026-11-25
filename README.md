@@ -31,3 +31,14 @@ Rust komut imzaları değişince TS bağlamalarını yeniden üretin:
     UPDATE_BINDINGS=1 cargo test -p jyotish-desk --test bindings
 
 `app/ui/bindings.ts` elle düzenlenmez.
+
+## Yayın ve beta
+
+- Yayın akışı ve yalnızca sahibin yapabileceği adımlar (sertifika, notarizasyon anahtarı,
+  güncelleme anahtarı, GitHub sırları): `docs/release/RELEASING.md`.
+- İmzasız deneme paketi (sır gerekmez):
+
+      sh scripts/release/build.sh unsigned
+      sh scripts/release/verify-bundle.sh unsigned
+
+- Kapalı beta katılımcıları için: `docs/beta/beta-guide.md`.

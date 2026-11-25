@@ -213,6 +213,9 @@ FTS5: clients.name, client_notes.body
 - **İmza:** Developer ID Application, hardened runtime, `notarytool` + staple. Universal binary (arm64 + x86_64).
 - **Minimum macOS:** 13 (Ventura).
 - **Güncelleme:** Tauri updater, imzalı, GitHub Releases üzerinden. Kontrol kullanıcı onayıyla yapılır.
+  - Denetim varsayılan olarak kapalıdır: kullanıcı Hakkında penceresinde "Şimdi denetle"ye basar ya da açılışta denetimi açar (Plan 13 D1). Kurulum, bulunan sürüm için ayrı bir onaydır.
+  - Ağa giden tek istek `releases/latest/download/latest.json` adresine yapılır; telemetri yoktur. İmzası gömülü açık anahtarla doğrulanmayan ve imzadaki sürümü bildirilen sürümle aynı olmayan paket kurulmaz.
+  - Yeni sürüm uygulama kapatılıp açılınca çalışır; uygulama kendini yeniden başlatmaz.
 - **İsim kuralları:**
   - Kala, Kāla, Kaala, Cala ve türevleri kullanılmaz.
   - Ernst Wilhelm'e ya da JHora, Parashara's Light, Shri Jyoti Star gibi yazılımlara benzer isim kullanılmaz.
