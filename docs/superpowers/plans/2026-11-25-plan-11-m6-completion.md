@@ -2855,7 +2855,7 @@ Ayar farkı testi Türkçe alan adlarını `settings.field.*`'tan okur ("Ayanams
 pnpm --dir app exec vitest run ui/shell ui/App.test.tsx
 pnpm --dir app test && pnpm --dir app build
 ```
-Expected: `ChartTitle.test.tsx` 2, `TzdbActions.test.tsx` 3, `App.test.tsx` +1 geçer; toplam `Test Files  47 passed (47)`, `Tests  381 passed (381)`; build `✓ built`.
+Expected: `ChartTitle.test.tsx` 2, `TzdbActions.test.tsx` 3, `App.test.tsx` +1 geçer; toplam `Test Files  48 passed (48)`, `Tests  391 passed (391)`; build `✓ built`.
 
 - [ ] **Step 5: Commit**
 
@@ -3420,7 +3420,7 @@ i18n — `tr.ts`:
 pnpm --dir app exec vitest run ui/transit ui/panels
 pnpm --dir app test && pnpm --dir app build
 ```
-Expected: `transit/store.test.tsx` 4, `transit/TransitTablePanel.test.tsx` 4 geçer; `panels.test.tsx` yeşil (kayıt testinin beklentisi Step 3'te `TransitTablePanel`'e çevrildi); toplam `Test Files  49 passed (49)`, `Tests  389 passed (389)`; build `✓ built`.
+Expected: `transit/store.test.tsx` 4, `transit/TransitTablePanel.test.tsx` 4 geçer; `panels.test.tsx` yeşil (kayıt testinin beklentisi Step 3'te `TransitTablePanel`'e çevrildi); toplam `Test Files  50 passed (50)`, `Tests  399 passed (399)`; build `✓ built`.
 
 - [ ] **Step 5: Commit**
 
@@ -3695,7 +3695,7 @@ pnpm --dir app test && pnpm --dir app build
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: ChartSvg +2, ChartPanel +2 geçer; `__snapshots__` değişmez (`git status` boş: halka kapalıyken çizim aynı); toplam `Test Files  49 passed (49)`, `Tests  393 passed (393)`; build `✓ built`; görsel `6 passed` (temeller değişmedi, C11).
+Expected: ChartSvg +2, ChartPanel +2 geçer; `__snapshots__` değişmez (`git status` boş: halka kapalıyken çizim aynı); toplam `Test Files  50 passed (50)`, `Tests  403 passed (403)`; build `✓ built`; görsel `6 passed` (temeller değişmedi, C11).
 
 - [ ] **Step 5: Commit**
 
@@ -4020,7 +4020,7 @@ pnpm --dir app test && pnpm --dir app build
 pnpm --dir app e2e
 rm -rf app/test-results
 ```
-Expected: `DashaStripPanel.test.tsx` 5, ağaç +1 geçer; panel kayıt testi Step 3'teki beklentiyle yeşil; toplam `Test Files  50 passed (50)`, `Tests  399 passed (399)`; build `✓ built`; e2e `6 passed` (şerit taklitten `transits_at` alır).
+Expected: `DashaStripPanel.test.tsx` 5, ağaç +1 geçer; panel kayıt testi Step 3'teki beklentiyle yeşil; toplam `Test Files  51 passed (51)`, `Tests  409 passed (409)`; build `✓ built`; e2e `6 passed` (şerit taklitten `transits_at` alır).
 
 - [ ] **Step 5: Commit**
 
@@ -4352,7 +4352,7 @@ i18n — `tr.ts` üst düzeye (`birth`'ün yanına):
 pnpm --dir app exec vitest run ui/panels
 pnpm --dir app test && pnpm --dir app build
 ```
-Expected: `BirthInfoPanel.test.tsx` 3 geçer, `panels.test.tsx` yeşil; toplam `Test Files  51 passed (51)`, `Tests  402 passed (402)`; build `✓ built`.
+Expected: `BirthInfoPanel.test.tsx` 3 geçer, `panels.test.tsx` yeşil; toplam `Test Files  52 passed (52)`, `Tests  412 passed (412)`; build `✓ built`.
 
 - [ ] **Step 5: Commit**
 
@@ -4838,7 +4838,7 @@ pnpm --dir app test && pnpm --dir app build
 pnpm --dir app e2e
 rm -rf app/test-results
 ```
-Expected: Dialog +1, model +2, PlaceSearch +1, BirthForm +6 geçer; toplam `Test Files  51 passed (51)`, `Tests  412 passed (412)`; build `✓ built`; e2e `6 passed` (e2e akışları kaydederek kapatır; Esc onayına girmez).
+Expected: Dialog +1, model +2, PlaceSearch +1, BirthForm +6 geçer; toplam `Test Files  52 passed (52)`, `Tests  422 passed (422)`; build `✓ built`; e2e `6 passed` (e2e akışları kaydederek kapatır; Esc onayına girmez).
 
 - [ ] **Step 5: Commit**
 
@@ -5529,7 +5529,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: yeni dosyalar `notices.test.tsx` 1, `focus.test.ts` 2; tokens +1, Sidebar +2, Notes +1, DataActions +2, Palette +2 geçer; değişen LayoutPicker ve Graha testleri yeşil; toplam `Test Files  53 passed (53)`, `Tests  423 passed (423)`; build `✓ built`; e2e `6 passed`; görsel `6 passed` (`.visually-hidden` ve `.button-danger` yer değiştirdi, kuralları değişmedi; görüntü farkı çıkarsa kural metnini karşılaştır, temeli yenileme).
+Expected: yeni dosyalar `notices.test.tsx` 1, `focus.test.ts` 2; tokens +1, Sidebar +2, Notes +1, DataActions +2, Palette +2 geçer; değişen LayoutPicker ve Graha testleri yeşil; toplam `Test Files  54 passed (54)`, `Tests  433 passed (433)`; build `✓ built`; e2e `6 passed`; görsel `6 passed` (`.visually-hidden` ve `.button-danger` yer değiştirdi, kuralları değişmedi; görüntü farkı çıkarsa kural metnini karşılaştır, temeli yenileme).
 
 - [ ] **Step 5: Commit**
 
@@ -5989,7 +5989,7 @@ pnpm --dir app test && pnpm --dir app build
 pnpm --dir app e2e
 rm -rf app/test-results
 ```
-Expected: Notes +6, Sidebar +3, persistence +1 geçer; toplam `Test Files  53 passed (53)`, `Tests  433 passed (433)`; build `✓ built`; e2e `6 passed` (e2e not akışı notu yazdığı için boş taze not silinmez).
+Expected: Notes +6, Sidebar +3, persistence +1 geçer; toplam `Test Files  54 passed (54)`, `Tests  443 passed (443)`; build `✓ built`; e2e `6 passed` (e2e not akışı notu yazdığı için boş taze not silinmez).
 
 - [ ] **Step 5: Commit**
 
@@ -6639,7 +6639,7 @@ cargo test -p store --release --lib -- --ignored search_of_two_hundred_clients -
 cargo clippy --workspace --all-targets -- -D warnings
 pnpm --dir app test && pnpm --dir app build
 ```
-Expected: store `79 passed; 0 failed; 1 ignored`; desk lib `33 passed`; bağlama, fikstür ve gidiş-dönüş testleri geçer (`ui_fixture` değişmez: fikstürde dışa aktarma yoktur); ölçüm satırı `search_clients(200 hits): …ms` ve `1 passed` (50 ms'yi aşarsa test düşer: görev burada durur, süre ve `EXPLAIN QUERY PLAN` çıktısı bildirilir); clippy çıktısız; vitest `Test Files  53 passed (53)`, `Tests  437 passed (437)` (i18n +2, DataActions +1, api +1); build `✓ built`.
+Expected: store `79 passed; 0 failed; 1 ignored`; desk lib `33 passed`; bağlama, fikstür ve gidiş-dönüş testleri geçer (`ui_fixture` değişmez: fikstürde dışa aktarma yoktur); ölçüm satırı `search_clients(200 hits): …ms` ve `1 passed` (50 ms'yi aşarsa test düşer: görev burada durur, süre ve `EXPLAIN QUERY PLAN` çıktısı bildirilir); clippy çıktısız; vitest `Test Files  54 passed (54)`, `Tests  447 passed (447)` (i18n +2, DataActions +1, api +1); build `✓ built`.
 
 - [ ] **Step 5: Commit**
 
@@ -6919,7 +6919,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: desk lib `34 passed`; store `80 passed; 0 failed; 1 ignored`; vitest `Test Files  53 passed (53)`, `Tests  441 passed (441)`; build `✓ built`; e2e iki kez `9 passed`; görsel `6 passed` (temeller yenilenmez).
+Expected: desk lib `34 passed`; store `80 passed; 0 failed; 1 ignored`; vitest `Test Files  54 passed (54)`, `Tests  451 passed (451)`; build `✓ built`; e2e iki kez `9 passed`; görsel `6 passed` (temeller yenilenmez).
 
 - [ ] **Step 5: Commit**
 
@@ -6974,7 +6974,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  53 passed (53)`, `Tests  441 passed (441)`; build `✓ built`; e2e `9 passed`; görsel `6 passed`.
+Expected: `Test Files  54 passed (54)`, `Tests  451 passed (451)`; build `✓ built`; e2e `9 passed`; görsel `6 passed`.
 
 - [ ] **Step 4: Kural taramaları (`6d48791`'den bu yana)**
 
@@ -7021,7 +7021,7 @@ Kapı geçtiyse ilerleme notlarına `Plan 11 Task 16 elle denetim: geçti (<tari
 - Spec M6 tamamdır: ayarlar penceresi ve haritaya özel ayarlar, fark rozeti, tzdb farkını kabul ya da saklanan anı koruma, oturum geri yükleme (gidiş-dönüş testiyle), transit tablosu, halkası ve tarih seçimi, `birth_info` ve `dasha_strip` panelleri, cinsiyet alanı.
 - Plan 10'un kapsam dışı listesindeki 1, 6, 7, 9, 10 (18, 19 ile), 11, 12, 13 (Plan 11 bölümleri), 17, 20, 21, 22, 23, 24, 25, 26 maddeleri ve Plan 11'e işaretli kayıt maddeleri (palet test boşlukları, m4, m6, m8, m10, m11) kapanmıştır.
 - Şema değişmemiştir (göç 1); yeni bağımlılık yoktur; C1–C17 taramaları temizdir.
-- Kapılar: Vitest 53/441, `jyotish-desk` lib 34, `store` lib 80 (+1 ölçüm testi `#[ignore]`), `jyotish-core` lib 110, golden 8, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, e2e 9, görsel 6; elle denetim kapısı geçmiştir.
+- Kapılar: Vitest 54/451, `jyotish-desk` lib 34, `store` lib 80 (+1 ölçüm testi `#[ignore]`), `jyotish-core` lib 110, golden 8, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, e2e 9, görsel 6; elle denetim kapısı geçmiştir.
 
 ## Bu planın kapsamadıkları
 
@@ -7078,16 +7078,17 @@ Boşluk yok; kapsam dışı maddeler yukarıda listelidir.
 | Task 3 | 43/363 | 27 | 77 | core 110 |
 | Task 4 | 43/364 | 29 | 77 | `ui_fixture` 2, `open_client` 1 |
 | Task 5 | 45/375 | 29 | 77 | e2e 6, görsel 6 |
-| Task 6 | 47/381 | 29 | 77 | |
-| Task 7 | 49/389 | 29 | 77 | |
-| Task 8 | 49/393 | 29 | 77 | görsel 6 (temeller değişmez) |
-| Task 9 | 50/399 | 29 | 77 | |
-| Task 10 | 51/402 | | | |
-| Task 11 | 51/412 | | | |
-| Task 12 | 53/423 | | | |
-| Task 13 | 53/433 | | | |
-| Task 14 | 53/437 | 33 | 79 (+1 ignored) | |
-| Task 15 | 53/441 | 34 | 80 (+1 ignored) | e2e 9, görsel 6 |
+| Task 5 inceleme düzeltmesi | 46/385 | 29 | 77 | `settings/saves.test.ts` 3, `SettingsDialog.test.tsx` +7 |
+| Task 6 | 48/391 | 29 | 77 | |
+| Task 7 | 50/399 | 29 | 77 | |
+| Task 8 | 50/403 | 29 | 77 | görsel 6 (temeller değişmez) |
+| Task 9 | 51/409 | 29 | 77 | |
+| Task 10 | 52/412 | | | |
+| Task 11 | 52/422 | | | |
+| Task 12 | 54/433 | | | |
+| Task 13 | 54/443 | | | |
+| Task 14 | 54/447 | 33 | 79 (+1 ignored) | |
+| Task 15 | 54/451 | 34 | 80 (+1 ignored) | e2e 9, görsel 6 |
 | Task 16 | değişmez | | | |
 
 **5. Yürütme notu.** Kod blokları `6d48791` ağacına karşı yazılmıştır ve plan yazılırken koşulmamıştır. Beklenen sayılar bu zincirden gelir: bir görevin sayısı tutmazsa önceki görevin adımı denetlenir; sayı elle düzeltilmez.
