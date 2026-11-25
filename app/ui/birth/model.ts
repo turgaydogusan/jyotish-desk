@@ -12,6 +12,7 @@ export interface BirthDraft {
   label: string;
   kind: ChartKind;
   date: string;
+  /** "17:30"; saniye varsa "20:17:40". */
   time: string;
   certainty: TimeCertainty;
   placeName: string;
@@ -22,7 +23,7 @@ export interface BirthDraft {
   lon: string;
   tzMode: TzMode;
   tzIana: string;
-  /** "+05:30" biçimi. */
+  /** "+05:30" biçimi; saniyeli ofsette "-04:56:16". */
   tzFixed: string;
   fold: FoldChoice | null;
   notes: string;
@@ -55,26 +56,38 @@ export function emptyDraft(): BirthDraft {
   };
 }
 
-/** "+05:30" / "-03:00" / "+5:45" → saniye; biçim dışıysa `null`. */
+/** "+05:30" / "-03:00" / "+5:45" / "-04:56:16" → saniye; biçim dışıysa `null`. */
 export function parseFixedOffset(text: string): number | null {
-  const m = /^([+\-−])(\d{1,2}):(\d{2})$/.exec(text.trim());
+  const m = /^([+\-−])(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(text.trim());
   if (!m) return null;
-  const [h, min] = [Number(m[2]), Number(m[3])];
-  if (min >= 60) return null;
-  return (m[1] === "+" ? 1 : -1) * (h * 3600 + min * 60);
+  const [h, min, s] = [Number(m[2]), Number(m[3]), Number(m[4] ?? 0)];
+  if (min >= 60 || s >= 60) return null;
+  return (m[1] === "+" ? 1 : -1) * (h * 3600 + min * 60 + s);
 }
 
+/** Saniyeli ofset (JHD içe aktarımı, LMT önizlemesi) saniyesiyle yazılır; kırpılmaz. */
 export function formatFixedOffset(secs: number): string {
   const a = Math.abs(secs);
-  const h = Math.floor(a / 3600);
-  const m = Math.floor((a % 3600) / 60);
-  return `${secs < 0 ? "-" : "+"}${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const two = (n: number) => String(n).padStart(2, "0");
+  const s = a % 60;
+  return `${secs < 0 ? "-" : "+"}${two(Math.floor(a / 3600))}:${two(Math.floor((a % 3600) / 60))}${s === 0 ? "" : `:${two(s)}`}`;
 }
 
 function parseCoord(text: string): number | null {
-  const t = text.trim().replace(",", ".");
-  if (t === "" || !/^[+-]?\d+(\.\d+)?$/.test(t)) return null;
-  return Number(t);
+  const t = text.trim().replace(",", ".").replace("−", "-");
+  if (!/^[+-]?\d+(\.\d+)?$/.test(t)) return null;
+  // Çok uzun bir rakam dizisi `Infinity` olur ve JSON'da `null`'a döner; sayı sayılmaz.
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Saklanan saat ("17:30:00", "20:17:40", "20:17:40.5") → form metni. Yalnızca sıfır saniye
+ * atılır; sıfırdan farklı saniye ve kesir korunur, yoksa düzenleyip kaydetmek doğum anını
+ * sessizce değiştirirdi.
+ */
+function formTime(time: string): string {
+  return time.replace(/^(\d{2}:\d{2}):00(\.0+)?$/, "$1");
 }
 
 /** Saklanan harita → düzenleme taslağı (Cmd+E). */
@@ -89,7 +102,7 @@ export function draftFromOpened(o: OpenedClient): BirthDraft {
     label: o.chart_record.label,
     kind: o.chart_record.kind,
     date: b.date,
-    time: b.time ? b.time.slice(0, 5) : "",
+    time: b.time ? formTime(b.time) : "",
     certainty: b.time_certainty,
     placeName: b.place.name,
     country: b.place.country,
@@ -126,10 +139,10 @@ export function setCoordinate(d: BirthDraft, field: "lat" | "lon", value: string
   return { ...d, [field]: value, geonameId: null };
 }
 
-/** DST boşluğu önerisi ("2014-03-31T04:30:00") tarih ve saate yazılır. */
+/** DST boşluğu önerisi ("2014-03-31T04:30:00") tarih ve saate yazılır; saniyesi korunur. */
 export function applySuggestion(d: BirthDraft, suggestion: string): BirthDraft {
   const [date, time] = suggestion.split("T");
-  return { ...d, date, time: time.slice(0, 5) };
+  return { ...d, date, time: formTime(time) };
 }
 
 function tzChoice(d: BirthDraft): TzChoice | null {

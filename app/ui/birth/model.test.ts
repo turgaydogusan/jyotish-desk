@@ -1,3 +1,4 @@
+import type { TzChoice } from "../bindings";
 import { fixture } from "../test/fixture";
 import {
   applyPlace,
@@ -26,6 +27,11 @@ test("fixed offsets parse and format both ways", () => {
   expect(parseFixedOffset("x5:30")).toBeNull();
   expect(formatFixedOffset(19_800)).toBe("+05:30");
   expect(formatFixedOffset(-34_200)).toBe("-09:30");
+  // Saniyeli ofset iki yönde de korunur; kırpılmaz.
+  expect(parseFixedOffset("-04:56:16")).toBe(-17_776);
+  expect(parseFixedOffset("+05:30:60")).toBeNull();
+  expect(formatFixedOffset(-17_776)).toBe("-04:56:16");
+  expect(formatFixedOffset(18_530)).toBe("+05:08:50");
 });
 
 test("an atlas hit fills the place and suggests its IANA zone", () => {
@@ -52,6 +58,8 @@ test("a complete draft becomes NewClient; unknown time sends no time", () => {
   expect(toBirthData({ ...delhiDraft(), tzMode: "fixed", tzFixed: "+05:30" }).birth!.tz).toEqual({ Fixed: 19_800 });
   expect(toBirthData({ ...delhiDraft(), tzMode: "lmt" }).birth!.tz).toBe("Lmt");
   expect(toBirthData({ ...delhiDraft(), lat: "28,5" }).birth!.place.lat).toBe(28.5);
+  // Tipografik eksi ofsette olduğu gibi koordinatta da kabul edilir.
+  expect(toBirthData({ ...delhiDraft(), lon: "−74.08" }).birth!.place.lon).toBe(-74.08);
 });
 
 test("format errors are reported per field before anything is sent", () => {
@@ -64,6 +72,8 @@ test("format errors are reported per field before anything is sent", () => {
     lon: { key: "birth.error.number" },
     tz: { key: "birth.error.offset" },
   });
+  // Sonlu olmayan sayı (`Infinity` JSON'da `null` olur) arka uca gitmez.
+  expect(toBirthData({ ...delhiDraft(), lat: "9".repeat(400) }).errors).toEqual({ lat: { key: "birth.error.number" } });
 });
 
 test("backend errors map to fields", () => {
@@ -83,4 +93,20 @@ test("the DST suggestion and editing a stored chart", () => {
   const d = draftFromOpened(fixture().opened);
   expect(d).toMatchObject({ name: "Örnek Danışan", date: "2000-01-01", time: "17:30", tzMode: "iana", tzIana: "Asia/Kolkata", kind: "Natal" });
   expect(toBirthData(d).birth!.place).toEqual(fixture().opened.chart_record.birth.place);
+});
+
+test("editing a stored chart keeps the seconds of its time and of its fixed offset", () => {
+  const stored = (time: string, tz: TzChoice) => {
+    const o = fixture().opened;
+    o.chart_record.birth = { ...o.chart_record.birth, time, tz };
+    return o;
+  };
+  // JHD içe aktarımı saniye yazar ("20:17:40"); ofset de saniyeli olabilir (−04:56:16).
+  const d = draftFromOpened(stored("20:17:40", { Fixed: -17_776 }));
+  expect(d).toMatchObject({ time: "20:17:40", tzMode: "fixed", tzFixed: "-04:56:16" });
+  expect(toBirthData(d).birth).toMatchObject({ time: "20:17:40", tz: { Fixed: -17_776 } });
+  expect(draftFromOpened(stored("20:17:40.5", "Lmt"))).toMatchObject({ time: "20:17:40.5", tzMode: "lmt" });
+  expect(draftFromOpened(stored("17:30:00", "Lmt")).time).toBe("17:30");
+  // DST önerisi girilen saatin saniyesini taşır.
+  expect(applySuggestion(delhiDraft(), "2014-03-31T04:30:40")).toMatchObject({ date: "2014-03-31", time: "04:30:40" });
 });

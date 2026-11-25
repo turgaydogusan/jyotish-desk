@@ -7760,7 +7760,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 10: Doğum formu modeli: biçim denetimi ve arka uç hata alanı eşlemesi
 
-Formun saf modeli (D17): metin alanlarından oluşan `BirthDraft`, biçim denetimi (`toBirthData`; tarih, saat, enlem/boylam aralığı, sabit ofset `+05:30`; işaret zorunludur ve `05:30` reddedilir: işaret sınıfı `[+\-−]`'dir, `[+-−]` bir karakter aralığı olurdu ve işaretsiz girişi ters işaretli ofsete çevirirdi), atlas sonucunun ve DST önerisinin taslağa uygulanması, düzenleme için `OpenedClient`'tan taslak, ve `invalid_input.field` → form alanı eşlemesi. Anlam denetimi (geçersiz gün, DST) Rust'tadır; model onu tekrarlamaz.
+Formun saf modeli (D17): metin alanlarından oluşan `BirthDraft`, biçim denetimi (`toBirthData`: zorunlu alanlar (ad, tarih, saat), sonlu ondalık sayı olarak enlem/boylam (ondalık virgül ve tipografik eksi kabul edilir), sabit ofset `+05:30` ya da saniyeli `-04:56:16`; işaret zorunludur ve `05:30` reddedilir: işaret sınıfı `[+\-−]`'dir, `[+-−]` bir karakter aralığı olurdu ve işaretsiz girişi ters işaretli ofsete çevirirdi), atlas sonucunun ve DST önerisinin taslağa uygulanması, düzenleme için `OpenedClient`'tan taslak (saklanan saatin ve sabit ofsetin sıfırdan farklı saniyesi korunur: düzenleyip kaydetmek doğum anını değiştirmez; JHD içe aktarımı `20:17:40` gibi saniyeli saat yazar), ve `invalid_input.field` → form alanı eşlemesi. Anlam denetimi (tarih ve saat biçimi, geçersiz gün, enlem/boylam ve ofset aralığı, DST) Rust'tadır; model onu tekrarlamaz.
 
 **Files:**
 - Create: `app/ui/birth/model.test.ts`
@@ -7777,6 +7777,7 @@ Formun saf modeli (D17): metin alanlarından oluşan `BirthDraft`, biçim deneti
 `app/ui/birth/model.test.ts` oluştur:
 
 ```ts
+import type { TzChoice } from "../bindings";
 import { fixture } from "../test/fixture";
 import {
   applyPlace,
@@ -7805,6 +7806,11 @@ test("fixed offsets parse and format both ways", () => {
   expect(parseFixedOffset("x5:30")).toBeNull();
   expect(formatFixedOffset(19_800)).toBe("+05:30");
   expect(formatFixedOffset(-34_200)).toBe("-09:30");
+  // Saniyeli ofset iki yönde de korunur; kırpılmaz.
+  expect(parseFixedOffset("-04:56:16")).toBe(-17_776);
+  expect(parseFixedOffset("+05:30:60")).toBeNull();
+  expect(formatFixedOffset(-17_776)).toBe("-04:56:16");
+  expect(formatFixedOffset(18_530)).toBe("+05:08:50");
 });
 
 test("an atlas hit fills the place and suggests its IANA zone", () => {
@@ -7831,6 +7837,8 @@ test("a complete draft becomes NewClient; unknown time sends no time", () => {
   expect(toBirthData({ ...delhiDraft(), tzMode: "fixed", tzFixed: "+05:30" }).birth!.tz).toEqual({ Fixed: 19_800 });
   expect(toBirthData({ ...delhiDraft(), tzMode: "lmt" }).birth!.tz).toBe("Lmt");
   expect(toBirthData({ ...delhiDraft(), lat: "28,5" }).birth!.place.lat).toBe(28.5);
+  // Tipografik eksi ofsette olduğu gibi koordinatta da kabul edilir.
+  expect(toBirthData({ ...delhiDraft(), lon: "−74.08" }).birth!.place.lon).toBe(-74.08);
 });
 
 test("format errors are reported per field before anything is sent", () => {
@@ -7843,6 +7851,8 @@ test("format errors are reported per field before anything is sent", () => {
     lon: { key: "birth.error.number" },
     tz: { key: "birth.error.offset" },
   });
+  // Sonlu olmayan sayı (`Infinity` JSON'da `null` olur) arka uca gitmez.
+  expect(toBirthData({ ...delhiDraft(), lat: "9".repeat(400) }).errors).toEqual({ lat: { key: "birth.error.number" } });
 });
 
 test("backend errors map to fields", () => {
@@ -7862,6 +7872,22 @@ test("the DST suggestion and editing a stored chart", () => {
   const d = draftFromOpened(fixture().opened);
   expect(d).toMatchObject({ name: "Örnek Danışan", date: "2000-01-01", time: "17:30", tzMode: "iana", tzIana: "Asia/Kolkata", kind: "Natal" });
   expect(toBirthData(d).birth!.place).toEqual(fixture().opened.chart_record.birth.place);
+});
+
+test("editing a stored chart keeps the seconds of its time and of its fixed offset", () => {
+  const stored = (time: string, tz: TzChoice) => {
+    const o = fixture().opened;
+    o.chart_record.birth = { ...o.chart_record.birth, time, tz };
+    return o;
+  };
+  // JHD içe aktarımı saniye yazar ("20:17:40"); ofset de saniyeli olabilir (−04:56:16).
+  const d = draftFromOpened(stored("20:17:40", { Fixed: -17_776 }));
+  expect(d).toMatchObject({ time: "20:17:40", tzMode: "fixed", tzFixed: "-04:56:16" });
+  expect(toBirthData(d).birth).toMatchObject({ time: "20:17:40", tz: { Fixed: -17_776 } });
+  expect(draftFromOpened(stored("20:17:40.5", "Lmt"))).toMatchObject({ time: "20:17:40.5", tzMode: "lmt" });
+  expect(draftFromOpened(stored("17:30:00", "Lmt")).time).toBe("17:30");
+  // DST önerisi girilen saatin saniyesini taşır.
+  expect(applySuggestion(delhiDraft(), "2014-03-31T04:30:40")).toMatchObject({ date: "2014-03-31", time: "04:30:40" });
 });
 ```
 
@@ -7894,6 +7920,7 @@ export interface BirthDraft {
   label: string;
   kind: ChartKind;
   date: string;
+  /** "17:30"; saniye varsa "20:17:40". */
   time: string;
   certainty: TimeCertainty;
   placeName: string;
@@ -7904,7 +7931,7 @@ export interface BirthDraft {
   lon: string;
   tzMode: TzMode;
   tzIana: string;
-  /** "+05:30" biçimi. */
+  /** "+05:30" biçimi; saniyeli ofsette "-04:56:16". */
   tzFixed: string;
   fold: FoldChoice | null;
   notes: string;
@@ -7937,26 +7964,38 @@ export function emptyDraft(): BirthDraft {
   };
 }
 
-/** "+05:30" / "-03:00" / "+5:45" → saniye; biçim dışıysa `null`. */
+/** "+05:30" / "-03:00" / "+5:45" / "-04:56:16" → saniye; biçim dışıysa `null`. */
 export function parseFixedOffset(text: string): number | null {
-  const m = /^([+\-−])(\d{1,2}):(\d{2})$/.exec(text.trim());
+  const m = /^([+\-−])(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(text.trim());
   if (!m) return null;
-  const [h, min] = [Number(m[2]), Number(m[3])];
-  if (min >= 60) return null;
-  return (m[1] === "+" ? 1 : -1) * (h * 3600 + min * 60);
+  const [h, min, s] = [Number(m[2]), Number(m[3]), Number(m[4] ?? 0)];
+  if (min >= 60 || s >= 60) return null;
+  return (m[1] === "+" ? 1 : -1) * (h * 3600 + min * 60 + s);
 }
 
+/** Saniyeli ofset (JHD içe aktarımı, LMT önizlemesi) saniyesiyle yazılır; kırpılmaz. */
 export function formatFixedOffset(secs: number): string {
   const a = Math.abs(secs);
-  const h = Math.floor(a / 3600);
-  const m = Math.floor((a % 3600) / 60);
-  return `${secs < 0 ? "-" : "+"}${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const two = (n: number) => String(n).padStart(2, "0");
+  const s = a % 60;
+  return `${secs < 0 ? "-" : "+"}${two(Math.floor(a / 3600))}:${two(Math.floor((a % 3600) / 60))}${s === 0 ? "" : `:${two(s)}`}`;
 }
 
 function parseCoord(text: string): number | null {
-  const t = text.trim().replace(",", ".");
-  if (t === "" || !/^[+-]?\d+(\.\d+)?$/.test(t)) return null;
-  return Number(t);
+  const t = text.trim().replace(",", ".").replace("−", "-");
+  if (!/^[+-]?\d+(\.\d+)?$/.test(t)) return null;
+  // Çok uzun bir rakam dizisi `Infinity` olur ve JSON'da `null`'a döner; sayı sayılmaz.
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Saklanan saat ("17:30:00", "20:17:40", "20:17:40.5") → form metni. Yalnızca sıfır saniye
+ * atılır; sıfırdan farklı saniye ve kesir korunur, yoksa düzenleyip kaydetmek doğum anını
+ * sessizce değiştirirdi.
+ */
+function formTime(time: string): string {
+  return time.replace(/^(\d{2}:\d{2}):00(\.0+)?$/, "$1");
 }
 
 /** Saklanan harita → düzenleme taslağı (Cmd+E). */
@@ -7971,7 +8010,7 @@ export function draftFromOpened(o: OpenedClient): BirthDraft {
     label: o.chart_record.label,
     kind: o.chart_record.kind,
     date: b.date,
-    time: b.time ? b.time.slice(0, 5) : "",
+    time: b.time ? formTime(b.time) : "",
     certainty: b.time_certainty,
     placeName: b.place.name,
     country: b.place.country,
@@ -8008,10 +8047,10 @@ export function setCoordinate(d: BirthDraft, field: "lat" | "lon", value: string
   return { ...d, [field]: value, geonameId: null };
 }
 
-/** DST boşluğu önerisi ("2014-03-31T04:30:00") tarih ve saate yazılır. */
+/** DST boşluğu önerisi ("2014-03-31T04:30:00") tarih ve saate yazılır; saniyesi korunur. */
 export function applySuggestion(d: BirthDraft, suggestion: string): BirthDraft {
   const [date, time] = suggestion.split("T");
-  return { ...d, date, time: time.slice(0, 5) };
+  return { ...d, date, time: formTime(time) };
 }
 
 function tzChoice(d: BirthDraft): TzChoice | null {
@@ -8097,7 +8136,7 @@ pnpm --dir app exec vitest run ui/birth/model.test.ts
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  34 passed (34)`, `Tests  282 passed (282)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  34 passed (34)`, `Tests  283 passed (283)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -8485,7 +8524,7 @@ pnpm --dir app exec vitest run ui/birth
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  35 passed (35)`, `Tests  286 passed (286)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  35 passed (35)`, `Tests  287 passed (287)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -8972,7 +9011,7 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
         {suggestion && (
           <p className="field-fix">
             <button type="button" onClick={() => update(applySuggestion(draft, suggestion), "time")}>
-              {t("birth.useSuggestion", { time: suggestion.slice(11, 16) })}
+              {t("birth.useSuggestion", { time: applySuggestion(draft, suggestion).time })}
             </button>
           </p>
         )}
@@ -9502,7 +9541,7 @@ pnpm --dir app exec vitest run ui/birth ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  36 passed (36)`, `Tests  294 passed (294)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  36 passed (36)`, `Tests  295 passed (295)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9852,7 +9891,7 @@ pnpm --dir app e2e:visual
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: `e2e` iki çalıştırmada da `4 passed` (kararsızlık yok); `e2e:visual` `6 passed`; vitest `36 passed (36)` / `294 passed (294)`; `build` hatasız. `git status` `app/test-results` ve `app/playwright-report`'u göstermez (`.gitignore`).
+Expected: `e2e` iki çalıştırmada da `4 passed` (kararsızlık yok); `e2e:visual` `6 passed`; vitest `36 passed (36)` / `295 passed (295)`; `build` hatasız. `git status` `app/test-results` ve `app/playwright-report`'u göstermez (`.gitignore`).
 
 - [ ] **Step 7: Commit**
 
@@ -9900,7 +9939,7 @@ pnpm --dir app build
 pnpm --dir app e2e
 pnpm --dir app e2e:visual
 ```
-Expected: `Test Files  36 passed (36)`, `Tests  294 passed (294)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
+Expected: `Test Files  36 passed (36)`, `Tests  295 passed (295)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
 
 - [ ] **Step 4: Yasak dizgi taraması ve temiz çalışma ağacı**
 
@@ -9941,7 +9980,7 @@ Expected: yedi madde de beklendiği gibi; biri tutmazsa ilgili görevin testine 
 - `ViewState` tek depodan serileştirilir ve store'a yazılır; localStorage düzeni bir kez taşınır.
 - Plan 08 ertelenen madde 2 (harita olmadan düzen kaydı) ve 12 (ayrıştırıcı eşliği) kapanır.
 - Düzen sınırı yazarken de uygulanır: arayüz 64'ten fazla düzen yazmaz, yeniden açılışta düzen kaybolmaz.
-- Task 14'ün bütün adımları beklenen çıktıyı verir; vitest 294, e2e 4, görsel 6 (yerel, PNG temelleri yalnızca bu adımda karşılaştırılır).
+- Task 14'ün bütün adımları beklenen çıktıyı verir; vitest 295, e2e 4, görsel 6 (yerel, PNG temelleri yalnızca bu adımda karşılaştırılır).
 
 ## Bu planın kapsamadıkları
 
@@ -9958,6 +9997,7 @@ Expected: yedi madde de beklendiği gibi; biri tutmazsa ilgili görevin testine 
 11. **Plan 08 incelemesinin M6'ya bıraktığı küçük bulgular:** Task 3 (`AppPrefs.schema_version` denetlenmiyor, tercih `calc_settings`'in sessiz geri dönüşü; ayarlar arayüzü), Task 6 (kırpma testi yok, etiket sırası yalnızca ASCII; etiket girişi), Task 7 (etiket sorgusu ham biçimde, NFD işaretleri, `load_client` N+1; `Cmd+K`), Task 8 (D13 sessiz yolu eski kısaltma/uyarıyı tutar; tzdb bandı), Task 9 (okunamayan JSON'da `null` dışa aktarma, bilinmeyen alan politikası; dışa aktarma belgesi), Task 10 (eksik testler, `"; "` etiket ayırıcısı, sınırsız dışa aktarma), Task 11 (toplu içe aktarmada yarıda DB hatası raporu kaybeder; gerçek dosya kurallarıyla proptest), Task 13 (`file_io` parametrelerinde tam yol, atomik olmayan dışa aktarma, ince dosya komutu testleri, boş içe aktarmanın kilidi alması).
 12. **M5'te oluşturulan danışanlar:** M6 danışan listesine kadar yalnızca oturum geri yüklemesiyle (son açılan harita) ulaşılır; listelenemez, yeniden seçilemez, silinemez.
 13. **İnceleme önerileri (M6):** atlas açılamama nedeni (`AtlasState` hatayı saklayıp `search_places`'ten döndürebilir; şimdi yalnızca `atlas_unavailable`); tarih değişince `fold` seçiminin sıfırlanması; Esc ile yarım taslağın kaybı (onay ya da taslak saklama).
+14. **Task 10 incelemesinin ertelediği küçük bulgular (M6, içe aktarma arayüzüyle):** sabit ofsette saat üst sınırı ve `-0:00`'ın `-0` vermesi (aralığı Rust denetler, `offset_out_of_range` alana bağlanır; `-0` JSON'da `0`'dır); `INPUT_FIELDS`'in prototip anahtarları (alan adları Rust'ta sabit dizgilerdir); istemcide tarih ve saat biçim denetimi (`type=date`/`type=time` ve Rust `invalid_input` yeterli); `errorField`'in öbür kodları ve `Fixed`/`Lmt` taslakları için ek testler; saniyeli saatin `type=time` kutusunda WKWebView'de görünmesi elle doğrulanmalı (model değeri korur, kutunun saniye alanını göstermesi tarayıcıya bağlıdır).
 
 ---
 
@@ -10015,9 +10055,9 @@ Belirsiz ya da ertelenmiş adım yok; her kod adımı tam kodu ya da birleşik f
 | 7 | 29 | 245 | — |
 | 8 | 31 | 262 | — |
 | 9 | 33 | 276 | — |
-| 10 | 34 | 282 | — |
-| 11 | 35 | 286 | — |
-| 12 | 36 | 294 | — |
-| 13 | 36 | 294 | + Playwright e2e 4, görsel 6 (yerel) |
+| 10 | 34 | 283 | — |
+| 11 | 35 | 287 | — |
+| 12 | 36 | 295 | — |
+| 13 | 36 | 295 | + Playwright e2e 4, görsel 6 (yerel) |
 
 Plan kopyada (`/Users/ttd/jd-p09`) iki kez uygulandı; ikincisinde plan dosyasından (yeni dosyalar ve farklar betikle uygulanarak) yeniden kuruldu, inceleme düzeltmeleri ilgili görevlere işlendi ve her commit'te vitest + `build` ölçüldü: bütün kapılar geçti, e2e üç kez kararsızlıksız çalıştı, görsel temeller birebir yeniden üretildi. Yeniden kurulum iki plan hatasını da gösterdi ve ikisi düzeltildi: `pnpm --dir app vitest run` pnpm 11'de çalışmaz (`Command "app" not found`), komutlar `pnpm --dir app exec vitest run`'dır; `ui_fixture` fikstür klasörünü kendisi oluşturur. Doğrulama sırasında bulunan iki hata Task 8 koduna işlendi: (1) klavye tembel yüklenen 4. seviyeye ulaşamıyordu (`loaded()` yardımcısı), (2) istenen yolun bir alt seviyesi olmayan yanıt sonsuz özyinelemeye yol açıyordu (`childrenOf` süzgeci); ikisinin de gerileme testi vardır. Task 8 incelemesi iki klavye hatası daha buldu ve ikisi Task 8 koduna işlendi: (3) "Yeniden dene" düğmesinin tuşlarını ağaç yutuyordu, (4) odaklı öğe ağaçtan çıkınca sekme durağı kayboluyordu; ikisinin ve geç gelen eski yanıtın testi vardır. Task 9 incelemesi, tuzağın ve Esc'in odağın pencerede kalmasına bağlı olduğunu ve Tab testinin boş (vacuous) olduğunu buldu; ikisi de Task 9 koduna işlendi, gerileme testi `Dialog.test.tsx`'tir.
