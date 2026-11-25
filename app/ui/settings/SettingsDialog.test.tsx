@@ -115,3 +115,109 @@ test("a save that fails after the dialog closed is reported in the notice bar", 
   await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Ayarlar kaydedilemedi"));
   expect(api.saveCalcSettings).toHaveBeenCalledTimes(1);
 });
+
+test("disabled default actions name their reason", () => {
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />);
+  for (const name of ["Varsayılana döndür", "Bunu varsayılan yap"]) {
+    const button = screen.getByRole("button", { name });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription("Ayarlar varsayılanla aynı.");
+  }
+});
+
+test("without readable preferences the default actions say why they are off", () => {
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />, { prefs: null });
+  for (const name of ["Varsayılana döndür", "Bunu varsayılan yap"]) {
+    const button = screen.getByRole("button", { name });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription("Tercihler okunamadı; varsayılanlar düzenlenemiyor.");
+  }
+});
+
+test("a custom ayanamsa cannot become the default and the button says so", () => {
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />, {
+    opened: openedWith({ ayanamsa: { Custom: { t0_jd: 2451545, deg: 23.85 } } }),
+  });
+  const make = screen.getByRole("button", { name: "Bunu varsayılan yap" });
+  expect(make).toBeDisabled();
+  expect(make).toHaveAccessibleDescription("Özel ayanamsa varsayılan yapılamaz.");
+  const reset = screen.getByRole("button", { name: "Varsayılana döndür" });
+  expect(reset).toBeEnabled();
+  expect(reset).not.toHaveAccessibleDescription();
+});
+
+test("focus moves to close when the pressed default action turns itself off", async () => {
+  vi.mocked(api.setAppPrefs).mockResolvedValue({ status: "ok", data: null });
+  vi.mocked(api.saveCalcSettings).mockResolvedValue(okChart());
+  const first = renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />, { opened: openedWith({ node: "True" }) });
+  const make = screen.getByRole("button", { name: "Bunu varsayılan yap" });
+  make.focus();
+  fireEvent.click(make);
+  await waitFor(() => expect(make).toBeDisabled());
+  expect(screen.getByRole("button", { name: "Kapat" })).toHaveFocus();
+  first.unmount();
+
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />, { opened: openedWith({ node: "True" }) });
+  const reset = screen.getByRole("button", { name: "Varsayılana döndür" });
+  reset.focus();
+  fireEvent.click(reset);
+  await waitFor(() => expect(reset).toBeDisabled());
+  expect(screen.getByRole("button", { name: "Kapat" })).toHaveFocus();
+});
+
+test("a make-default that fails after the dialog closed is reported in the notice bar", async () => {
+  let fail!: () => void;
+  vi.mocked(api.setAppPrefs).mockReturnValue(
+    new Promise((r) => {
+      fail = () => r({ status: "error", error: { code: "store_sqlite", params: { detail: "disk" } } });
+    }),
+  );
+  function Host() {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        {open && <SettingsDialog onClose={() => setOpen(false)} debounceMs={0} />}
+        <NoticeBar />
+      </>
+    );
+  }
+  renderWithStores(<Host />, { opened: openedWith({ node: "True" }) });
+  fireEvent.click(screen.getByRole("button", { name: "Bunu varsayılan yap" }));
+  await waitFor(() => expect(api.setAppPrefs).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole("button", { name: "Kapat" }));
+  await act(async () => fail());
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Ayarlar kaydedilemedi"));
+});
+
+test("the made-default status survives a chart save that lands afterwards", async () => {
+  let land!: () => void;
+  vi.mocked(api.saveCalcSettings).mockReturnValue(
+    new Promise((r) => {
+      land = () => r(okChart());
+    }),
+  );
+  vi.mocked(api.setAppPrefs).mockResolvedValue({ status: "ok", data: null });
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={10_000} />);
+  fireEvent.change(screen.getByLabelText("Düğüm"), { target: { value: "True" } });
+  fireEvent.click(screen.getByRole("button", { name: "Bunu varsayılan yap" }));
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Yeni haritaların varsayılanı olarak kaydedildi."));
+  expect(api.saveCalcSettings).toHaveBeenCalledTimes(1);
+  await act(async () => land());
+  expect(screen.getByRole("status")).toHaveTextContent("Yeni haritaların varsayılanı olarak kaydedildi.");
+});
+
+test("a pending edit is written when the page hides or unloads", async () => {
+  vi.mocked(api.saveCalcSettings).mockResolvedValue(okChart());
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={10_000} />);
+  fireEvent.change(screen.getByLabelText("Düğüm"), { target: { value: "True" } });
+  expect(api.saveCalcSettings).not.toHaveBeenCalled();
+  fireEvent(window, new Event("pagehide"));
+  await waitFor(() => expect(api.saveCalcSettings).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByLabelText("Düğüm"), { target: { value: "Mean" } });
+  const state = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+  fireEvent(document, new Event("visibilitychange"));
+  state.mockRestore();
+  await waitFor(() => expect(api.saveCalcSettings).toHaveBeenCalledTimes(2));
+  expect(vi.mocked(api.saveCalcSettings).mock.calls[1][1].node).toBe("Mean");
+});

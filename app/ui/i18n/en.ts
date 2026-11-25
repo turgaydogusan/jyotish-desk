@@ -367,6 +367,8 @@ export const en: Messages = {
     zodiac: { Sidereal: "Sidereal", TropicalRasiSiderealNakshatra: "Tropical rasi, sidereal nakshatra" },
     ayanamsa: { Lahiri: "Lahiri", Raman: "Raman", Kp: "KP (Krishnamurti)", TrueChitra: "True Chitrapaksha", Custom: "Custom" },
     customLocked: "An imported custom ayanamsa cannot be changed here.",
+    sameAsDefault: "The settings match the default.",
+    customNotDefault: "A custom ayanamsa cannot be made the default.",
     node: { Mean: "Mean", True: "True" },
     house: { WholeSign: "Whole sign", Sripati: "Sripati", Placidus: "Placidus" },
     dashaYearOption: "{{days}} days",

@@ -48,6 +48,7 @@ export function SettingsDialog({ onClose, debounceMs = SAVE_DEBOUNCE_MS }: { onC
   const [error, setError] = useState<CommandError | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const mounted = useRef(true);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const latest = useRef({ prefs, language: i18n.language, updateSettings, push, save });
   latest.current = { prefs, language: i18n.language, updateSettings, push, save };
   const locale = () => (isLanguage(latest.current.language) ? latest.current.language : DEFAULT_LANGUAGE);
@@ -75,7 +76,8 @@ export function SettingsDialog({ onClose, debounceMs = SAVE_DEBOUNCE_MS }: { onC
         onSaved: () => {
           if (!mounted.current) return;
           setError(null);
-          setStatus("saved");
+          // "Varsayılan yapıldı" duyurusu, ardından biten harita kaydıyla silinmez.
+          setStatus((s) => (s === "madeDefault" ? s : "saved"));
         },
       },
     ),
@@ -104,6 +106,10 @@ export function SettingsDialog({ onClose, debounceMs = SAVE_DEBOUNCE_MS }: { onC
   const defaults = prefs?.calc_settings ?? null;
   const differs = (f: SettingsField) => chartId !== null && defaults !== null && draft !== null && !sameValue(draft[f], defaults[f]);
   const anyDiff = draft !== null && defaults !== null && chartId !== null && !sameValue({ ...draft, schema_version: 0 }, { ...defaults, schema_version: 0 });
+  // Kapalı düğmenin nedeni görünür metindir ve düğmeye `aria-describedby` ile bağlanır.
+  const resetReason = defaults === null ? "noPrefs" : anyDiff ? null : "sameAsDefault";
+  const defaultReason = resetReason ?? (draft !== null && ayanamsaKey(draft.ayanamsa) === "Custom" ? "customNotDefault" : null);
+  const reasons = [...new Set([resetReason, defaultReason])].filter((r) => r !== null);
   const mark = (f: SettingsField) =>
     differs(f) && (
       <span className="settings-differs">
@@ -125,17 +131,23 @@ export function SettingsDialog({ onClose, debounceMs = SAVE_DEBOUNCE_MS }: { onC
     setOrbs(orbTexts(defaults));
     change(defaults);
     saver.flush();
+    // Düğme kendini kilitler; odak pencerede bir düğmede durur.
+    closeRef.current?.focus();
   };
 
   const makeDefault = async () => {
-    if (!prefs || !draft) return;
+    if (!prefs || !draft || defaultReason !== null) return;
     saver.flush();
     const e = await save({ ...prefs, locale: locale(), calc_settings: draft });
-    if (!mounted.current) return;
+    if (!mounted.current) {
+      if (e) latest.current.push({ id: "settings", type: "error", messageKey: "notice.settingsSaveFailed", error: e });
+      return;
+    }
     if (e) setError(e);
     else {
       setError(null);
       setStatus("madeDefault");
+      closeRef.current?.focus();
     }
   };
 
@@ -263,18 +275,24 @@ export function SettingsDialog({ onClose, debounceMs = SAVE_DEBOUNCE_MS }: { onC
       <p role="status" className="settings-status">
         {status === "idle" ? "" : t(`settings.status.${status}`)}
       </p>
+      {chartId !== null &&
+        reasons.map((r) => (
+          <p key={r} id={`${id}-why-${r}`} className="settings-hint">
+            {t(`settings.${r}`)}
+          </p>
+        ))}
       <div className="dialog-actions">
         {chartId !== null && (
           <>
-            <button type="button" disabled={!anyDiff} onClick={resetToDefault}>
+            <button type="button" disabled={resetReason !== null} aria-describedby={resetReason ? `${id}-why-${resetReason}` : undefined} onClick={resetToDefault}>
               {t("settings.resetToDefault")}
             </button>
-            <button type="button" disabled={!anyDiff || prefs === null} onClick={() => void makeDefault()}>
+            <button type="button" disabled={defaultReason !== null} aria-describedby={defaultReason ? `${id}-why-${defaultReason}` : undefined} onClick={() => void makeDefault()}>
               {t("settings.makeDefault")}
             </button>
           </>
         )}
-        <button type="button" onClick={onClose}>
+        <button ref={closeRef} type="button" onClick={onClose}>
           {t("settings.close")}
         </button>
       </div>

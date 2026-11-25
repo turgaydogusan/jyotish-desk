@@ -366,6 +366,8 @@ export const tr = {
     zodiac: { Sidereal: "Sidereal", TropicalRasiSiderealNakshatra: "Tropik rasi, sidereal nakshatra" },
     ayanamsa: { Lahiri: "Lahiri", Raman: "Raman", Kp: "KP (Krishnamurti)", TrueChitra: "True Chitrapaksha", Custom: "Özel" },
     customLocked: "İçe aktarılmış özel ayanamsa burada değiştirilemez.",
+    sameAsDefault: "Ayarlar varsayılanla aynı.",
+    customNotDefault: "Özel ayanamsa varsayılan yapılamaz.",
     node: { Mean: "Ortalama", True: "Gerçek" },
     house: { WholeSign: "Tam burç", Sripati: "Sripati", Placidus: "Placidus" },
     dashaYearOption: "{{days}} gün",
