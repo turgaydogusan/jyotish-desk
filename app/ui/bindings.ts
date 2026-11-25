@@ -51,10 +51,15 @@ export const commands = {
 	loadPanelLayout: (options?: InvokeOptions) => typedError<PanelLayout | null, CommandError>(__TAURI_INVOKE("load_panel_layout", undefined, options)),
 	/**  Açık harita olmadan düzen kaydı (otomatik kayıt); `None` kayıtlı düzeni siler. */
 	savePanelLayout: (layout: PanelLayout | null, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("save_panel_layout", { layout }, options)),
-	exportJson: (path: string, selection: ExportOptions, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("export_json", { path, selection }, options)),
-	exportCsv: (path: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("export_csv", { path }, options)),
-	importJson: (path: string, options?: InvokeOptions) => typedError<ImportReport, CommandError>(__TAURI_INVOKE("import_json", { path }, options)),
-	importJhd: (paths: string[], options?: InvokeOptions) => typedError<JhdImportResult, CommandError>(__TAURI_INVOKE("import_jhd", { paths }, options)),
+	/**
+	 *  Bütün danışanlar JSON'a. Pencere Rust'ta açılır; arayüz yol vermez. Dönüş: kaydedilen
+	 *  dosyanın adı, vazgeçilirse `None`. Notlar yalnızca `include_notes` ile (spec §5).
+	 */
+	exportClientsJson: (includeNotes: boolean, options?: InvokeOptions) => typedError<string | null, CommandError>(__TAURI_INVOKE("export_clients_json", { includeNotes }, options)),
+	/**  Bütün haritalar CSV'ye (yalnızca dışa aktarma; notlar CSV'de yoktur). */
+	exportClientsCsv: (options?: InvokeOptions) => typedError<string | null, CommandError>(__TAURI_INVOKE("export_clients_csv", undefined, options)),
+	/**  JSON içe aktarma (hepsi ya da hiçbiri). Vazgeçilirse `None`. */
+	importClientsJson: (options?: InvokeOptions) => typedError<ImportResult | null, CommandError>(__TAURI_INVOKE("import_clients_json", undefined, options)),
 	searchPlaces: (query: string, limit: number, options?: InvokeOptions) => typedError<PlaceHit[], CommandError>(__TAURI_INVOKE("search_places", { query, limit }, options)),
 	previewMoment: (birth: BirthData, options?: InvokeOptions) => typedError<MomentPreview, CommandError>(__TAURI_INVOKE("preview_moment", { birth }, options)),
 };
@@ -253,19 +258,6 @@ export type EngineStatus = {
 	seVersion: string,
 };
 
-export type ExportOptions = {
-	/**  "Notları dahil et"; varsayılan kapalı. */
-	include_notes: boolean,
-	/**  Boşsa tüm danışanlar. */
-	client_ids: number[] | null,
-};
-
-/**  JHD dosyası başına hata. */
-export type FileFailure = {
-	file: string,
-	error: CommandError,
-};
-
 export type FoldChoice = "Earlier" | "Later";
 
 export type Gender = "Male" | "Female" | "Other";
@@ -314,6 +306,12 @@ export type ImportReport = {
 	warnings: ImportWarning[],
 };
 
+/**  Seçilen dosyanın adı ve içe aktarma özeti. */
+export type ImportResult = {
+	file: string,
+	report: ImportReport,
+};
+
 export type ImportWarning = {
 	/**  Harita UUID'si ya da JHD dosya adı. */
 	item: string,
@@ -325,11 +323,6 @@ export type ImportWarningCode =
 "CalcSettingsReset" | 
 /**  JHD: saat dilimi ofseti ile boylam 60°'den fazla uyuşmuyor; işaret kuralı şüpheli. */
 "JhdOffsetLongitudeMismatch";
-
-export type JhdImportResult = {
-	report: ImportReport,
-	failed: FileFailure[],
-};
 
 export type Karana = {
 	/**  1..=60 (yarım tithi sırası). */

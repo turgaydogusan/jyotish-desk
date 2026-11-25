@@ -85,7 +85,9 @@ impl From<StoreError> for CommandError {
             },
             StoreError::Settings(e) => e.into(),
             StoreError::LastChart => Self::new("last_chart", &[]),
-            StoreError::ImportFormat(detail) => Self::new("import_format", &[("detail", detail)]),
+            StoreError::ImportFormat(detail) => {
+                Self::new("import_format", &[("detail", clip(&detail))])
+            }
             StoreError::ImportVersion { found, supported } => Self::new(
                 "import_version",
                 &[
@@ -95,13 +97,24 @@ impl From<StoreError> for CommandError {
             ),
             StoreError::ImportRecord { item, field } => Self::new(
                 "import_record",
-                &[("item", item), ("field", field.to_owned())],
+                &[("item", clip(&item)), ("field", field.to_owned())],
             ),
             StoreError::Jhd { line, field } => Self::new(
                 "jhd_invalid",
                 &[("line", line.to_string()), ("field", field.to_owned())],
             ),
         }
+    }
+}
+
+/// Dosyadan gelen metin (ayrıştırıcı iletisi, kayıt kimliği) hata parametresinde en çok
+/// `MAX_PARAM_CHARS` karakterdir: bildirim satırı taşmaz, dosya içeriği taşınmaz.
+pub const MAX_PARAM_CHARS: usize = 120;
+
+fn clip(text: &str) -> String {
+    match text.char_indices().nth(MAX_PARAM_CHARS) {
+        Some((i, _)) => format!("{}…", &text[..i]),
+        None => text.to_owned(),
     }
 }
 
@@ -374,5 +387,20 @@ mod tests {
             (e.code.as_str(), e.params["item"].as_str()),
             ("import_record", "u")
         );
+    }
+
+    #[test]
+    fn import_parameters_from_the_file_are_clipped() {
+        let long = "ş".repeat(MAX_PARAM_CHARS + 30);
+        let e = CommandError::from(StoreError::ImportRecord {
+            item: long.clone(),
+            field: "uuid",
+        });
+        assert_eq!(e.params["item"].chars().count(), MAX_PARAM_CHARS + 1);
+        assert!(e.params["item"].ends_with('…'));
+        let e = CommandError::from(StoreError::ImportFormat(long));
+        assert_eq!(e.params["detail"].chars().count(), MAX_PARAM_CHARS + 1);
+        let e = CommandError::from(StoreError::ImportFormat("kısa".into()));
+        assert_eq!(e.params["detail"], "kısa");
     }
 }

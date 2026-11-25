@@ -48,10 +48,9 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store_commands::set_app_prefs,
             store_commands::load_panel_layout,
             store_commands::save_panel_layout,
-            store_commands::export_json,
-            store_commands::export_csv,
-            store_commands::import_json,
-            store_commands::import_jhd,
+            store_commands::export_clients_json,
+            store_commands::export_clients_csv,
+            store_commands::import_clients_json,
             atlas_commands::search_places,
             atlas_commands::preview_moment,
         ])
@@ -60,6 +59,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
 pub fn run() {
     let builder = specta_builder();
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);

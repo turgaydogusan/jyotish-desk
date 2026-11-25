@@ -8,7 +8,7 @@ import { errorMessage } from "../i18n/errors";
 
 export type Notice =
   | { id: string; type: "error"; messageKey: string; error: CommandError }
-  | { id: string; type: "warning"; messageKey: string; params: Record<string, string> };
+  | { id: string; type: "warning" | "info"; messageKey: string; params: Record<string, string> };
 
 export interface Notices {
   notices: Notice[];

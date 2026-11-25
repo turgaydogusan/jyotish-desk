@@ -134,6 +134,10 @@
   border-left: 3px solid var(--warn);
   padding-left: 8px;
 }
+.notice--info {
+  border-left: 3px solid var(--line);
+  padding-left: 8px;
+}
 .notice--error {
   border-left: 3px solid var(--danger);
   padding-left: 8px;

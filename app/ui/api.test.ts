@@ -24,6 +24,9 @@ vi.mock("./bindings", () => ({
     saveViewState: vi.fn(),
     loadPanelLayout: vi.fn(),
     savePanelLayout: vi.fn(),
+    exportClientsJson: vi.fn(),
+    exportClientsCsv: vi.fn(),
+    importClientsJson: vi.fn(),
     dashaChildren: vi.fn(),
     searchPlaces: vi.fn(),
     previewMoment: vi.fn(),
@@ -32,6 +35,7 @@ vi.mock("./bindings", () => ({
 
 import { api } from "./api";
 import { commands } from "./bindings";
+import bindingsSource from "./bindings.ts?raw";
 
 test("passes ok results through", async () => {
   vi.mocked(commands.engineStatus).mockResolvedValueOnce({
@@ -88,6 +92,9 @@ test("every wrapper forwards its arguments to the command of the same name", asy
     ["saveViewState", [3, { schema_version: 1 }]],
     ["loadPanelLayout", []],
     ["savePanelLayout", [null]],
+    ["exportClientsJson", [false]],
+    ["exportClientsCsv", []],
+    ["importClientsJson", []],
     ["dashaChildren", [{ birth_jd_ut: 1 }, ["Sun"]]],
     ["searchPlaces", ["delhi", 8]],
     ["previewMoment", [{ date: "2000-01-01" }]],
@@ -101,7 +108,12 @@ test("every wrapper forwards its arguments to the command of the same name", asy
   }
 });
 
-test("import and export commands are not reachable from the UI (Plan 08 deferred items 1 and 3)", () => {
+test("no command takes a file path from the UI and JHD import is not reachable (Plan 08 deferred items 1 and 3)", () => {
+  // Dosya yolu yalnızca Rust'taki pencereden gelir; yol alan komut bağlamalarda yoktur.
+  for (const name of ["export_json", "export_csv", "import_json", "import_jhd"]) {
+    expect(bindingsSource).not.toContain(`"${name}"`);
+  }
+  expect(bindingsSource).not.toMatch(/\bpath: string\b|\bpaths: string\[\]/);
   for (const name of ["importJson", "importJhd", "exportJson", "exportCsv"]) {
     expect(Object.keys(api)).not.toContain(name);
   }

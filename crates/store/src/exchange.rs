@@ -133,6 +133,14 @@ fn import_resolved(p: &ParsedBirth, r: &ResolvedRecord) -> Option<ResolvedRecord
     }
     let other_tzdb =
         matches!(p.canonical.tz, TzChoice::Iana(_)) && r.tzdb_version != atlas::tzdb_version();
+    // Dosyadan olduğu gibi saklanan alanlar sınırlı: kısaltma ve tzdb sürümü kısa metin,
+    // ofset gerçek saat dilimlerinin aralığında.
+    let bounded = r.abbrev.chars().count() <= MAX_IMPORT_LABEL_CHARS
+        && r.tzdb_version.chars().count() <= MAX_IMPORT_LABEL_CHARS
+        && r.offset_secs.unsigned_abs() <= MAX_OFFSET_SECS;
+    if !bounded {
+        return None;
+    }
     let jd = stored.as_millisecond() as f64 / 86_400_000.0 + 2_440_587.5;
     if !other_tzdb || !JD_UT_RANGE.contains(&r.jd_ut) || (r.jd_ut - jd).abs() * 86_400.0 > 1.0 {
         return None;
@@ -142,6 +150,11 @@ fn import_resolved(p: &ParsedBirth, r: &ResolvedRecord) -> Option<ResolvedRecord
         ..r.clone()
     })
 }
+
+/// İçe alınan çözülmüş anın `abbrev` ve `tzdb_version` alanlarının sınırı (karakter).
+const MAX_IMPORT_LABEL_CHARS: usize = 32;
+/// İçe alınan çözülmüş anın ofset sınırı: ±18 saat.
+const MAX_OFFSET_SECS: u32 = 18 * 3600;
 
 /// Geçerli bir `format_ts` zaman damgası değilse `now`.
 fn ts_or(ts: &str, now: &str) -> String {
@@ -356,6 +369,12 @@ impl Store {
                 if id_by_uuid(&tx, "client_notes", &note_uuid)?.is_some() {
                     report.skipped += 1;
                     continue;
+                }
+                if n.body.len() > crate::notes::MAX_NOTE_BYTES {
+                    return Err(StoreError::ImportRecord {
+                        item: note_uuid,
+                        field: "body",
+                    });
                 }
                 let chart_id: Option<u32> = match n.chart_uuid.as_deref().map(Uuid::parse_str) {
                     Some(Ok(u)) => tx
@@ -599,6 +618,27 @@ mod tests {
         let o = dst.open_client(c.id, None).unwrap();
         assert_eq!(o.chart.resolved.utc, "2000-01-01T11:00:00Z");
         assert!(matches!(o.warnings[..], [StoreWarning::TzdbChanged { .. }]));
+        // Saklanan alanlar sınırlı: uzun kısaltma, uzun tzdb sürümü, ±18 saati aşan ofset.
+        for (field, value) in [
+            ("abbrev", json!("X".repeat(33))),
+            ("tzdb_version", json!("1".repeat(33))),
+            ("offset_secs", json!(18 * 3600 + 1)),
+        ] {
+            let mut w = v.clone();
+            w["clients"][0]["charts"][0]["resolved"][field] = value;
+            assert_eq!(rejected(&w), "resolved", "{field}");
+        }
+        // Not gövdesi sınırı içe aktarmada da geçerlidir.
+        let mut v = serde_json::from_str::<Value>(
+            &src.export_json(&ExportOptions {
+                include_notes: true,
+                client_ids: None,
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        v["clients"][0]["notes"][0]["body"] = json!("x".repeat(crate::notes::MAX_NOTE_BYTES + 1));
+        assert_eq!(rejected(&v), "body");
         // Haritasız danışan oluşmaz.
         let mut v = exported.clone();
         v["clients"][0]["charts"] = json!([]);

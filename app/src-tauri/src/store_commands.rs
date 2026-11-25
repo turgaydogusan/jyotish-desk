@@ -1,7 +1,9 @@
 //! Kayıt yönetimi komutları (danışan, harita, not, etiket, tercihler) ve dosya içe/dışa
 //! aktarma. Harita hesabı gerektirmez; gövdeler `store`'dadır.
 
-use std::path::Path;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
@@ -10,7 +12,8 @@ use store::{
     AppPrefs, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note, PanelLayout,
     SearchHit, Store, TagCount,
 };
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::client_commands::{blocking, lock, with_store, StoreState};
 use crate::commands::CommandError;
@@ -28,14 +31,63 @@ pub struct JhdImportResult {
     pub failed: Vec<FileFailure>,
 }
 
+/// İçe aktarılan JSON dosyasının sınırı; dosya okunmadan önce boyutuyla denetlenir.
+pub const MAX_IMPORT_BYTES: u64 = 32 * 1024 * 1024;
+
+/// Hata parametrelerinde yalnızca dosya adı bulunur: tam yol kullanıcı adını taşır.
+fn base_name(path: &Path) -> String {
+    path.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
 fn io_error(path: &Path, e: std::io::Error) -> CommandError {
     CommandError::new(
         "file_io",
-        &[
-            ("path", path.display().to_string()),
-            ("detail", e.to_string()),
-        ],
+        &[("file", base_name(path)), ("detail", e.kind().to_string())],
     )
+}
+
+/// Aynı klasörde geçici dosyaya yazıp yerine taşır: yarıda kesilen yazım eski dosyayı bozmaz.
+pub fn write_atomic(path: &Path, text: &str) -> Result<(), CommandError> {
+    let tmp = path.with_file_name(format!(".{}.{}.tmp", base_name(path), std::process::id()));
+    let written = (|| {
+        let mut f = File::create(&tmp)?;
+        f.write_all(text.as_bytes())?;
+        f.sync_all()?;
+        std::fs::rename(&tmp, path)
+    })();
+    written.map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        io_error(path, e)
+    })
+}
+
+/// `MAX_IMPORT_BYTES`'tan büyük dosya okunmaz (okurken büyüyen dosya da reddedilir).
+pub fn read_bounded(path: &Path) -> Result<String, CommandError> {
+    let too_large = || {
+        CommandError::new(
+            "import_too_large",
+            &[
+                ("file", base_name(path)),
+                ("max_mb", (MAX_IMPORT_BYTES / (1024 * 1024)).to_string()),
+            ],
+        )
+    };
+    let len = std::fs::metadata(path)
+        .map_err(|e| io_error(path, e))?
+        .len();
+    if len > MAX_IMPORT_BYTES {
+        return Err(too_large());
+    }
+    let mut text = String::new();
+    File::open(path)
+        .and_then(|f| f.take(MAX_IMPORT_BYTES + 1).read_to_string(&mut text))
+        .map_err(|e| io_error(path, e))?;
+    if text.len() as u64 > MAX_IMPORT_BYTES {
+        return Err(too_large());
+    }
+    Ok(text)
 }
 
 pub fn import_jhd_files_blocking(
@@ -46,10 +98,7 @@ pub fn import_jhd_files_blocking(
     let mut failed = Vec::new();
     for p in paths {
         let path = Path::new(p);
-        let name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| p.clone());
+        let name = base_name(path);
         match std::fs::read(path) {
             Ok(bytes) => files.push((name, bytes)),
             Err(e) => failed.push(FileFailure {
@@ -71,24 +120,55 @@ pub fn import_jhd_files_blocking(
 
 pub fn export_json_file_blocking(
     store: &Mutex<Store>,
-    path: &str,
+    path: &Path,
     options: &ExportOptions,
 ) -> Result<(), CommandError> {
     let text = lock(store)?.export_json(options)?;
-    std::fs::write(path, text).map_err(|e| io_error(Path::new(path), e))
+    write_atomic(path, &text)
 }
 
-pub fn export_csv_file_blocking(store: &Mutex<Store>, path: &str) -> Result<(), CommandError> {
+pub fn export_csv_file_blocking(store: &Mutex<Store>, path: &Path) -> Result<(), CommandError> {
     let text = lock(store)?.export_csv()?;
-    std::fs::write(path, text).map_err(|e| io_error(Path::new(path), e))
+    write_atomic(path, &text)
 }
 
 pub fn import_json_file_blocking(
     store: &Mutex<Store>,
-    path: &str,
+    path: &Path,
 ) -> Result<ImportReport, CommandError> {
-    let text = std::fs::read_to_string(path).map_err(|e| io_error(Path::new(path), e))?;
+    let text = read_bounded(path)?;
     Ok(lock(store)?.import_json(&text)?)
+}
+
+/// Seçilen dosyanın adı ve içe aktarma özeti.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct ImportResult {
+    pub file: String,
+    pub report: ImportReport,
+}
+
+fn chosen(path: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
+    path.map(|p| {
+        p.into_path()
+            .map_err(|_| CommandError::new("dialog_path", &[]))
+    })
+    .transpose()
+}
+
+/// Kaydetme penceresi. `None`: kullanıcı vazgeçti.
+fn save_dialog(
+    app: &AppHandle,
+    filter: &str,
+    ext: &str,
+    name: &str,
+) -> Result<Option<PathBuf>, CommandError> {
+    chosen(
+        app.dialog()
+            .file()
+            .add_filter(filter, &[ext])
+            .set_file_name(name)
+            .blocking_save_file(),
+    )
 }
 
 #[tauri::command]
@@ -243,56 +323,192 @@ pub async fn save_panel_layout(
     with_store(&store, move |s| s.save_panel_layout(layout.as_ref())).await
 }
 
+/// Bütün danışanlar JSON'a. Pencere Rust'ta açılır; arayüz yol vermez. Dönüş: kaydedilen
+/// dosyanın adı, vazgeçilirse `None`. Notlar yalnızca `include_notes` ile (spec §5).
 #[tauri::command]
 #[specta::specta]
-pub async fn export_json(
+pub async fn export_clients_json(
+    app: AppHandle,
     store: State<'_, StoreState>,
-    path: String,
-    selection: ExportOptions,
-) -> Result<(), CommandError> {
+    include_notes: bool,
+) -> Result<Option<String>, CommandError> {
     let store = Arc::clone(&store);
-    blocking(move || export_json_file_blocking(&store, &path, &selection)).await
+    blocking(move || {
+        let Some(path) = save_dialog(&app, "JSON", "json", EXPORT_JSON_NAME)? else {
+            return Ok(None);
+        };
+        let options = ExportOptions {
+            include_notes,
+            client_ids: None,
+        };
+        export_json_file_blocking(&store, &path, &options)?;
+        Ok(Some(base_name(&path)))
+    })
+    .await
 }
 
+/// Bütün haritalar CSV'ye (yalnızca dışa aktarma; notlar CSV'de yoktur).
 #[tauri::command]
 #[specta::specta]
-pub async fn export_csv(store: State<'_, StoreState>, path: String) -> Result<(), CommandError> {
+pub async fn export_clients_csv(
+    app: AppHandle,
+    store: State<'_, StoreState>,
+) -> Result<Option<String>, CommandError> {
     let store = Arc::clone(&store);
-    blocking(move || export_csv_file_blocking(&store, &path)).await
+    blocking(move || {
+        let Some(path) = save_dialog(&app, "CSV", "csv", EXPORT_CSV_NAME)? else {
+            return Ok(None);
+        };
+        export_csv_file_blocking(&store, &path)?;
+        Ok(Some(base_name(&path)))
+    })
+    .await
 }
 
+/// JSON içe aktarma (hepsi ya da hiçbiri). Vazgeçilirse `None`.
 #[tauri::command]
 #[specta::specta]
-pub async fn import_json(
+pub async fn import_clients_json(
+    app: AppHandle,
     store: State<'_, StoreState>,
-    path: String,
-) -> Result<ImportReport, CommandError> {
+) -> Result<Option<ImportResult>, CommandError> {
     let store = Arc::clone(&store);
-    blocking(move || import_json_file_blocking(&store, &path)).await
+    blocking(move || {
+        let picked = app
+            .dialog()
+            .file()
+            .add_filter("JSON", &["json"])
+            .blocking_pick_file();
+        let Some(path) = chosen(picked)? else {
+            return Ok(None);
+        };
+        let report = import_json_file_blocking(&store, &path)?;
+        Ok(Some(ImportResult {
+            file: base_name(&path),
+            report,
+        }))
+    })
+    .await
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn import_jhd(
-    store: State<'_, StoreState>,
-    paths: Vec<String>,
-) -> Result<JhdImportResult, CommandError> {
-    let store = Arc::clone(&store);
-    blocking(move || import_jhd_files_blocking(&store, &paths)).await
-}
+pub const EXPORT_JSON_NAME: &str = "jyotish-desk-clients.json";
+pub const EXPORT_CSV_NAME: &str = "jyotish-desk-charts.csv";
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn populated() -> Mutex<Store> {
+        let store = Store::open_in_memory().unwrap();
+        let store = Mutex::new(store);
+        let new = store::NewClient {
+            name: "Ayşe".into(),
+            gender: None,
+            chart: store::NewChart {
+                label: String::new(),
+                kind: store::ChartKind::Natal,
+                birth: store::BirthData {
+                    date: "2000-01-01".into(),
+                    time: Some("17:30".into()),
+                    time_certainty: store::TimeCertainty::Exact,
+                    place: store::Place {
+                        name: "New Delhi".into(),
+                        country: "India".into(),
+                        admin1: "NCT".into(),
+                        lat: 28.6139,
+                        lon: 77.2090,
+                        geoname_id: None,
+                    },
+                    tz: store::TzChoice::Iana("Asia/Kolkata".into()),
+                    fold: None,
+                    notes: String::new(),
+                },
+            },
+        };
+        let (c, _) = lock(&store).unwrap().create_client(&new).unwrap();
+        lock(&store).unwrap().add_note(c.id, None, "gizli").unwrap();
+        store
+    }
+
     #[test]
-    fn file_commands_report_io_errors_per_file() {
+    fn file_errors_name_only_the_file() {
         let store = Mutex::new(Store::open_in_memory().unwrap());
         let r = import_jhd_files_blocking(&store, &["/nonexistent/dir/a.jhd".into()]).unwrap();
         assert_eq!(r.failed.len(), 1);
         assert_eq!(r.failed[0].file, "a.jhd");
         assert_eq!(r.failed[0].error.code, "file_io");
-        let e = import_json_file_blocking(&store, "/nonexistent/x.json").unwrap_err();
+        let e =
+            import_json_file_blocking(&store, Path::new("/nonexistent/dir/x.json")).unwrap_err();
         assert_eq!(e.code, "file_io");
+        assert_eq!(e.params["file"], "x.json");
+        assert!(!e.params.values().any(|v| v.contains("/nonexistent")));
+    }
+
+    #[test]
+    fn export_writes_atomically_and_round_trips_without_notes_by_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("out.json");
+        std::fs::write(&path, "eski").unwrap();
+        let src = populated();
+        export_json_file_blocking(&src, &path, &ExportOptions::default()).unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("Ayşe") && !text.contains("gizli"));
+        // Geçici dosya kalmaz.
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+        let dst = Mutex::new(Store::open_in_memory().unwrap());
+        let report = import_json_file_blocking(&dst, &path).unwrap();
+        assert_eq!(
+            (
+                report.clients_added,
+                report.charts_added,
+                report.notes_added
+            ),
+            (1, 1, 0)
+        );
+        let csv = dir.path().join("out.csv");
+        export_csv_file_blocking(&src, &csv).unwrap();
+        assert!(std::fs::read_to_string(&csv).unwrap().contains("Ayşe"));
+    }
+
+    #[test]
+    fn a_failed_write_leaves_the_old_file_and_no_temporary() {
+        let dir = tempfile::tempdir().unwrap();
+        // Hedef bir klasör: taşıma başarısız olur.
+        let target = dir.path().join("taken");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("keep"), "x").unwrap();
+        let e = write_atomic(&target, "yeni").unwrap_err();
+        assert_eq!(e.code, "file_io");
+        assert_eq!(e.params["file"], "taken");
+        let names: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names, ["taken"]);
+    }
+
+    /// D2: pencere Rust'ta açılır; web görünümüne dosya penceresi ya da dosya sistemi izni
+    /// verilmez (C2′).
+    #[test]
+    fn the_webview_is_granted_no_dialog_or_file_system_permission() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/capabilities");
+        assert_eq!(std::fs::read_dir(dir).unwrap().count(), 1);
+        let v: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+        assert_eq!(v["permissions"], serde_json::json!(["core:event:default"]));
+    }
+
+    #[test]
+    fn an_import_over_the_byte_cap_is_refused_before_reading() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("big.json");
+        let f = File::create(&path).unwrap();
+        f.set_len(MAX_IMPORT_BYTES + 1).unwrap();
+        let store = Mutex::new(Store::open_in_memory().unwrap());
+        let e = import_json_file_blocking(&store, &path).unwrap_err();
+        assert_eq!(e.code, "import_too_large");
+        assert_eq!(e.params["file"], "big.json");
+        assert_eq!(e.params["max_mb"], "32");
+        assert!(lock(&store).unwrap().list_clients(10).unwrap().is_empty());
     }
 }

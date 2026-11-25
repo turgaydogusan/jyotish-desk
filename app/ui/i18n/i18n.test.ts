@@ -75,6 +75,7 @@ const BACKEND_CODES = [
   "date_out_of_range", "last_chart", "unsupported_schema_version", "invalid_settings", "invalid_location", "invalid_julian_day",
   "non_finite_result", "invalid_dasha_input", "panchang_search", "invalid_transit_input",
   "atlas_unavailable", "atlas_sqlite", "atlas_io", "atlas_schema",
+  "file_io", "dialog_path", "import_too_large", "import_format", "import_version", "import_record",
 ] as const;
 
 test("every backend error code reachable from the UI has a message", () => {
