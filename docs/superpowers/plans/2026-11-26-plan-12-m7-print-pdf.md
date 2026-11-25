@@ -34,7 +34,7 @@ Muhafazakâr seçenek seçildi; her karar bir satır gerekçeyle. D2, D3, D6 ve 
 - **D11 — Plan 10 kapsam dışı 16'nın yarısı bu plandadır: kenar çubuğunun açık/kapalı durumu saklanır (`jyotish-desk.sidebar.v1`). Genişliğin elle ayarlanması ve Plan 10 kapsam dışı 15 (paletten notun kendisine gitme) kapalı beta geri bildirimine bırakılır.** Gerekçe: durum kaydı birkaç satırdır ve oturum geri yüklemenin doğal parçasıdır; boyutlandırma erişilebilir bir ayırıcı ister, nota gitme `SearchHit`'e not kimliği (IPC değişikliği) ister; ikisi de baskıyla ilgisizdir ve istek gelmeden yapılmaz.
 - **D12 — `PrintSpike.tsx`, testi ve `ui/print.css` silinir; `no-hex.test.ts` istisnaları kalkar; `shell.printSpike`, `shell.backToDesk`, `shell.print` anahtarları `print.*` altına taşınır.** Gerekçe: Plan 04'ün "M7'de kaldırılır" notu.
 - **D13 — Basılı harita etkileşimsizdir: `ChartSvg` `interactive={false}` ile `role="img"` olur; evler ve gezegenler düğme ya da sekme durağı değildir. Varsayılan (`true`) çıktıyı değiştirmez.** Gerekçe: önizlemede iki harita 42 işlevsiz sekme durağı eklerdi; ayrıntıyı aynı belgedeki graha tablosu taşır. Mevcut SVG anlık görüntüleri ve görsel temeller değişmez (C11).
-- **D14 — Doğum saati bilinmiyorsa kâğıt panellerle aynı kuralları izler: lagna ve ev çizilmez, graha tablosunda lagna satırı ve ev sütunu yoktur, Ay'ın saate bağlı değerleri "≈" ile başlar, harita ve dasa sayfalarında açıklama notu, kapakta uyarı metni basılır.** Gerekçe: v1 spec §7; kâğıt ekrandan fazlasını iddia etmemelidir.
+- **D14 — Doğum saati bilinmiyorsa kâğıt panellerle aynı kuralları izler: lagna ve ev çizilmez, graha tablosunda lagna satırı ve ev sütunu yoktur, Ay'ın saate bağlı değerleri "≈" ile başlar, harita, dasa ve graha tablosu sayfalarında açıklama notu, kapakta uyarı metni basılır.** Gerekçe: v1 spec §7; kâğıt ekrandan fazlasını iddia etmemelidir.
 - **D15 — Görsel temellere dört kâğıt eklenir (yerel, darwin); mevcut altı temel değişmez.** Gerekçe: düzenler piksel düzeyinde korunur; C11.
 
 ## Global Constraints
@@ -3027,7 +3027,7 @@ rm -rf app/test-results
 sh scripts/print-probe.sh
 git status --short
 ```
-Expected: `Test Files  57 passed (57)`, `Tests  497 passed (497)`; build `✓ built`; e2e `11 passed`; görsel `10 passed`; sonda dört `ok` satırı; `git status --short` boş.
+Expected: `Test Files  57 passed (57)`, `Tests  500 passed (500)`; build `✓ built`; e2e `11 passed`; görsel `10 passed`; sonda dört `ok` satırı; `git status --short` boş.
 
 - [ ] **Step 3: Kural taramaları (`ecf7ed5`'ten bu yana)**
 
@@ -3058,7 +3058,7 @@ Gerçek uygulamada, deneme danışanlarıyla (gerçek danışan verisi kullanıl
 - [ ] Siyah-beyaz çıktı (yazdırma penceresinde "Siyah Beyaz" ya da gri tonlamalı PDF) okunur: hiçbir bilgi yalnızca renkle taşınmaz.
 - [ ] Kâğıt boyutu "US Letter" seçilince yine dört sayfa çıkar; hiçbir düzen ikinci kâğıda taşmaz.
 - [ ] "Vimshottari dasa" kutusu kapatılınca önizleme üç kâğıda iner ve numaralar "1 / 3 … 3 / 3" olur; tek sayfa seçiliyken o kutu kapatılamaz ve nedeni yazar. Harita biçimi "Güney" seçilince iki harita da Güney biçiminde çizilir. Uygulama kapanıp açılınca seçimler durur.
-- [ ] Doğum saati bilinmeyen bir deneme haritasında: kapakta "Saat bilinmiyor" uyarısı metinle basılır; haritalarda lagna ve ev yoktur ve not vardır; graha tablosunda lagna satırı ve ev sütunu yoktur, Ay "≈" ile işaretlidir; dasa sayfasında yaklaşıklık notu vardır; belge yine dört sayfadır.
+- [ ] Doğum saati bilinmeyen bir deneme haritasında: kapakta "Saat bilinmiyor" uyarısı metinle basılır; haritalarda lagna ve ev yoktur ve not vardır; graha tablosunda lagna satırı ve ev sütunu yoktur, Ay "≈" ile işaretlidir ve tablonun üstünde bunu açıklayan not vardır; dasa sayfasında yaklaşıklık notu vardır; belge yine dört sayfadır.
 - [ ] Önizlemede `⌘2` düzeni değiştirmez; "Panoya dön" panoyu aynı düzenle geri getirir ve odak görünür bir öğededir. `⌘K` → "Baskı önizleme" de önizlemeyi açar.
 - [ ] Önizleme açıkken yazdırma penceresinden vazgeçmek (İptal) hata göstermez; önizleme durur.
 - [ ] Kenar çubuğu `⌘\` ile kapatılıp uygulama yeniden açılınca kapalı gelir; açılıp yeniden açılınca açık gelir.
@@ -3074,7 +3074,7 @@ Kapı geçtiyse ilerleme notlarına `Plan 12 Task 8 elle denetim: geçti (<tarih
 - Spec M7 tamamdır: açık harita dört A4 düzenle yazdırılır ve macOS yazdırma penceresinden PDF olarak kaydedilir; baskı her zaman açık tema ve tek renktir; retro, yanma, vargottama ve lagna renksiz işaretlerle basılır.
 - M0 baskı denemesi kapanmıştır: `PrintSpike` silinmiş, bulgu belgesi doldurulmuş, Typst kararı verilmiştir; yazdırma yolu `scripts/print-probe.sh` ile A4 ve Letter'da denetlenir.
 - Rust, bağlamalar, şema ve bağımlılıklar değişmemiştir; C1–C17 taramaları temizdir.
-- Kapılar: Vitest 57/497, e2e 11, görsel 10, sonda 4 `ok`; Rust sayıları tabandaki gibidir; elle denetim kapısı geçmiştir.
+- Kapılar: Vitest 57/500, e2e 11, görsel 10, sonda 4 `ok`; Rust sayıları tabandaki gibidir; elle denetim kapısı geçmiştir.
 
 ## Bu planın kapsamadıkları
 
@@ -3129,8 +3129,10 @@ Boşluk yok; kapsam dışı maddeler yukarıda listelidir.
 | Task 3 | 57/484 | | | `PrintDocumentView.test.tsx` 9, `ChartSvg.test.tsx` +1 |
 | Task 4 | 56/489 | | | `PrintSpike.test.tsx` −2, `shell/PrintView.test.tsx` −1, `print/PrintView.test.tsx` +7, `App.test.tsx` +1 |
 | Task 5 | 57/497 | | | `sidebarPref.test.ts` 2, `shortcuts.test.ts` +1, `App.test.tsx` +5 |
-| Task 6 | 57/497 | 11 | 10 | mevcut altı görsel temel değişmez |
+| Task 4 inceleme düzeltmesi (`ef5c399`, Task 5'ten sonra) | 57/498 | | | `App.test.tsx` +1 (yeniden denemede odak) |
+| Task 6 | 57/498 | 11 | 10 | mevcut altı görsel temel değişmez |
 | Task 7 | değişmez | | | sonda: 4 `ok` |
+| Son inceleme düzeltmeleri | 57/500 | 11 | 10 | `App.test.tsx` +1 (harita önizlemenin ardında giderse istek biter), `PrintDocumentView.test.tsx` +1 (graha sayfasında "≈" notu); sonda dolu portu reddeder ve graha notunu arar |
 | Task 8 | değişmez | | | Rust sayıları tabandaki gibi |
 
 **5. Yürütme notu.** Bu plandaki kod, `ecf7ed5` ağacının bir kopyasında (çalışan uygulamaya dokunmadan) görev sırasıyla yazılmış ve koşulmuştur: Vitest 57/497, `pnpm build`, e2e 11, görsel 10 ve sondanın dört koşusu yeşildir; sayaç zinciri o koşulardan gelir. Sonda plan yazılırken iki hatayı buldu ve ikisi de planın içindedir: Letter kâğıtta saati bilinmeyen haritanın beşinci sayfaya taşması (harita 82 mm'ye indi, e2e sınırı 744 × 990 px oldu) ve sistem fontunun PDF metin katmanını bozması (D6). Bir görevin sayısı tutmazsa önceki görevin adımı denetlenir; sayı elle düzeltilmez. Rust sayıları ve elle denetim kapısı bu kopyada koşulmamıştır (Rust değişmez; kapı gerçek uygulama ister).
