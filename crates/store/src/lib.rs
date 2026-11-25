@@ -8,6 +8,7 @@ mod csv;
 mod db;
 mod error;
 pub mod exchange;
+pub mod jhd;
 pub mod model;
 mod notes;
 mod open;
@@ -25,6 +26,7 @@ pub use exchange::{
     ExportOptions, ImportReport, ImportWarning, ImportWarningCode, EXPORT_FORMAT,
     EXPORT_SCHEMA_VERSION,
 };
+pub use jhd::{parse_jhd, JhdChart, JhdImport};
 pub use model::{
     BirthData, ChartKind, ChartRecord, Client, FoldChoice, Gender, MomentWarning, NewChart,
     NewClient, Note, Place, ResolvedRecord, TimeCertainty, TzChoice,

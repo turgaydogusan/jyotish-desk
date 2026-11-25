@@ -78,6 +78,8 @@ pub struct ExportNote {
 pub enum ImportWarningCode {
     /// Haritanın ayarı okunamadı; o anki genel varsayılan yazıldı.
     CalcSettingsReset,
+    /// JHD: saat dilimi ofseti ile boylam 60°'den fazla uyuşmuyor; işaret kuralı şüpheli.
+    JhdOffsetLongitudeMismatch,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
