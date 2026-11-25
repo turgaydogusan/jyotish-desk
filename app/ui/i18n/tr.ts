@@ -165,9 +165,6 @@ export const tr = {
   theme: { label: "Tema", light: "Açık", dark: "Koyu", system: "Sistem" },
   language: { label: "Dil", tr: "Türkçe", en: "English", fr: "Français" },
   shell: {
-    printSpike: "Baskı denemesi",
-    backToDesk: "Panoya dön",
-    print: "Yazdır…",
     warnings: "Uyarılar",
   },
   badge: {
@@ -457,6 +454,14 @@ export const tr = {
     action: "Yeni harita",
   },
   print: {
+    open: "Baskı önizleme",
+    back: "Panoya dön",
+    toolbar: "Baskı seçenekleri",
+    pages: "Sayfalar",
+    style: "Harita biçimi",
+    print: "Yazdır…",
+    pdfHint: "PDF için yazdırma penceresinde “PDF” menüsünden “PDF olarak kaydet”i seçin.",
+    lastPage: "En az bir sayfa seçili olmalıdır.",
     page: { cover: "Kapak", charts: "Haritalar: D1 ve D9", dasha: "Vimshottari dasa", grahas: "Graha tablosu" },
     legend: "R: retro · c: yanık · altı çizili: vargottama",
     credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",

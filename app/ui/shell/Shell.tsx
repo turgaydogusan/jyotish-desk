@@ -1,5 +1,7 @@
 import { SettingsDialog } from "../settings/SettingsDialog";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { api } from "../api";
+import type { CommandError } from "../bindings";
 import { BirthForm } from "../birth/BirthForm";
 import { Sidebar } from "../clients/Sidebar";
 import type { PaletteItem } from "../palette/items";
@@ -13,7 +15,7 @@ import { EmptyState } from "./EmptyState";
 import { leaveNotes, leaveSidebar, MAIN_ID } from "./focus";
 import { HelpDialog } from "./HelpDialog";
 import { NoticeBar, useNotices } from "./notices";
-import { PrintView } from "./PrintView";
+import { PrintView } from "../print/PrintView";
 import "./shell.css";
 import { TopBar } from "./TopBar";
 import { useElementWidth } from "./useElementWidth";
@@ -22,7 +24,8 @@ export function Shell() {
   const layout = useLayoutStore();
   const { toggleNotes } = layout;
   const [themePref, setThemePref] = useState<ThemePref>(() => loadThemePref());
-  const [printView, setPrintView] = useState(false);
+  const [printRequested, setPrintRequested] = useState(false);
+  const [printError, setPrintError] = useState<CommandError | null>(null);
   const [help, setHelp] = useState(false);
   const [settings, setSettings] = useState(false);
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
@@ -34,6 +37,18 @@ export function Shell() {
   };
   const session = useSession();
   const { opened } = session;
+  // Baskı önizlemesi yalnızca açık haritayla anlamlıdır; harita kapanırsa pano geri gelir.
+  const printView = printRequested && opened !== null;
+  const togglePrint = () => {
+    setPrintError(null);
+    setPrintRequested(!printView);
+  };
+  // Yazdırma penceresini Rust açar (C2′: arayüz yol vermez; PDF o pencerenin seçeneğidir).
+  const printNow = async () => {
+    setPrintError(null);
+    const r = await api.printWindow();
+    if (r.status === "error") setPrintError(r.error);
+  };
   const { push } = useNotices();
   const measureRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(measureRef);
@@ -123,7 +138,7 @@ export function Shell() {
         themePref={themePref}
         onThemeChange={changeTheme}
         printView={printView}
-        onTogglePrint={() => setPrintView((v) => !v)}
+        onTogglePrint={opened ? togglePrint : undefined}
         onHelp={() => setHelp(true)}
         onNewChart={() => setForm("new")}
         onEditChart={opened ? () => setForm("edit") : undefined}
@@ -136,7 +151,7 @@ export function Shell() {
       <div className="shell-body">
         {sidebar && !printView && <Sidebar onAddChart={() => setForm("add")} />}
         <main id={MAIN_ID} className="shell-main" tabIndex={-1}>
-          <div ref={measureRef}>{printView ? <PrintView /> : opened ? <Dashboard width={width} /> : <EmptyState onNew={() => setForm("new")} />}</div>
+          <div ref={measureRef}>{printView ? <PrintView error={printError} onPrint={() => void printNow()} /> : opened ? <Dashboard width={width} /> : <EmptyState onNew={() => setForm("new")} />}</div>
         </main>
       </div>
       {help && <HelpDialog onClose={() => setHelp(false)} />}

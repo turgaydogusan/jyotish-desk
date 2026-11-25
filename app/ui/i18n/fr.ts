@@ -166,9 +166,6 @@ export const fr: Messages = {
   theme: { label: "Thème", light: "Clair", dark: "Sombre", system: "Système" },
   language: { label: "Langue", tr: "Türkçe", en: "English", fr: "Français" },
   shell: {
-    printSpike: "Essai d’impression",
-    backToDesk: "Retour au tableau",
-    print: "Imprimer…",
     warnings: "Avertissements",
   },
   badge: {
@@ -458,6 +455,14 @@ export const fr: Messages = {
     action: "Nouvelle carte",
   },
   print: {
+    open: "Aperçu avant impression",
+    back: "Retour au tableau",
+    toolbar: "Options d’impression",
+    pages: "Pages",
+    style: "Style de carte",
+    print: "Imprimer…",
+    pdfHint: "Pour un PDF, choisissez « Enregistrer au format PDF » dans le menu « PDF » de la fenêtre d’impression.",
+    lastPage: "Au moins une page doit rester sélectionnée.",
     page: { cover: "Couverture", charts: "Cartes : D1 et D9", dasha: "Dasha Vimshottari", grahas: "Tableau des grahas" },
     legend: "R : rétrograde · c : combuste · souligné : vargottama",
     credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",

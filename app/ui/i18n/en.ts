@@ -166,9 +166,6 @@ export const en: Messages = {
   theme: { label: "Theme", light: "Light", dark: "Dark", system: "System" },
   language: { label: "Language", tr: "Türkçe", en: "English", fr: "Français" },
   shell: {
-    printSpike: "Print test",
-    backToDesk: "Back to desk",
-    print: "Print…",
     warnings: "Warnings",
   },
   badge: {
@@ -458,6 +455,14 @@ export const en: Messages = {
     action: "New chart",
   },
   print: {
+    open: "Print preview",
+    back: "Back to desk",
+    toolbar: "Print options",
+    pages: "Pages",
+    style: "Chart style",
+    print: "Print…",
+    pdfHint: "For a PDF, choose “Save as PDF” from the “PDF” menu of the print dialog.",
+    lastPage: "At least one page must stay selected.",
     page: { cover: "Cover", charts: "Charts: D1 and D9", dasha: "Vimshottari dasha", grahas: "Graha table" },
     legend: "R: retrograde · c: combust · underlined: vargottama",
     credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",

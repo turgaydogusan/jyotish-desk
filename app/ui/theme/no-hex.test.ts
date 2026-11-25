@@ -6,9 +6,9 @@ const sources = import.meta.glob("/ui/**/*.{ts,tsx,css}", {
   eager: true,
 }) as Record<string, string>;
 
-// tokens.css belirteçlerin kaynağı; bindings.ts üretilmiş; PrintSpike ve print.css
-// M7'de baskı düzenleriyle değişecek spike dosyaları; testler beklenen değer olarak hex içerir.
-const EXEMPT = [/^\/ui\/theme\/tokens\.css$/, /^\/ui\/bindings\.ts$/, /^\/ui\/PrintSpike\.tsx$/, /^\/ui\/print\.css$/, /\.test\.tsx?$/];
+// tokens.css belirteçlerin kaynağı; bindings.ts üretilmiş; testler beklenen değer olarak hex
+// içerir. Baskı düzenleri (ui/print) istisna değildir: kâğıt paleti de tokens.css'tedir.
+const EXEMPT = [/^\/ui\/theme\/tokens\.css$/, /^\/ui\/bindings\.ts$/, /\.test\.tsx?$/];
 
 test("no hex colors outside theme tokens", () => {
   const files = Object.keys(sources).filter((f) => !EXEMPT.some((re) => re.test(f)));

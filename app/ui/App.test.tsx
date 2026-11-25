@@ -184,7 +184,7 @@ test("Cmd+Shift+N works from a text field and is ignored on key repeat, during c
   fireEvent.keyDown(window, { key: "N", metaKey: true, shiftKey: true, isComposing: true });
   expect(notes()).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: "Baskı denemesi" }));
+  fireEvent.click(screen.getByRole("button", { name: "Baskı önizleme" }));
   const ev = new KeyboardEvent("keydown", { key: "N", metaKey: true, shiftKey: true, cancelable: true });
   window.dispatchEvent(ev);
   expect(ev.defaultPrevented).toBe(false);
@@ -292,23 +292,43 @@ test("language menu switches every string", async () => {
   expect(screen.getByRole("combobox", { name: "Theme" })).toBeInTheDocument();
 });
 
-test("the print test stays reachable and calls printWindow", async () => {
+test("the print preview replaces the desk, prints through printWindow and returns to the desk", async () => {
+  vi.mocked(api.printWindow).mockClear();
+  document.title = "Jyotish Desk";
   renderApp();
-  fireEvent.click(screen.getByRole("button", { name: "Baskı denemesi" }));
-  expect(await screen.findByText(/Doğum haritası — ğüşıöç İ/)).toBeInTheDocument();
-  expect(screen.getByTestId("sign-8")).toHaveTextContent("Sun");
+  fireEvent.click(screen.getByRole("button", { name: "Baskı önizleme" }));
+  expect(screen.getByRole("group", { name: "Baskı seçenekleri" })).toBeInTheDocument();
+  expect(screen.getAllByRole("img").map((i) => i.getAttribute("aria-label"))).toEqual(["D1 haritası", "D9 haritası"]);
+  // Pano, kenar çubuğu ve düzen seçici önizlemede yoktur.
+  expect(screen.queryByRole("group", { name: "D1 haritası" })).toBeNull();
+  expect(screen.queryByRole("complementary", { name: "Danışanlar" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Düzen" })).toBeNull();
+  expect(document.title).toBe("Örnek Danışan – Doğum haritası");
+  expect(screen.getByRole("button", { name: "Yazdır…" })).toHaveFocus();
+  expect(api.printWindow).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Yazdır…" }));
   expect(api.printWindow).toHaveBeenCalledOnce();
   fireEvent.click(screen.getByRole("button", { name: "Panoya dön" }));
   expect(await screen.findByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "Baskı seçenekleri" })).toBeNull();
+  expect(document.title).toBe("Jyotish Desk");
 });
 
-test("a print failure is shown with a retry", async () => {
+test("a print failure is shown with a retry; a retry that succeeds clears it", async () => {
+  vi.mocked(api.printWindow).mockClear();
   vi.mocked(api.printWindow).mockResolvedValueOnce({ status: "error", error: { code: "print_failed", params: {} } });
   renderApp();
-  fireEvent.click(screen.getByRole("button", { name: "Baskı denemesi" }));
+  fireEvent.click(screen.getByRole("button", { name: "Baskı önizleme" }));
   fireEvent.click(screen.getByRole("button", { name: "Yazdır…" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Yazdırma penceresi açılamadı.");
+  fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  expect(api.printWindow).toHaveBeenCalledTimes(2);
+});
+
+test("without an open chart there is nothing to print: the preview button is absent", () => {
+  renderApp({ opened: null });
+  expect(screen.queryByRole("button", { name: "Baskı önizleme" })).toBeNull();
 });
 
 test("? opens the shortcut help as a modal that traps focus, blocks shortcuts and closes with Esc", () => {

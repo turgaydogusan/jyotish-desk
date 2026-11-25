@@ -9,7 +9,8 @@ export interface TopBarProps {
   themePref: ThemePref;
   onThemeChange(pref: ThemePref): void;
   printView: boolean;
-  onTogglePrint(): void;
+  /** Açık harita yoksa verilmez (düğme gösterilmez). */
+  onTogglePrint?: () => void;
   onHelp(): void;
   onNewChart(): void;
   /** Açık harita yoksa verilmez (düğme gösterilmez). */
@@ -73,9 +74,11 @@ export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onH
         <button type="button" aria-keyshortcuts="?" onClick={onHelp}>
           {t("shortcuts.open")}
         </button>
-        <button type="button" onClick={onTogglePrint}>
-          {printView ? t("shell.backToDesk") : t("shell.printSpike")}
-        </button>
+        {onTogglePrint && (
+          <button type="button" onClick={onTogglePrint}>
+            {printView ? t("print.back") : t("print.open")}
+          </button>
+        )}
       </div>
     </header>
   );
