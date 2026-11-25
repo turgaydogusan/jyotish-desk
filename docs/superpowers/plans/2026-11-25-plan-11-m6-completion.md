@@ -8,7 +8,7 @@
 - **Store (Rust):** `Store::app_prefs_load()` tercihleri sürüm denetimi ve uyarılarla okur, daha yeni sürümlü kaydın üzerine yazmaz (Task 1). `save_view_state` ve `save_panel_layout` yazarken de 64/48 sınırını ve `schema_version`'ı denetler (Task 1). tzdb sessiz yolu çözülmüş anın kısaltma, ofset ve uyarılarını yeniler; `keep_stored_moment` saklanan anı korur (Task 2). İçe/dışa aktarma sertleşir (Task 14). Şema değişmez (D2).
 - **Çekirdek ve komutlar:** `jyotish_core::dasha_path_at` bir andaki dasa yolunu verir; yeni `transit_commands.rs` "şimdi"yi Rust'ta okur, yerel tarih-saati tarayıcının IANA diliminde çözer ve `TransitView` döner (Task 3). `get_app_prefs` `PrefsLoad` döner, `keep_stored_moment` komutu, atlas açılamama nedeni (Task 4).
 - **Arayüz durumu:** `settings/prefs.tsx` (`PrefsProvider`), `transit/store.tsx` (`TransitProvider`, oturumluk an, isteğe bağlı okuma). Kayıtlar sıralıdır (C5) ve sayfa gizlenince boşaltılır (C17).
-- **Arayüz:** `settings/SettingsDialog.tsx` (`⌘,`), üst çubukta fark rozeti, bildirim bandında tzdb eylemleri (Task 5–6); `transit/TransitTablePanel.tsx`, harita panelinde transit halkası (Task 7–8); `dasha/DashaStripPanel.tsx` (Task 9); `birth/BirthInfoPanel.tsx` (Task 10); doğum formu (Task 11); erişilebilirlik geçişi M6-7 (Task 12); notlar ve kenar çubuğu küçükleri (Task 13).
+- **Arayüz:** `settings/SettingsDialog.tsx` (`⌘,`), üst çubukta fark rozeti, bildirim bandında tzdb eylemleri (Task 5–6); `transit/TransitTablePanel.tsx`, harita panelinde transit halkası (Task 7–8); `dasha/DashaStripPanel.tsx` (Task 9); `panels/BirthInfoPanel.tsx` (Task 10); doğum formu (Task 11); erişilebilirlik geçişi M6-7 (Task 12); notlar ve kenar çubuğu küçükleri (Task 13).
 - **Testler:** her görev Vitest ya da `cargo test` ile; Task 15 Playwright e2e ve M6-9 test borcu; Task 16 son doğrulama.
 
 **Tech Stack:** React 19, Vite 8, TypeScript 7 (`strict`), Vitest 5 (jsdom), i18next 27, Playwright 1.65.1 (WebKit), Tauri 2.12.7, tauri-specta rc.29 (Result hata kipi), specta rc.28, `tauri-plugin-dialog` `=2.8.4`, rusqlite (FTS5), jiff (gömülü tzdb, `atlas` yeniden dışa aktarır). **Yeni bağımlılık yok** (Rust ve npm).
@@ -40,12 +40,17 @@ Muhafazakâr seçenek seçildi; her karar bir satır gerekçeyle.
 - **D17 — Boş "Yeni not" odak çıkışında ya da panel kapanınca silinir.** Gerekçe: Plan 10 madde 23; boş not hiçbir bilgi taşımaz ve listede yer kaplar.
 - **D18 — Atlas açılamama nedeni `atlas_unavailable.reason` (`missing`, `schema`, `io`) olarak gelir; dosya yolu taşınmaz.** Gerekçe: Plan 09 kapsam dışı 13; C1/C2′ yol vermez.
 - **D19 — Oturum geri yükleme mevcut akıştır (Plan 09/10); bu plan yalnızca spec §8 gidiş-dönüş testini tercihleri ve `save_view_state` komut gövdesini kapsayacak biçimde genişletir.** Gerekçe: `tests/open_client.rs` ayarları, düzeni, dasha yolunu, etiketleri ve notları zaten denetler; eksik olan tercihler ve komut gövdesidir.
+- **D20 (ön inceleme) — `transit_commands` lib testleri tek bir `Engine`'i paylaşır (`OnceLock`).** Gerekçe: süreçte yalnızca bir SE örneği açılabilir (`EphError::AlreadyOpen`); paralel koşan üç testin her biri motor açarsa testler aralıklı düşer.
+- **D21 (ön inceleme) — `ImportReport.warnings_total` `#[serde(default)]` taşımaz.** Gerekçe: `specta_builder` serde fazlarını kapatır ve IPC tiplerinde `default` özniteliği olmadığını varsayar; rapor yalnızca Rust'tan arayüze gider, eski veriden okunmaz.
+- **D22 (ön inceleme) — Düzen menüsünde yalnızca `aria-disabled` öğeler odaklanır; gerçekten `disabled` olan "Varsayılana döndür" (kullanıcı düzeninde) gezintinin dışındadır.** Gerekçe: `disabled` düğme odak almaz; listede dursa ok tuşları onda takılır.
+- **D23 (ön inceleme) — Task 16 yasaklı sözcük taraması plan belgelerini (`docs/superpowers/plans`) dışarıda tutar.** Gerekçe: kuralın kendi metni bu dosyadadır ve dosya `6d48791`'den sonra commit edilmiştir; tarama kodu, mesajları ve diğer belgeleri kapsar.
 
 ## Global Constraints
 
 - Lisans: AGPL-3.0-or-later. Bu plan bağımlılık eklemez; `cargo deny check` Task 16'da `advisories ok, bans ok, licenses ok, sources ok` verir.
 - "Kala", "Kāla", "Kaala", "Cala" ve türevleri hiçbir isimde, yorumda, metinde, dosya adında ya da commit mesajında kullanılmaz. Türkçe sözcükler de kapsamdadır (ör. "kalan", "kalabilir", "yakalama", "arkalarında"): eklenen satırlarda `k(a|ā|aa)la` ve `\bcala\b` bulunmaz. Her commit adımı eklenen satırları, dosya adlarını ve commit mesajını `grep -inE 'k(a|ā|aa)la|\bcala\b'` ile tarar; çıktı boş olmalıdır (C13). Bu belgede kuralın kendi metni dışında eşleşme yoktur.
 - Kapılar: `pnpm --dir app test`, `pnpm --dir app build` (`tsc --noEmit`, `tsc --noEmit -p e2e`, `vite build`) her görev sonunda yeşil; `pnpm --dir app e2e` Task 15 ve 16'da yeşil. `tsc` `strict`. Tek dosya: `pnpm --dir app exec vitest run ui/<yol>`.
+- Bu plandaki Rust kod blokları `rustfmt` çıktısı değildir: Rust değişen her görevde `--check`'ten önce `cargo fmt --all` koşulur (yalnızca biçim değişir).
 - Rust değişen görevlerde (1, 2, 3, 4, 14, 15): `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo clippy -p store --features specta --all-targets -- -D warnings`, ilgili `cargo test`; MSRV 1.93: `PATH="$HOME/.rustup/toolchains/1.93-aarch64-apple-darwin/bin:$PATH" cargo check -p store -p jyotish-desk --all-targets`.
 - **Toolchain:** `export PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$HOME/.cargo/bin:/opt/homebrew/bin:$PATH"` (oturum başına bir kez; `cargo deny` `~/.cargo/bin`'dedir). Node 24+, pnpm 11.8.0. SE ephemeris yolu 242 baytın altında olmalıdır (kopyada kısa yol, ör. `/Users/ttd/jd-p11`).
 - CI işleri: `deny`, `core-macos`, `core` (ubuntu ve windows; yalnızca crate'ler), `macos-x86_64`, `msrv`. Hiçbiri bu planda değişmez.
@@ -60,7 +65,7 @@ Muhafazakâr seçenek seçildi; her karar bir satır gerekçeyle.
   - **C6** Tek düzen anahtarı ve iki ayrıştırıcıda tek sınır çifti (64 düzen, 48 panel); ayrıştırıcı değişikliği `layout-parity.json`'ı ve iki testi aynı commit'te günceller. Task 1 yazım denetimini ekler ama ayrıştırıcıları değiştirmez.
   - **C7** Kısayollar yalnızca `shortcuts.ts`'e (`matchShortcut` + `SHORTCUT_LIST`) eklenir; Shell'in tek dinleyicisi durur. Task 5 `⌘,` ekler.
   - **C8** Her pencere `shell/Dialog`'u kullanır (ayarlar penceresi dahil).
-  - **C9** Renk yalnızca token'lardan gelir ve tek başına anlam taşımaz; `--warn` metin rengi değildir. Bu planda: fark rozeti işaret + metin; güncel dasa dönemi `aria-current` + "şimdi" metni + kalın kenar; transit etiketi parantez + italik.
+  - **C9** Renk yalnızca token'lardan gelir ve tek başına anlam taşımaz; `--warn` metin rengi değildir. Bu planda: fark rozeti işaret + metin; transit anındaki dasa dönemi `aria-current` + "transit anında" metni + kalın kenar; transit etiketi parantez + italik.
   - **C10** Üretilen dosyalar yukarıdaki komutlarla.
   - **C11** Görsel PNG temelleri yereldir ve yalnızca darwin'dir; harita çizimi değişirse temeller ve SVG anlık görüntüleri aynı commit'te yeniden üretilir. Transit halkası varsayılan kapalıdır: mevcut temeller değişmez (Task 8 bunu doğrular).
   - **C12** Arayüzden ulaşılabilen her yeni `CommandError.code` aynı görevde tr/en/fr metni alır ve `i18n.test.ts` `BACKEND_CODES`'a eklenir (Task 1: `prefs_too_new`).
@@ -101,8 +106,8 @@ app/ui/
   settings/{model.ts, prefs.tsx, saves.ts, SettingsDialog.tsx, settings.css}   (yeni)
   transit/{store.tsx, TransitDate.tsx, TransitTablePanel.tsx, transit.css}      (yeni)
   dasha/{DashaStripPanel.tsx, DashaTreePanel.tsx, dasha.css}
-  birth/{BirthInfoPanel.tsx, BirthForm.tsx, PlaceSearch.tsx, model.ts}
-  chart/{types.ts, ChartSvg.tsx, chart.css}, panels/{ChartPanel.tsx, registry.ts}
+  birth/{BirthForm.tsx, PlaceSearch.tsx, model.ts}
+  chart/{types.ts, ChartSvg.tsx, chart.css}, panels/{ChartPanel.tsx, BirthInfoPanel.tsx, registry.ts}
   shell/{ChartTitle.tsx, TopBar.tsx, Shell.tsx, notices.tsx, TzdbActions.tsx, LayoutPicker.tsx, shell.css}
   session/store.tsx, shortcuts.ts, palette/{items.ts, Palette.tsx}
   clients/{ClientList.tsx, OpenClient.tsx, TagEditor.tsx, DataActions.tsx, clients.css}
@@ -309,7 +314,7 @@ Spec §5 `AppPrefs.schema_version` ve Plan 08 Task 3 bulgusu ("tercih `calc_sett
     }
 ```
 
-`charts.rs` test modülünün `use` satırlarına ekle (yoksa): `use crate::view_state::{Layout, Panel, PanelLayout, ViewState, MAX_LAYOUTS, MAX_PANELS, MAX_VIEW_STATE_BYTES};`. `Panel.y` alanının tipi `u32` değilse (ör. `i64`) `as` dönüşümünü o tipe göre yaz; tip `crates/store/src/view_state.rs`'teki `pub struct Panel`'dadır.
+`charts.rs` test modülündeki `use crate::view_state::{Layout, Panel};` satırını şununla **değiştir** (ikinci bir `use` ekleme: aynı ad iki kez içe aktarılırsa derlenmez; `PanelLayout` ve `ViewState` `use super::*` ile gelir): `use crate::view_state::{Layout, Panel, MAX_LAYOUTS, MAX_PANELS, MAX_VIEW_STATE_BYTES};`. `Panel.y` `u32`'dir.
 
 `app/src-tauri/src/client_commands.rs` `mod tests` içindeki eşleme testinin (`assert_eq!(CommandError::from(StoreError::LastChart).code, "last_chart");` satırının) hemen altına:
 
@@ -793,9 +798,15 @@ mod tests {
 
     use super::*;
 
-    fn engine() -> Engine {
-        let ephe = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ephe");
-        Engine::spawn(ephe).expect("spawn engine")
+    /// Süreçte yalnızca bir SE örneği açılabilir (`EphError::AlreadyOpen`) ve testler paralel
+    /// koşar: bu modülün testleri tek motoru paylaşır (Plan 11 D20). Başka bir lib testi motor
+    /// açmaz; açması gerekirse bu işlevi kullanır.
+    fn engine() -> &'static Engine {
+        static ENGINE: std::sync::OnceLock<Engine> = std::sync::OnceLock::new();
+        ENGINE.get_or_init(|| {
+            let ephe = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ephe");
+            Engine::spawn(ephe).expect("spawn engine")
+        })
     }
 
     /// tests/golden/new-delhi-2000-01-01.json: JD 2451545.0, Ay 199.470529°.
@@ -816,13 +827,13 @@ mod tests {
     #[test]
     fn now_jd_local_and_jd_resolve_to_the_same_moment() {
         let engine = engine();
-        let bhavas = natal(&engine);
+        let bhavas = natal(engine);
         // 2026-11-24T00:00:00Z.
         let now = Timestamp::from_second(1_795_478_400).unwrap();
-        let a = transits_at_blocking(&engine, TransitAt::Now, now, CalcSettings::default(), bhavas.clone(), seed()).unwrap();
+        let a = transits_at_blocking(engine, TransitAt::Now, now, CalcSettings::default(), bhavas.clone(), seed()).unwrap();
         assert_eq!(a.utc, "2026-11-24T00:00:00Z");
         let b = transits_at_blocking(
-            &engine,
+            engine,
             TransitAt::Local {
                 date: "2026-11-24".into(),
                 time: "03:00".into(),
@@ -836,7 +847,7 @@ mod tests {
         .unwrap();
         assert_eq!(b.utc, a.utc);
         assert_eq!(b.snapshot.jd_ut, a.snapshot.jd_ut);
-        let c = transits_at_blocking(&engine, TransitAt::Jd(a.snapshot.jd_ut), now, CalcSettings::default(), bhavas, seed()).unwrap();
+        let c = transits_at_blocking(engine, TransitAt::Jd(a.snapshot.jd_ut), now, CalcSettings::default(), bhavas, seed()).unwrap();
         assert_eq!(c.snapshot, a.snapshot);
         assert_eq!(a.dasha_path.len(), usize::from(TRANSIT_DASHA_DEPTH));
         assert_eq!(a.dasha_path, c.dasha_path);
@@ -845,7 +856,7 @@ mod tests {
     #[test]
     fn local_moments_follow_the_dst_rules() {
         let engine = engine();
-        let bhavas = natal(&engine);
+        let bhavas = natal(engine);
         let now = Timestamp::from_second(1_795_478_400).unwrap();
         let local = |date: &str, time: &str| TransitAt::Local {
             date: date.into(),
@@ -853,7 +864,7 @@ mod tests {
             tz: "Europe/Istanbul".into(),
         };
         // Boşluk: hata ve öneri, sessiz kaydırma yok.
-        let gap = transits_at_blocking(&engine, local("2014-03-31", "03:30"), now, CalcSettings::default(), bhavas.clone(), seed())
+        let gap = transits_at_blocking(engine, local("2014-03-31", "03:30"), now, CalcSettings::default(), bhavas.clone(), seed())
             .unwrap_err();
         assert_eq!(gap.code, "nonexistent_local_time");
         assert_eq!(gap.params["suggestion"], "2014-03-31T04:30:00");
@@ -863,7 +874,7 @@ mod tests {
             time: "02:30".into(),
             tz: "Europe/Berlin".into(),
         };
-        let overlap = transits_at_blocking(&engine, berlin, now, CalcSettings::default(), bhavas.clone(), seed())
+        let overlap = transits_at_blocking(engine, berlin, now, CalcSettings::default(), bhavas.clone(), seed())
             .unwrap();
         assert_eq!(overlap.utc, "2014-10-26T00:30:00Z");
         // Bilinmeyen dilim ve bozuk tarih.
@@ -873,11 +884,11 @@ mod tests {
             tz: "Mars/Olympus".into(),
         };
         assert_eq!(
-            transits_at_blocking(&engine, bad_tz, now, CalcSettings::default(), bhavas.clone(), seed()).unwrap_err().code,
+            transits_at_blocking(engine, bad_tz, now, CalcSettings::default(), bhavas.clone(), seed()).unwrap_err().code,
             "unknown_time_zone"
         );
         assert_eq!(
-            transits_at_blocking(&engine, local("2026-13-01", "03:00"), now, CalcSettings::default(), bhavas, seed())
+            transits_at_blocking(engine, local("2026-13-01", "03:00"), now, CalcSettings::default(), bhavas, seed())
                 .unwrap_err()
                 .params["field"],
             "birth.date"
@@ -887,14 +898,16 @@ mod tests {
     #[test]
     fn bad_jd_is_an_error_not_a_panic() {
         let engine = engine();
-        let bhavas = natal(&engine);
+        let bhavas = natal(engine);
         let now = Timestamp::from_second(1_795_478_400).unwrap();
-        let e = transits_at_blocking(&engine, TransitAt::Jd(f64::INFINITY), now, CalcSettings::default(), bhavas, seed())
+        let e = transits_at_blocking(engine, TransitAt::Jd(f64::INFINITY), now, CalcSettings::default(), bhavas, seed())
             .unwrap_err();
         assert!(["invalid_julian_day", "invalid_transit_input"].contains(&e.code.as_str()), "{}", e.code);
     }
 }
 ```
+
+Not: `engine()` `&'static Engine` döner; testler onu `engine` olarak doğrudan geçirir (`&engine` değil). `Engine` `Send + Sync`'tir (`crates/ephemeris/src/engine.rs`).
 
 Not: `Europe/Berlin`'de 2014-10-26 02:30 iki kez yaşandı (03:00 CEST → 02:00 CET); önceki an `+02:00` ofsetlidir, UTC `00:30`. İstanbul boşluğu (2014-03-31 03:30 → öneri 04:30) `tests/open_client.rs`'te doğrulanmış değerdir. (İstanbul'un 2014 güz geçişi seçim nedeniyle 9 Kasım'a ertelendiği için örtüşme testi Berlin'le yapılır.)
 
@@ -1264,7 +1277,7 @@ ve `assert!(after.warnings.is_empty());` satırının altına:
     let prefs = store.lock().expect("store").app_prefs_load().expect("prefs");
 ```
 
-ve `json!`'a `"prefs": prefs,` ekle. (`delhi()` zaten kanonik biçimdedir: `2000-01-01`, `17:30`, IANA dilimi; eşitlik düşerse farkı yazdır ve fikstür girdisini kanonik biçime getir, kanonikleştirmeyi değiştirme.)
+ve `json!`'a `"prefs": prefs,` ekle. Aynı dosyadaki `delhi()` içinde `time: Some("17:30".into()),` satırını `time: Some("17:30:00".into()),` yap: store saati jiff'in kanonik biçiminde saklar (`17:30:00`; fikstürdeki `"time":"17:30:00"` bunu gösterir) ve eşitlik ancak kanonik girdiyle tutar. Üretilen fikstür bu değişiklikle değişmez (çıktı zaten kanoniktir). Kanonikleştirmeye dokunma.
 
 `app/ui/api.test.ts`: sarmalayıcı iletim testinin (her `api` anahtarının aynı adlı `commands` işlevine argümanları ilettiğini denetleyen test) `vi.mock("./bindings", …)` taklit listesine `getAppPrefs`, `setAppPrefs`, `saveCalcSettings`, `updateClient`, `transitsAt`, `keepStoredMoment` ekle; beklenen anahtar listesi varsa aynılarını ekle. Dosyada beklenen anahtarlar `Object.keys(api)` ile karşılaştırılıyorsa yeni anahtarlar kendiliğinden kapsanır; taklit edilmeyen komut testi `commands.X is not a function` ile düşürür (Step 2'de görülecek hata budur).
 
@@ -1522,7 +1535,7 @@ Spec §4 "Ayar katmanları": açık haritanın ayarı düzenlenir ve harita Rust
   - `Boot.prefs: PrefsLoad | null`, `Boot.prefsError: CommandError | null`
   - `Command` `{ id: "settings" }`, `ShortcutInfo.id` `"settings"`, `PaletteCommand` `"settings"`
   - `RenderOptions.prefs?: AppPrefs | null` (varsayılan `fixture().prefs.prefs`)
-  - i18n: `settings.*`, `shortcuts.settings`, `palette.command.settings`, `notice.settingsSaveFailed`, `notice.prefsLoadFailed`, `topbar.settings`
+  - i18n: `settings.*` (üst çubuk düğmesi `settings.open`), `shortcuts.settings`, `palette.command.settings`, `notice.settingsSaveFailed`, `notice.prefsLoadFailed`
 
 - [ ] **Step 1: Başarısız testleri yaz**
 
@@ -1590,7 +1603,8 @@ afterEach(() => {
 
 function Probe() {
   const { opened } = useSession();
-  return <output data-testid="node">{opened?.calc_settings.node}</output>;
+  // `<output>` örtük `role="status"` taşır ve pencerenin durum satırıyla karışır; `<span>` kullanılır.
+  return <span data-testid="node">{opened?.calc_settings.node}</span>;
 }
 
 function openedWith(patch: Partial<CalcSettings>): OpenedClient {
@@ -2273,7 +2287,7 @@ export function App({ boot = EMPTY_BOOT, persistence }: { boot?: Boot; persisten
 
 `app/ui/test/render.tsx`: `RenderOptions`'a `prefs?: AppPrefs | null;` ekle (yorum: `/** Varsayılan: fikstürün tercihleri. */`), tip içe aktarımına `AppPrefs`, `import { PrefsProvider } from "../settings/prefs";`; imzayı `{ opened = fixture().opened, layout = null, debounceMs = 0, prefs = fixture().prefs.prefs }` yap ve `NoticeProvider`'ın hemen içine `<PrefsProvider initial={prefs}>…</PrefsProvider>` sar.
 
-Testlerde `App`'i doğrudan çizen dosyalar (`App.test.tsx`) `Boot` nesnesini elle kuruyorsa yeni alanları ekle: `{ ...EMPTY_BOOT, … }` kullanılıyorsa değişiklik gerekmez; nesne açıkça yazılıyorsa `prefs: null, prefsError: null` ekle (tsc bunu gösterir).
+`app/ui/App.test.tsx` `renderApp` içindeki `Boot` nesnesi açıkça yazılıdır; yeni alanları ekle: `const full: Boot = { layout: null, layoutError: null, prefs: null, prefsError: null, opened: fixture().opened, error: null, ...boot };` (eklenmezse `pnpm --dir app build` içindeki `tsc` düşer).
 
 `app/ui/shortcuts.ts`: `Command` birliğine `| { id: "settings" }`; `ShortcutInfo.id`'e `"settings"`; `SHORTCUT_LIST`'te `editChart` satırının altına `{ id: "settings", keys: "⌘," },`; `matchShortcut` içinde `if (e.code === "Backslash" …` satırının altına:
 
@@ -2352,7 +2366,7 @@ i18n — `app/ui/i18n/tr.ts` (üst düzey, `data`'nın altına):
   },
 ```
 
-`shortcuts` içine `settings: "Ayarlar",`; `palette.command` içine `settings: "Ayarlar",`; `notice` içine:
+`shortcuts` içine, **`editChart` satırının hemen altına** `settings: "Ayarlar",` (`shortcuts.test.ts` `tr.shortcuts` anahtar sırasını `SHORTCUT_LIST` sırasıyla karşılaştırır; sona eklenirse test düşer; `en.ts` ve `fr.ts`'te de aynı yere); `palette.command` içine `settings: "Ayarlar",`; `notice` içine:
 
 ```ts
     settingsSaveFailed: "Ayarlar kaydedilemedi: {{message}}",
@@ -2587,12 +2601,11 @@ test("a failed decision keeps the band and reports the error", async () => {
 });
 ```
 
-`app/ui/App.test.tsx` sonuna (dosyadaki `App` çizim biçimini kullan; `EMPTY_BOOT` içe aktarılıyorsa):
+`app/ui/App.test.tsx` sonuna (dosyanın `renderApp` yardımcısıyla; bellek içi kalıcılık kullanır):
 
 ```tsx
 test("preference warnings from boot are shown in the notice bar", () => {
-  const prefs = fixture().prefs;
-  render(<App boot={{ ...EMPTY_BOOT, prefs: { ...prefs, warnings: [{ TooNew: { found: 2 } }] } }} />);
+  renderApp({ opened: null, prefs: { ...fixture().prefs, warnings: [{ TooNew: { found: 2 } }] } });
   expect(screen.getByText(/Tercihler daha yeni bir uygulama sürümüyle kaydedilmiş \(sürüm 2\)/)).toBeInTheDocument();
 });
 ```
@@ -2864,7 +2877,7 @@ UI spec §3.3 `transit_table` ("tarih, varsayılan: şimdi"). `TransitProvider` 
 - Create: `app/ui/transit/store.tsx`, `app/ui/transit/store.test.tsx`
 - Create: `app/ui/transit/TransitDate.tsx`
 - Create: `app/ui/transit/TransitTablePanel.tsx`, `app/ui/transit/TransitTablePanel.test.tsx`, `app/ui/transit/transit.css`
-- Modify: `app/ui/panels/registry.ts`
+- Modify: `app/ui/panels/registry.ts`, `app/ui/panels/panels.test.tsx` (kayıt testi)
 - Modify: `app/ui/App.tsx`, `app/ui/test/render.tsx`
 - Modify: `app/ui/i18n/{tr,en,fr}.ts`
 
@@ -3347,6 +3360,8 @@ Create `app/ui/transit/transit.css`:
 
 `app/ui/panels/registry.ts`: `import { TransitTablePanel } from "../transit/TransitTablePanel";` ve `transit_table: { titleKey: "panel.transit_table", component: TransitTablePanel },`.
 
+`app/ui/panels/panels.test.tsx` kayıt testi (`"registry covers the seven kinds; …"`) bugün `["dasha_strip", "transit_table", "birth_info"]` türlerinin `UnavailablePanel` olmasını bekler. Döngü listesinden `"transit_table"`'ı çıkar (`["dasha_strip", "birth_info"]`), `import { TransitTablePanel } from "../transit/TransitTablePanel";` ekle ve döngünün altına `expect(PANEL_REGISTRY.transit_table.component).toBe(TransitTablePanel);` yaz.
+
 `app/ui/App.tsx`: `import { TransitProvider } from "./transit/store";`; `Stores` dönüşünde `<SessionProvider initial={boot.opened}><TransitProvider>{children}</TransitProvider></SessionProvider>`.
 
 `app/ui/test/render.tsx`: aynı biçimde `SessionProvider`'ın içine `<TransitProvider>` sar.
@@ -3405,7 +3420,7 @@ i18n — `tr.ts`:
 pnpm --dir app exec vitest run ui/transit ui/panels
 pnpm --dir app test && pnpm --dir app build
 ```
-Expected: `transit/store.test.tsx` 4, `transit/TransitTablePanel.test.tsx` 4 geçer; `panels.test.tsx` yeşil (kayıt testi `transit_table`'ın artık `UnavailablePanel` olmadığını denetliyorsa aynı commit'te beklentiyi `TransitTablePanel`'e çevir); toplam `Test Files  49 passed (49)`, `Tests  389 passed (389)`; build `✓ built`.
+Expected: `transit/store.test.tsx` 4, `transit/TransitTablePanel.test.tsx` 4 geçer; `panels.test.tsx` yeşil (kayıt testinin beklentisi Step 3'te `TransitTablePanel`'e çevrildi); toplam `Test Files  49 passed (49)`, `Tests  389 passed (389)`; build `✓ built`.
 
 - [ ] **Step 5: Commit**
 
@@ -3703,7 +3718,7 @@ Görüşme düzeni (varsayılan) `dasha_strip` içerir: şerit artık `transits_
 **Files:**
 - Create: `app/ui/dasha/DashaStripPanel.tsx`, `app/ui/dasha/DashaStripPanel.test.tsx`
 - Modify: `app/ui/dasha/DashaTreePanel.tsx`, `app/ui/dasha/DashaTreePanel.test.tsx`, `app/ui/dasha/dasha.css`
-- Modify: `app/ui/panels/registry.ts`
+- Modify: `app/ui/panels/registry.ts`, `app/ui/panels/panels.test.tsx` (kayıt testi)
 - Modify: `app/ui/App.test.tsx`, `app/ui/dashboard/Dashboard.test.tsx` (taklit)
 - Modify: `app/e2e/ipc.ts` (`transits_at`)
 - Modify: `app/ui/i18n/{tr,en,fr}.ts`
@@ -3787,7 +3802,7 @@ test("an empty lazily loaded level is an error with a retry, not a silent empty 
   vi.mocked(api.dashaChildren).mockResolvedValueOnce({ status: "ok", data: [] });
   const opened = fixture().opened;
   opened.view_state.dasha_expanded_path = fixture().dasha_children.path;
-  renderWithStores(<DashaTreePanel panel={treePanel} />, { opened });
+  renderWithStores(<DashaTreePanel panel={panel} />, { opened });
   expect(await screen.findByText("Bu dönemin alt dönemleri alınamadı.")).toBeInTheDocument();
   vi.mocked(api.dashaChildren).mockResolvedValueOnce({ status: "ok", data: fixture().dasha_children.periods });
   fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
@@ -3795,7 +3810,7 @@ test("an empty lazily loaded level is an error with a retry, not a silent empty 
 });
 ```
 
-(`treePanel` dosyadaki dasa ağacı paneli değişkeninin adıdır; farklıysa onu kullan.)
+(`panel` dosyanın başındaki dasa ağacı paneli sabitidir; `fixture`, `renderWithStores`, `screen`, `fireEvent`, `waitFor` zaten içe aktarılıdır.)
 
 - [ ] **Step 2: Testlerin düştüğünü gör**
 
@@ -3839,10 +3854,10 @@ export function DashaStripPanel({ panel }: PanelProps) {
   const { setPanelSettings } = useLayoutStore();
   const id = useId();
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
-  return <Strip panelId={panel.id} level={stripLevel(panel.settings)} id={id} onLevel={(level) => setPanelSettings(panel.id, { level })} />;
+  return <Strip level={stripLevel(panel.settings)} id={id} onLevel={(level) => setPanelSettings(panel.id, { level })} />;
 }
 
-function Strip({ level, id, onLevel }: { panelId: string; level: StripLevel; id: string; onLevel(level: StripLevel): void }) {
+function Strip({ level, id, onLevel }: { level: StripLevel; id: string; onLevel(level: StripLevel): void }) {
   const { t } = useTranslation();
   const { opened } = useSession();
   const transit = useTransit();
@@ -3963,6 +3978,8 @@ function Strip({ level, id, onLevel }: { panelId: string; level: StripLevel; id:
 
 `app/ui/panels/registry.ts`: `import { DashaStripPanel } from "../dasha/DashaStripPanel";` ve `dasha_strip: { titleKey: "panel.dasha_strip", component: DashaStripPanel },`.
 
+`app/ui/panels/panels.test.tsx` kayıt testinde (Task 7'den sonra döngü listesi `["dasha_strip", "birth_info"]`'dur) listeden `"dasha_strip"`'i çıkar (`["birth_info"]`), `import { DashaStripPanel } from "../dasha/DashaStripPanel";` ekle ve `expect(PANEL_REGISTRY.dasha_strip.component).toBe(DashaStripPanel);` yaz. Aynı dosyada `UnavailablePanel`'i `kind: "dasha_strip"` ile doğrudan çizen test değişmez (bileşeni dener, kaydı değil).
+
 `app/ui/App.test.tsx` ve `app/ui/dashboard/Dashboard.test.tsx` `vi.mock(…api…)` nesnelerine:
 
 ```ts
@@ -4003,7 +4020,7 @@ pnpm --dir app test && pnpm --dir app build
 pnpm --dir app e2e
 rm -rf app/test-results
 ```
-Expected: `DashaStripPanel.test.tsx` 5, ağaç +1 geçer; panel kayıt testi `dasha_strip` beklentisini aynı commit'te `DashaStripPanel`'e çevirir; toplam `Test Files  50 passed (50)`, `Tests  399 passed (399)`; build `✓ built`; e2e `6 passed` (şerit taklitten `transits_at` alır).
+Expected: `DashaStripPanel.test.tsx` 5, ağaç +1 geçer; panel kayıt testi Step 3'teki beklentiyle yeşil; toplam `Test Files  50 passed (50)`, `Tests  399 passed (399)`; build `✓ built`; e2e `6 passed` (şerit taklitten `transits_at` alır).
 
 - [ ] **Step 5: Commit**
 
@@ -4071,7 +4088,8 @@ test("shows the stored birth data and the moment Rust resolved", () => {
   expect(value("tzdb sürümü")).toBe("2026f");
   expect(value("Cinsiyet")).toBe("Belirtilmemiş");
   expect(value("Harita türü")).toBe("Doğum haritası");
-  expect(screen.queryByRole("term", { name: "Kaynak notu" })).toBeNull();
+  // `term` rolünün adı içeriğinden gelmez: ada göre sorgu her zaman boş dönerdi. Metne bakılır.
+  expect(screen.getAllByRole("term").map((d) => d.textContent)).not.toContain("Kaynak notu");
   expect(screen.getByText("Uyarı yok.")).toBeInTheDocument();
 });
 
@@ -5252,7 +5270,8 @@ function Approx({ on, label, children }: { on: boolean; label: string; children:
 
 ```tsx
   // Devre dışı öğeler de odaklanır (WAI-ARIA menü deseni); nedenleri `aria-describedby`'dadır.
-  const menuItems = () => [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])];
+  // Gerçekten `disabled` olan öğe (kullanıcı düzeninde "Varsayılana döndür") odak alamaz; gezintiye girmez (D22).
+  const menuItems = () => [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])];
 ```
 
 `runItem`'in yanına:
@@ -5775,8 +5794,11 @@ Bileşen imzasına `discardWhenEmpty` ekle. `flush`'ın altına:
     now.deleted = true;
     if (now.timer) clearTimeout(now.timer);
     now.timer = null;
-    // Sessiz silme: odak kullanıcının gittiği yerde kalır (onaylı silmeden farklı olarak).
-    void onDelete(note, true);
+    // Sessiz silme: odak kullanıcının gittiği yerde durur (onaylı silmeden farklı olarak).
+    // Silinemezse not listede durur; `deleted` geri alınır ki sonraki yazım kaydedilsin.
+    void onDelete(note, true).then((ok) => {
+      if (!ok) now.deleted = false;
+    });
   };
   const discardRef = useRef({ discardable, discard });
   discardRef.current = { discardable, discard };
@@ -6010,7 +6032,7 @@ Plan 10 madde 13 (Plan 11 parçaları), 17, 22, 23 (Rust parçaları), 24 ve m4,
 - Produces:
   - `pub struct ExportResult { pub file: String, pub bytes: u32, pub over_import_limit: bool }` (Rust ve bağlama); `export_clients_json`/`export_clients_csv` → `Result<Option<ExportResult>, CommandError>`
   - `fn io_detail(kind: ErrorKind) -> &'static str` (modül içi)
-  - `pub const MAX_IMPORT_WARNINGS: usize = 100` (`store`); `ImportReport.warnings_total: u32` (`#[serde(default)]`); `ImportReport::warn(&mut self, w: ImportWarning)`
+  - `pub const MAX_IMPORT_WARNINGS: usize = 100` (`store`); `ImportReport.warnings_total: u32` (`serde(default)` yok, D21; `ImportReport` `Default` türettiği için `..Default::default()` kuran yerler değişmez); `ImportReport::warn(&mut self, w: ImportWarning)`
   - `export_json_file_blocking(...) -> Result<usize, CommandError>`, `export_csv_file_blocking(...) -> Result<usize, CommandError>` (yazılan bayt)
   - i18n `errors.fileIoDetail.{not_found,permission_denied,already_exists,invalid_input,invalid_data,storage_full,other}`, `data.exportedOverLimit`
 
@@ -6250,8 +6272,8 @@ pub const MAX_IMPORT_WARNINGS: usize = 100;
 
 ```rust
     pub warnings: Vec<ImportWarning>,
-    /// Bütün uyarıların sayısı; `warnings` ilk `MAX_IMPORT_WARNINGS` tanesidir.
-    #[serde(default)]
+    /// Bütün uyarıların sayısı; `warnings` ilk `MAX_IMPORT_WARNINGS` tanesidir. `serde(default)`
+    /// yoktur: IPC tiplerinde faz farkı yaratan öznitelik kullanılmaz (`specta_builder`, D21).
     pub warnings_total: u32,
 }
 
@@ -6320,14 +6342,18 @@ ve işlevin altına:
 /// Taşımanın kendisi de diske yazılsın (Unix: klasör girdisi). Yalnızca dayanıklılıktır: dosya
 /// zaten yerindedir, hata yok sayılır.
 fn sync_parent(path: &Path) {
+    // Öznitelik `if` ifadesine doğrudan yazılamaz (derlenmez); blok sarılır.
     #[cfg(unix)]
-    if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
-        if let Ok(d) = File::open(dir) {
+    {
+        let dir = path.parent().filter(|d| !d.as_os_str().is_empty());
+        if let Some(Ok(d)) = dir.map(File::open) {
             let _ = d.sync_all();
         }
     }
     #[cfg(not(unix))]
-    let _ = path;
+    {
+        let _ = path;
+    }
 }
 ```
 
@@ -6953,7 +6979,7 @@ Expected: `Test Files  53 passed (53)`, `Tests  441 passed (441)`; build `✓ bu
 - [ ] **Step 4: Kural taramaları (`6d48791`'den bu yana)**
 
 ```bash
-git diff 6d48791..HEAD -U0 | grep '^+' | grep -v '^+++' | grep -inE 'k(a|ā|aa)la|\bcala\b'
+git diff 6d48791..HEAD -U0 -- . ':(exclude)docs/superpowers/plans' | grep '^+' | grep -v '^+++' | grep -inE 'k(a|ā|aa)la|\bcala\b'
 git log 6d48791..HEAD --format=%B | grep -inE 'k(a|ā|aa)la|\bcala\b'
 git diff 6d48791..HEAD --name-only | grep -inE 'k(a|ā|aa)la|\bcala\b'
 git diff 6d48791..HEAD --name-only | grep -vE '^(app|crates|docs)/'
@@ -6964,7 +6990,7 @@ grep -n '"dialog:\|"fs:' app/src-tauri/capabilities/*.json
 grep -rn 'tauri_plugin_fs' app/src-tauri/src
 git diff 6d48791..HEAD -U0 -- app/ui | grep '^+' | grep -E '\b(alert|confirm|prompt)\('
 ```
-Expected: `trailers:` satırındaki iki sayı eşit; bunun dışındaki her komut çıktısızdır. (`grep` çıktısız olunca 1 ile çıkar; beklenen budur.) Kural metninin kendisi bu planın dosyasındadır, kodda değil: ilk üç tarama boş döner.
+Expected: `trailers:` satırındaki iki sayı eşit; bunun dışındaki her komut çıktısızdır. (`grep` çıktısız olunca 1 ile çıkar; beklenen budur.) Kural metninin kendisi bu planın dosyasındadır ve dosya `6d48791`'den sonra commit edilmiştir; ilk tarama bu yüzden plan klasörünü dışarıda tutar (D23). `trailers`/`commits` sayımı plan commit'lerini de kapsar; onlar da aynı satırla biter.
 
 - [ ] **Step 5: Elle denetim kapısı (`pnpm --dir app tauri dev`)**
 
@@ -6972,11 +6998,11 @@ Gerçek uygulamada, deneme danışanlarıyla (gerçek danışan verisi kullanıl
 
 - [ ] `⌘,` ayarlar penceresini açar; macOS uygulama menüsündeki "Settings…" (varsa) aynı pencereyi açar ya da hiç tepki vermez, iki pencere açılmaz.
 - [ ] Ayanamsa değiştirilince harita yeniden hesaplanır (Lagna derecesi değişir), 500 ms içinde kaydedilir; uygulama kapanıp açılınca değişiklik durur.
-- [ ] Haritanın ayarı varsayılandan farklıyken üst çubukta "Ayar farkı" rozeti görünür; "Varsayılana döndür" haritayı geri hesaplar, "Varsayılan yap" yeni haritaların ayarını değiştirir ve rozet kaybolur.
-- [ ] tzdb sürümü farklı bir harita (eski bir yedekten içe aktarılmış) açılınca bant görünür; "Güncelle" anı yeniler, "Saklanan anı koru" bandı kapatır ve bir dahaki açılışta bant yine gelmez.
+- [ ] Haritanın ayarı varsayılandan farklıyken üst çubukta "Ayar farkı" rozeti görünür; "Varsayılana döndür" haritayı geri hesaplar, "Bunu varsayılan yap" yeni haritaların ayarını değiştirir ve rozet kaybolur.
+- [ ] tzdb sürümü farklı bir harita (eski bir yedekten içe aktarılmış) açılınca bant görünür; "Yeni zamanı kabul et" anı yeniler, "Saklanan zamanı koru" bandı kapatır ve bir dahaki açılışta bant yine gelmez.
 - [ ] Transit düzeninde (`⌘3`) "Şimdi" saatin yerel zamanını gösterir; seçilen tarih uygulanınca tablo değişir; uygulama yeniden açılınca transit tarihi "Şimdi"ye döner (D8).
 - [ ] Harita panelinde transit halkası açılıp kapanır, yalnızca D1'de görünür; açık durumu uygulama yeniden açılınca korunur.
-- [ ] Dasa şeridinde güncel dönem "şimdi" metniyle işaretlidir; bir döneme tıklamak transit anını o dönemin başlangıcına taşır.
+- [ ] Dasa şeridinde transit anını içeren dönem "transit anında" metniyle işaretlidir; bir döneme tıklamak transit anını o dönemin başlangıcına taşır.
 - [ ] `birth_info` paneli doğum anını, dilimi, ofseti ve tzdb sürümünü gösterir; uyarı rozetlerinin açıklaması okunur.
 - [ ] Danışan düzenleme formunda cinsiyet değişikliği kaydedilir ve kenar çubuğunda görünür.
 - [ ] VoiceOver: belirsiz yerel saatte iki seçenek "radio group" olarak ve hatası ile duyurulur; geçersiz kayıtta odak ilk hatalı alana gider ve hata özeti okunur.
@@ -7037,7 +7063,7 @@ Boşluk yok; kapsam dışı maddeler yukarıda listelidir.
 
 **3. Tip tutarlılığı.**
 - `ExportResult { file, bytes: u32, over_import_limit }` Task 14'te Rust'ta tanımlanır, `bindings.ts`'e üretilir, `DataActions.tsx` ve testi aynı adları kullanır.
-- `ImportReport.warnings_total: u32` Rust'ta `#[serde(default)]`'tur; arayüz bildirimi ve `DataActions.test.tsx` `report` sabiti bu alanı taşır.
+- `ImportReport.warnings_total: u32` Rust'ta düz bir alandır (`serde(default)` yok, D21) ve bağlamada `number`'dır; arayüz bildirimi ve `DataActions.test.tsx` `report` sabiti bu alanı taşır.
 - `file_io.detail` kodları (`not_found`, `permission_denied`, `already_exists`, `invalid_input`, `invalid_data`, `storage_full`, `other`) D16, `io_detail`, `errors.fileIoDetail` (tr/en/fr) ve `i18n.test.ts`'te aynıdır.
 - e2e taklitleri: `get_app_prefs`, `set_app_prefs`, `save_calc_settings` (Task 5, `Chart` döner), `transits_at` (Task 9), `keep_stored_moment`, `update_client` ve gerçekçi etiket taklidi (Task 15); komut bağımsız değişken adları (`chartId`, `clientId`, `tag`, `limit`, `tags`) `bindings.ts`'in camelCase biçimidir.
 - i18n anahtarları: `settings.*` ("Hesap ayarları", "Ayanamsa", "Ayar farkı") Task 5–6, `transit.*` ("Tarih", "Saat", "Uygula", "Şimdi") Task 7, `birthInfo.*` ve `gender.*` Task 10, `data.working` Task 12, `notes.atLimit` Task 13, `data.exportedOverLimit` Task 14; e2e ve Vitest testleri aynı metinleri arar.
