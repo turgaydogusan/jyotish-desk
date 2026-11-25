@@ -125,10 +125,22 @@ fn clip(text: &str) -> String {
     }
 }
 
+/// Store kilidi. Kilidi tutan bir iş panik ettiyse (`blocking` bunu `task_failed` olarak
+/// bildirir) kilit zehirlenir; sonraki çağrı bağlantıyı toparlar (`Store::recover`) ve zehri
+/// kaldırır, böylece tek bir panik uygulamayı kapanana dek kullanılmaz bırakmaz (Plan 08
+/// ertelenen madde 11). Toparlama başarısızsa kilit zehirli durur ve `store_unavailable` döner.
 pub(crate) fn lock(store: &Mutex<Store>) -> Result<std::sync::MutexGuard<'_, Store>, CommandError> {
-    store
-        .lock()
-        .map_err(|_| CommandError::new("store_unavailable", &[]))
+    match store.lock() {
+        Ok(guard) => Ok(guard),
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            guard
+                .recover()
+                .map_err(|_| CommandError::new("store_unavailable", &[]))?;
+            store.clear_poison();
+            Ok(guard)
+        }
+    }
 }
 
 /// `open_client` gövdesi: kayıt (store kilidi kısa tutulur), sonra motor iş parçacığında
@@ -360,6 +372,21 @@ mod tests {
         let e = tauri::async_runtime::block_on(blocking::<()>(|| panic!("Ayşe"))).unwrap_err();
         assert_eq!(e.code, "task_failed");
         assert!(e.params.is_empty());
+    }
+
+    #[test]
+    fn a_poisoned_store_lock_is_recovered_on_the_next_call() {
+        let store: StoreState = Arc::new(Mutex::new(Store::open_in_memory().unwrap()));
+        let held = Arc::clone(&store);
+        let _ = std::thread::spawn(move || {
+            let _guard = held.lock().unwrap();
+            panic!("job failed while holding the store");
+        })
+        .join();
+        assert!(store.is_poisoned());
+        let prefs = lock(&store).unwrap().app_prefs().unwrap();
+        assert_eq!(prefs, store::AppPrefs::default());
+        assert!(!store.is_poisoned());
     }
 
     #[test]

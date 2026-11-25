@@ -130,7 +130,8 @@ pub fn search_places_blocking(
     }
     let places = atlas
         .lock()
-        .map_err(|_| CommandError::new("atlas_unavailable", &[("reason", "io".to_owned())]))?
+        // Atlas salt okunurdur: zehirli kilit veriyi bozmuş olamaz, arama sürer.
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .search(&query, limit)?;
     Ok(places
         .into_iter()

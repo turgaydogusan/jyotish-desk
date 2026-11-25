@@ -72,6 +72,17 @@ impl Store {
         format_ts(Timestamp::from_millisecond(ms).unwrap_or(Timestamp::MAX))
     }
 
+    /// Yarıda kesilmiş bir işin ardından bağlantıyı kullanılır duruma getirir: açık bir işlem
+    /// varsa geri alınır. `Mutex<Store>` bir panikle zehirlendiğinde çağrılır (Plan 08 ertelenen
+    /// madde 11). Bu crate'in işlemleri `rusqlite::Transaction` ile açılır ve panikte kendiliğinden
+    /// geri alınır; buradaki denetim, bağlantının gerçekten işlem dışında olduğunu garanti eder.
+    pub fn recover(&mut self) -> Result<(), StoreError> {
+        if !self.conn.is_autocommit() {
+            self.conn.execute_batch("ROLLBACK")?;
+        }
+        Ok(())
+    }
+
     /// Veritabanının şema sürümü (`PRAGMA user_version`).
     pub fn schema_version(&self) -> Result<usize, StoreError> {
         let v: i64 = self
@@ -157,6 +168,19 @@ mod tests {
         assert_eq!(s.now(), "2025-11-24T16:00:00.000Z");
         assert_eq!(s.now(), "2025-11-24T16:00:00.001Z");
         assert_eq!(s.now(), "2025-11-24T16:00:00.002Z");
+    }
+
+    #[test]
+    fn recover_rolls_back_an_open_transaction_and_is_a_no_op_otherwise() {
+        let mut s = store();
+        s.recover().unwrap();
+        s.conn
+            .execute_batch("BEGIN; INSERT INTO app_state (key, value_json) VALUES ('half', '1');")
+            .unwrap();
+        assert!(!s.conn.is_autocommit());
+        s.recover().unwrap();
+        assert!(s.conn.is_autocommit());
+        assert_eq!(s.app_state_get("half").unwrap(), None);
     }
 
     #[test]

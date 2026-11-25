@@ -1,6 +1,7 @@
 pub mod atlas_commands;
 pub mod client_commands;
 pub mod commands;
+pub mod data_dir;
 pub mod store_commands;
 pub mod transit_commands;
 
@@ -74,8 +75,11 @@ pub fn run() {
             // Danışan veritabanı: ~/Library/Application Support/<identifier>/. Açılamazsa
             // (ör. daha yeni bir sürümün veritabanı) setup hatası, motorla aynı yol.
             let data_dir = app.path().app_data_dir()?;
-            std::fs::create_dir_all(&data_dir)?;
-            let db = store::Store::open(&data_dir.join(client_commands::DB_FILE_NAME))?;
+            // Klasör 0700, veritabanı dosyaları 0600 (Plan 08 ertelenen madde 10).
+            data_dir::prepare(&data_dir)?;
+            let db_path = data_dir.join(client_commands::DB_FILE_NAME);
+            let db = store::Store::open(&db_path)?;
+            data_dir::restrict_db_files(&db_path)?;
             let state: client_commands::StoreState = Arc::new(Mutex::new(db));
             app.manage(state);
             // Atlas ölümcül değildir: açılamazsa yer araması `atlas_unavailable` döner, elle
