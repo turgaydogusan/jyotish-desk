@@ -1,0 +1,27 @@
+[package]
+name = "store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[features]
+# Uygulama katmanı TS tipleri üretmek için açar (tauri-specta).
+specta = ["dep:specta", "dep:specta-typescript", "jyotish-core/specta"]
+
+[dependencies]
+atlas = { path = "../atlas" }
+jyotish-core = { path = "../jyotish-core" }
+rusqlite = { version = "0.43", features = ["bundled"] }
+rusqlite_migration = "=2.9.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+specta = { version = "=2.0.0-rc.28", features = ["derive"], optional = true }
+# Yalnızca `Panel.settings` tip geçersiz kılması için (`unknown`; serde_json::Value i64 içerir).
+specta-typescript = { version = "0.0.15", optional = true }
+thiserror.workspace = true
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }

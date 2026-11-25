@@ -2858,6 +2858,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusqlite_migration"
+version = "2.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ebdcf690caa87fbe286387def857714dd5582121df5bc1e985cbc8bba3bbb7b"
+dependencies = [
+ "log",
+ "rusqlite",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3353,6 +3363,23 @@ name = "static_vcruntime"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff7589a1859b09232522bb9edf076ca7fcf14ded96685d3fa629db73023ffbb7"
+
+[[package]]
+name = "store"
+version = "0.1.0"
+dependencies = [
+ "atlas",
+ "jyotish-core",
+ "proptest",
+ "rusqlite",
+ "rusqlite_migration",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-typescript",
+ "thiserror 2.0.21",
+ "uuid",
+]
 
 [[package]]
 name = "string_cache"

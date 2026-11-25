@@ -29,7 +29,7 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: rustup toolchain install 1.93 --profile minimal
-      - run: cargo +1.93 check -p jyotish-desk --all-targets
+      - run: cargo +1.93 check -p store -p jyotish-desk --all-targets
 
   core:
     name: core (${{ matrix.os }})
@@ -45,8 +45,8 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      - run: cargo clippy -p ephemeris -p atlas -p jyotish-core --all-targets -- -D warnings
-      - run: cargo test -p ephemeris -p atlas -p jyotish-core
+      - run: cargo clippy -p ephemeris -p atlas -p jyotish-core -p store --all-targets -- -D warnings
+      - run: cargo test -p ephemeris -p atlas -p jyotish-core -p store
 
   macos-x86_64:
     runs-on: macos-15
@@ -80,4 +80,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.93
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check -p ephemeris -p atlas -p jyotish-core --all-targets
+      - run: cargo check -p ephemeris -p atlas -p jyotish-core -p store --all-targets
