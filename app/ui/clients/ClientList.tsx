@@ -32,6 +32,7 @@ export function ClientList() {
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("");
   const [tags, setTags] = useState<TagCount[]>([]);
+  const [tagsError, setTagsError] = useState<CommandError | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<CommandError | null>(null);
   const [retry, setRetry] = useState(0);
@@ -42,7 +43,18 @@ export function ClientList() {
   const rowsRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
-    void api.listTags().then((r) => r.status === "ok" && setTags(r.data));
+    let live = true;
+    void api.listTags().then((r) => {
+      if (!live) return;
+      if (r.status === "error") return setTagsError(r.error);
+      setTagsError(null);
+      setTags(r.data);
+      // Seçili etiket artık hiçbir haritada yoksa süzgeç "Tüm etiketler"e döner.
+      setTag((current) => (current !== "" && !r.data.some((tc) => tc.name === current) ? "" : current));
+    });
+    return () => {
+      live = false;
+    };
   }, [session.revision]);
 
   useEffect(() => {
@@ -130,6 +142,11 @@ export function ClientList() {
             </option>
           ))}
         </select>
+        {tagsError && (
+          <p className="sidebar-error" role="alert">
+            {t("clients.tagsFailed", { message: errorMessage(t, i18n, tagsError) })}
+          </p>
+        )}
       </div>
       <h2 id={`${id}-heading`} className="sidebar-heading">
         {heading}

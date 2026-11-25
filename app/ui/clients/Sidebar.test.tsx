@@ -311,3 +311,62 @@ test("after deleting a chart focus goes to the client heading, after deleting th
   fireEvent.click(within(screen.getByRole("dialog", { name: "Danışan silinsin mi?" })).getByRole("button", { name: "Danışanı sil" }));
   await waitFor(() => expect(document.activeElement).toBe(within(sidebar()).getByRole("searchbox", { name: "Danışan ara" })));
 });
+
+test("a tag filter whose tag disappeared falls back to all tags; a tag list error is shown", async () => {
+  vi.mocked(api.listTags).mockResolvedValue(ok([{ name: "Kariyer", charts: 1 }]));
+  vi.mocked(api.listClientsByTag).mockResolvedValue(ok([ayse]));
+  let touch: () => void = () => {};
+  function Toucher() {
+    touch = useSession().touch;
+    return null;
+  }
+  renderWithStores(
+    <>
+      <Toucher />
+      <Sidebar onAddChart={onAddChart} />
+    </>,
+    { opened: opened() },
+  );
+  const filter = await within(sidebar()).findByRole("combobox", { name: "Etiket" });
+  await within(filter).findByRole("option", { name: "Kariyer (1)" });
+  fireEvent.change(filter, { target: { value: "Kariyer" } });
+  await waitFor(() => expect(api.listClientsByTag).toHaveBeenCalledWith("Kariyer", 200));
+  vi.mocked(api.listTags).mockResolvedValue(ok([]));
+  act(() => touch());
+  await waitFor(() => expect(filter).toHaveValue(""));
+  expect(within(sidebar()).getByRole("heading", { name: "Son açılanlar" })).toBeInTheDocument();
+  vi.mocked(api.listTags).mockResolvedValue({ status: "error", error: { code: "store_sqlite", params: { detail: "disk" } } });
+  act(() => touch());
+  expect(await within(sidebar()).findByText(/Etiketler okunamadı: .*disk/)).toBeInTheDocument();
+});
+
+test("switching to another client while the open chart is being deleted does not reopen the first client", async () => {
+  const charts = [chart(1, ""), chart(5, "Düzeltilmiş", "2000-01-02")];
+  vi.mocked(api.listCharts).mockResolvedValue(ok(charts));
+  let release!: () => void;
+  vi.mocked(api.deleteChart).mockReturnValue(new Promise((r) => (release = () => r(ok(null)))));
+  const other = opened();
+  other.client = ayse;
+  other.chart_record = { ...other.chart_record, id: 20, client_id: 2 };
+  vi.mocked(api.openClient).mockResolvedValue(ok(other));
+  renderSidebar();
+  fireEvent.click(await within(sidebar()).findByRole("button", { name: "Haritayı sil: “Doğum haritası”" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Harita silinsin mi?" })).getByRole("button", { name: "Haritayı sil" }));
+  fireEvent.click(await within(list()).findByRole("button", { name: /Ayşe Yılmaz/ }));
+  await waitFor(() => expect(screen.getByRole("status", { name: "açık" })).toHaveTextContent("Ayşe Yılmaz#20"));
+  release();
+  await act(async () => {});
+  expect(api.openClient).toHaveBeenCalledOnce();
+  expect(screen.getByRole("status", { name: "açık" })).toHaveTextContent("Ayşe Yılmaz#20");
+});
+
+test("Enter that commits IME text in the tag box does not save", async () => {
+  vi.mocked(api.setChartTags).mockResolvedValue(ok(["a"]));
+  renderSidebar();
+  const box = await within(sidebar()).findByRole("textbox", { name: "Etiketler" });
+  fireEvent.change(box, { target: { value: "a" } });
+  fireEvent.keyDown(box, { key: "Enter", keyCode: 229 });
+  expect(api.setChartTags).not.toHaveBeenCalled();
+  fireEvent.keyDown(box, { key: "Enter" });
+  await waitFor(() => expect(api.setChartTags).toHaveBeenCalledOnce());
+});

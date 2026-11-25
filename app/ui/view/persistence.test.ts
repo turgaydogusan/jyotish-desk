@@ -111,3 +111,18 @@ test("a corrupt legacy entry is ignored and a failed move keeps it for the next 
   expect((await loadLayout()).layout).not.toBeNull();
   expect(localStorage.getItem(LEGACY_LAYOUT_KEY)).not.toBeNull();
 });
+
+test("a save that throws reaches onError as task_failed and the queue keeps going", async () => {
+  vi.mocked(api.saveViewState).mockRejectedValueOnce(new Error("ipc")).mockResolvedValue(ok(null));
+  const onError = vi.fn();
+  const onSaved = vi.fn();
+  const p = storePersistence({ onError, onSaved });
+  p.save({ chartId: 4, viewState: vs });
+  p.save({ chartId: 5, viewState: vs });
+  await p.idle();
+  expect(onError).toHaveBeenCalledWith({ code: "task_failed", params: {} });
+  expect(onSaved).toHaveBeenCalledOnce();
+  p.save({ chartId: 4, viewState: vs });
+  await p.idle();
+  expect(api.saveViewState).toHaveBeenCalledTimes(3);
+});

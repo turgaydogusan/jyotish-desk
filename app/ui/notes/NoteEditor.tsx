@@ -14,7 +14,7 @@ import { enqueueNoteSave } from "./saves";
 export const NOTE_SAVE_DEBOUNCE_MS = 500;
 /** Kesintisiz yazımda iki kayıt arasındaki en uzun süre. */
 export const NOTE_SAVE_MAX_WAIT_MS = 2000;
-/** UTF-16 birimi; 16 384 × 3 bayt Rust `MAX_NOTE_BYTES` (65 536) altında kalır. */
+/** UTF-16 birimi; 16 384 × 3 bayt Rust `MAX_NOTE_BYTES` (65 536) altında kalır. Değişirse notes.atLimit metinleri de değişir. */
 export const MAX_NOTE_UNITS = 16_384;
 
 export interface NoteEditorProps {
@@ -24,11 +24,13 @@ export interface NoteEditorProps {
   /** Bu haritaya bağlı not (açık harita). */
   onThisChart: boolean;
   onSaved(note: Note): void;
-  /** Onaylı silme; `false`: silinemedi (bildirim panelin işidir), not yerinde kalır. */
-  onDelete(note: Note): Promise<boolean>;
+  /** "Yeni not" ile eklendi ve henüz bu oturumda yazılmadı: boş bırakılırsa silinir (D17). */
+  discardWhenEmpty: boolean;
+  /** Onaylı silme; `false`: silinemedi (bildirim panelin işidir), not yerinde kalır. `quiet`: boş taze notun onaysız silinmesi, odak taşınmaz. */
+  onDelete(note: Note, quiet?: boolean): Promise<boolean>;
 }
 
-export function NoteEditor({ note, autoFocus, onThisChart, onSaved, onDelete }: NoteEditorProps) {
+export function NoteEditor({ note, autoFocus, onThisChart, discardWhenEmpty, onSaved, onDelete }: NoteEditorProps) {
   const { t, i18n } = useTranslation();
   const { push } = useNotices();
   const id = useId();
@@ -75,6 +77,22 @@ export function NoteEditor({ note, autoFocus, onThisChart, onSaved, onDelete }: 
     });
   };
 
+  // Boş taze not: odak çıkınca ya da panel kapanınca onaysız silinir. Silme sürüyorsa tekrar edilmez.
+  const discardable = () => discardWhenEmpty && !latest.current.deleted && latest.current.body.trim() === "";
+  const discard = () => {
+    const now = latest.current;
+    now.deleted = true;
+    if (now.timer) clearTimeout(now.timer);
+    now.timer = null;
+    // Sessiz silme: odak kullanıcının gittiği yerde durur (onaylı silmeden farklı olarak).
+    // Silinemezse not listede durur; `deleted` geri alınır ki sonraki yazım kaydedilsin.
+    void onDelete(note, true).then((ok) => {
+      if (!ok) now.deleted = false;
+    });
+  };
+  const discardRef = useRef({ discardable, discard });
+  discardRef.current = { discardable, discard };
+
   // Panel kapanırken, pencere gizlenirken ve uygulama kapanırken bekleyen metin yazılır
   // (görünüm deposuyla aynı olaylar; Tauri webview kapanışı `pagehide` atlayabilir).
   // `flush` yalnızca ref ve kararlı değerleri okur (not kimliği anahtardır).
@@ -91,6 +109,10 @@ export function NoteEditor({ note, autoFocus, onThisChart, onSaved, onDelete }: 
       document.removeEventListener("visibilitychange", onVisibility);
       mounted.current = false;
       flush();
+      // StrictMode kur-temizle-kur yapar: bir mikro görev sonra hâlâ bağlı değilse boş taze not silinir.
+      queueMicrotask(() => {
+        if (!mounted.current && discardRef.current.discardable()) discardRef.current.discard();
+      });
     };
   }, []);
 
@@ -111,6 +133,8 @@ export function NoteEditor({ note, autoFocus, onThisChart, onSaved, onDelete }: 
 
   const remove = async () => {
     setConfirm(false);
+    // Silme sürerken ikinci onay yok sayılır.
+    if (latest.current.deleted) return;
     latest.current.deleted = true;
     if (latest.current.timer) clearTimeout(latest.current.timer);
     if (await onDelete(note)) return;
@@ -137,10 +161,19 @@ export function NoteEditor({ note, autoFocus, onThisChart, onSaved, onDelete }: 
         value={body}
         maxLength={MAX_NOTE_UNITS}
         rows={3}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={[error ? `${id}-error` : null, body.length >= MAX_NOTE_UNITS ? `${id}-limit` : null].filter(Boolean).join(" ") || undefined}
         onChange={(e) => change(e.target.value)}
-        onBlur={flush}
+        onBlur={(e) => {
+          // Odak notun kendi düğmesine (Sil) geçiyorsa boş taze not silinmez; kullanıcı orada.
+          if (discardable() && !e.currentTarget.closest("li")?.contains(e.relatedTarget as Node | null)) discard();
+          else flush();
+        }}
       />
+      {body.length >= MAX_NOTE_UNITS && (
+        <p id={`${id}-limit`} className="field-hint">
+          {t("notes.atLimit")}
+        </p>
+      )}
       {error && (
         <p id={`${id}-error`} className="note-error" role="alert">
           {t("notes.saveFailed", { message: errorMessage(t, i18n, error) })}

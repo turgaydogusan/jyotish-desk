@@ -321,6 +321,7 @@ export const en: Messages = {
     },
   },
   clients: {
+    tagsFailed: "Tags could not be read: {{message}}",
     region: "Clients",
     toggle: "Clients",
     search: "Search clients",
@@ -379,6 +380,8 @@ export const en: Messages = {
     },
   },
   notes: {
+    atLimit: "A note can be at most 16,384 characters; the rest was not added.",
+    listLimit: "Showing the newest {{max}} notes.",
     add: "New note",
     list: "Notes for {{name}}",
     empty: "No notes yet.",

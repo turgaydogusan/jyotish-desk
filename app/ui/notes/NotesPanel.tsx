@@ -2,6 +2,7 @@
 // `list_notes` ile okunur (bekleyen kayıtlar bittikten sonra); `open_client`'ın `recent_notes`
 // alanı kullanılmaz, çünkü bu oturumdaki düzenlemelerden sonra eskir. "Yeni not" boş bir not
 // ekler ve ona odaklanır; metin otomatik kaydedilir.
+// "Yeni not" ile eklenip boş bırakılan not, odak çıkınca ya da panel kapanınca silinir (D17).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
@@ -27,6 +28,7 @@ export function NotesPanel(_props: PanelProps) {
 function ClientNotes({ opened }: { opened: OpenedClient }) {
   const { t, i18n } = useTranslation();
   const { push } = useNotices();
+  const { revision } = useSession();
   const clientId = opened.client.id;
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [error, setError] = useState<CommandError | null>(null);
@@ -48,7 +50,7 @@ function ClientNotes({ opened }: { opened: OpenedClient }) {
     return () => {
       live = false;
     };
-  }, [clientId, retry]);
+  }, [clientId, retry, revision]);
 
   // Ekleme sürerken ikinci tıklama ikinci bir boş not açmaz.
   const adding = useRef(false);
@@ -67,7 +69,7 @@ function ClientNotes({ opened }: { opened: OpenedClient }) {
 
   const saved = useCallback((n: Note) => setNotes((list) => list && list.map((x) => (x.id === n.id ? n : x))), []);
 
-  const remove = async (n: Note) => {
+  const remove = async (n: Note, quiet = false) => {
     // Silme, kayıtlarla aynı sırada gider: notun bekleyen kaydı silinmiş nota yazmaya çalışmaz.
     const r = await enqueueNoteSave(() => api.deleteNote(n.id));
     if (r.status === "error") {
@@ -75,7 +77,8 @@ function ClientNotes({ opened }: { opened: OpenedClient }) {
       return false;
     }
     setNotes((list) => list && list.filter((x) => x.id !== n.id));
-    addRef.current?.focus();
+    setFresh((f) => (f === n.id ? null : f));
+    if (!quiet) addRef.current?.focus();
     return true;
   };
 
@@ -103,12 +106,14 @@ function ClientNotes({ opened }: { opened: OpenedClient }) {
               note={n}
               autoFocus={n.id === fresh}
               onThisChart={n.chart_id === opened.chart_record.id}
+              discardWhenEmpty={n.id === fresh}
               onSaved={saved}
               onDelete={remove}
             />
           ))}
         </ul>
       )}
+      {notes && notes.length >= NOTES_LIMIT && <p className="field-hint">{t("notes.listLimit", { max: NOTES_LIMIT })}</p>}
     </div>
   );
 }

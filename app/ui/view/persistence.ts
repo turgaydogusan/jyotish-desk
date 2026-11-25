@@ -37,12 +37,22 @@ export function storePersistence(events: PersistenceEvents = {}, { hold = false 
   const send = (s: ViewSnapshot) => (s.chartId === null ? api.savePanelLayout(s.viewState.panel_layout) : api.saveViewState(s.chartId, s.viewState));
 
   const pump = async () => {
-    for (let next = queue.shift(); next; next = queue.shift()) {
-      const r = await send(next);
-      if (r.status === "error") events.onError?.(r.error);
-      else events.onSaved?.();
+    try {
+      for (let next = queue.shift(); next; next = queue.shift()) {
+        let r: Awaited<ReturnType<typeof send>>;
+        try {
+          r = await send(next);
+        } catch {
+          // `wrap` reddetmez; yine de fırlatan bir çağrı kuyruğu durdurmaz. Hata metni ve kayıt
+          // içeriği bildirime konmaz.
+          r = { status: "error", error: { code: "task_failed", params: {} } };
+        }
+        if (r.status === "error") events.onError?.(r.error);
+        else events.onSaved?.();
+      }
+    } finally {
+      running = null;
     }
-    running = null;
   };
 
   return {

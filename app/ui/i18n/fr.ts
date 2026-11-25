@@ -321,6 +321,7 @@ export const fr: Messages = {
     },
   },
   clients: {
+    tagsFailed: "Les étiquettes n’ont pas pu être lues : {{message}}",
     region: "Clients",
     toggle: "Clients",
     search: "Rechercher un client",
@@ -379,6 +380,8 @@ export const fr: Messages = {
     },
   },
   notes: {
+    atLimit: "Une note peut contenir au plus 16 384 caractères ; le surplus n’a pas été ajouté.",
+    listLimit: "Les {{max}} notes les plus récentes sont affichées.",
     add: "Nouvelle note",
     list: "Notes de {{name}}",
     empty: "Aucune note pour l’instant.",

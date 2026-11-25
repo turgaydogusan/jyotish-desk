@@ -15,6 +15,7 @@ import { api } from "../api";
 import type { Note } from "../bindings";
 import type { Panel } from "../layout/model";
 import { NoticeBar } from "../shell/notices";
+import { useSession } from "../session/store";
 import { renderWithStores } from "../test/render";
 import { MAX_NOTE_UNITS, NOTE_SAVE_DEBOUNCE_MS, NOTE_SAVE_MAX_WAIT_MS } from "./NoteEditor";
 import { NOTES_LIMIT, NotesPanel } from "./NotesPanel";
@@ -54,6 +55,7 @@ const list = () => screen.getByRole("list", { name: "Örnek Danışan notları" 
 beforeEach(() => {
   for (const f of Object.values(api)) vi.mocked(f).mockReset();
   vi.mocked(api.listNotes).mockResolvedValue(ok([newer, older]));
+  vi.mocked(api.deleteNote).mockResolvedValue(ok(null));
   vi.mocked(api.updateNote).mockImplementation(async (id, body) => ok({ ...(id === 1 ? older : newer), body }));
 });
 
@@ -297,4 +299,87 @@ test("after a note is deleted focus goes to New note", async () => {
   fireEvent.click(within(items[1]).getByRole("button", { name: /tarihli notu sil/ }));
   fireEvent.click(within(screen.getByRole("dialog", { name: "Not silinsin mi?" })).getByRole("button", { name: "Notu sil" }));
   await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Yeni not" })));
+});
+
+test("a note at the length limit and a client at the list limit say so", async () => {
+  const many = Array.from({ length: NOTES_LIMIT }, (_, i) => note(i + 10, "x", `2026-01-${String((i % 28) + 1).padStart(2, "0")}T10:00:00.000Z`));
+  vi.mocked(api.listNotes).mockResolvedValue(ok(many));
+  renderPanel();
+  expect(await screen.findByText(`En yeni ${NOTES_LIMIT} not gösteriliyor.`)).toBeInTheDocument();
+  const box = within(list()).getAllByRole("textbox")[0];
+  fireEvent.change(box, { target: { value: "a".repeat(MAX_NOTE_UNITS) } });
+  expect(box).toHaveAccessibleDescription("Not en çok 16 384 karakter olabilir; fazlası eklenmedi.");
+});
+
+test("an empty new note is removed when focus leaves it, without asking", async () => {
+  vi.mocked(api.addNote).mockResolvedValue(ok(note(3, "", "2026-03-01T09:00:00.000Z", 1)));
+  renderPanel();
+  await screen.findByRole("list", { name: "Örnek Danışan notları" });
+  fireEvent.click(screen.getByRole("button", { name: "Yeni not" }));
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
+  fireEvent.blur(within(list()).getAllByRole("textbox")[0]);
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(2));
+  expect(api.deleteNote).toHaveBeenCalledWith(3);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("an empty new note is removed when the panel closes; a written one and an old empty one stay", async () => {
+  vi.mocked(api.listNotes).mockResolvedValue(ok([note(9, "", "2026-01-01T10:00:00.000Z"), older]));
+  vi.mocked(api.addNote).mockResolvedValueOnce(ok(note(3, "", "2026-03-01T09:00:00.000Z", 1)));
+  renderPanel();
+  await screen.findByRole("list", { name: "Örnek Danışan notları" });
+  fireEvent.click(screen.getByRole("button", { name: "Yeni not" }));
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
+  act(() => setShown(false));
+  await waitFor(() => expect(api.deleteNote).toHaveBeenCalledOnce());
+  expect(api.deleteNote).toHaveBeenCalledWith(3);
+});
+
+test("under StrictMode a new note is not removed by the mount, cleanup, mount cycle", async () => {
+  vi.mocked(api.addNote).mockResolvedValue(ok(note(3, "", "2026-03-01T09:00:00.000Z", 1)));
+  renderWithStores(
+    <StrictMode>
+      <NotesPanel panel={panel} />
+    </StrictMode>,
+  );
+  await screen.findByRole("list", { name: "Örnek Danışan notları" });
+  fireEvent.click(screen.getByRole("button", { name: "Yeni not" }));
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
+  await act(async () => {});
+  expect(api.deleteNote).not.toHaveBeenCalled();
+});
+
+test("notes are read again after the session revision changes", async () => {
+  let touch: () => void = () => {};
+  function Toucher() {
+    touch = useSession().touch;
+    return null;
+  }
+  renderWithStores(
+    <>
+      <Toucher />
+      <NotesPanel panel={panel} />
+    </>,
+  );
+  await screen.findByRole("list", { name: "Örnek Danışan notları" });
+  expect(api.listNotes).toHaveBeenCalledOnce();
+  vi.mocked(api.listNotes).mockResolvedValue(ok([note(4, "içe aktarılan", "2026-04-01T10:00:00.000Z"), newer, older]));
+  act(() => touch());
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(3));
+  expect(api.listNotes).toHaveBeenCalledTimes(2);
+});
+
+test("a second confirmed delete while the first is running is ignored", async () => {
+  let release!: () => void;
+  vi.mocked(api.deleteNote).mockReturnValue(new Promise((r) => (release = () => r(ok(null)))));
+  renderPanel();
+  const items = await within(await screen.findByRole("list", { name: "Örnek Danışan notları" })).findAllByRole("listitem");
+  const del = within(items[1]).getByRole("button", { name: /tarihli notu sil/ });
+  fireEvent.click(del);
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Not silinsin mi?" })).getByRole("button", { name: "Notu sil" }));
+  fireEvent.click(del);
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Not silinsin mi?" })).getByRole("button", { name: "Notu sil" }));
+  release();
+  await waitFor(() => expect(within(list()).getAllByRole("listitem")).toHaveLength(1));
+  expect(api.deleteNote).toHaveBeenCalledOnce();
 });

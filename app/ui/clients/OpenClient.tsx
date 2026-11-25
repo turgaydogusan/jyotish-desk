@@ -26,6 +26,16 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
   const [error, setError] = useState<CommandError | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // Silme sürerken başka harita ya da danışan açılırsa silme bitince geri dönülmez.
+  const current = useRef(opened);
+  current.current = opened;
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -50,14 +60,16 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
     flush();
     const r = await api.deleteChart(chart.id);
     if (r.status === "error") return failed(r.error);
-    if (chart.id !== opened.chart_record.id) {
+    // Silme sürerken başka danışana (bileşen ayrıldı) ya da başka haritaya geçildiyse yalnızca listeler yenilenir.
+    if (!live.current || chart.id !== current.current.chart_record.id) {
       session.touch();
       // Silinen satırın düğmesi kaybolur: odak danışan başlığına geçer.
-      headingRef.current?.focus();
+      if (live.current) headingRef.current?.focus();
       return;
     }
     // Açık harita silindi: diğer haritalardan en son güncelleneni açılır (uyarısız).
     const rest = await api.listCharts(clientId);
+    if (!live.current || current.current.chart_record.id !== chart.id) return session.touch();
     const next = rest.status === "ok" ? rest.data[0] : undefined;
     const e = next ? await session.openClient(clientId, next.id) : rest.status === "error" ? rest.error : null;
     // Diğer harita açılamazsa silinen harita ekranda bırakılmaz: pano boşalır.

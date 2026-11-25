@@ -48,7 +48,8 @@ export function TagEditor({ chartId, tags }: { chartId: number; tags: string[] }
         onChange={(e) => setText(e.target.value)}
         onBlur={() => void commit()}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+          // IME bileşimini onaylayan Enter kaydetmez (WebKit bunu 229 koduyla bildirir).
+          if (e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229) {
             e.preventDefault();
             void commit();
           }

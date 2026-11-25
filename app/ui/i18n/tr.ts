@@ -320,6 +320,7 @@ export const tr = {
     },
   },
   clients: {
+    tagsFailed: "Etiketler okunamadı: {{message}}",
     region: "Danışanlar",
     toggle: "Danışanlar",
     search: "Danışan ara",
@@ -378,6 +379,8 @@ export const tr = {
     },
   },
   notes: {
+    atLimit: "Not en çok 16 384 karakter olabilir; fazlası eklenmedi.",
+    listLimit: "En yeni {{max}} not gösteriliyor.",
     add: "Yeni not",
     list: "{{name}} notları",
     empty: "Henüz not yok.",
