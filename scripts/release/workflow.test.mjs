@@ -43,14 +43,38 @@ test("the eight secrets are the documented ones and are never echoed", () => {
   for (const line of code.split("\n")) {
     if (line.includes("secrets.")) assert.match(line, /^\s+\w+: \$\{\{ secrets\.\w+ \}\}$/, line);
   }
-  assert.doesNotMatch(code, /set -x|echo "?\$(S[1-8]|APPLE_|TAURI_SIGNING)/);
+  // Sır taşıyan hiçbir değişken yazdırılmaz (hangi komutla olursa olsun) ve izleme açılmaz.
+  const SECRET_VAR = /\$\{?(S[1-8]\b|APPLE_CERTIFICATE|APPLE_API_KEY_P8|TAURI_SIGNING)/;
+  for (const line of code.split("\n")) {
+    if (/\b(echo|printf|cat|tee|print)\b/.test(line) && SECRET_VAR.test(line)) {
+      // Tek izinli satır: notarizasyon anahtarının 0600 dosyaya yazılması.
+      assert.equal(line.trim(), `printf '%s\\n' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"`, line);
+    }
+  }
+  assert.doesNotMatch(code, /set -x|xtrace|ACTIONS_STEP_DEBUG/);
+});
+
+test("expressions never reach a shell line: values enter scripts through env", () => {
+  // `${{ … }}` yalnızca bir YAML anahtarının değerinde durur (`if:`, `env:` eşlemesi, `with:`);
+  // `run:` satırlarında ve betik gövdelerinde yoktur (betik enjeksiyonu yolu).
+  for (const line of code.split("\n")) {
+    if (line.includes("${{")) assert.match(line, /^\s+(?:- )?(?!run:)[\w-]+: \S/, line);
+  }
+  assert.match(code, /^          VERSION="\$\(node scripts\/release\/check-version\.mjs\)"\n          echo "version=\$VERSION" >> "\$GITHUB_OUTPUT"$/m);
+  assert.doesNotMatch(code, /echo "[^"\n]*\$\(node /);
 });
 
 test("the default token is read-only; only the release job may write, and the release is a draft", () => {
   assert.match(code, /^permissions:\n  contents: read\n/m);
   assert.equal([...code.matchAll(/contents: write/g)].length, 1);
   assert.match(code, /gh release create "\$GITHUB_REF_NAME" --draft --verify-tag/);
-  assert.match(code, /if: steps\.mode\.outputs\.signed == 'true' && github\.ref_type == 'tag'/);
+  // Taslak yalnızca etiket gönderimiyle oluşur; etiket üzerinde elle başlatılan iş oluşturmaz.
+  const draft = /- name: Draft GitHub release\n\s+if: (.+)\n/.exec(code)?.[1];
+  assert.equal(draft, "steps.mode.outputs.signed == 'true' && github.event_name == 'push'");
+  assert.doesNotMatch(code, /ref_type == 'tag'/);
+  // Sırlar `release` ortamından gelir; ortamın etiket kuralı onları yalnızca `v*` etiketlerine verir.
+  assert.match(code, /^  macos:\n(?:    .*\n)*?    environment: release\n/m);
+  assert.equal([...code.matchAll(/environment:/g)].length, 1);
   assert.match(code, /persist-credentials: false/);
 });
 

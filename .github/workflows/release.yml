@@ -6,7 +6,9 @@ name: release
 #    elle yayımlar; güncelleyici taslağı görmez.
 #  - Sırlardan biri bile yoksa: imzasız deneme derlemesi yapılır, paket denetlenir ve iş çıktısı
 #    olarak saklanır; yayın oluşturulmaz.
-# Elle çalıştırma (workflow_dispatch) hiçbir zaman yayın oluşturmaz.
+# Elle çalıştırma (workflow_dispatch) hiçbir zaman yayın oluşturmaz: bir etiket üzerinde elle
+# başlatılsa bile (o zaman sırlar verilir ve imzalı derleme yapılır) taslak adımı yalnızca etiket
+# gönderimiyle (`push`) çalışır.
 # Sırlar `release` ortamındadır (docs/release/RELEASING.md); hiçbir adım değerlerini yazdırmaz.
 # Eylemler commit SHA'sıyla sabitlenir ve bu işte önbellek kullanılmaz (scripts/release/workflow.test.mjs).
 
@@ -53,7 +55,10 @@ jobs:
             # Etiket ana daldaki bir commit'i göstermelidir.
             git merge-base --is-ancestor "$GITHUB_SHA" origin/main
           fi
-          echo "version=$(node scripts/release/check-version.mjs)" >> "$GITHUB_OUTPUT"
+          # Atama ayrı satırdadır: denetim başarısız olursa (ör. yayın notu yoksa) adım durur;
+          # `echo "…$(…)"` içinde hata yutulurdu.
+          VERSION="$(node scripts/release/check-version.mjs)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Signing secrets present?
         id: mode
@@ -80,10 +85,12 @@ jobs:
 
       - name: Build (unsigned dry run)
         if: steps.mode.outputs.signed != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           sh scripts/release/build.sh unsigned
           sh scripts/release/verify-bundle.sh unsigned
-          ditto -c -k --keepParent "target/universal-apple-darwin/release/bundle/macos/Jyotish Desk.app" "$RUNNER_TEMP/Jyotish-Desk_${{ steps.version.outputs.version }}_UNSIGNED.zip"
+          ditto -c -k --keepParent "target/universal-apple-darwin/release/bundle/macos/Jyotish Desk.app" "$RUNNER_TEMP/Jyotish-Desk_${VERSION}_UNSIGNED.zip"
       - if: steps.mode.outputs.signed != 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -102,13 +109,14 @@ jobs:
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           umask 077
           export APPLE_API_KEY_PATH="$RUNNER_TEMP/notary-key.p8"
           printf '%s\n' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
           sh scripts/release/build.sh signed
           # Tauri .app'i notarize eder ve damgalar; .dmg ayrıca gönderilir ve damgalanır.
-          DMG="target/universal-apple-darwin/release/bundle/dmg/Jyotish Desk_${{ steps.version.outputs.version }}_universal.dmg"
+          DMG="target/universal-apple-darwin/release/bundle/dmg/Jyotish Desk_${VERSION}_universal.dmg"
           xcrun notarytool submit "$DMG" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait
           xcrun stapler staple "$DMG"
       - name: Remove the notary key file
@@ -128,7 +136,7 @@ jobs:
           retention-days: 14
 
       - name: Draft GitHub release
-        if: steps.mode.outputs.signed == 'true' && github.ref_type == 'tag'
+        if: steps.mode.outputs.signed == 'true' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
