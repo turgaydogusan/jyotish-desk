@@ -19,6 +19,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: app/pnpm-lock.yaml
       - run: pnpm --dir app install --frozen-lockfile
+      # Yayın betikleri (sürüm tutarlılığı, latest.json); bağımlılıksız, Node'un kendi test koşucusu.
+      - run: node --test "scripts/release/*.test.mjs"
       - run: pnpm --dir app test
       - run: pnpm --dir app build
       # Uçtan uca arayüz testleri (WebKit, IPC taklidi). Görsel karşılaştırma yalnızca yerelde.

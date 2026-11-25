@@ -36,7 +36,7 @@ test("cover lists birth data and settings; the warnings section appears only whe
   const cover = sheet("Örnek Danışan");
   expect(within(cover).getByText("New Delhi, Delhi, India")).toBeInTheDocument();
   expect(within(cover).getByText("Lahiri 23°51′")).toBeInTheDocument();
-  expect(within(cover).getByText("Jyotish Desk 0.1.0 · Swiss Ephemeris 2.10.03")).toBeInTheDocument();
+  expect(within(cover).getByText("Jyotish Desk 0.9.0 · Swiss Ephemeris 2.10.03")).toBeInTheDocument();
   expect(within(cover).queryByRole("heading", { name: "Uyarılar" })).toBeNull();
 });
 

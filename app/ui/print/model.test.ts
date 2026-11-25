@@ -29,7 +29,7 @@ test("cover: stored birth data, the settings the chart was computed with and the
     ["Dasa yılı", "365.25 gün"],
   ]);
   expect(cover.warnings).toEqual([]);
-  expect(cover.credit).toBe("Jyotish Desk 0.1.0 · Swiss Ephemeris 2.10.03");
+  expect(cover.credit).toBe("Jyotish Desk 0.9.0 · Swiss Ephemeris 2.10.03");
 });
 
 test("cover warnings carry the name and the explanation as text", () => {
