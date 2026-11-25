@@ -1,30 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { vi } from "vitest";
-
-vi.mock("../api", () => ({
-  api: {
-    planetLongitudes: vi.fn(async () => ({
-      status: "ok",
-      data: [
-        { body: "Sun", lon: 256.5, retrograde: false },
-        { body: "Saturn", lon: 10.25, retrograde: true },
-        { body: "Mars", lon: null, retrograde: false },
-      ],
-    })),
-  },
-}));
-
-import { api } from "../api";
-import { HighlightProvider } from "../highlight/store";
 import { setLanguage } from "../i18n";
 import { tr } from "../i18n/tr";
 import { PANEL_KINDS, type Panel } from "../layout/model";
+import { fixture } from "../test/fixture";
+import { renderWithStores } from "../test/render";
 import { ChartPanel } from "./ChartPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { panelDefinition, PANEL_REGISTRY } from "./registry";
-import { SkyProvider } from "./sky";
-import { PanelStatusContext } from "./states";
 import { UnavailablePanel } from "./UnavailablePanel";
 
 const chartPanel = (settings: Record<string, unknown> = { varga: "D1", style: "north" }): Panel => ({
@@ -38,17 +20,6 @@ const chartPanel = (settings: Record<string, unknown> = { varga: "D1", style: "n
 });
 const tablePanel: Panel = { id: "t", kind: "graha_table", x: 6, y: 0, w: 6, h: 8, settings: {} };
 
-function Providers({ children }: { children: ReactNode }) {
-  return (
-    <HighlightProvider>
-      <SkyProvider now={() => 0}>{children}</SkyProvider>
-    </HighlightProvider>
-  );
-}
-
-beforeEach(() => vi.mocked(api.planetLongitudes).mockClear());
-afterEach(() => vi.useRealTimers());
-
 test("registry covers the seven kinds; only chart and graha_table are implemented here", () => {
   expect(Object.keys(PANEL_REGISTRY).sort()).toEqual([...PANEL_KINDS].sort());
   expect(PANEL_REGISTRY.chart.component).toBe(ChartPanel);
@@ -60,75 +31,79 @@ test("registry covers the seven kinds; only chart and graha_table are implemente
   const keys = new Set(Object.keys(tr.panel).map((k) => `panel.${k}`));
   for (const kind of [...PANEL_KINDS, "yoga_list"]) expect(keys.has(panelDefinition(kind).titleKey)).toBe(true);
   expect(PANEL_REGISTRY.chart.subtitle!(chartPanel({ varga: "D9" }))).toBe("D9");
+  expect(PANEL_REGISTRY.chart.subtitle!(chartPanel({ varga: "D5" }))).toBe("D1");
 });
 
-test("chart panel draws the current sky with the no-lagna notice, fetching once for jd(now)", async () => {
-  render(
-    <Providers>
-      <ChartPanel panel={chartPanel()} />
-      <GrahaTablePanel panel={tablePanel} />
-    </Providers>,
-  );
-  expect(await screen.findByRole("note")).toHaveTextContent("Lagna henüz hesaplanmıyor; şimdiki gökyüzü, 1. ev Koç");
+test("chart panel draws the open chart's D1 with its lagna", () => {
+  const { container } = renderWithStores(<ChartPanel panel={chartPanel()} />);
   expect(screen.getByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Gü, Yay 16°" })).toBeInTheDocument();
-  expect(api.planetLongitudes).toHaveBeenCalledTimes(1);
-  expect(api.planetLongitudes).toHaveBeenCalledWith(2440587.5);
+  // Lagna İkizler (İki): 1. ev.
+  expect(screen.getByRole("button", { name: "1. ev, İki" })).toBeInTheDocument();
+  expect(container.querySelector("svg")!.dataset.style).toBe("north");
 });
 
-test("chart panel honours the style setting and falls back to north", async () => {
-  const { container, unmount } = render(
-    <Providers>
-      <ChartPanel panel={chartPanel({ varga: "D1", style: "south" })} />
-    </Providers>,
-  );
-  await screen.findByRole("group");
+test("chart panel draws any varga of the chart and honours the style setting", () => {
+  const { container } = renderWithStores(<ChartPanel panel={chartPanel({ varga: "D9", style: "south" })} />);
+  expect(screen.getByRole("group", { name: "D9 haritası" })).toBeInTheDocument();
   expect(container.querySelector("svg")!.dataset.style).toBe("south");
-  unmount();
-  const r = render(
-    <Providers>
-      <ChartPanel panel={chartPanel({ style: "spiral" })} />
-    </Providers>,
-  );
-  await r.findByRole("group");
-  expect(r.container.querySelector("svg")!.dataset.style).toBe("north");
+  // D9 lagnası Kova (Kov).
+  expect(screen.getByRole("button", { name: "1. ev, Kov" })).toBeInTheDocument();
 });
 
-test("vargas other than D1 show an explicit later-milestone message", () => {
-  render(
-    <Providers>
-      <ChartPanel panel={chartPanel({ varga: "D9" })} />
-    </Providers>,
+test("an unknown style falls back to north; a varga missing from the chart says so", () => {
+  const opened = fixture().opened;
+  opened.chart.vargas = opened.chart.vargas.filter((v) => v.varga !== "D60");
+  const { container } = renderWithStores(
+    <>
+      <ChartPanel panel={chartPanel({ style: "spiral" })} />
+      <ChartPanel panel={chartPanel({ varga: "D60" })} />
+    </>,
+    { opened },
   );
-  expect(screen.getByText("D9 haritası sonraki bir sürümde gelecek.")).toBeInTheDocument();
+  expect(container.querySelector("svg")!.dataset.style).toBe("north");
+  expect(screen.getByText("D60 bu haritada yok.")).toBeInTheDocument();
+});
+
+test("without an open chart both panels say so", () => {
+  renderWithStores(
+    <>
+      <ChartPanel panel={chartPanel()} />
+      <GrahaTablePanel panel={tablePanel} />
+    </>,
+    { opened: null },
+  );
+  expect(screen.getAllByText("Açık harita yok.")).toHaveLength(2);
   expect(screen.queryByRole("group")).toBeNull();
 });
 
-test("graha table lists body, sign, degree with minutes and the retro marker", async () => {
-  render(
-    <Providers>
-      <GrahaTablePanel panel={tablePanel} />
-    </Providers>,
-  );
-  const sun = (await screen.findByRole("button", { name: "Güneş" })).closest("tr")!;
+test("graha table lists body, sign, degree with minutes and the retro marker", () => {
+  renderWithStores(<GrahaTablePanel panel={tablePanel} />);
+  const sun = screen.getByRole("button", { name: "Güneş" }).closest("tr")!;
   expect(sun).toHaveTextContent("Yay");
   expect(sun).toHaveTextContent("16°30′");
   const saturn = screen.getByRole("button", { name: "Satürn" }).closest("tr")!;
   expect(saturn).toHaveTextContent("Koç");
-  expect(saturn).toHaveTextContent("10°15′");
   expect(saturn).toHaveTextContent("℞");
-  const mars = screen.getByRole("button", { name: "Mars" }).closest("tr")!;
-  expect(mars.querySelectorAll("td")[0]).toHaveTextContent("—");
+  expect(screen.getAllByRole("row")).toHaveLength(10);
 });
 
-test("hovering a graha in the table highlights it in the chart, click pins, Esc clears", async () => {
-  const { container } = render(
-    <Providers>
+test("a null degree is shown as a dash", () => {
+  const opened = fixture().opened;
+  opened.chart.grahas[2].deg_in_sign = null;
+  renderWithStores(<GrahaTablePanel panel={tablePanel} />, { opened });
+  const mars = screen.getByRole("button", { name: "Mars" }).closest("tr")!;
+  expect(mars.querySelectorAll("td")[1]).toHaveTextContent("—");
+});
+
+test("hovering a graha in the table highlights it in the chart, click pins, Esc clears", () => {
+  const { container } = renderWithStores(
+    <>
       <ChartPanel panel={chartPanel()} />
       <GrahaTablePanel panel={tablePanel} />
-    </Providers>,
+    </>,
   );
-  const row = (await screen.findByRole("button", { name: "Satürn" })).closest("tr")!;
+  const row = screen.getByRole("button", { name: "Satürn" }).closest("tr")!;
   const chartSaturn = () => container.querySelector('svg [data-graha="Saturn"]')!;
   fireEvent.mouseEnter(row);
   expect(chartSaturn()).toHaveClass("chart-planet--highlight");
@@ -143,42 +118,6 @@ test("hovering a graha in the table highlights it in the chart, click pins, Esc 
   expect(row).not.toHaveClass("is-highlighted");
 });
 
-test("an empty result shows the empty state", async () => {
-  vi.mocked(api.planetLongitudes).mockResolvedValueOnce({ status: "ok", data: [] });
-  render(
-    <Providers>
-      <GrahaTablePanel panel={tablePanel} />
-    </Providers>,
-  );
-  expect(await screen.findByText("Gösterilecek graha yok.")).toBeInTheDocument();
-});
-
-test("errors are shown in the panel and retry fetches again", async () => {
-  vi.mocked(api.planetLongitudes).mockResolvedValueOnce({ status: "error", error: { code: "engine_stopped", params: {} } });
-  render(
-    <Providers>
-      <GrahaTablePanel panel={tablePanel} />
-    </Providers>,
-  );
-  expect(await screen.findByRole("alert")).toHaveTextContent("Hesap motoru durdu.");
-  fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
-  expect(await screen.findByRole("button", { name: "Güneş" })).toBeInTheDocument();
-  expect(api.planetLongitudes).toHaveBeenCalledTimes(2);
-});
-
-test("a slow load shows a skeleton after one second", async () => {
-  vi.useFakeTimers();
-  vi.mocked(api.planetLongitudes).mockReturnValueOnce(new Promise(() => {}));
-  render(
-    <Providers>
-      <ChartPanel panel={chartPanel()} />
-    </Providers>,
-  );
-  expect(screen.queryByLabelText("Yükleniyor")).toBeNull();
-  act(() => vi.advanceTimersByTime(1000));
-  expect(screen.getByLabelText("Yükleniyor")).toHaveAttribute("aria-busy", "true");
-});
-
 test("unavailable and unknown panels explain themselves without an error", () => {
   render(<UnavailablePanel panel={{ ...tablePanel, kind: "dasha_tree" }} />);
   expect(screen.getByText("Bu panel sonraki bir sürümde gelecek.")).toBeInTheDocument();
@@ -189,59 +128,23 @@ test("unavailable and unknown panels explain themselves without an error", () =>
 
 test("labels follow the selected language", async () => {
   await setLanguage("en");
-  render(
-    <Providers>
+  renderWithStores(
+    <>
       <ChartPanel panel={chartPanel()} />
       <GrahaTablePanel panel={tablePanel} />
-    </Providers>,
+    </>,
   );
-  expect(await screen.findByRole("button", { name: "Su, Sg 16°" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Su, Sg 16°" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Sun" }).closest("tr")).toHaveTextContent("Sg");
 });
 
-test("chart aria-pressed follows the pin only: focus hovers, Enter pins, Enter again unpins", async () => {
-  render(
-    <Providers>
-      <ChartPanel panel={chartPanel()} />
-    </Providers>,
-  );
-  const planet = await screen.findByRole("button", { name: "Gü, Yay 16°" });
+test("chart aria-pressed follows the pin only: focus hovers, Enter pins, Enter again unpins", () => {
+  renderWithStores(<ChartPanel panel={chartPanel()} />);
+  const planet = screen.getByRole("button", { name: "Gü, Yay 16°" });
   act(() => planet.focus());
   expect(planet).toHaveAttribute("aria-pressed", "false");
   fireEvent.keyDown(planet, { key: "Enter" });
   expect(planet).toHaveAttribute("aria-pressed", "true");
   fireEvent.keyDown(planet, { key: "Enter" });
   expect(planet).toHaveAttribute("aria-pressed", "false");
-});
-
-test("a non-D1 chart reports no loading phase to the panel frame", () => {
-  vi.useFakeTimers();
-  vi.mocked(api.planetLongitudes).mockReturnValueOnce(new Promise(() => {}));
-  const reported: string[] = [];
-  render(
-    <PanelStatusContext.Provider value={(p) => reported.push(p)}>
-      <Providers>
-        <ChartPanel panel={chartPanel({ varga: "D9" })} />
-      </Providers>
-    </PanelStatusContext.Provider>,
-  );
-  act(() => vi.advanceTimersByTime(2000));
-  expect(reported.every((p) => p === "none")).toBe(true);
-});
-
-test("unmounting SkyProvider before the load resolves neither sets state nor warns", async () => {
-  let resolve!: (v: Awaited<ReturnType<typeof api.planetLongitudes>>) => void;
-  vi.mocked(api.planetLongitudes).mockReturnValueOnce(new Promise((r) => (resolve = r)));
-  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-  const { unmount } = render(
-    <SkyProvider now={() => 0}>
-      <span />
-    </SkyProvider>,
-  );
-  unmount();
-  await act(async () => {
-    resolve({ status: "ok", data: [] });
-  });
-  expect(spy).not.toHaveBeenCalled();
-  spy.mockRestore();
 });

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { isLanguage, LANGUAGES, setLanguage, DEFAULT_LANGUAGE } from "../i18n";
 import { isThemePref, THEME_PREFS, type ThemePref } from "../theme/theme";
+import { ChartTitle } from "./ChartTitle";
 import { LayoutPicker } from "./LayoutPicker";
 
 export interface TopBarProps {
@@ -10,13 +11,13 @@ export interface TopBarProps {
   onTogglePrint(): void;
 }
 
-/** Üst çubuk (spec §4): solda başlık, ortada düzen seçici, sağda tema, dil ve baskı. */
+/** Üst çubuk (spec §4): solda danışan ve harita (uyarı rozetleriyle), ortada düzen seçici, sağda tema, dil ve baskı. */
 export function TopBar({ themePref, onThemeChange, printView, onTogglePrint }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : DEFAULT_LANGUAGE;
   return (
     <header className="topbar no-print">
-      <h1 className="topbar-title">{t("app.title")}</h1>
+      <ChartTitle />
       <div className="topbar-center">{!printView && <LayoutPicker />}</div>
       <div className="topbar-right">
         <label>

@@ -1,23 +1,55 @@
-// PlanetRow → ChartData. Yalnızca gösterim eşlemesi yapılır (burç = floor(lon / 30),
-// burç içi derece); astrolojik hesap değildir.
-import type { PlanetRow } from "../bindings";
-import { isGrahaId, type ChartData } from "./types";
+// Chart → ChartData. Burç, derece, retro, yanma ve vargottama Rust'tan hazır gelir
+// (`Chart.vargas`, `Chart.grahas`); arayüz hiçbir boylamdan burç türetmez (spec §4).
+import type { Chart, Sign, Varga } from "../bindings";
+import type { ChartData, ChartPlanet } from "./types";
 
-export function signAndDegree(lon: number): { sign: number; degInSign: number } {
-  const norm = ((lon % 360) + 360) % 360;
-  const sign = Math.floor(norm / 30);
-  return { sign, degInSign: norm - sign * 30 };
+/** 0 = Mesha (Koç) … 11 = Meena (Balık); bindings `Sign` sırası. */
+export const SIGNS = [
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+  "Capricorn",
+  "Aquarius",
+  "Pisces",
+] as const satisfies readonly Sign[];
+
+/** `Varga::ALL` sırası (Shodasavarga). */
+export const VARGAS = ["D1", "D2", "D3", "D4", "D7", "D9", "D10", "D12", "D16", "D20", "D24", "D27", "D30", "D40", "D45", "D60"] as const satisfies readonly Varga[];
+
+export function isVarga(v: unknown): v is Varga {
+  return typeof v === "string" && (VARGAS as readonly string[]).includes(v);
 }
 
-/** Lagna henüz backend'den gelmediği için `ascSign` her zaman `null`. */
-export function chartDataFromPlanetRows(rows: readonly PlanetRow[]): ChartData {
-  const planets: ChartData["planets"] = [];
-  for (const r of rows) {
-    // Sonlu olmayan boylam (NaN, ±∞) gösterilemez; açıkça atlanır.
-    if (r.lon === null || !Number.isFinite(r.lon) || !isGrahaId(r.body)) continue;
-    const pos = signAndDegree(r.lon);
-    if (!Number.isInteger(pos.sign) || pos.sign < 0 || pos.sign > 11) continue;
-    planets.push({ id: r.body, ...pos, retrograde: r.retrograde });
-  }
-  return { ascSign: null, planets };
+export function signIndex(sign: Sign): number {
+  return (SIGNS as readonly Sign[]).indexOf(sign);
+}
+
+/**
+ * Bir vargayı çizim girdisine çevirir; varga haritada yoksa `null`. Retro her vargada,
+ * yanma yalnızca D1'de, vargottama (D1 ve D9 burcu aynı) D1 ve D9'da gösterilir.
+ * `showLagna: false` (saat bilinmiyor) lagnayı gizler: 1. ev Koç çizilir (spec §7).
+ */
+export function chartDataFromChart(chart: Chart, varga: Varga, { showLagna }: { showLagna: boolean }): ChartData | null {
+  const v = chart.vargas.find((x) => x.varga === varga);
+  if (!v) return null;
+  const grahas = new Map(chart.grahas.map((g) => [g.graha, g]));
+  const planets: ChartPlanet[] = v.placements.map((p) => {
+    const g = grahas.get(p.graha);
+    return {
+      id: p.graha,
+      sign: signIndex(p.sign),
+      // `null`: Rust'ta sonlu olmayan değer (NaN); çizim bu gezegeni açıkça atlar.
+      degInSign: p.deg ?? Number.NaN,
+      retrograde: g?.retrograde ?? false,
+      combust: varga === "D1" && (g?.combust ?? false),
+      vargottama: (varga === "D1" || varga === "D9") && (g?.vargottama ?? false),
+    };
+  });
+  return { ascSign: showLagna ? signIndex(v.lagna_sign) : null, planets };
 }

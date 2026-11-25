@@ -1,24 +1,20 @@
 import { useTranslation } from "react-i18next";
-import { signAndDegree } from "../chart/adapter";
-import { isGrahaId } from "../chart/types";
+import { signIndex } from "../chart/adapter";
 import { useHighlight } from "../highlight/store";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
+import { useSession } from "../session/store";
 import { formatDegree } from "./format";
 import "./panels.css";
-import { useSky } from "./sky";
-import { PanelError, PanelSkeleton, usePanelLoadPhase } from "./states";
 import type { PanelProps } from "./types";
 
-/** Graha tablosu: graha, burç, burç içi derece, retro. Sütun seçimi (`settings.columns`) sonraki planda. */
+/** Graha tablosu: graha, burç, burç içi derece, retro. Değerler `Chart.grahas`'tan gelir. */
 export function GrahaTablePanel(_: PanelProps) {
   const { t } = useTranslation();
-  const sky = useSky();
+  const { opened } = useSession();
   const highlight = useHighlight();
-  const phase = usePanelLoadPhase(sky.state.status === "loading");
 
-  if (sky.state.status === "error") return <PanelError error={sky.state.error} onRetry={sky.retry} />;
-  if (sky.state.status === "loading") return phase === "skeleton" ? <PanelSkeleton /> : null;
-  if (sky.state.rows.length === 0) return <p className="panel-message">{t("table.empty")}</p>;
+  if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
+  if (opened.chart.grahas.length === 0) return <p className="panel-message">{t("table.empty")}</p>;
 
   return (
     <table className="graha-table">
@@ -31,38 +27,33 @@ export function GrahaTablePanel(_: PanelProps) {
         </tr>
       </thead>
       <tbody>
-        {sky.state.rows.map((row) => {
-          const pos = row.lon === null ? null : signAndDegree(row.lon);
-          const target: HighlightTarget | null = isGrahaId(row.body) ? { type: "graha", id: row.body } : null;
-          const on = target !== null && sameTarget(highlight.active, target);
-          const pinned = target !== null && sameTarget(highlight.pinned, target);
+        {opened.chart.grahas.map((g) => {
+          const target: HighlightTarget = { type: "graha", id: g.graha };
+          const on = sameTarget(highlight.active, target);
+          const pinned = sameTarget(highlight.pinned, target);
           return (
             <tr
-              key={row.body}
-              data-graha={row.body}
+              key={g.graha}
+              data-graha={g.graha}
               className={on ? "is-highlighted" : undefined}
-              onMouseEnter={target ? () => highlight.hover(target) : undefined}
-              onMouseLeave={target ? () => highlight.hover(null) : undefined}
+              onMouseEnter={() => highlight.hover(target)}
+              onMouseLeave={() => highlight.hover(null)}
             >
               <th scope="row">
-                {target ? (
-                  <button
-                    type="button"
-                    className="link-button"
-                    aria-pressed={pinned}
-                    onClick={() => highlight.togglePin(target)}
-                    onFocus={() => highlight.hover(target)}
-                    onBlur={() => highlight.hover(null)}
-                  >
-                    {t(`grahaName.${row.body}`)}
-                  </button>
-                ) : (
-                  row.body
-                )}
+                <button
+                  type="button"
+                  className="link-button"
+                  aria-pressed={pinned}
+                  onClick={() => highlight.togglePin(target)}
+                  onFocus={() => highlight.hover(target)}
+                  onBlur={() => highlight.hover(null)}
+                >
+                  {t(`grahaName.${g.graha}`)}
+                </button>
               </th>
-              <td>{pos ? t(`sign.${pos.sign}`) : "—"}</td>
-              <td className="num">{pos ? formatDegree(pos.degInSign) : "—"}</td>
-              <td>{row.retrograde ? "℞" : ""}</td>
+              <td>{t(`sign.${signIndex(g.sign)}`)}</td>
+              <td className="num">{g.deg_in_sign === null ? "—" : formatDegree(g.deg_in_sign)}</td>
+              <td>{g.retrograde ? "℞" : ""}</td>
             </tr>
           );
         })}

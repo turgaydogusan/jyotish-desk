@@ -20,7 +20,6 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         .disable_serde_phases()
         .commands(tauri_specta::collect_commands![
             commands::engine_status,
-            commands::planet_longitudes,
             commands::compute_chart,
             commands::compute_transits,
             commands::dasha_children,

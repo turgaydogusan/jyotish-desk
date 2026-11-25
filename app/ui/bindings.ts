@@ -6,12 +6,6 @@ import type { InvokeOptions } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	engineStatus: (options?: InvokeOptions) => typedError<EngineStatus, CommandError>(__TAURI_INVOKE("engine_status", undefined, options)),
-	/**
-	 *  Motor çağrısı milisaniyeler sürer ve `engine.call` kanal üzerinde bloklar. Bu yüzden
-	 *  çağrı `spawn_blocking` havuzunda yapılır; async çalışma zamanı iş parçacıkları serbest kalır.
-	 *  `State<'_, _>` `'static` olmadığından motor `Arc` olarak yönetilir ve kapanışa klonlanır.
-	 */
-	planetLongitudes: (jdUt: number | null, options?: InvokeOptions) => typedError<PlanetRow[], CommandError>(__TAURI_INVOKE("planet_longitudes", { jdUt }, options)),
 	/**  Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir. */
 	computeChart: (jdUt: number | null, lat: number | null, lon: number | null, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("compute_chart", { jdUt, lat, lon, settings }, options)),
 	/**
@@ -498,12 +492,6 @@ export type PlaceHit = {
 	lon: number | null,
 	/**  IANA kimliği; form saat dilimini buradan önerir. */
 	timezone: string,
-};
-
-export type PlanetRow = {
-	body: string,
-	lon: number | null,
-	retrograde: boolean,
 };
 
 /**

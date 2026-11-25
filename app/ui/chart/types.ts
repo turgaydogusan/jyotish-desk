@@ -1,7 +1,8 @@
 // Harita çiziminin girdisi. Değerler Rust'tan hazır gelir; arayüz yalnızca çizer.
+import type { Graha } from "../bindings";
 
-/** Backend'in `PlanetRow.body` değerleriyle birebir aynı (app/src-tauri/src/commands.rs). */
-export const GRAHA_IDS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] as const;
+/** `Graha::ALL` sırası (bindings `Graha`). */
+export const GRAHA_IDS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] as const satisfies readonly Graha[];
 export type GrahaId = (typeof GRAHA_IDS)[number];
 
 export function isGrahaId(v: string): v is GrahaId {

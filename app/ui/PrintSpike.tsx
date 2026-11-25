@@ -1,5 +1,13 @@
-import type { PlanetRow } from "./bindings";
 import "./print.css";
+
+/** Baskı denemesinin satırı: burç Rust'tan gelir (`Chart.grahas[].sign`), burada türetilmez. */
+export interface SpikeRow {
+  body: string;
+  /** 0 = Mesha … 11 = Meena; `null` bilinmiyor. */
+  sign: number | null;
+  lon: number | null;
+  retrograde: boolean;
+}
 
 // Güney Hint düzeni: 4×4 ızgaranın dış halkası, Meena sol üstten saat yönünde.
 // [satır, sütun] → burç index (0 = Mesha).
@@ -9,12 +17,11 @@ const SOUTH_CELLS: Array<[number, number, number]> = [
   [3, 1, 7], [3, 0, 8], [2, 0, 9], [1, 0, 10],
 ];
 
-export function PrintSpike({ rows }: { rows: PlanetRow[] }) {
+export function PrintSpike({ rows }: { rows: SpikeRow[] }) {
   const bySign = new Map<number, string[]>();
   for (const r of rows) {
-    if (r.lon === null) continue;
-    const s = Math.floor(r.lon / 30) % 12;
-    bySign.set(s, [...(bySign.get(s) ?? []), r.body]);
+    if (r.sign === null) continue;
+    bySign.set(r.sign, [...(bySign.get(r.sign) ?? []), r.body]);
   }
   const cell = 45;
   return (

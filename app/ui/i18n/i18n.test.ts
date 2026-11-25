@@ -46,7 +46,7 @@ test("each language has 12 distinct sign abbreviations", () => {
 
 test("Turkish is the default and initialisation is synchronous", () => {
   expect(currentLanguage()).toBe("tr");
-  expect(i18n.t("chart.noLagna")).toBe("Lagna henüz hesaplanmıyor; şimdiki gökyüzü, 1. ev Koç");
+  expect(i18n.t("panel.noChart")).toBe("Açık harita yok.");
   expect(i18n.t("errors.calc", { detail: "x<y" })).toBe("Hesap tamamlanamadı (x<y).");
 });
 
@@ -64,4 +64,25 @@ test("chart accessible-name words exist in every language", () => {
   expect([tr.chart.retro, tr.chart.combust, tr.chart.vargottama]).toEqual(["retro", "yanık", "vargottama"]);
   expect([en.chart.retro, en.chart.combust, en.chart.vargottama]).toEqual(["retrograde", "combust", "vargottama"]);
   expect([fr.chart.retro, fr.chart.combust, fr.chart.vargottama]).toEqual(["rétrograde", "combuste", "vargottama"]);
+});
+
+// Arka ucun döndürebildiği her `CommandError.code` (commands.rs, client_commands.rs,
+// atlas_commands.rs). Dosya ve içe aktarma kodları M6'da arayüze açılınca eklenir.
+const BACKEND_CODES = [
+  "ipc", "calc", "engine_stopped", "data_files_missing", "invalid_path", "env_override", "already_open", "job_panicked", "print_failed",
+  "store_sqlite", "store_migration", "store_json", "store_too_new", "store_unavailable", "not_found", "invalid_input",
+  "unknown_time_zone", "nonexistent_local_time", "ambiguous_local_time", "offset_out_of_range", "longitude_out_of_range",
+  "date_out_of_range", "last_chart", "unsupported_schema_version", "invalid_settings", "invalid_location", "invalid_julian_day",
+  "non_finite_result", "invalid_dasha_input", "panchang_search", "invalid_transit_input",
+  "atlas_unavailable", "atlas_sqlite", "atlas_io", "atlas_schema",
+] as const;
+
+test("every backend error code reachable from the UI has a message", () => {
+  for (const code of BACKEND_CODES) expect(Object.keys(tr.errors), code).toContain(code);
+});
+
+test("warning badges and hints cover every moment and chart warning", () => {
+  const warnings = ["TimeUnknownNoon", "LmtFromLongitude", "PreTzdbReliability", "LowPrecision", "PlacidusPolarFallback", "SunriseUnavailable"];
+  expect(Object.keys(tr.badge).sort()).toEqual([...warnings].sort());
+  expect(Object.keys(tr.badgeHint).sort()).toEqual([...warnings].sort());
 });

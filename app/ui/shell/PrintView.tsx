@@ -2,20 +2,27 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import type { CommandError } from "../bindings";
-import { useSky } from "../panels/sky";
+import { signIndex } from "../chart/adapter";
 import { PanelError } from "../panels/states";
-import { PrintSpike } from "../PrintSpike";
+import { PrintSpike, type SpikeRow } from "../PrintSpike";
+import { useSession } from "../session/store";
 
 /** M0 baskı denemesi; M7'deki A4 baskı düzenleri gelene kadar menüden erişilir. */
 export function PrintView() {
   const { t } = useTranslation();
-  const sky = useSky();
+  const { opened } = useSession();
   const [error, setError] = useState<CommandError | null>(null);
   const print = async () => {
     setError(null);
     const r = await api.printWindow();
     if (r.status === "error") setError(r.error);
   };
+  const rows: SpikeRow[] = (opened?.chart.grahas ?? []).map((g) => ({
+    body: g.graha,
+    sign: signIndex(g.sign),
+    lon: g.lon,
+    retrograde: g.retrograde,
+  }));
   return (
     <div>
       <div className="print-view-actions no-print">
@@ -24,7 +31,7 @@ export function PrintView() {
         </button>
         {error && <PanelError error={error} onRetry={() => void print()} />}
       </div>
-      <PrintSpike rows={sky.state.status === "ok" ? sky.state.rows : []} />
+      <PrintSpike rows={rows} />
     </div>
   );
 }

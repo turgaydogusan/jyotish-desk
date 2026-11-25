@@ -3,42 +3,72 @@ import { vi } from "vitest";
 
 vi.mock("./api", () => ({
   api: {
-    engineStatus: vi.fn(async () => ({ status: "ok", data: { seVersion: "2.10.03" } })),
-    planetLongitudes: vi.fn(async () => ({
-      status: "ok",
-      data: [
-        { body: "Sun", lon: 256.5, retrograde: false },
-        { body: "Saturn", lon: 10.25, retrograde: true },
-      ],
-    })),
     printWindow: vi.fn(async () => ({ status: "ok", data: null })),
   },
 }));
 
 import { api } from "./api";
 import { App } from "./App";
-import { memoryPersistence } from "./view/persistence";
+import type { Boot } from "./boot";
+import { fixture, unknownTimeOpened } from "./test/fixture";
 import { THEME_STORAGE_KEY } from "./theme/theme";
+import { memoryPersistence } from "./view/persistence";
 
-function renderApp() {
-  return render(<App persistence={memoryPersistence()} />);
+function renderApp(boot: Partial<Boot> = {}) {
+  const full: Boot = { layout: null, opened: fixture().opened, error: null, ...boot };
+  return render(<App boot={full} persistence={memoryPersistence()} />);
 }
 
-test("opens on the interview layout with the current-sky chart", async () => {
+test("opens on the interview layout with the restored chart", () => {
   renderApp();
   expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
-  expect(await screen.findByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
-  expect(screen.getByRole("note")).toHaveTextContent("Lagna henüz hesaplanmıyor; şimdiki gökyüzü, 1. ev Koç");
-  expect(screen.getByText("D9 haritası sonraki bir sürümde gelecek.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeInTheDocument();
+  expect(screen.getByText("Doğum haritası")).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "D9 haritası" })).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Notlar" })).toBeInTheDocument();
-  expect(api.planetLongitudes).toHaveBeenCalled();
+  expect(screen.queryByRole("list", { name: "Uyarılar" })).toBeNull();
 });
 
-test("Cmd+2 switches to the research layout with the graha table", async () => {
+test("without a session the desk shows the app title and empty panels", () => {
+  renderApp({ opened: null });
+  expect(screen.getByRole("heading", { level: 1, name: "Jyotish Desk" })).toBeInTheDocument();
+  expect(screen.getAllByText("Açık harita yok.").length).toBeGreaterThan(0);
+});
+
+test("moment warnings are badges with a text label and a hint", () => {
+  renderApp({ opened: unknownTimeOpened() });
+  const badges = screen.getByRole("list", { name: "Uyarılar" });
+  const badge = within(badges).getByText("Saat bilinmiyor").closest("li")!;
+  expect(badge).toHaveAttribute("title", "Doğum saati bilinmiyor; öğlen 12:00 alındı.");
+  expect(badge).toHaveAttribute("tabindex", "0");
+  expect(badge).toHaveTextContent(": Doğum saati bilinmiyor; öğlen 12:00 alındı.");
+});
+
+test("a restore failure and store warnings are shown in the notice bar and can be dismissed", () => {
+  const { unmount } = renderApp({ opened: null, error: { code: "store_sqlite", params: { detail: "disk" } } });
+  const region = screen.getByRole("region", { name: "Bildirimler" });
+  expect(within(region).getByRole("alert")).toHaveTextContent(
+    "Son oturum açılamadı: Danışan veritabanı okunamadı ya da yazılamadı (disk).",
+  );
+  fireEvent.click(within(region).getByRole("button", { name: "Kapat" }));
+  expect(screen.queryByRole("region", { name: "Bildirimler" })).toBeNull();
+  unmount();
+  const opened = fixture().opened;
+  opened.warnings = ["LastChartMissing", { TzdbChanged: { stored_version: "2025a", current_version: "2026a", current_utc: null } }];
+  renderApp({ opened });
+  const statuses = within(screen.getByRole("region", { name: "Bildirimler" })).getAllByRole("status");
+  expect(statuses.map((s) => s.textContent)).toEqual([
+    "UyarıSon açılan harita silinmiş; en son güncellenen harita açıldı.Kapat",
+    "UyarıSaat dilimi verisi değişti (2025a → 2026a); saklanan an kullanılıyor.Kapat",
+  ]);
+});
+
+test("Cmd+2 switches to the research layout with the graha table", () => {
   renderApp();
   fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });
   expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Araştırma");
-  const table = await screen.findByRole("region", { name: "Graha tablosu" });
+  const table = screen.getByRole("region", { name: "Graha tablosu" });
   expect(within(table).getByRole("button", { name: "Satürn" }).closest("tr")).toHaveTextContent("℞");
 });
 
@@ -93,6 +123,7 @@ test("language menu switches every string", async () => {
   fireEvent.change(screen.getByRole("combobox", { name: "Dil" }), { target: { value: "en" } });
   expect(await screen.findByRole("combobox", { name: "Layout" })).toHaveDisplayValue("Consultation");
   expect(screen.getByRole("group", { name: "D1 chart" })).toBeInTheDocument();
+  expect(screen.getByText("Natal chart")).toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Theme" })).toBeInTheDocument();
 });
 
@@ -100,6 +131,7 @@ test("the print test stays reachable and calls printWindow", async () => {
   renderApp();
   fireEvent.click(screen.getByRole("button", { name: "Baskı denemesi" }));
   expect(await screen.findByText(/Doğum haritası — ğüşıöç İ/)).toBeInTheDocument();
+  expect(screen.getByTestId("sign-8")).toHaveTextContent("Sun");
   fireEvent.click(screen.getByRole("button", { name: "Yazdır…" }));
   expect(api.printWindow).toHaveBeenCalledOnce();
   fireEvent.click(screen.getByRole("button", { name: "Panoya dön" }));
@@ -112,10 +144,4 @@ test("a print failure is shown with a retry", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Baskı denemesi" }));
   fireEvent.click(screen.getByRole("button", { name: "Yazdır…" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Yazdırma penceresi açılamadı.");
-});
-
-test("a failed sky request shows an in-panel error instead of a blank desk", async () => {
-  vi.mocked(api.planetLongitudes).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
-  renderApp();
-  expect(await screen.findByRole("alert")).toHaveTextContent("Hesap tamamlanamadı (x).");
 });

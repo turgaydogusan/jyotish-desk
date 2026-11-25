@@ -1,23 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
-vi.mock("../api", () => ({
-  api: {
-    planetLongitudes: vi.fn(async () => ({
-      status: "ok",
-      data: [{ body: "Sun", lon: 256.5, retrograde: false }],
-    })),
-  },
-}));
-
-import { api } from "../api";
-import { HighlightProvider } from "../highlight/store";
 import { hasOverlap } from "../layout/grid";
 import type { LayoutState, Panel } from "../layout/model";
-import { SkyProvider } from "../panels/sky";
-import { initialViewModel } from "../view/model";
-import { memoryPersistence } from "../view/persistence";
-import { ViewStateProvider } from "../view/store";
+import { renderWithStores } from "../test/render";
 import { Dashboard } from "./Dashboard";
 import { GRID_GAP_PX } from "./metrics";
 
@@ -46,16 +32,7 @@ afterEach(() => {
 const MOVE = { buttons: 1, pointerId: 1 };
 
 function setup(width = WIDTH, panels = PANELS, initial: LayoutState = state(panels)) {
-  const persistence = memoryPersistence();
-  const utils = render(
-    <ViewStateProvider initial={initialViewModel(initial)} persistence={persistence} debounceMs={0}>
-      <HighlightProvider>
-        <SkyProvider now={() => 0}>
-          <Dashboard width={width} />
-        </SkyProvider>
-      </HighlightProvider>
-    </ViewStateProvider>,
-  );
+  const utils = renderWithStores(<Dashboard width={width} />, { layout: initial });
   const frame = (id: string) => utils.container.querySelector<HTMLElement>(`[data-panel-id="${id}"]`)!;
   const box = (id: string) => {
     const f = frame(id);
@@ -68,7 +45,7 @@ function setup(width = WIDTH, panels = PANELS, initial: LayoutState = state(pane
       w: Number(f.dataset.w),
       h: Number(f.dataset.h),
     }));
-  return { ...utils, persistence, frame, box, all };
+  return { ...utils, frame, box, all };
 }
 
 test("renders every panel of the active layout on a 12-column grid", async () => {
@@ -144,18 +121,6 @@ test("narrow windows reflow to 8 and 4 columns read-only", async () => {
   expect(box("b")).toEqual(before);
   const narrow = setup(320);
   expect(narrow.container.querySelectorAll('.dashboard[data-columns="4"]')).toHaveLength(1);
-});
-
-test("the header shows an inline loading indicator between 100 ms and 1 s", async () => {
-  vi.useFakeTimers();
-  let resolve: (v: Awaited<ReturnType<typeof api.planetLongitudes>>) => void = () => {};
-  vi.mocked(api.planetLongitudes).mockReturnValueOnce(new Promise((r) => (resolve = r)));
-  setup(WIDTH, [PANELS[0]]);
-  expect(screen.queryByRole("status")).toBeNull();
-  act(() => vi.advanceTimersByTime(150));
-  expect(screen.getByRole("status")).toHaveTextContent("Yükleniyor");
-  await act(async () => resolve({ status: "ok", data: [] }));
-  expect(screen.queryByRole("status")).toBeNull();
 });
 
 // ---- Sürükleme sağlamlığı ----

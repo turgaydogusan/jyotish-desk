@@ -1,42 +1,31 @@
 import { useTranslation } from "react-i18next";
-import { chartDataFromPlanetRows } from "../chart/adapter";
+import type { Varga } from "../bindings";
+import { chartDataFromChart, isVarga } from "../chart/adapter";
 import { ChartSvg } from "../chart/ChartSvg";
 import { isChartStyle } from "../chart/types";
 import { useHighlight } from "../highlight/store";
+import { useSession } from "../session/store";
 import { chartLabels } from "./labels";
 import "./panels.css";
-import { useSky } from "./sky";
-import { PanelError, PanelSkeleton, usePanelLoadPhase } from "./states";
 import type { PanelProps } from "./types";
 
-export function chartVarga(settings: Record<string, unknown>): string {
-  return typeof settings.varga === "string" ? settings.varga : "D1";
+export function chartVarga(settings: Record<string, unknown>): Varga {
+  return isVarga(settings.varga) ? settings.varga : "D1";
 }
 
-/**
- * Harita paneli. Lagna ve varga komutları M2–M3'te gelir; şimdilik yalnızca D1 çizilir ve
- * şimdiki gökyüzü gösterilir (1. ev Koç). Diğer vargalar açık bir bilgi metni gösterir.
- */
+/** Harita paneli: açık haritanın `settings.varga` vargası, `settings.style` biçiminde. */
 export function ChartPanel({ panel }: PanelProps) {
   const { t } = useTranslation();
-  const sky = useSky();
+  const { opened } = useSession();
   const highlight = useHighlight();
   const varga = chartVarga(panel.settings);
-  const phase = usePanelLoadPhase(varga === "D1" && sky.state.status === "loading");
   const style = isChartStyle(panel.settings.style) ? panel.settings.style : "north";
 
-  if (varga !== "D1") return <p className="panel-message">{t("chart.vargaUnavailable", { varga })}</p>;
-  if (sky.state.status === "error") return <PanelError error={sky.state.error} onRetry={sky.retry} />;
-  if (sky.state.status === "loading") return phase === "skeleton" ? <PanelSkeleton /> : null;
-
-  const data = chartDataFromPlanetRows(sky.state.rows);
+  if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
+  const data = chartDataFromChart(opened.chart, varga, { showLagna: true });
+  if (!data) return <p className="panel-message">{t("chart.vargaMissing", { varga })}</p>;
   return (
     <div className="chart-panel">
-      {data.ascSign === null && (
-        <p className="panel-notice" role="note">
-          {t("chart.noLagna")}
-        </p>
-      )}
       <div className="chart-panel-figure">
         <ChartSvg
           data={data}

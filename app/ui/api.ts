@@ -40,7 +40,6 @@ async function wrap<T>(call: () => Promise<Result<T>>): Promise<Result<T>> {
 
 export const api = {
   engineStatus: () => wrap(() => commands.engineStatus()),
-  planetLongitudes: (jdUt: number | null) => wrap(() => commands.planetLongitudes(jdUt)),
   printWindow: () => wrap(() => commands.printWindow()),
   restoreSession: () => wrap(() => commands.restoreSession()),
   createClient: (input: NewClient) => wrap(() => commands.createClient(input)),

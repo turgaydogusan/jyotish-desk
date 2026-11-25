@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { PrintSpike } from "./PrintSpike";
 
 const rows = [
-  { body: "Sun", lon: 256.5, retrograde: false },
-  { body: "Moon", lon: 10.0, retrograde: false },
+  { body: "Sun", sign: 8, lon: 256.5, retrograde: false },
+  { body: "Moon", sign: 0, lon: 10.0, retrograde: false },
 ];
 
 test("renders two A4 pages with chart svg and planet table", () => {
@@ -16,9 +16,9 @@ test("renders two A4 pages with chart svg and planet table", () => {
   expect(screen.getByText("राशि")).toBeInTheDocument();
 });
 
-test("planet sign index is floor(lon / 30)", () => {
+test("planets are placed by the sign the backend sent", () => {
   render(<PrintSpike rows={rows} />);
-  // Sun 256.5° → 9. burç (Dhanu, index 8); hücrede "Sun" etiketi.
+  // Sun: Dhanu (index 8); hücrede "Sun" etiketi.
   const cell = screen.getByTestId("sign-8");
   expect(cell).toHaveTextContent("Sun");
 });

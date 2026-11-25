@@ -3,6 +3,7 @@ import { Dashboard } from "../dashboard/Dashboard";
 import { isEditableTarget } from "../keyboard";
 import { useLayoutStore } from "../view/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
+import { NoticeBar } from "./notices";
 import { PrintView } from "./PrintView";
 import "./shell.css";
 import { TopBar } from "./TopBar";
@@ -45,6 +46,7 @@ export function Shell() {
         printView={printView}
         onTogglePrint={() => setPrintView((v) => !v)}
       />
+      <NoticeBar />
       <main className="shell-main">
         <div ref={measureRef}>{printView ? <PrintView /> : <Dashboard width={width} />}</div>
       </main>
