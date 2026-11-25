@@ -51,6 +51,25 @@ test("apply sends the wall-clock time in the browser's time zone; now goes back 
   expect(now).toHaveAttribute("aria-pressed", "true");
 });
 
+test("a date typed right after the table appears is not overwritten by a late sync", async () => {
+  // Zamanlayıcının her dilimi dolmuş görünür: React edilgen etkileri bir sonraki işe erteler
+  // (yük altındaki CI ile aynı sıra). Kutuların eşitlenmesi bir etkide olsaydı yazılan tarihi ezerdi.
+  let now = 0;
+  const clock = vi.spyOn(performance, "now").mockImplementation(() => (now += 10));
+  try {
+    renderWithStores(<TransitTablePanel panel={panel} />);
+    await screen.findByRole("table");
+    fireEvent.change(screen.getByLabelText("Tarih"), { target: { value: "2026-12-01" } });
+    fireEvent.change(screen.getByLabelText("Saat"), { target: { value: "09:30" } });
+    fireEvent.click(screen.getByRole("button", { name: "Uygula" }));
+    await waitFor(() =>
+      expect(vi.mocked(api.transitsAt).mock.calls.at(-1)?.[0]).toEqual({ Local: { date: "2026-12-01", time: "09:30", tz: browserTimeZone() } }),
+    );
+  } finally {
+    clock.mockRestore();
+  }
+});
+
 test("an error is shown in the panel with a retry", async () => {
   vi.mocked(api.transitsAt).mockResolvedValueOnce({ status: "error", error: { code: "nonexistent_local_time", params: { local: "2014-03-31T03:30:00", suggestion: "2014-03-31T04:30:00" } } });
   renderWithStores(<TransitTablePanel panel={panel} />);

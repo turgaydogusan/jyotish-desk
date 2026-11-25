@@ -1,6 +1,6 @@
 // Transit anı seçici: duvar saati tarayıcının IANA diliminde gönderilir, Rust çözer (boşlukta
 // hata ve öneri, örtüşmede önceki an; Plan 11 D7). "Şimdi" anı Rust'un saatine bırakır.
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { browserTimeZone, formatMoment, localParts, useTransitControl } from "./store";
 
@@ -15,11 +15,17 @@ export function TransitDate() {
   const [editing, setEditing] = useState(false);
 
   // Gösterilen an değişince (şimdi, şerit) kutular onu gösterir; kullanıcı yazarken değişmez.
-  useEffect(() => {
-    if (editing || !shown) return;
-    setDate(shown.date);
-    setTime(shown.time);
-  }, [shown?.date, shown?.time, editing]);
+  // Eşitleme çizim sırasında yapılır, etkide değil: etki bir sonraki işe ertelenebilir ve araya
+  // giren ilk tuş vuruşunun üzerine yazardı (yük altında görülen test dalgalanmasının nedeni).
+  const target = editing || !shown ? null : `${shown.date} ${shown.time}`;
+  const [synced, setSynced] = useState(target);
+  if (target !== synced) {
+    setSynced(target);
+    if (shown && target !== null) {
+      setDate(shown.date);
+      setTime(shown.time);
+    }
+  }
 
   const apply = (e: FormEvent) => {
     e.preventDefault();
