@@ -125,6 +125,27 @@ impl Store {
         }
         Ok(hits)
     }
+
+    /// Kenar çubuğu etiket süzgeci: etiketin (`tag_key` ile tam eşleşme) bağlı olduğu en az
+    /// bir haritası olan danışanlar, son açılan önce. Bilinmeyen etiket boş liste döner.
+    pub fn clients_with_tag(&self, tag: &str, limit: u32) -> Result<Vec<Client>, StoreError> {
+        let mut stmt = self.conn.prepare_cached(
+            "SELECT DISTINCT c.id, c.uuid, c.name, c.gender, c.last_chart_id, c.last_opened_at,
+                    c.created_at, c.updated_at
+             FROM tags t
+             JOIN chart_tags ct ON ct.tag_id = t.id
+             JOIN charts ch ON ch.id = ct.chart_id
+             JOIN clients c ON c.id = ch.client_id
+             WHERE t.name_key = ?1
+             ORDER BY c.last_opened_at DESC NULLS LAST, c.name COLLATE NOCASE, c.id
+             LIMIT ?2",
+        )?;
+        let rows = stmt.query_map(
+            params![tag_key(tag.trim()), limit.min(MAX_LIST)],
+            row_to_client,
+        )?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
 }
 
 #[cfg(test)]
@@ -295,5 +316,31 @@ mod tests {
         assert!(s.search_clients("a", 0).unwrap().is_empty());
         assert_eq!(s.search_clients("a", 1).unwrap().len(), 1);
         assert_eq!(s.search_clients("a", u32::MAX).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn clients_with_tag_match_the_whole_tag_key() {
+        let mut s = store();
+        let (a, ach) = s.create_client(&new_client("Ayşe")).unwrap();
+        let (b, bch) = s.create_client(&new_client("Burak")).unwrap();
+        let (c, cch) = s.create_client(&new_client("Can")).unwrap();
+        s.set_chart_tags(ach.id, &["Kariyer".into()]).unwrap();
+        s.set_chart_tags(bch.id, &["KARİYER".into(), "araştırma".into()])
+            .unwrap();
+        s.set_chart_tags(cch.id, &["Kariyerler".into()]).unwrap();
+        s.open_client(b.id, None).unwrap();
+        let ids = |s: &Store, q: &str| -> Vec<u32> {
+            s.clients_with_tag(q, 10)
+                .unwrap()
+                .iter()
+                .map(|c| c.id)
+                .collect()
+        };
+        // Son açılan önce; önek eşleşmesi yok ("Kariyerler" ayrı etiket).
+        assert_eq!(ids(&s, " kariyer "), [b.id, a.id]);
+        assert_eq!(ids(&s, "kariyerler"), [c.id]);
+        assert!(ids(&s, "kari").is_empty());
+        assert!(ids(&s, "").is_empty());
+        assert_eq!(s.clients_with_tag("kariyer", 1).unwrap().len(), 1);
     }
 }

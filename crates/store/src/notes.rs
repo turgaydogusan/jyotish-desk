@@ -36,25 +36,34 @@ fn row_to_note(r: &Row<'_>) -> rusqlite::Result<Note> {
     })
 }
 
-/// Etiketin kimlik anahtarı (`tags.name_key`): Unicode küçük harf; ayrıca Türkçe dört "i"
-/// (`I`, `ı`, `İ`, `i`) tek harfe iner ("KARIYER", "KARİYER", "kariyer" aynı etikettir).
-/// Aksanlar korunur ("Öfke" ile "Ofke" ayrı etiketlerdir).
+/// Unicode NFC: "O" + U+0308 ile hazır "Ö" aynı dizgi olur (macOS dosya adları ve bazı
+/// klavyeler ayrışık biçim üretir).
+pub(crate) fn nfc(text: &str) -> String {
+    icu_normalizer::ComposingNormalizerBorrowed::new_nfc()
+        .normalize(text)
+        .into_owned()
+}
+
+/// Etiketin kimlik anahtarı (`tags.name_key`): NFC, sonra Unicode küçük harf; ayrıca Türkçe
+/// dört "i" (`I`, `ı`, `İ`, `i`) tek harfe iner ("KARIYER", "KARİYER", "kariyer" aynı
+/// etikettir). Aksanlar korunur ("Öfke" ile "Ofke" ayrı etiketlerdir).
 pub(crate) fn tag_key(tag: &str) -> String {
-    tag.to_lowercase()
+    nfc(tag)
+        .to_lowercase()
         .chars()
         .filter(|c| *c != '\u{307}')
         .map(|c| if c == 'ı' { 'i' } else { c })
         .collect()
 }
 
-/// Etiket listesini kırpar, boşları atar, büyük/küçük harf duyarsız (`tag_key`)
-/// tekilleştirir (ilk yazım korunur).
+/// Etiket listesini NFC'ye çevirir, kırpar, boşları atar, büyük/küçük harf duyarsız
+/// (`tag_key`) tekilleştirir (ilk yazım korunur).
 pub fn normalize_tags(tags: &[String]) -> Result<Vec<String>, StoreError> {
     let mut out: Vec<String> = Vec::new();
     let mut keys: Vec<String> = Vec::new();
     for t in tags {
-        let t = t.trim();
-        let key = tag_key(t);
+        let t = nfc(t.trim());
+        let key = tag_key(&t);
         if key.is_empty() {
             continue;
         }
@@ -63,7 +72,7 @@ pub fn normalize_tags(tags: &[String]) -> Result<Vec<String>, StoreError> {
         }
         if !keys.contains(&key) {
             keys.push(key);
-            out.push(t.to_owned());
+            out.push(t);
         }
     }
     Ok(out)
@@ -335,5 +344,30 @@ mod tests {
         assert_eq!(s.tags().unwrap().len(), 4);
         // Yalnızca birleştirici noktadan oluşan etiket boş sayılır.
         assert!(normalize_tags(&["\u{307}".into()]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn decomposed_and_precomposed_tags_are_one_tag() {
+        let mut s = store();
+        let (_, a) = s.create_client(&new_client("A")).unwrap();
+        let (_, b) = s.create_client(&new_client("B")).unwrap();
+        // "O" + U+0308 (ayrışık) ilk yazımdır; saklanan ad NFC'dir.
+        let got = s.set_chart_tags(a.id, &["O\u{308}fke".into()]).unwrap();
+        assert_eq!(got, ["Öfke"]);
+        let got = s.set_chart_tags(b.id, &["öfke".into()]).unwrap();
+        assert_eq!(got, ["Öfke"]);
+        assert_eq!(
+            s.tags().unwrap(),
+            [TagCount {
+                name: "Öfke".into(),
+                charts: 2
+            }]
+        );
+        // Sınır NFC'den sonra sayılır: 64 ayrışık "Ö" 128 kod noktasıdır ama 64 karakterdir.
+        let long = "O\u{308}".repeat(MAX_TAG_CHARS);
+        assert_eq!(
+            normalize_tags(&[long]).unwrap()[0].chars().count(),
+            MAX_TAG_CHARS
+        );
     }
 }

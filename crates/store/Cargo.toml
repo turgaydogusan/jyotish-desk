@@ -12,6 +12,9 @@ specta = ["dep:specta", "dep:specta-typescript", "jyotish-core/specta"]
 
 [dependencies]
 atlas = { path = "../atlas" }
+# Etiket kimliği için Unicode NFC (Plan 08 ertelenen madde 8). Ağaçta zaten var (url → idna);
+# yalnızca derlenmiş veri, ek özellik yok.
+icu_normalizer = { version = "=2.4.0", default-features = false, features = ["compiled_data"] }
 jyotish-core = { path = "../jyotish-core" }
 rusqlite = { version = "0.43", features = ["bundled"] }
 rusqlite_migration = "=2.9.0"
