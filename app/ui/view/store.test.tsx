@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useLayoutEffect } from "react";
 import type { Graha } from "../bindings";
 import { BUILTIN_LAYOUT_IDS } from "../layout/model";
 import { initialViewModel } from "./model";
@@ -19,6 +20,14 @@ function Probe() {
       <button onClick={() => view.setDashaPath(["Rahu", "Jupiter"] as Graha[])}>path</button>
       <button onClick={() => view.openChart(7, ["Venus"])}>open7</button>
       <button onClick={() => view.openChart(8, "garbage")}>open8</button>
+      <button
+        onClick={() => {
+          store.select(BUILTIN_LAYOUT_IDS.research);
+          view.openChart(8, []);
+        }}
+      >
+        researchThenOpen8
+      </button>
     </div>
   );
 }
@@ -85,6 +94,48 @@ test("opening another chart flushes the pending save to the previous chart first
   expect(p.saved.map((s) => [s.chartId, s.viewState.dasha_expanded_path])).toEqual([[7, ["Rahu", "Jupiter"]]]);
   expect(screen.getByTestId("chart")).toHaveTextContent("8");
   expect(screen.getByTestId("path")).toHaveTextContent(""); // bozuk yol boş yol olur
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
+  expect(p.saved).toHaveLength(1);
+});
+
+test("a change dispatched in the same tick as openChart is kept and saved to the previous chart", () => {
+  const p = memoryPersistence();
+  setup(p);
+  fireEvent.click(screen.getByText("researchThenOpen8"));
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.research);
+  expect(screen.getByTestId("chart")).toHaveTextContent("8");
+  expect(p.saved.map((s) => [s.chartId, s.viewState.panel_layout!.active_layout_id])).toEqual([
+    [null, BUILTIN_LAYOUT_IDS.research],
+  ]);
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
+  expect(p.saved).toHaveLength(1);
+});
+
+test("a committed change whose effects have not run yet is still flushed to the previous chart", () => {
+  // Layout effect'ler passive effect'lerden önce çalışır: değişiklik commit edilmiş ama
+  // deponun kendi effect'i henüz çalışmamışken `openChart` çağrılır.
+  function OpenOnResearch() {
+    const { active } = useLayoutStore();
+    const { model, openChart } = useViewStore();
+    useLayoutEffect(() => {
+      if (active.id === BUILTIN_LAYOUT_IDS.research && model.chartId === 7) openChart(8, []);
+    }, [active.id, model.chartId, openChart]);
+    return null;
+  }
+  const p = memoryPersistence();
+  render(
+    <ViewStateProvider initial={initialViewModel(null)} persistence={p}>
+      <Probe />
+      <OpenOnResearch />
+    </ViewStateProvider>,
+  );
+  fireEvent.click(screen.getByText("open7"));
+  fireEvent.click(screen.getByText("research"));
+  expect(screen.getByTestId("chart")).toHaveTextContent("8");
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.research);
+  expect(p.saved.map((s) => [s.chartId, s.viewState.panel_layout!.active_layout_id])).toEqual([
+    [7, BUILTIN_LAYOUT_IDS.research],
+  ]);
   act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
   expect(p.saved).toHaveLength(1);
 });

@@ -1981,6 +1981,7 @@ test("a corrupt legacy entry is ignored and a failed move keeps it for the next 
 
 ```tsx
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useLayoutEffect } from "react";
 import type { Graha } from "../bindings";
 import { BUILTIN_LAYOUT_IDS } from "../layout/model";
 import { initialViewModel } from "./model";
@@ -2001,6 +2002,14 @@ function Probe() {
       <button onClick={() => view.setDashaPath(["Rahu", "Jupiter"] as Graha[])}>path</button>
       <button onClick={() => view.openChart(7, ["Venus"])}>open7</button>
       <button onClick={() => view.openChart(8, "garbage")}>open8</button>
+      <button
+        onClick={() => {
+          store.select(BUILTIN_LAYOUT_IDS.research);
+          view.openChart(8, []);
+        }}
+      >
+        researchThenOpen8
+      </button>
     </div>
   );
 }
@@ -2067,6 +2076,48 @@ test("opening another chart flushes the pending save to the previous chart first
   expect(p.saved.map((s) => [s.chartId, s.viewState.dasha_expanded_path])).toEqual([[7, ["Rahu", "Jupiter"]]]);
   expect(screen.getByTestId("chart")).toHaveTextContent("8");
   expect(screen.getByTestId("path")).toHaveTextContent(""); // bozuk yol boş yol olur
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
+  expect(p.saved).toHaveLength(1);
+});
+
+test("a change dispatched in the same tick as openChart is kept and saved to the previous chart", () => {
+  const p = memoryPersistence();
+  setup(p);
+  fireEvent.click(screen.getByText("researchThenOpen8"));
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.research);
+  expect(screen.getByTestId("chart")).toHaveTextContent("8");
+  expect(p.saved.map((s) => [s.chartId, s.viewState.panel_layout!.active_layout_id])).toEqual([
+    [null, BUILTIN_LAYOUT_IDS.research],
+  ]);
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
+  expect(p.saved).toHaveLength(1);
+});
+
+test("a committed change whose effects have not run yet is still flushed to the previous chart", () => {
+  // Layout effect'ler passive effect'lerden önce çalışır: değişiklik commit edilmiş ama
+  // deponun kendi effect'i henüz çalışmamışken `openChart` çağrılır.
+  function OpenOnResearch() {
+    const { active } = useLayoutStore();
+    const { model, openChart } = useViewStore();
+    useLayoutEffect(() => {
+      if (active.id === BUILTIN_LAYOUT_IDS.research && model.chartId === 7) openChart(8, []);
+    }, [active.id, model.chartId, openChart]);
+    return null;
+  }
+  const p = memoryPersistence();
+  render(
+    <ViewStateProvider initial={initialViewModel(null)} persistence={p}>
+      <Probe />
+      <OpenOnResearch />
+    </ViewStateProvider>,
+  );
+  fireEvent.click(screen.getByText("open7"));
+  fireEvent.click(screen.getByText("research"));
+  expect(screen.getByTestId("chart")).toHaveTextContent("8");
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.research);
+  expect(p.saved.map((s) => [s.chartId, s.viewState.panel_layout!.active_layout_id])).toEqual([
+    [7, BUILTIN_LAYOUT_IDS.research],
+  ]);
   act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
   expect(p.saved).toHaveLength(1);
 });
@@ -2473,11 +2524,11 @@ export function viewReducer(state: ViewModel, action: ViewAction): ViewModel {
 `app/ui/view/store.tsx` oluştur:
 
 ```tsx
-// Görünüm durumunun tek merkezi (spec §11 M5): düzenler ve dasha yolu bir reducer'da;
+// Görünüm durumunun tek merkezi (spec §11 M5): düzenler ve dasha yolu tek saf reducer'dan geçer;
 // ≈ 500 ms debounce ile kayıt (spec §4), pencere gizlenince ya da kapanınca hemen kayıt,
 // Cmd+1…9 ile sıradaki düzene geçiş (UI spec §3.2). Paneller düzene `useLayoutStore`,
 // dasha yoluna `useViewStore` ile ulaşır; birbirini çağırmaz.
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type Dispatch, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
 import type { Graha, ViewState } from "../bindings";
 import { isEditableTarget } from "../keyboard";
 import type { Layout, LayoutState, Panel } from "../layout/model";
@@ -2513,12 +2564,6 @@ export interface ViewStore {
 
 const ViewContext = createContext<{ view: ViewStore; layout: LayoutStore } | null>(null);
 
-type Internal = ViewAction | { type: "replace"; state: ViewModel };
-
-function reduce(state: ViewModel, action: Internal): ViewModel {
-  return action.type === "replace" ? action.state : viewReducer(state, action);
-}
-
 export function ViewStateProvider({
   initial,
   persistence,
@@ -2530,18 +2575,23 @@ export function ViewStateProvider({
   children: ReactNode;
   debounceMs?: number;
 }) {
-  const [state, dispatch] = useReducer(reduce, initial, (m) => ({ ...m, layout: normalizeState(m.layout) }));
+  const [state, setState] = useState(() => ({ ...initial, layout: normalizeState(initial.layout) }));
 
   // Üst bileşen her render'da yeni bir `persistence` verebilir; debounce sıfırlanmasın.
   const persistenceRef = useRef(persistence);
   persistenceRef.current = persistence;
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const debounceRef = useRef(debounceMs);
+  debounceRef.current = debounceMs;
 
-  // `baseline` kaydı gerekmeyen son durumdur (açılış ya da yeni açılan harita).
-  const baseline = useRef(state);
+  // Model `dispatch` içinde eşzamanlı ilerler; `stateRef` asıl kaynaktır, `state` onun render'a
+  // yansımasıdır. Böylece kirli durum ve kayıt, render ya da effect zamanlamasına bağlı kalmaz:
+  // aynı tick'te gelen eylemler ve `openChart` sırayla, kayıpsız uygulanır.
+  const stateRef = useRef(state);
+  /** Kaydı bekleyen son durum; `null` ise son durum kayıtlıdır (açılış ya da yeni açılan harita). */
   const pending = useRef<ViewModel | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const flushRef = useRef(() => {
+    clearTimeout(timer.current);
     if (pending.current) {
       const m = pending.current;
       pending.current = null;
@@ -2549,14 +2599,20 @@ export function ViewStateProvider({
     }
   });
 
-  useEffect(() => {
-    if (state === baseline.current) return;
-    pending.current = state;
-    const timer = setTimeout(() => {
-      if (pending.current === state) flushRef.current();
-    }, debounceMs);
-    return () => clearTimeout(timer);
-  }, [state, debounceMs]);
+  const dispatch = useCallback((action: ViewAction) => {
+    // Yeni harita: bekleyen kayıt önce önceki haritaya yazılır; açılan haritanın kendi durumu
+    // store'dan geldiği için yeniden yazılmaz.
+    if (action.type === "openChart") flushRef.current();
+    const next = viewReducer(stateRef.current, action);
+    if (next === stateRef.current) return;
+    stateRef.current = next;
+    if (action.type !== "openChart") {
+      pending.current = next;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(flushRef.current, debounceRef.current);
+    }
+    setState(next);
+  }, []);
 
   // Tauri webview kapanışı `pagehide` atlayabildiği için `visibilitychange` de dinlenir.
   useEffect(() => {
@@ -2607,15 +2663,10 @@ export function ViewStateProvider({
       model: state,
       viewState: toViewState(state),
       setDashaPath: (path) => dispatch({ type: "setDashaPath", path }),
-      openChart: (chartId, dashaPath) => {
-        flushRef.current();
-        const next = viewReducer(stateRef.current, { type: "openChart", chartId, dashaPath });
-        baseline.current = next;
-        dispatch({ type: "replace", state: next });
-      },
+      openChart: (chartId, dashaPath) => dispatch({ type: "openChart", chartId, dashaPath }),
     };
     return { view, layout };
-  }, [state]);
+  }, [state, dispatch]);
   return <ViewContext.Provider value={value}>{children}</ViewContext.Provider>;
 }
 
@@ -2642,7 +2693,7 @@ pnpm --dir app exec vitest run ui/view ui/no-console.test.ts
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  27 passed (27)`, `Tests  224 passed (224)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  27 passed (27)`, `Tests  226 passed (226)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -4858,7 +4909,7 @@ Expected: ikisi de çıktısız, çıkış kodu 0.
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  26 passed (26)`, `Tests  224 passed (224)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  26 passed (26)`, `Tests  226 passed (226)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 6: Commit**
 
@@ -5401,7 +5452,7 @@ pnpm --dir app exec vitest run ui/panels/ChartPanel.test.tsx ui/chart ui/layout
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  27 passed (27)`, `Tests  235 passed (235)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  27 passed (27)`, `Tests  237 passed (237)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 6: Commit**
 
@@ -6105,7 +6156,7 @@ pnpm --dir app exec vitest run ui/panels
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  29 passed (29)`, `Tests  243 passed (243)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  29 passed (29)`, `Tests  245 passed (245)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -6873,7 +6924,7 @@ pnpm --dir app exec vitest run ui/dasha ui/dashboard ui/panels
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  31 passed (31)`, `Tests  257 passed (257)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  31 passed (31)`, `Tests  259 passed (259)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -7416,7 +7467,7 @@ export function matchShortcut(e: KeyboardEvent): Command | null {
 +++ b/app/ui/view/store.tsx
 @@ -4,10 +4,10 @@
  // dasha yoluna `useViewStore` ile ulaşır; birbirini çağırmaz.
- import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type Dispatch, type ReactNode } from "react";
+ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
  import type { Graha, ViewState } from "../bindings";
 -import { isEditableTarget } from "../keyboard";
  import type { Layout, LayoutState, Panel } from "../layout/model";
@@ -7454,7 +7505,7 @@ pnpm --dir app exec vitest run ui/shortcuts.test.ts ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  32 passed (32)`, `Tests  261 passed (261)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  32 passed (32)`, `Tests  263 passed (263)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -7807,7 +7858,7 @@ pnpm --dir app exec vitest run ui/birth/model.test.ts
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  33 passed (33)`, `Tests  267 passed (267)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  33 passed (33)`, `Tests  269 passed (269)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -8195,7 +8246,7 @@ pnpm --dir app exec vitest run ui/birth
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  34 passed (34)`, `Tests  271 passed (271)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  34 passed (34)`, `Tests  273 passed (273)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9212,7 +9263,7 @@ pnpm --dir app exec vitest run ui/birth ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  35 passed (35)`, `Tests  279 passed (279)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  35 passed (35)`, `Tests  281 passed (281)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9610,7 +9661,7 @@ pnpm --dir app build
 pnpm --dir app e2e
 pnpm --dir app e2e:visual
 ```
-Expected: `Test Files  35 passed (35)`, `Tests  279 passed (279)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
+Expected: `Test Files  35 passed (35)`, `Tests  281 passed (281)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
 
 - [ ] **Step 4: Yasak dizgi taraması ve temiz çalışma ağacı**
 
@@ -9719,15 +9770,15 @@ Belirsiz ya da ertelenmiş adım yok; her kod adımı tam kodu ya da birleşik f
 | 1 | 23 | 203 | `jyotish-desk` lib 17 (+7 atlas_commands) |
 | 2 | 23 | 211 | `store` lib 64 (+3) |
 | 3 | 24 | 215 | `ui_fixture` 2 (yeni), `open_client` 1 (genişledi) |
-| 4 | 27 | 224 | — |
-| 5 | 26 | 224 | `jyotish-desk` lib 13 (−4 deneme) |
-| 6 | 27 | 235 | — |
-| 7 | 29 | 243 | — |
-| 8 | 31 | 257 | — |
-| 9 | 32 | 261 | — |
-| 10 | 33 | 267 | — |
-| 11 | 34 | 271 | — |
-| 12 | 35 | 279 | — |
-| 13 | 35 | 279 | + Playwright e2e 4, görsel 6 (yerel) |
+| 4 | 27 | 226 | — |
+| 5 | 26 | 226 | `jyotish-desk` lib 13 (−4 deneme) |
+| 6 | 27 | 237 | — |
+| 7 | 29 | 245 | — |
+| 8 | 31 | 259 | — |
+| 9 | 32 | 263 | — |
+| 10 | 33 | 269 | — |
+| 11 | 34 | 273 | — |
+| 12 | 35 | 281 | — |
+| 13 | 35 | 281 | + Playwright e2e 4, görsel 6 (yerel) |
 
 Plan kopyada (`/Users/ttd/jd-p09`) iki kez uygulandı; ikincisinde plan dosyasından (yeni dosyalar ve farklar betikle uygulanarak) yeniden kuruldu, inceleme düzeltmeleri ilgili görevlere işlendi ve her commit'te vitest + `build` ölçüldü: bütün kapılar geçti, e2e üç kez kararsızlıksız çalıştı, görsel temeller birebir yeniden üretildi. Yeniden kurulum iki plan hatasını da gösterdi ve ikisi düzeltildi: `pnpm --dir app vitest run` pnpm 11'de çalışmaz (`Command "app" not found`), komutlar `pnpm --dir app exec vitest run`'dır; `ui_fixture` fikstür klasörünü kendisi oluşturur. Doğrulama sırasında bulunan iki hata Task 8 koduna işlendi: (1) klavye tembel yüklenen 4. seviyeye ulaşamıyordu (`loaded()` yardımcısı), (2) istenen yolun bir alt seviyesi olmayan yanıt sonsuz özyinelemeye yol açıyordu (`childrenOf` süzgeci); ikisinin de gerileme testi vardır.

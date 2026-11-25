@@ -1,8 +1,8 @@
-// Görünüm durumunun tek merkezi (spec §11 M5): düzenler ve dasha yolu bir reducer'da;
+// Görünüm durumunun tek merkezi (spec §11 M5): düzenler ve dasha yolu tek saf reducer'dan geçer;
 // ≈ 500 ms debounce ile kayıt (spec §4), pencere gizlenince ya da kapanınca hemen kayıt,
 // Cmd+1…9 ile sıradaki düzene geçiş (UI spec §3.2). Paneller düzene `useLayoutStore`,
 // dasha yoluna `useViewStore` ile ulaşır; birbirini çağırmaz.
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type Dispatch, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
 import type { Graha, ViewState } from "../bindings";
 import { isEditableTarget } from "../keyboard";
 import type { Layout, LayoutState, Panel } from "../layout/model";
@@ -38,12 +38,6 @@ export interface ViewStore {
 
 const ViewContext = createContext<{ view: ViewStore; layout: LayoutStore } | null>(null);
 
-type Internal = ViewAction | { type: "replace"; state: ViewModel };
-
-function reduce(state: ViewModel, action: Internal): ViewModel {
-  return action.type === "replace" ? action.state : viewReducer(state, action);
-}
-
 export function ViewStateProvider({
   initial,
   persistence,
@@ -55,18 +49,23 @@ export function ViewStateProvider({
   children: ReactNode;
   debounceMs?: number;
 }) {
-  const [state, dispatch] = useReducer(reduce, initial, (m) => ({ ...m, layout: normalizeState(m.layout) }));
+  const [state, setState] = useState(() => ({ ...initial, layout: normalizeState(initial.layout) }));
 
   // Üst bileşen her render'da yeni bir `persistence` verebilir; debounce sıfırlanmasın.
   const persistenceRef = useRef(persistence);
   persistenceRef.current = persistence;
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const debounceRef = useRef(debounceMs);
+  debounceRef.current = debounceMs;
 
-  // `baseline` kaydı gerekmeyen son durumdur (açılış ya da yeni açılan harita).
-  const baseline = useRef(state);
+  // Model `dispatch` içinde eşzamanlı ilerler; `stateRef` asıl kaynaktır, `state` onun render'a
+  // yansımasıdır. Böylece kirli durum ve kayıt, render ya da effect zamanlamasına bağlı kalmaz:
+  // aynı tick'te gelen eylemler ve `openChart` sırayla, kayıpsız uygulanır.
+  const stateRef = useRef(state);
+  /** Kaydı bekleyen son durum; `null` ise son durum kayıtlıdır (açılış ya da yeni açılan harita). */
   const pending = useRef<ViewModel | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const flushRef = useRef(() => {
+    clearTimeout(timer.current);
     if (pending.current) {
       const m = pending.current;
       pending.current = null;
@@ -74,14 +73,20 @@ export function ViewStateProvider({
     }
   });
 
-  useEffect(() => {
-    if (state === baseline.current) return;
-    pending.current = state;
-    const timer = setTimeout(() => {
-      if (pending.current === state) flushRef.current();
-    }, debounceMs);
-    return () => clearTimeout(timer);
-  }, [state, debounceMs]);
+  const dispatch = useCallback((action: ViewAction) => {
+    // Yeni harita: bekleyen kayıt önce önceki haritaya yazılır; açılan haritanın kendi durumu
+    // store'dan geldiği için yeniden yazılmaz.
+    if (action.type === "openChart") flushRef.current();
+    const next = viewReducer(stateRef.current, action);
+    if (next === stateRef.current) return;
+    stateRef.current = next;
+    if (action.type !== "openChart") {
+      pending.current = next;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(flushRef.current, debounceRef.current);
+    }
+    setState(next);
+  }, []);
 
   // Tauri webview kapanışı `pagehide` atlayabildiği için `visibilitychange` de dinlenir.
   useEffect(() => {
@@ -132,15 +137,10 @@ export function ViewStateProvider({
       model: state,
       viewState: toViewState(state),
       setDashaPath: (path) => dispatch({ type: "setDashaPath", path }),
-      openChart: (chartId, dashaPath) => {
-        flushRef.current();
-        const next = viewReducer(stateRef.current, { type: "openChart", chartId, dashaPath });
-        baseline.current = next;
-        dispatch({ type: "replace", state: next });
-      },
+      openChart: (chartId, dashaPath) => dispatch({ type: "openChart", chartId, dashaPath }),
     };
     return { view, layout };
-  }, [state]);
+  }, [state, dispatch]);
   return <ViewContext.Provider value={value}>{children}</ViewContext.Provider>;
 }
 
