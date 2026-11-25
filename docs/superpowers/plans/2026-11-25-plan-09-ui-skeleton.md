@@ -6172,7 +6172,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 8: Vimshottari dasha ağacı: kayıtlı tek açık yol, tembel 4–5. seviye, ağaç klavyesi
 
-Dasha ağacı (D10, D13): 1–3. seviye haritayla gelir, 4–5. seviye açıldıkça `dasha_children` ile yüklenir ve harita ve tohum başına önbelleklenir: `update_chart` aynı kimlikle yeni tohum döndürür, eski doğum anının alt dönemleri ve geç gelen yanıtları atılır. Tek açık yol `ViewState.dasha_expanded_path`'tir; bir düğümü açmak kardeşlerini kapatır. WAI-ARIA ağaç deseni: tek sekme durağı, ↑/↓, →/← (aç/kapa, ebeveyne git), Home/End, Enter. Yanıt yalnızca istenen yolun bir alt seviyesiyse kabul edilir (sonsuz özyinelemeye karşı). Saat bilinmiyorsa "tarihler yaklaşık" notu çıkar.
+Dasha ağacı (D10, D13): 1–3. seviye haritayla gelir, 4–5. seviye açıldıkça `dasha_children` ile yüklenir ve harita ve tohum başına önbelleklenir: `update_chart` aynı kimlikle yeni tohum döndürür, eski doğum anının alt dönemleri ve geç gelen yanıtları atılır. Tek açık yol `ViewState.dasha_expanded_path`'tir; bir düğümü açmak kardeşlerini kapatır. WAI-ARIA ağaç deseni: tek sekme durağı, ↑/↓, →/← (aç/kapa, ebeveyne git), Home/End, Enter. Sekme durağı her zaman görünür bir öğedir (odaklı öğe ağaçtan çıkarsa görünür en yakın atası); ağaç tuşları yalnızca `treeitem` hedefinde işlenir, öğe içindeki "Yeniden dene" düğmesi kendi tuşlarını alır. Yanıt yalnızca istenen yolun bir alt seviyesiyse kabul edilir (sonsuz özyinelemeye karşı). Saat bilinmiyorsa "tarihler yaklaşık" notu çıkar.
 
 **Files:**
 - Create: `app/ui/dasha/DashaTreePanel.test.tsx`
@@ -6223,6 +6223,26 @@ const tree = () => screen.getByRole("tree", { name: "Dasa ağacı" });
 const item = (name: RegExp) => within(tree()).getByRole("treeitem", { name });
 const click = (name: RegExp) => fireEvent.click(item(name).querySelector(".dasha-row")!);
 const level = (n: number) => within(tree()).queryAllByRole("treeitem").filter((i) => i.getAttribute("aria-level") === String(n));
+const tabStops = () => within(tree()).getAllByRole("treeitem").filter((i) => i.getAttribute("tabindex") === "0");
+
+/** Ağacı çizer ve oturumun `open`'ını verir (başka harita açmak ya da `update_chart` dönüşü için). */
+function renderWithOpen(path: Graha[]) {
+  let open: (o: OpenedClient) => void = () => {};
+  function Grab() {
+    open = useSession().open;
+    return null;
+  }
+  const opened = fixture().opened;
+  opened.view_state.dasha_expanded_path = path;
+  renderWithStores(
+    <>
+      <Grab />
+      <DashaTreePanel panel={panel} />
+    </>,
+    { opened },
+  );
+  return (o: OpenedClient) => act(() => open(o));
+}
 
 beforeEach(() => {
   vi.mocked(api.dashaChildren).mockReset();
@@ -6293,30 +6313,52 @@ test("levels 4 and 5 load on demand and are cached per chart", async () => {
 });
 
 test("editing the birth data drops lazily loaded levels", async () => {
-  let open: (o: OpenedClient) => void = () => {};
-  function Grab() {
-    open = useSession().open;
-    return null;
-  }
-  const opened = fixture().opened;
-  opened.view_state.dasha_expanded_path = ["Rahu", "Rahu", "Rahu"];
-  renderWithStores(
-    <>
-      <Grab />
-      <DashaTreePanel panel={panel} />
-    </>,
-    { opened },
-  );
+  const open = renderWithOpen(["Rahu", "Rahu", "Rahu"]);
   await waitFor(() => expect(level(4)).toHaveLength(9));
   // `update_chart`: aynı harita kimliği, yeni doğum anı (yeni tohum). Yeni yanıt bekletilir.
   vi.mocked(api.dashaChildren).mockImplementation(() => new Promise(() => {}));
   const edited = fixture().opened;
   edited.view_state.dasha_expanded_path = ["Rahu", "Rahu", "Rahu"];
   edited.chart.dasha.seed.birth_jd_ut = edited.chart.dasha.seed.birth_jd_ut! + 0.5;
-  act(() => open(edited));
+  open(edited);
   expect(level(4)).toHaveLength(0);
   expect(api.dashaChildren).toHaveBeenCalledTimes(2);
   expect(api.dashaChildren).toHaveBeenLastCalledWith(edited.chart.dasha.seed, ["Rahu", "Rahu", "Rahu"]);
+});
+
+test("a late response for the old birth data is dropped", async () => {
+  type Reply = Awaited<ReturnType<typeof api.dashaChildren>>;
+  let resolveOld: (r: Reply) => void = () => {};
+  vi.mocked(api.dashaChildren).mockImplementation(() => new Promise(() => {}));
+  vi.mocked(api.dashaChildren).mockImplementationOnce(() => new Promise<Reply>((r) => (resolveOld = r)));
+  const open = renderWithOpen(["Rahu", "Rahu", "Rahu"]);
+  expect(api.dashaChildren).toHaveBeenCalledTimes(1);
+  const edited = fixture().opened;
+  edited.view_state.dasha_expanded_path = ["Rahu", "Rahu", "Rahu"];
+  edited.chart.dasha.seed.birth_jd_ut = edited.chart.dasha.seed.birth_jd_ut! + 0.5;
+  open(edited);
+  expect(api.dashaChildren).toHaveBeenCalledTimes(2);
+  await act(async () => resolveOld({ status: "ok", data: fixture().dasha_children.periods }));
+  expect(level(4)).toHaveLength(0);
+  expect(within(tree()).getByText("Yükleniyor")).toBeInTheDocument();
+});
+
+test("the tab stop survives a focused item leaving the tree", () => {
+  const open = renderWithOpen(["Jupiter", "Saturn"]);
+  act(() => item(/^Jüpiter–Satürn–Merkür, /).focus());
+  expect(tabStops()).toEqual([item(/^Jüpiter–Satürn–Merkür, /)]);
+  // Başka harita, kapalı yol: odaklı 3. seviye öğe artık yok; durak görünür en yakın ataya geçer.
+  const other = fixture().opened;
+  other.chart_record.id += 1;
+  other.view_state.dasha_expanded_path = [];
+  open(other);
+  expect(level(2)).toHaveLength(0);
+  expect(tabStops()).toEqual([item(/^Jüpiter, /)]);
+  // Durak klavyeyle kullanılabilir: oklar oradan devam eder.
+  act(() => tabStops()[0].focus());
+  fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
+  expect(document.activeElement).toHaveAccessibleName(/^Satürn, /);
+  expect(tabStops()).toEqual([item(/^Satürn, /)]);
 });
 
 test("keyboard reaches the lazily loaded level", async () => {
@@ -6343,6 +6385,24 @@ test("a failed level-4 load shows an in-tree error with retry", async () => {
   renderTree(["Rahu", "Rahu", "Rahu"]);
   expect(await screen.findByRole("alert")).toHaveTextContent("Dasa isteği geçersiz: path.");
   fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
+  await waitFor(() => expect(level(4)).toHaveLength(9));
+  expect(api.dashaChildren).toHaveBeenCalledTimes(2);
+});
+
+test("the retry button keeps its own keys: the tree neither collapses nor moves focus", async () => {
+  vi.mocked(api.dashaChildren).mockResolvedValueOnce({ status: "error", error: { code: "invalid_dasha_input", params: { field: "path" } } });
+  renderTree(["Rahu", "Rahu", "Rahu"]);
+  const retry = await screen.findByRole("button", { name: "Yeniden dene" });
+  act(() => retry.focus());
+  // `fireEvent` varsayılan engellenmediyse `true` döner: Enter ve boşluk düğmeyi etkinleştirebilir.
+  expect(fireEvent.keyDown(retry, { key: "Enter" })).toBe(true);
+  expect(fireEvent.keyDown(retry, { key: " " })).toBe(true);
+  expect(item(/^Rahu–Rahu–Rahu, /)).toHaveAttribute("aria-expanded", "true");
+  for (const key of ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"]) expect(fireEvent.keyDown(retry, { key })).toBe(true);
+  expect(document.activeElement).toBe(retry);
+  expect(item(/^Rahu–Rahu–Rahu, /)).toHaveAttribute("aria-expanded", "true");
+  // jsdom tuştan tıklama üretmez; tarayıcıda Enter'ın varsayılan eylemi budur.
+  fireEvent.click(retry);
   await waitFor(() => expect(level(4)).toHaveLength(9));
   expect(api.dashaChildren).toHaveBeenCalledTimes(2);
 });
@@ -6570,11 +6630,18 @@ export function DashaTreePanel(_: PanelProps) {
     }
   };
   walk([]);
-  const current = focusKey ?? (visible[0] ? pathKey(visible[0].period.lords) : null);
+  // Sekme durağı her zaman görünür bir öğedir: odaklı öğe ağaçtan çıktıysa (başka harita, kapanan
+  // yol, silinen tembel seviye) görünür en yakın atası, o da yoksa ilk öğe.
+  const visibleKeys = new Set(visible.map((v) => pathKey(v.period.lords)));
+  const focusPath = focusKey === null ? [] : focusKey.split(",");
+  while (focusPath.length > 0 && !visibleKeys.has(focusPath.join(","))) focusPath.pop();
+  const current = focusPath.length > 0 ? focusPath.join(",") : visible[0] ? pathKey(visible[0].period.lords) : null;
 
   const toggle = (p: DashaPeriod) => setDashaPath(isOpen(open, p.lords) ? p.lords.slice(0, -1) : p.lords);
 
   const onKeyDown = (e: KeyboardEvent) => {
+    // Ağaç tuşları yalnızca öğelerindir; öğenin içindeki düğme ("Yeniden dene") kendi tuşlarını alır.
+    if ((e.target as Element).getAttribute("role") !== "treeitem") return;
     const i = visible.findIndex((v) => pathKey(v.period.lords) === current);
     if (i < 0) return;
     const v = visible[i];
@@ -6924,7 +6991,7 @@ pnpm --dir app exec vitest run ui/dasha ui/dashboard ui/panels
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  31 passed (31)`, `Tests  259 passed (259)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  31 passed (31)`, `Tests  262 passed (262)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -7505,7 +7572,7 @@ pnpm --dir app exec vitest run ui/shortcuts.test.ts ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  32 passed (32)`, `Tests  263 passed (263)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  32 passed (32)`, `Tests  266 passed (266)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -7858,7 +7925,7 @@ pnpm --dir app exec vitest run ui/birth/model.test.ts
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  33 passed (33)`, `Tests  269 passed (269)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  33 passed (33)`, `Tests  272 passed (272)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -8246,7 +8313,7 @@ pnpm --dir app exec vitest run ui/birth
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  34 passed (34)`, `Tests  273 passed (273)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  34 passed (34)`, `Tests  276 passed (276)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9263,7 +9330,7 @@ pnpm --dir app exec vitest run ui/birth ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  35 passed (35)`, `Tests  281 passed (281)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  35 passed (35)`, `Tests  284 passed (284)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9661,7 +9728,7 @@ pnpm --dir app build
 pnpm --dir app e2e
 pnpm --dir app e2e:visual
 ```
-Expected: `Test Files  35 passed (35)`, `Tests  281 passed (281)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
+Expected: `Test Files  35 passed (35)`, `Tests  284 passed (284)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
 
 - [ ] **Step 4: Yasak dizgi taraması ve temiz çalışma ağacı**
 
@@ -9774,11 +9841,11 @@ Belirsiz ya da ertelenmiş adım yok; her kod adımı tam kodu ya da birleşik f
 | 5 | 26 | 226 | `jyotish-desk` lib 13 (−4 deneme) |
 | 6 | 27 | 237 | — |
 | 7 | 29 | 245 | — |
-| 8 | 31 | 259 | — |
-| 9 | 32 | 263 | — |
-| 10 | 33 | 269 | — |
-| 11 | 34 | 273 | — |
-| 12 | 35 | 281 | — |
-| 13 | 35 | 281 | + Playwright e2e 4, görsel 6 (yerel) |
+| 8 | 31 | 262 | — |
+| 9 | 32 | 266 | — |
+| 10 | 33 | 272 | — |
+| 11 | 34 | 276 | — |
+| 12 | 35 | 284 | — |
+| 13 | 35 | 284 | + Playwright e2e 4, görsel 6 (yerel) |
 
-Plan kopyada (`/Users/ttd/jd-p09`) iki kez uygulandı; ikincisinde plan dosyasından (yeni dosyalar ve farklar betikle uygulanarak) yeniden kuruldu, inceleme düzeltmeleri ilgili görevlere işlendi ve her commit'te vitest + `build` ölçüldü: bütün kapılar geçti, e2e üç kez kararsızlıksız çalıştı, görsel temeller birebir yeniden üretildi. Yeniden kurulum iki plan hatasını da gösterdi ve ikisi düzeltildi: `pnpm --dir app vitest run` pnpm 11'de çalışmaz (`Command "app" not found`), komutlar `pnpm --dir app exec vitest run`'dır; `ui_fixture` fikstür klasörünü kendisi oluşturur. Doğrulama sırasında bulunan iki hata Task 8 koduna işlendi: (1) klavye tembel yüklenen 4. seviyeye ulaşamıyordu (`loaded()` yardımcısı), (2) istenen yolun bir alt seviyesi olmayan yanıt sonsuz özyinelemeye yol açıyordu (`childrenOf` süzgeci); ikisinin de gerileme testi vardır.
+Plan kopyada (`/Users/ttd/jd-p09`) iki kez uygulandı; ikincisinde plan dosyasından (yeni dosyalar ve farklar betikle uygulanarak) yeniden kuruldu, inceleme düzeltmeleri ilgili görevlere işlendi ve her commit'te vitest + `build` ölçüldü: bütün kapılar geçti, e2e üç kez kararsızlıksız çalıştı, görsel temeller birebir yeniden üretildi. Yeniden kurulum iki plan hatasını da gösterdi ve ikisi düzeltildi: `pnpm --dir app vitest run` pnpm 11'de çalışmaz (`Command "app" not found`), komutlar `pnpm --dir app exec vitest run`'dır; `ui_fixture` fikstür klasörünü kendisi oluşturur. Doğrulama sırasında bulunan iki hata Task 8 koduna işlendi: (1) klavye tembel yüklenen 4. seviyeye ulaşamıyordu (`loaded()` yardımcısı), (2) istenen yolun bir alt seviyesi olmayan yanıt sonsuz özyinelemeye yol açıyordu (`childrenOf` süzgeci); ikisinin de gerileme testi vardır. Task 8 incelemesi iki klavye hatası daha buldu ve ikisi Task 8 koduna işlendi: (3) "Yeniden dene" düğmesinin tuşlarını ağaç yutuyordu, (4) odaklı öğe ağaçtan çıkınca sekme durağı kayboluyordu; ikisinin ve geç gelen eski yanıtın testi vardır.

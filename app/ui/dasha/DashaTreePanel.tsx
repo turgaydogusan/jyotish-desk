@@ -70,11 +70,18 @@ export function DashaTreePanel(_: PanelProps) {
     }
   };
   walk([]);
-  const current = focusKey ?? (visible[0] ? pathKey(visible[0].period.lords) : null);
+  // Sekme durağı her zaman görünür bir öğedir: odaklı öğe ağaçtan çıktıysa (başka harita, kapanan
+  // yol, silinen tembel seviye) görünür en yakın atası, o da yoksa ilk öğe.
+  const visibleKeys = new Set(visible.map((v) => pathKey(v.period.lords)));
+  const focusPath = focusKey === null ? [] : focusKey.split(",");
+  while (focusPath.length > 0 && !visibleKeys.has(focusPath.join(","))) focusPath.pop();
+  const current = focusPath.length > 0 ? focusPath.join(",") : visible[0] ? pathKey(visible[0].period.lords) : null;
 
   const toggle = (p: DashaPeriod) => setDashaPath(isOpen(open, p.lords) ? p.lords.slice(0, -1) : p.lords);
 
   const onKeyDown = (e: KeyboardEvent) => {
+    // Ağaç tuşları yalnızca öğelerindir; öğenin içindeki düğme ("Yeniden dene") kendi tuşlarını alır.
+    if ((e.target as Element).getAttribute("role") !== "treeitem") return;
     const i = visible.findIndex((v) => pathKey(v.period.lords) === current);
     if (i < 0) return;
     const v = visible[i];
