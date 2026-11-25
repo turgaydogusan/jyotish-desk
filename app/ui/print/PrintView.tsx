@@ -89,7 +89,16 @@ export function PrintView({ error, onPrint }: PrintViewProps) {
           {t("print.print")}
         </button>
         <p className="print-hint">{t("print.pdfHint")}</p>
-        {error && <PanelError error={error} onRetry={onPrint} />}
+        {error && (
+          <PanelError
+            error={error}
+            onRetry={() => {
+              // Yeniden deneme hata kutusunu kaldırır: odak önce "Yazdır…" düğmesine taşınır, gövdeye düşmez.
+              printButton.current?.focus();
+              onPrint();
+            }}
+          />
+        )}
       </div>
       <PrintDocumentView doc={doc} />
     </div>

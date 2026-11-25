@@ -1,4 +1,5 @@
 import { fireEvent, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { vi } from "vitest";
 import { renderWithStores } from "../test/render";
 import { PRINT_STORAGE_KEY } from "./options";
@@ -70,6 +71,19 @@ test("a print error is shown in the toolbar with a retry that prints again", () 
   expect(within(toolbar()).getByRole("alert")).toHaveTextContent("Yazdırma penceresi açılamadı.");
   fireEvent.click(within(toolbar()).getByRole("button", { name: "Yeniden dene" }));
   expect(onPrint).toHaveBeenCalledOnce();
+});
+
+test("retry after a print error keeps focus off the body when the error box goes away", () => {
+  function Harness() {
+    const [error, setError] = useState<Parameters<typeof PrintView>[0]["error"]>({ code: "print_failed", params: {} });
+    return <PrintView error={error} onPrint={() => setError(null)} />;
+  }
+  renderWithStores(<Harness />);
+  const retry = within(toolbar()).getByRole("button", { name: "Yeniden dene" });
+  retry.focus();
+  fireEvent.click(retry);
+  expect(within(toolbar()).queryByRole("alert")).toBeNull();
+  expect(within(toolbar()).getByRole("button", { name: "Yazdır…" })).toHaveFocus();
 });
 
 test("without an open chart the preview renders nothing", () => {
