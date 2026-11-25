@@ -212,4 +212,9 @@ export const en: Messages = {
     resizePanel: "Resize the focused panel",
     tree: "Move through, open and close the dasha tree",
   },
+  birth: {
+    place: "Birth place",
+    placeResults: "Matching places",
+    placeCount: "Results: {{count}}",
+  },
 };

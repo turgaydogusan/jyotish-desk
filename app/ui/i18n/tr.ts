@@ -211,6 +211,11 @@ export const tr = {
     resizePanel: "Odaktaki paneli boyutlandır",
     tree: "Dasa ağacında gezin, aç, kapat",
   },
+  birth: {
+    place: "Doğum yeri",
+    placeResults: "Bulunan yerler",
+    placeCount: "{{count}} sonuç",
+  },
 };
 
 type Strings<T> = { [K in keyof T]: T[K] extends string ? string : Strings<T[K]> };

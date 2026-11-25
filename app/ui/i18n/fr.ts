@@ -212,4 +212,9 @@ export const fr: Messages = {
     resizePanel: "Redimensionner le panneau actif",
     tree: "Parcourir, ouvrir et fermer l’arbre des dashas",
   },
+  birth: {
+    place: "Lieu de naissance",
+    placeResults: "Lieux trouvés",
+    placeCount: "Résultats : {{count}}",
+  },
 };

@@ -1,0 +1,37 @@
+.place-search {
+  position: relative;
+}
+.place-results {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  margin: 2px 0 0;
+  padding: 2px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  max-height: 240px;
+  overflow: auto;
+}
+.place-results li {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 6px;
+  cursor: default;
+}
+.place-results li.is-active {
+  background: var(--select);
+  color: var(--ink-strong);
+}
+.place-meta {
+  color: var(--text-2);
+  font-size: var(--fs-table);
+}
+.field-hint {
+  margin: 2px 0 0;
+  min-height: 1em;
+  color: var(--text-2);
+  font-size: var(--fs-table);
+}
