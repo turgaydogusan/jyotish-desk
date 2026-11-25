@@ -29,6 +29,14 @@ jobs:
           key: playwright-webkit-${{ runner.os }}-${{ hashFiles('app/pnpm-lock.yaml') }}
       - run: pnpm --dir app exec playwright install webkit
       - run: pnpm --dir app e2e
+      # Başarısız e2e'nin Playwright izleri (trace: retain-on-failure) indirilebilir kalır (M6-4).
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: app/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy

@@ -70,3 +70,40 @@ test("dasha tree by keyboard loads level 4 on demand", async ({ page }) => {
   await expect(page.locator(":focus")).toHaveAttribute("aria-level", "4");
   expect(await ipcCalls(page, "dasha_children")).toHaveLength(1);
 });
+
+test("spec §8: Cmd+K, a name and Enter open that client's chart with no form or confirmation", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+KeyK");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await expect(palette.getByRole("combobox")).toBeFocused();
+  await page.keyboard.type("ayşe");
+  await expect(palette.getByRole("option").first()).toContainText("Ayşe Yılmaz");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Ayşe Yılmaz" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "D1 haritası" })).toBeVisible();
+  expect(await ipcCalls(page, "open_client")).toEqual([{ clientId: 2, chartId: null }]);
+});
+
+test("the sidebar opens a recent client, a new note is saved as it is typed, and Cmd+\\ from the note hides the sidebar", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  const sidebar = page.getByRole("complementary", { name: "Danışanlar" });
+  await sidebar.getByRole("button", { name: "Ayşe Yılmaz" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Ayşe Yılmaz" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Ayşe Yılmaz" })).toHaveAttribute("aria-current", "true");
+  const notes = page.getByRole("region", { name: "Notlar" });
+  await notes.getByRole("button", { name: "Yeni not" }).click();
+  const box = notes.getByRole("textbox");
+  await expect(box).toBeFocused();
+  await page.keyboard.type("Satürn dönüşü konuşuldu");
+  await page.keyboard.press("Tab");
+  await expect.poll(async () => ((await ipcCalls(page, "update_note")).at(-1) as { body?: string } | undefined)?.body).toBe("Satürn dönüşü konuşuldu");
+  // ⌘ kısayolları not kutusunun içinden de çalışır (Plan 10 incelemesi MF1).
+  await box.focus();
+  await page.keyboard.press("Meta+Backslash");
+  await expect(sidebar).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Danışanlar" })).toHaveAttribute("aria-expanded", "false");
+});

@@ -16,7 +16,46 @@ export async function mockIpc(page: Page, { session }: IpcOptions) {
     ({ fixture, session }) => {
       const calls: { cmd: string; args: unknown }[] = [];
       Object.assign(window, { __ipcCalls: calls });
+      // İkinci danışan: aynı hesaplanmış harita, başka kimlik ve ad (arayüz hesap yapmaz).
+      const ayse = structuredClone(fixture.opened);
+      ayse.client = { ...ayse.client, id: 2, uuid: "00000000-0000-4000-8000-000000000003", name: "Ayşe Yılmaz", last_chart_id: 20 };
+      ayse.chart_record = { ...ayse.chart_record, id: 20, client_id: 2, uuid: "00000000-0000-4000-8000-000000000004" };
+      ayse.recent_notes = [];
+      const opened: Record<number, typeof ayse> = { 1: fixture.opened, 2: ayse };
+      const clients = () => [opened[2].client, opened[1].client];
+      // Notlar bellek içi; kimlik ve zaman sırayla artar.
+      const notes: { id: number; uuid: string; client_id: number; chart_id: number | null; body: string; created_at: string; updated_at: string }[] = [];
+      let noteSeq = 0;
+      const stamp = () => new Date(Date.UTC(2026, 10, 25, 10, 0, noteSeq)).toISOString();
       const respond: Record<string, (args: Record<string, unknown>) => unknown> = {
+        open_client: (args) => opened[args.clientId as number],
+        list_clients: () => clients(),
+        list_clients_by_tag: () => [],
+        search_clients: (args) => {
+          const q = String(args.query).toLocaleLowerCase("tr");
+          return clients()
+            .filter((c) => c.name.toLocaleLowerCase("tr").includes(q))
+            .map((client) => ({ client, matched: "Name", snippet: null }));
+        },
+        list_tags: () => [],
+        list_charts: (args) => [opened[args.clientId as number].chart_record],
+        set_chart_tags: (args) => args.tags,
+        list_notes: (args) => notes.filter((n) => n.client_id === args.clientId).reverse(),
+        add_note: (args) => {
+          noteSeq += 1;
+          const n = { id: noteSeq, uuid: `note-${noteSeq}`, client_id: args.clientId as number, chart_id: args.chartId as number | null, body: String(args.body), created_at: stamp(), updated_at: stamp() };
+          notes.push(n);
+          return n;
+        },
+        update_note: (args) => {
+          const n = notes.find((x) => x.id === args.noteId)!;
+          n.body = String(args.body);
+          return n;
+        },
+        delete_note: (args) => {
+          notes.splice(notes.findIndex((x) => x.id === args.noteId), 1);
+          return null;
+        },
         restore_session: () => (session ? fixture.opened : null),
         load_panel_layout: () => null,
         save_panel_layout: () => null,
