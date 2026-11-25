@@ -240,12 +240,22 @@ mod tests {
         assert_eq!(clean_query("  new delhi  "), "new delhi");
     }
 
+    /// Kırpma kesmeden öncedir: sınırı aşan dolgu sorgudan karakter götürmez. Kesmenin kendisi
+    /// `clean_query` üzerinde ölçülür (100 karakterlik önekle eşleşen yer adı yoktur).
     #[test]
-    fn a_query_cut_at_the_limit_still_finds_its_prefix() {
+    fn padding_beyond_the_limit_is_trimmed_before_the_cut() {
         let atlas = shipped_atlas();
-        let padded = format!("new delhi{}", " ".repeat(MAX_QUERY_CHARS));
-        let hits = search_places_blocking(&atlas, &padded, 5).unwrap();
-        assert_eq!(hits.first().map(|h| h.name.as_str()), Some("New Delhi"));
+        for padded in [
+            format!("new delhi{}", " ".repeat(MAX_QUERY_CHARS)),
+            format!("{}new delhi", " ".repeat(MAX_QUERY_CHARS)),
+        ] {
+            let hits = search_places_blocking(&atlas, &padded, 5).unwrap();
+            assert_eq!(hits.first().map(|h| h.name.as_str()), Some("New Delhi"));
+        }
+        let long = format!("  new delhi{}  ", "x".repeat(MAX_QUERY_CHARS));
+        let cut = clean_query(&long);
+        assert_eq!(cut.chars().count(), MAX_QUERY_CHARS);
+        assert!(cut.starts_with("new delhi") && cut.ends_with('x'));
     }
 
     #[test]
