@@ -158,3 +158,16 @@ test("an unavailable atlas is explained and leaves the field usable", async () =
   await type("");
   expect(screen.getByRole("status")).toBeEmptyDOMElement();
 });
+
+test("Enter while the list belongs to the previous text is consumed and selects nothing", async () => {
+  const onSelect = vi.fn();
+  render(<Harness onSelect={onSelect} />);
+  await type("new delhi");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  vi.mocked(api.searchPlaces).mockReturnValueOnce(new Promise(() => {}));
+  await type("new delhi x");
+  // Liste hâlâ "new delhi"nin sonucunu gösteriyor; yanıt gelmedi.
+  expect(fireEvent.keyDown(box(), { key: "Enter" })).toBe(false);
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(screen.getByRole("listbox")).toHaveAttribute("aria-busy", "true");
+});

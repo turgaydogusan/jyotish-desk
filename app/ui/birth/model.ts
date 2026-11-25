@@ -62,7 +62,8 @@ export function parseFixedOffset(text: string): number | null {
   if (!m) return null;
   const [h, min, s] = [Number(m[2]), Number(m[3]), Number(m[4] ?? 0)];
   if (min >= 60 || s >= 60) return null;
-  return (m[1] === "+" ? 1 : -1) * (h * 3600 + min * 60 + s);
+  // `|| 0`: "-0:00" negatif sıfır değil sıfırdır (JSON'da ve karşılaştırmada fark yaratmasın).
+  return (m[1] === "+" ? 1 : -1) * (h * 3600 + min * 60 + s) || 0;
 }
 
 /** Saniyeli ofset (JHD içe aktarımı, LMT önizlemesi) saniyesiyle yazılır; kırpılmaz. */

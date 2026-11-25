@@ -1,7 +1,8 @@
 // Yer arama kutusu (WAI-ARIA 1.2 combobox, liste açılır). Yazdıkça 200 ms sonra
 // `search_places` çağrılır; eski isteğin geç gelen yanıtı yok sayılır. Atlas yoksa bilgi
 // verilir ve elle koordinat girişi açık kalır (spec §12). Etkin seçenek kaydırılarak görünür
-// tutulur; liste görünmüyorken Enter ve Esc tüketilmez (Esc pencereye gider).
+// tutulur; liste görünmüyorken Enter ve Esc tüketilmez (Esc pencereye gider); liste önceki metnin
+// sonucuyken Enter seçmez.
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
@@ -30,6 +31,9 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy, i
   const [active, setActive] = useState(-1);
   const [error, setError] = useState<CommandError | null>(null);
   const [query, setQuery] = useState<string | null>(null);
+  // Liste hangi metnin yanıtı: yazım sürüp yanıt gelmediyse liste eskidir.
+  const [answered, setAnswered] = useState<string | null>(null);
+  const stale = query !== null && query !== answered;
   const seq = useRef(0);
   const listRef = useRef<HTMLUListElement>(null);
   const shown = open && hits.length > 0;
@@ -48,6 +52,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy, i
     const timer = setTimeout(() => {
       void api.searchPlaces(query, SEARCH_LIMIT).then((r) => {
         if (mine !== seq.current) return;
+        setAnswered(query);
         if (r.status === "error") {
           setError(r.error);
           setHits([]);
@@ -88,9 +93,10 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy, i
       e.preventDefault();
       setOpen(true);
       setActive((a) => (a <= 0 ? hits.length - 1 : a - 1));
-    } else if (e.key === "Enter" && shown && active >= 0 && hits[active]) {
+    } else if (e.key === "Enter" && shown) {
+      // Görünen liste önceki metnin sonucuysa Enter tüketilir ama seçmez (eski yer seçilmez).
       e.preventDefault();
-      choose(hits[active]);
+      if (!stale && active >= 0 && hits[active]) choose(hits[active]);
     } else if (e.key === "Escape" && shown) {
       // Görünen liste kapanır; pencere açık kalır. Liste görünmüyorsa (sonuç yok ya da
       // kapalı) Esc tüketilmez ve pencereyi kapatır.
@@ -123,7 +129,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy, i
         onKeyDown={onKeyDown}
         onBlur={() => setOpen(false)}
       />
-      <ul ref={listRef} id={listId} role="listbox" aria-label={t("birth.placeResults")} className="place-results" hidden={!shown}>
+      <ul ref={listRef} id={listId} role="listbox" aria-label={t("birth.placeResults")} className="place-results" hidden={!shown} aria-busy={stale || undefined}>
         {hits.map((h, i) => (
           <li
             key={h.geoname_id}

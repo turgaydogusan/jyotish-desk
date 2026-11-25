@@ -271,6 +271,11 @@ export const tr = {
   },
   gender: { label: "Cinsiyet", none: "Belirtilmemiş", Male: "Erkek", Female: "Kadın", Other: "Diğer" },
   birth: {
+    foldHint: "Bu saat iki kez yaşandı; aşağıdan hangisi olduğunu seçin.",
+    errorSummary: "Düzeltilmesi gereken {{count}} alan var.",
+    discardTitle: "Değişiklikler atılsın mı?",
+    discardMessage: "Formdaki kaydedilmemiş değişiklikler kaybolur.",
+    discardConfirm: "Değişiklikleri at",
     place: "Doğum yeri",
     placeResults: "Bulunan yerler",
     placeCount: "{{count}} sonuç",

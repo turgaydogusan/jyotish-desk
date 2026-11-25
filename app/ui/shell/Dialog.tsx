@@ -1,5 +1,6 @@
 // Modal pencere (WAI-ARIA dialog): açılınca ilk alana odaklanır, Tab içeride döner, Esc
-// kapatır, kapanınca odak açan öğeye döner. `variant="sheet"` sağdan kayan paneldir
+// kapatır, kapanınca odak açan öğeye döner.
+// İç içe açılan pencerelerde Esc ve Tab'ı yalnızca en son açılan işler. `variant="sheet"` sağdan kayan paneldir
 // (doğum formu); arka plan tıklamayla kapanmaz (yarım form kaybolmasın).
 import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
 
@@ -30,6 +31,9 @@ export function Dialog({ title, onClose, variant = "center", children }: DialogP
     const onKeyDown = (e: KeyboardEvent) => {
       const root = ref.current;
       if (!root) return;
+      // İç içe pencerede (formun üstünde onay) tuşları yalnızca en üstteki işler.
+      const modals = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (modals[modals.length - 1] !== root) return;
       if (e.key === "Escape") {
         // IME bileşimini iptal eden Esc pencereyi kapatmaz (WebKit bunu 229 koduyla bildirir).
         if (e.isComposing || e.keyCode === 229) return;

@@ -156,3 +156,28 @@ test("closing returns focus to the opener and removes the key listener", () => {
   fireEvent.keyDown(document.body, { key: "Escape" });
   expect(onClose).toHaveBeenCalledOnce();
 });
+
+test("only the topmost dialog handles Esc and Tab", () => {
+  const outer = vi.fn();
+  const inner = vi.fn();
+  const { rerender } = render(
+    <Dialog title="Dış" onClose={outer}>
+      <button>dış</button>
+    </Dialog>,
+  );
+  // İç pencere sonra açılır (gerçek akış: onay penceresi formun üstünde).
+  rerender(
+    <Dialog title="Dış" onClose={outer}>
+      <button>dış</button>
+      <Dialog title="İç" onClose={inner}>
+        <button>iç</button>
+      </Dialog>
+    </Dialog>,
+  );
+  expect(document.activeElement).toBe(button("iç"));
+  expect(tab(button("iç"))).toBe(true);
+  expect(document.activeElement).toBe(button("iç"));
+  fireEvent.keyDown(button("iç"), { key: "Escape" });
+  expect(inner).toHaveBeenCalledOnce();
+  expect(outer).not.toHaveBeenCalled();
+});

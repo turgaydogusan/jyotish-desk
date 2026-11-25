@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { vi } from "vitest";
 
 vi.mock("../api", () => ({
-  api: { searchPlaces: vi.fn(), previewMoment: vi.fn(), createClient: vi.fn(), addChart: vi.fn(), updateChart: vi.fn() },
+  api: { searchPlaces: vi.fn(), previewMoment: vi.fn(), createClient: vi.fn(), addChart: vi.fn(), updateChart: vi.fn(), updateClient: vi.fn() },
 }));
 
 import { api } from "../api";
@@ -52,6 +52,8 @@ beforeEach(() => {
   vi.mocked(api.previewMoment).mockResolvedValue({ status: "ok", data: fixture().preview });
   vi.mocked(api.createClient).mockResolvedValue({ status: "ok", data: fixture().opened });
   vi.mocked(api.updateChart).mockResolvedValue({ status: "ok", data: fixture().opened });
+  vi.mocked(api.updateClient).mockImplementation(async (id, name, gender) => ({ status: "ok", data: { ...fixture().opened.client, id, name, gender } }));
+  vi.mocked(api.addChart).mockResolvedValue({ status: "ok", data: fixture().opened });
 });
 afterEach(() => vi.useRealTimers());
 
@@ -120,7 +122,10 @@ test("an ambiguous time asks which occurrence and sends the choice", async () =>
   });
   renderForm("new");
   await fillDelhi();
-  const group = within(dialog()).getByRole("group", { name: "Bu saat iki kez yaşandı" });
+  const group = within(dialog()).getByRole("radiogroup", { name: "Bu saat iki kez yaşandı" });
+  expect(group).toHaveAttribute("aria-invalid", "true");
+  expect(group).toHaveAccessibleDescription("2014-10-26T03:30:00 iki kez yaşandı (yaz saati dönüşü); hangisi olduğunu seçin.");
+  expect(within(dialog()).getByRole("region", { name: "Önizleme" })).toHaveTextContent("Bu saat iki kez yaşandı; aşağıdan hangisi olduğunu seçin.");
   fireEvent.click(within(group).getByRole("radio", { name: "İkinci kez (geçişten sonra)" }));
   await wait(PREVIEW_DEBOUNCE_MS);
   expect(vi.mocked(api.previewMoment).mock.lastCall![0].fold).toBe("Later");
@@ -242,7 +247,7 @@ test("saving replaces boot and store notices with the warnings of the returned c
   expect(within(bar()).getAllByRole("alert")).toHaveLength(1);
 });
 
-test("save errors land on their field or above the buttons; Esc closes", async () => {
+test("save errors land on their field or above the buttons", async () => {
   vi.mocked(api.createClient).mockResolvedValueOnce({ status: "error", error: { code: "invalid_input", params: { field: "birth.date" } } });
   renderForm("new");
   await fillDelhi();
@@ -254,6 +259,82 @@ test("save errors land on their field or above the buttons; Esc closes", async (
   await wait(0);
   expect(within(dialog()).getByRole("alert")).toHaveTextContent("Kaydedilemedi: Danışan veritabanı okunamadı ya da yazılamadı (disk).");
   expect(onClose).not.toHaveBeenCalled();
+});
+
+test("gender: a new client sends the chosen gender", async () => {
+  renderForm("new");
+  await fillDelhi();
+  fireEvent.change(input("Cinsiyet"), { target: { value: "Female" } });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(vi.mocked(api.createClient).mock.lastCall![0].gender).toBe("Female");
+});
+
+test("editing a gender calls update_client after the chart is saved and opens the updated client", async () => {
+  renderForm("edit");
+  expect(input("Cinsiyet")).toHaveValue("");
+  fireEvent.change(input("Cinsiyet"), { target: { value: "Male" } });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(api.updateChart).toHaveBeenCalledOnce();
+  expect(api.updateClient).toHaveBeenCalledWith(1, "Örnek Danışan", "Male");
+  expect(vi.mocked(api.updateChart).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(api.updateClient).mock.invocationCallOrder[0]);
+  expect(onClose).toHaveBeenCalledOnce();
+});
+
+test("an unchanged gender does not call update_client; add mode locks it", async () => {
+  const first = renderForm("edit");
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(api.updateClient).not.toHaveBeenCalled();
+  first.unmount();
+  renderForm("add");
+  expect(input("Cinsiyet")).toBeDisabled();
+});
+
+test("submitting with errors focuses the first invalid field and announces the count", async () => {
+  renderForm("new");
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(document.activeElement).toBe(input("Danışan adı"));
+  // Yer kutusunun durum satırı da `role="status"`dır; özet görünmez satırdır.
+  expect(dialog().querySelector('p.visually-hidden[role="status"]')).toHaveTextContent(/^Düzeltilmesi gereken \d+ alan var\.$/);
+  fireEvent.change(input("Danışan adı"), { target: { value: "Ayşe" } });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(document.activeElement).toBe(input("Tarih"));
+});
+
+test("changing the date clears the chosen occurrence of an ambiguous time", async () => {
+  vi.mocked(api.previewMoment).mockResolvedValueOnce({
+    status: "error",
+    error: { code: "ambiguous_local_time", params: { local: "2014-10-26T03:30:00", earlier_offset_secs: "10800", later_offset_secs: "7200" } },
+  });
+  renderForm("new");
+  await fillDelhi();
+  fireEvent.click(within(dialog()).getByRole("radio", { name: "İkinci kez (geçişten sonra)" }));
+  fireEvent.change(input("Tarih"), { target: { value: "2000-01-02" } });
+  await wait(PREVIEW_DEBOUNCE_MS);
+  expect(vi.mocked(api.previewMoment).mock.lastCall![0].fold).toBeNull();
+});
+
+test("Esc on an untouched form closes at once; with changes it asks first", async () => {
+  const first = renderForm("edit");
   fireEvent.keyDown(input("Tarih"), { key: "Escape" });
+  expect(onClose).toHaveBeenCalledOnce();
+  first.unmount();
+  onClose.mockReset();
+  renderForm("new");
+  fireEvent.change(input("Danışan adı"), { target: { value: "Ayşe" } });
+  fireEvent.keyDown(input("Danışan adı"), { key: "Escape" });
+  expect(onClose).not.toHaveBeenCalled();
+  const confirm = screen.getByRole("dialog", { name: "Değişiklikler atılsın mı?" });
+  // Onay penceresinde Esc yalnızca onu kapatır; form ve taslak yerinde.
+  fireEvent.keyDown(within(confirm).getByRole("button", { name: "Vazgeç" }), { key: "Escape" });
+  expect(screen.queryByRole("dialog", { name: "Değişiklikler atılsın mı?" })).toBeNull();
+  expect(input("Danışan adı")).toHaveValue("Ayşe");
+  expect(onClose).not.toHaveBeenCalled();
+  fireEvent.keyDown(input("Danışan adı"), { key: "Escape" });
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Değişiklikler atılsın mı?" })).getByRole("button", { name: "Değişiklikleri at" }));
   expect(onClose).toHaveBeenCalledOnce();
 });

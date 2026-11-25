@@ -272,6 +272,11 @@ export const en: Messages = {
   },
   gender: { label: "Gender", none: "Not given", Male: "Male", Female: "Female", Other: "Other" },
   birth: {
+    foldHint: "This time occurred twice; choose which one below.",
+    errorSummary: "Fields to correct: {{count}}.",
+    discardTitle: "Discard your changes?",
+    discardMessage: "The unsaved changes in the form will be lost.",
+    discardConfirm: "Discard changes",
     place: "Birth place",
     placeResults: "Matching places",
     placeCount: "Results: {{count}}",

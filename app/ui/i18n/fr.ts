@@ -272,6 +272,11 @@ export const fr: Messages = {
   },
   gender: { label: "Genre", none: "Non indiqué", Male: "Homme", Female: "Femme", Other: "Autre" },
   birth: {
+    foldHint: "Cette heure a eu lieu deux fois ; choisissez laquelle ci-dessous.",
+    errorSummary: "Champs à corriger : {{count}}.",
+    discardTitle: "Abandonner les modifications ?",
+    discardMessage: "Les modifications non enregistrées du formulaire seront perdues.",
+    discardConfirm: "Abandonner",
     place: "Lieu de naissance",
     placeResults: "Lieux trouvés",
     placeCount: "Résultats : {{count}}",

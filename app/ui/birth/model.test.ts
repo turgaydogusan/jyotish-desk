@@ -110,3 +110,32 @@ test("editing a stored chart keeps the seconds of its time and of its fixed offs
   // DST önerisi girilen saatin saniyesini taşır.
   expect(applySuggestion(delhiDraft(), "2014-03-31T04:30:40")).toMatchObject({ date: "2014-03-31", time: "04:30:40" });
 });
+
+test("a signed zero offset is zero, not negative zero", () => {
+  expect(Object.is(parseFixedOffset("-0:00"), 0)).toBe(true);
+  expect(Object.is(parseFixedOffset("+00:00"), 0)).toBe(true);
+  expect(Object.is(parseFixedOffset("−00:00:00"), 0)).toBe(true);
+});
+
+test("errorField maps every field-bound backend code and nothing else", () => {
+  const e = (code: string, params: Record<string, string> = {}) => ({ code, params });
+  const table: [ReturnType<typeof e>, string | null][] = [
+    [e("invalid_input", { field: "birth.date" }), "date"],
+    [e("invalid_input", { field: "birth.time" }), "time"],
+    [e("invalid_input", { field: "birth.time_certainty" }), "certainty"],
+    [e("invalid_input", { field: "birth.place.lat" }), "lat"],
+    [e("invalid_input", { field: "birth.place.lon" }), "lon"],
+    [e("invalid_input", { field: "name" }), "name"],
+    [e("invalid_input", { field: "label" }), "label"],
+    [e("invalid_input", { field: "notes" }), null],
+    [e("nonexistent_local_time", { local: "x", suggestion: "y" }), "time"],
+    [e("ambiguous_local_time"), "fold"],
+    [e("unknown_time_zone"), "tz"],
+    [e("offset_out_of_range"), "tz"],
+    [e("longitude_out_of_range"), "lon"],
+    [e("date_out_of_range"), "date"],
+    [e("atlas_unavailable", { reason: "missing" }), null],
+    [e("task_failed"), null],
+  ];
+  for (const [error, field] of table) expect([error.code, errorField(error)]).toEqual([error.code, field]);
+});
