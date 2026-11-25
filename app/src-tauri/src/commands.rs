@@ -4,7 +4,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use ephemeris::{Body, Engine, EphError, Ephemeris, SiderealMode, SwissEph, Zodiac};
-use jyotish_core::{CalcSettings, Chart, CoreError, DashaPeriod, DashaSeed, Graha};
+use jyotish_core::{
+    Bhavas, CalcSettings, Chart, CoreError, DashaPeriod, DashaSeed, Graha, TransitSnapshot,
+};
 use serde::Serialize;
 use specta::Type;
 use tauri::State;
@@ -187,6 +189,38 @@ pub async fn compute_chart(
     let engine = Arc::clone(&engine);
     tauri::async_runtime::spawn_blocking(move || {
         compute_chart_blocking(&engine, jd_ut, lat, lon, settings)
+    })
+    .await
+    .map_err(|e| CommandError::new("engine_stopped", &[("detail", e.to_string())]))?
+}
+
+/// `compute_transits` komutunun gövdesi; `compute_chart_blocking` gibi bloklar.
+pub fn compute_transits_blocking(
+    engine: &Engine,
+    jd_ut: f64,
+    settings: CalcSettings,
+    natal_bhavas: Bhavas,
+) -> Result<TransitSnapshot, CommandError> {
+    let snapshot = engine.call(move |se: &mut SwissEph| {
+        jyotish_core::compute_transits(se, jd_ut, &settings, &natal_bhavas)
+    })??;
+    Ok(snapshot)
+}
+
+/// Transit konumları (UI spec §3.3). `jd_ut` arayüzden gelir (varsayılan "şimdi" ya da
+/// seçilen dasha dönemi); `settings` ve `natal_bhavas` natal haritanın
+/// `chart.meta.settings` ve `chart.bhavas` alanlarıdır.
+#[tauri::command]
+#[specta::specta]
+pub async fn compute_transits(
+    engine: State<'_, Arc<Engine>>,
+    jd_ut: f64,
+    settings: CalcSettings,
+    natal_bhavas: Bhavas,
+) -> Result<TransitSnapshot, CommandError> {
+    let engine = Arc::clone(&engine);
+    tauri::async_runtime::spawn_blocking(move || {
+        compute_transits_blocking(&engine, jd_ut, settings, natal_bhavas)
     })
     .await
     .map_err(|e| CommandError::new("engine_stopped", &[("detail", e.to_string())]))?

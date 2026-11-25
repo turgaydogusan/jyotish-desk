@@ -4,8 +4,8 @@
 use std::path::PathBuf;
 
 use ephemeris::{Engine, SwissEph};
-use jyotish_core::{AyanamsaSystem, CalcSettings, Graha, Sign, Varga};
-use jyotish_desk_lib::commands::compute_chart_blocking;
+use jyotish_core::{AyanamsaSystem, Bhavas, CalcSettings, Graha, KaranaName, Sign, Vara, Varga};
+use jyotish_desk_lib::commands::{compute_chart_blocking, compute_transits_blocking};
 
 #[test]
 fn compute_chart_runs_on_the_engine_thread_and_maps_errors() {
@@ -59,6 +59,44 @@ fn compute_chart_runs_on_the_engine_thread_and_maps_errors() {
         "maha start {}",
         first.start_jd_ut
     );
+
+    // Plan 07: panchang ve SAV (tests/golden/new-delhi-2000-01-01.json, swetest türetmesi).
+    let p = &chart.panchang;
+    let sec = |a: f64, b: f64| (a - b).abs() * 86_400.0;
+    assert!(sec(p.sunrise_jd_ut.unwrap(), 2_451_544.574_985) <= 60.0);
+    assert!(sec(p.sunset_jd_ut.unwrap(), 2_451_545.000_560) <= 60.0);
+    assert_eq!(p.vara, Vara::Saturday);
+    assert_eq!(p.tithi.no, 26);
+    assert!(sec(p.tithi.ends_jd_ut, 2_451_545.826_235) <= 60.0);
+    assert_eq!((p.nakshatra.no, p.yoga.no), (15, 8));
+    assert_eq!((p.karana.no, p.karana.name), (51, KaranaName::Bava));
+    assert_eq!(
+        chart.ashtakavarga.sav,
+        [29, 21, 23, 26, 34, 33, 30, 30, 28, 21, 32, 30]
+    );
+
+    // Transit: doğum anında haritayla aynı; bir gün sonra Ay ≈ 12–15° ilerler.
+    let settings = chart.meta.settings.clone();
+    let at_birth =
+        compute_transits_blocking(&engine, 2_451_545.0, settings.clone(), chart.bhavas.clone())
+            .expect("transits at birth");
+    assert_eq!(at_birth.grahas.len(), 9);
+    for (t, g) in at_birth.grahas.iter().zip(&chart.grahas) {
+        assert_eq!((t.graha, t.sign, t.natal_house), (g.graha, g.sign, g.house));
+        assert!((t.lon - g.lon).abs() < 1e-9, "{:?}", t.graha);
+    }
+    let next =
+        compute_transits_blocking(&engine, 2_451_546.0, settings.clone(), chart.bhavas.clone())
+            .expect("transits next day");
+    let step = (next.grahas[1].lon - at_birth.grahas[1].lon).rem_euclid(360.0);
+    assert!((11.0..16.0).contains(&step), "moon step {step}");
+    let broken = Bhavas {
+        cusps: vec![0.0; 3],
+        ..chart.bhavas.clone()
+    };
+    let err = compute_transits_blocking(&engine, 2_451_545.0, settings, broken).unwrap_err();
+    assert_eq!(err.code, "invalid_transit_input");
+    assert_eq!(err.params["field"], "natal_bhavas");
 
     let err = compute_chart_blocking(&engine, 2_451_545.0, 91.0, 0.0, CalcSettings::default())
         .unwrap_err();

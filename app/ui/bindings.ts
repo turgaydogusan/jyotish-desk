@@ -15,6 +15,12 @@ export const commands = {
 	/**  Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir. */
 	computeChart: (jdUt: number | null, lat: number | null, lon: number | null, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("compute_chart", { jdUt, lat, lon, settings }, options)),
 	/**
+	 *  Transit konumları (UI spec §3.3). `jd_ut` arayüzden gelir (varsayılan "şimdi" ya da
+	 *  seçilen dasha dönemi); `settings` ve `natal_bhavas` natal haritanın
+	 *  `chart.meta.settings` ve `chart.bhavas` alanlarıdır.
+	 */
+	computeTransits: (jdUt: number | null, settings: CalcSettings, natalBhavas: Bhavas, options?: InvokeOptions) => typedError<TransitSnapshot, CommandError>(__TAURI_INVOKE("compute_transits", { jdUt, settings, natalBhavas }, options)),
+	/**
 	 *  Bir dasha döneminin alt dönemleri (spec §4 `dasha_children(path)`). `seed`
 	 *  `chart.dasha.seed`'den, `path` dönemin `lords`'undan gelir. Saf hesaptır, motora gitmez.
 	 */
@@ -292,6 +298,30 @@ export type Tithi = {
 	no: number,
 	paksha: Paksha,
 	ends_jd_ut: number | null,
+};
+
+export type TransitGraha = {
+	graha: Graha,
+	/**  Rasi çerçevesinde boylam (natal haritayla aynı ayarlar verilmelidir). */
+	lon: number | null,
+	sidereal_lon: number | null,
+	speed: number | null,
+	retrograde: boolean,
+	sign: Sign,
+	deg_in_sign: number | null,
+	nakshatra: number,
+	pada: number,
+	/**  Natal bhava başlangıçlarına göre ev, 1..=12. */
+	natal_house: number,
+};
+
+export type TransitSnapshot = {
+	jd_ut: number | null,
+	ayanamsa_deg: number | null,
+	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
+	grahas: TransitGraha[],
+	/**  Yalnızca `LowPrecision` olabilir. */
+	warnings: ChartWarning[],
 };
 
 /**  Hafta günü: Ravi, Soma, Mangala, Budha, Guru, Shukra, Shani. */
