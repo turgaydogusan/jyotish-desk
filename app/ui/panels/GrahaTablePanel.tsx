@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GrahaPosition, Lagna } from "../bindings";
 import { signIndex } from "../chart/adapter";
-import { RETRO_MARK } from "../chart/types";
+import { RETRO_MARK, showsRetro } from "../chart/types";
 import { useHighlight } from "../highlight/store";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
 import { useSession } from "../session/store";
@@ -52,7 +52,7 @@ function grahaCell(t: TFunction, g: GrahaPosition, column: GrahaColumn, approx: 
     case "speed":
       return g.speed === null ? dash : formatSpeed(g.speed);
     case "retro":
-      return g.retrograde ? (
+      return showsRetro(g.graha, g.retrograde) ? (
         <>
           <span aria-hidden="true">{RETRO_MARK}</span>
           <span className="visually-hidden">{t("chart.retro")}</span>

@@ -23,6 +23,8 @@ test("default columns and a lagna row, values straight from the chart", () => {
   expect(row("Satürn")).toHaveTextContent("Rretro");
   expect(row("Satürn")).toHaveTextContent("Düşük");
   expect(row("Rahu").querySelectorAll("td")[6]).toHaveTextContent("—");
+  expect(row("Rahu").querySelectorAll("td")[4]).toHaveTextContent(/^$/);
+  expect(row("Ketu").querySelectorAll("td")[4]).toHaveTextContent(/^$/);
 });
 
 test("optional columns show longitude, signed latitude and speed", () => {

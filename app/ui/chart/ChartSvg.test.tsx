@@ -69,6 +69,19 @@ test("circle renders the sign number in all 12 houses", () => {
   }
 });
 
+test("nodes are always retrograde, so Rahu and Ketu carry no retro mark", () => {
+  const nodes: ChartData = {
+    ...data,
+    planets: [
+      { id: "Rahu", sign: 2, degInSign: 5, retrograde: true },
+      { id: "Ketu", sign: 8, degInSign: 5, retrograde: true },
+    ],
+  };
+  render(<ChartSvg data={nodes} style="north" labels={labels} />);
+  expect(screen.getByRole("button", { name: "Ra, Ge 5°" }).querySelector("text")).toHaveTextContent(/^Ra$/);
+  expect(screen.getByRole("button", { name: "Ke, Sg 5°" }).querySelector("text")).toHaveTextContent(/^Ke$/);
+});
+
 test("markers: retro R, combust c, vargottama underline — no colour coding", () => {
   render(<ChartSvg data={data} style="north" labels={labels} />);
   const mercury = screen.getByRole("button", { name: "Me, Le 20°, retrograde, combust" });
@@ -171,7 +184,7 @@ test("asc outside 0…11 is normalised", () => {
 test("five marked planets in one house: label backgrounds are as wide as the estimate and never overlap", () => {
   const crowd: ChartData = {
     ascSign: 0,
-    planets: (["Rahu", "Mercury", "Mars", "Jupiter", "Saturn"] as const).map((id) => ({
+    planets: (["Venus", "Mercury", "Mars", "Jupiter", "Saturn"] as const).map((id) => ({
       id,
       sign: 2,
       degInSign: 10,

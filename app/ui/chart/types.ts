@@ -55,3 +55,8 @@ export interface ChartLabels {
 
 /** Retro işareti: harita etiketinde ve gezegen tablosunda düz "R" (spec §2.3). */
 export const RETRO_MARK = "R";
+
+/** Rahu ve Ketu her zaman geri gider; işaret yalnızca diğer grahalarda gösterilir. */
+export function showsRetro(id: GrahaId, retrograde: boolean): boolean {
+  return retrograde && id !== "Rahu" && id !== "Ketu";
+}

@@ -6,7 +6,7 @@ import { useMemo, type KeyboardEvent } from "react";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
 import "./chart.css";
 import { chartCells, layoutLabels, pathOf, VIEWBOX, type ChartCell, type LabelLayout } from "./geometry";
-import { RETRO_MARK, type ChartData, type ChartLabels, type ChartPlanet, type ChartStyle } from "./types";
+import { RETRO_MARK, showsRetro, type ChartData, type ChartLabels, type ChartPlanet, type ChartStyle } from "./types";
 
 export interface ChartSvgProps {
   data: ChartData;
@@ -30,13 +30,13 @@ function drawable(p: ChartPlanet): boolean {
 }
 
 function labelText(p: ChartPlanet, graha: ChartLabels["graha"]): string {
-  return `${graha[p.id]}${p.retrograde ? RETRO_MARK : ""}${p.combust ? "c" : ""}`;
+  return `${graha[p.id]}${showsRetro(p.id, p.retrograde) ? RETRO_MARK : ""}${p.combust ? "c" : ""}`;
 }
 
 /** Erişilebilir ad sözcüklerden kurulur, glif okunmaz: "Ma, Sc 19°, retro, vargottama". */
 function planetName(p: ChartPlanet, labels: ChartLabels): string {
   const parts = [`${labels.graha[p.id]}, ${labels.signs[p.sign]} ${Math.floor(p.degInSign)}°`];
-  if (p.retrograde) parts.push(labels.retro);
+  if (showsRetro(p.id, p.retrograde)) parts.push(labels.retro);
   if (p.combust) parts.push(labels.combust);
   if (p.vargottama) parts.push(labels.vargottama);
   return parts.join(", ");
@@ -164,7 +164,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
                 textDecoration={p.vargottama ? "underline" : undefined}
               >
                 <tspan>{labels.graha[p.id]}</tspan>
-                {p.retrograde && <tspan>{RETRO_MARK}</tspan>}
+                {showsRetro(p.id, p.retrograde) && <tspan>{RETRO_MARK}</tspan>}
                 {p.combust && <tspan>c</tspan>}
               </text>
             </g>

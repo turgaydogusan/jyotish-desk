@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import type { CommandError } from "../bindings";
 import { signIndex } from "../chart/adapter";
+import { showsRetro } from "../chart/types";
 import { PanelError } from "../panels/states";
 import { PrintSpike, type SpikeRow } from "../PrintSpike";
 import { useSession } from "../session/store";
@@ -21,7 +22,7 @@ export function PrintView() {
     body: g.graha,
     sign: signIndex(g.sign),
     lon: g.lon,
-    retrograde: g.retrograde,
+    retrograde: showsRetro(g.graha, g.retrograde),
   }));
   return (
     <div>
