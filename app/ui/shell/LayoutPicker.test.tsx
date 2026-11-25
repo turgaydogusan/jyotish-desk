@@ -57,8 +57,12 @@ test("lists builtin layouts by translated name and selects on change", () => {
 test("builtin layouts can be reset but not renamed or deleted", () => {
   setup();
   menu();
-  expect(item("Yeniden adlandır…")).toBeDisabled();
-  expect(item("Sil…")).toBeDisabled();
+  expect(item("Yeniden adlandır…")).toHaveAttribute("aria-disabled", "true");
+  expect(item("Yeniden adlandır…")).toHaveAccessibleDescription("Hazır düzenler yeniden adlandırılamaz ve silinemez.");
+  expect(item("Sil…")).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(item("Sil…"));
+  expect(screen.queryByText(/düzeni silinsin mi\?/)).toBeNull();
+  expect(screen.getByRole("menu")).toBeInTheDocument();
   expect(item("Varsayılana döndür")).toBeEnabled();
   fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
   expect(screen.queryByRole("menu")).toBeNull();
@@ -125,9 +129,11 @@ test("save as and duplicate are disabled at the layout limit", () => {
   }
   expect(options()).toHaveLength(MAX_LAYOUTS);
   menu();
-  expect(item("Farklı kaydet…")).toBeDisabled();
-  expect(item("Kopyala")).toBeDisabled();
-  expect(item("Kopyala")).toHaveAttribute("title", `En çok ${MAX_LAYOUTS} düzen kaydedilebilir.`);
+  expect(item("Farklı kaydet…")).toHaveAttribute("aria-disabled", "true");
+  expect(item("Kopyala")).toHaveAttribute("aria-disabled", "true");
+  expect(item("Kopyala")).toHaveAccessibleDescription(`En çok ${MAX_LAYOUTS} düzen kaydedilebilir.`);
+  fireEvent.click(item("Kopyala"));
+  expect(options()).toHaveLength(MAX_LAYOUTS);
 });
 
 describe("actions menu keyboard", () => {
@@ -142,14 +148,16 @@ describe("actions menu keyboard", () => {
     expect(item("Farklı kaydet…")).toHaveFocus();
   });
 
-  test("arrows, Home and End rove over enabled items only", () => {
+  test("arrows, Home and End rove over every item; disabled ones say why", () => {
     setup();
     menu();
     expect(item("Farklı kaydet…")).toHaveFocus();
-    // Hazır düzende "Yeniden adlandır…" ve "Sil…" devre dışıdır, atlanır.
+    // Hazır düzende "Yeniden adlandır…" ve "Sil…" devre dışıdır ama odaklanır (menü deseni).
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
+    expect(item("Yeniden adlandır…")).toHaveFocus();
     fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
     expect(item("Kopyala")).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "End" });
     expect(item("Varsayılana döndür")).toHaveFocus();
     fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
     expect(item("Farklı kaydet…")).toHaveFocus();
@@ -157,8 +165,6 @@ describe("actions menu keyboard", () => {
     expect(item("Varsayılana döndür")).toHaveFocus();
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Home" });
     expect(item("Farklı kaydet…")).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole("menu"), { key: "End" });
-    expect(item("Varsayılana döndür")).toHaveFocus();
   });
 
   test("Esc closes the menu, returns focus to the trigger and keeps the chart pin", () => {

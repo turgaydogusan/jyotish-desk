@@ -226,3 +226,9 @@ kbd {
   display: inline-flex;
   gap: 6px;
 }
+.shell-main:focus {
+  outline: none;
+}
+.button-danger {
+  border: 1px solid var(--danger);
+}

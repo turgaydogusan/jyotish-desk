@@ -232,3 +232,34 @@ test("a pending view save is written before the open client is deleted and nothi
   expect(savedAtDelete).toEqual([[1]]);
   expect(persistence.saved.map((s) => s.chartId)).toEqual([1]);
 });
+
+test("the client list is one tab stop; arrows, Home and End move between clients", async () => {
+  vi.mocked(api.listClients).mockResolvedValue(ok([opened().client, ayse, client(3, "Can Demir")]));
+  renderSidebar();
+  const buttons = await within(list()).findAllByRole("button");
+  expect(buttons.map((b) => b.tabIndex)).toEqual([0, -1, -1]);
+  buttons[0].focus();
+  fireEvent.keyDown(buttons[0], { key: "ArrowDown" });
+  expect(document.activeElement).toBe(buttons[1]);
+  fireEvent.keyDown(buttons[1], { key: "End" });
+  expect(document.activeElement).toBe(buttons[2]);
+  expect(buttons.map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+  fireEvent.keyDown(buttons[2], { key: "ArrowDown" });
+  expect(document.activeElement).toBe(buttons[2]);
+  fireEvent.keyDown(buttons[2], { key: "Home" });
+  expect(document.activeElement).toBe(buttons[0]);
+});
+
+test("after deleting a chart focus goes to the client heading, after deleting the client to the search box", async () => {
+  const charts = [chart(1, ""), chart(5, "Düzeltilmiş", "2000-01-02")];
+  vi.mocked(api.listCharts).mockResolvedValueOnce(ok(charts)).mockResolvedValue(ok([charts[0]]));
+  vi.mocked(api.deleteChart).mockResolvedValue(ok(null));
+  vi.mocked(api.deleteClient).mockResolvedValue(ok(null));
+  renderSidebar();
+  fireEvent.click(await within(sidebar()).findByRole("button", { name: "Haritayı sil: “Düzeltilmiş”" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Harita silinsin mi?" })).getByRole("button", { name: "Haritayı sil" }));
+  await waitFor(() => expect(document.activeElement).toBe(within(sidebar()).getByRole("heading", { name: "Örnek Danışan" })));
+  fireEvent.click(within(sidebar()).getByRole("button", { name: "Danışanı sil…" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Danışan silinsin mi?" })).getByRole("button", { name: "Danışanı sil" }));
+  await waitFor(() => expect(document.activeElement).toBe(within(sidebar()).getByRole("searchbox", { name: "Danışan ara" })));
+});

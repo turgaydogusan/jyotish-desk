@@ -54,5 +54,7 @@ test("unknown birth time hides the lagna row and house column and marks the Moon
   const moon = row("Ay");
   expect(moon.querySelectorAll("td")[2]).toHaveTextContent("≈yaklaşık Swati");
   expect(moon.querySelector('[title="yaklaşık"]')).not.toBeNull();
+  // `title` yalnızca görünmez işarettedir: "yaklaşık" ekran okuyucuda bir kez okunur.
+  expect(moon.querySelector('[title="yaklaşık"]')).toHaveAttribute("aria-hidden", "true");
   expect(row("Güneş").querySelector('[title="yaklaşık"]')).toBeNull();
 });

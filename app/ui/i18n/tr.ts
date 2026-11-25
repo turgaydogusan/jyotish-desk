@@ -146,6 +146,7 @@ export const tr = {
     copyName: "{{name}} kopyası",
     copyNameN: "{{name}} kopyası {{n}}",
     limit: "En çok {{max}} düzen kaydedilebilir.",
+    builtinLocked: "Hazır düzenler yeniden adlandırılamaz ve silinemez.",
     nameEmpty: "Bir ad yazın.",
     nameTaken: "Bu ad başka bir düzende kullanılıyor.",
     confirmDelete: "“{{name}}” düzeni silinsin mi? Bu işlem geri alınamaz.",
@@ -422,6 +423,7 @@ export const tr = {
     status: { saving: "Kaydediliyor…", saved: "Kaydedildi.", madeDefault: "Yeni haritaların varsayılanı olarak kaydedildi." },
   },
   data: {
+    working: "Çalışıyor…",
     heading: "Veri",
     exportJson: "JSON olarak dışa aktar…",
     exportCsv: "CSV olarak dışa aktar…",

@@ -22,12 +22,14 @@ function deg(v: number | null): string {
   return v === null ? dash : formatDegree(v);
 }
 
-/** Yaklaşık değer: "≈" işareti ve ekran okuyucu için metin (renk tek başına taşımaz). */
+/** Yaklaşık değer: "≈" işareti (fare için `title`) ve ekran okuyucu için bir kez okunan metin. */
 function Approx({ on, label, children }: { on: boolean; label: string; children: ReactNode }) {
   if (!on) return <>{children}</>;
   return (
-    <span title={label}>
-      <span aria-hidden="true">≈</span>
+    <span>
+      <span aria-hidden="true" title={label}>
+        ≈
+      </span>
       <span className="visually-hidden">{label} </span>
       {children}
     </span>

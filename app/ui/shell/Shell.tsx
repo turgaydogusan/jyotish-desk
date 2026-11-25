@@ -1,7 +1,7 @@
 import { SettingsDialog } from "../settings/SettingsDialog";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BirthForm } from "../birth/BirthForm";
-import { Sidebar, SIDEBAR_ID } from "../clients/Sidebar";
+import { Sidebar } from "../clients/Sidebar";
 import type { PaletteItem } from "../palette/items";
 import { Palette } from "../palette/Palette";
 import { Dashboard } from "../dashboard/Dashboard";
@@ -10,22 +10,13 @@ import { matchShortcut } from "../shortcuts";
 import { useLayoutStore } from "../view/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
 import { EmptyState } from "./EmptyState";
+import { leaveNotes, leaveSidebar, MAIN_ID } from "./focus";
 import { HelpDialog } from "./HelpDialog";
 import { NoticeBar, useNotices } from "./notices";
 import { PrintView } from "./PrintView";
 import "./shell.css";
 import { TopBar } from "./TopBar";
 import { useElementWidth } from "./useElementWidth";
-
-/**
- * Kenar çubuğu gizlenmeden önce: odak içindeyse açma düğmesine geçer. Odak belgeye düşmez ve
- * odaktaki alan (etiketler) çıkışta kaydını yapar; kaldırılan öğe odak çıkışı olayı almaz.
- */
-function leaveSidebar() {
-  if (document.getElementById(SIDEBAR_ID)?.contains(document.activeElement)) {
-    document.querySelector<HTMLElement>(`[aria-controls="${SIDEBAR_ID}"]`)?.focus();
-  }
-}
 
 export function Shell() {
   const layout = useLayoutStore();
@@ -66,6 +57,7 @@ export function Shell() {
       const now = latest.current;
       if (command?.id === "toggleNotes" && !now.printView) {
         e.preventDefault();
+        leaveNotes();
         now.toggleNotes();
       } else if (command?.id === "help") {
         e.preventDefault();
@@ -115,7 +107,11 @@ export function Shell() {
         }
         // Kısayollarındaki gibi: baskı görünümünde (pano ve kenar çubuğu yokken) yok sayılır.
         if (item.command === "settings") return setSettings(true);
-        if (item.command === "toggleNotes") return printView ? undefined : toggleNotes();
+        if (item.command === "toggleNotes") {
+          if (printView) return;
+          leaveNotes();
+          return toggleNotes();
+        }
         if (item.command === "sidebar") return printView ? undefined : toggleSidebar();
         return setHelp(true);
     }
@@ -139,7 +135,7 @@ export function Shell() {
       <NoticeBar />
       <div className="shell-body">
         {sidebar && !printView && <Sidebar onAddChart={() => setForm("add")} />}
-        <main className="shell-main">
+        <main id={MAIN_ID} className="shell-main" tabIndex={-1}>
           <div ref={measureRef}>{printView ? <PrintView /> : opened ? <Dashboard width={width} /> : <EmptyState onNew={() => setForm("new")} />}</div>
         </main>
       </div>

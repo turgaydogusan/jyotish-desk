@@ -32,6 +32,7 @@ function ClientNotes({ opened }: { opened: OpenedClient }) {
   const [error, setError] = useState<CommandError | null>(null);
   const [retry, setRetry] = useState(0);
   const [fresh, setFresh] = useState<number | null>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let live = true;
@@ -74,13 +75,14 @@ function ClientNotes({ opened }: { opened: OpenedClient }) {
       return false;
     }
     setNotes((list) => list && list.filter((x) => x.id !== n.id));
+    addRef.current?.focus();
     return true;
   };
 
   return (
     <div className="notes-panel">
       <div className="notes-actions">
-        <button type="button" onClick={() => void add()} disabled={notes === null}>
+        <button ref={addRef} type="button" onClick={() => void add()} disabled={notes === null}>
           {t("notes.add")}
         </button>
       </div>

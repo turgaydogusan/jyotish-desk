@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { vi } from "vitest";
 
 vi.mock("../api", () => ({
@@ -159,4 +160,40 @@ test("clients found for the previous text are not offered while the next search 
   await waitFor(() => expect(api.searchClients).toHaveBeenCalledTimes(2));
   await act(async () => answer(ok([])));
   expect(screen.getByText("Eşleşen öğe yok.")).toBeInTheDocument();
+});
+
+test("Esc closes the palette and focus returns to what was focused before it opened", async () => {
+  function Host() {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)}>
+          aç
+        </button>
+        {open && <Palette onClose={() => setOpen(false)} onRun={onRun} />}
+      </>
+    );
+  }
+  renderWithStores(<Host />, { opened: opened() });
+  const opener = screen.getByRole("button", { name: "aç" });
+  opener.focus();
+  fireEvent.click(opener);
+  await waitFor(() => expect(document.activeElement).toBe(box()));
+  fireEvent.keyDown(box(), { key: "Escape" });
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(document.activeElement).toBe(opener);
+});
+
+test("an older search reply that arrives after a newer one is dropped", async () => {
+  let older: (r: Awaited<ReturnType<typeof api.searchClients>>) => void = () => {};
+  vi.mocked(api.searchClients).mockReturnValueOnce(new Promise((resolve) => (older = resolve)));
+  vi.mocked(api.searchClients).mockResolvedValueOnce(ok([{ client: client(2, "Ayşe Yılmaz"), matched: "Name", snippet: null }]));
+  renderPalette();
+  fireEvent.change(box(), { target: { value: "ayş" } });
+  await waitFor(() => expect(api.searchClients).toHaveBeenCalledTimes(1));
+  fireEvent.change(box(), { target: { value: "ayşe" } });
+  await waitFor(() => expect(options()[0]).toHaveTextContent("Ayşe Yılmaz"));
+  await act(async () => older(ok([{ client: client(3, "Ayla Demir"), matched: "Name", snippet: null }])));
+  expect(screen.queryByText("Ayla Demir")).toBeNull();
+  expect(options()[0]).toHaveTextContent("Ayşe Yılmaz");
 });

@@ -2,12 +2,30 @@
 // olarak dışa, JSON olarak içe aktarılır. Dosya penceresi Rust'ta açılır; arayüz yol görmez.
 // "Notları dahil et" varsayılan kapalıdır (notlar hassas veridir). JHD içe aktarma bu sürümde
 // yoktur (gerçek dosyalarla doğrulanacak, Plan 11).
-import { useId, useState } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import { useSession } from "../session/store";
 import { Dialog } from "../shell/Dialog";
 import { useNotices } from "../shell/notices";
+
+// Meşgul durumu modül düzeyindedir: yerel dosya penceresi açıkken kenar çubuğu kapanıp açılsa
+// da sıfırlanmaz, ikinci pencere açılmaz.
+let busyNow = false;
+const busyListeners = new Set<() => void>();
+function setExchangeBusy(value: boolean) {
+  busyNow = value;
+  for (const l of busyListeners) l();
+}
+const subscribeBusy = (l: () => void) => {
+  busyListeners.add(l);
+  return () => void busyListeners.delete(l);
+};
+
+/** Yalnızca testler: bir önceki testten taşınan meşgul durumunu sıfırlar. */
+export function resetExchangeBusy() {
+  setExchangeBusy(false);
+}
 
 export function DataActions() {
   const { t } = useTranslation();
@@ -16,20 +34,22 @@ export function DataActions() {
   const id = useId();
   const [asking, setAsking] = useState(false);
   const [includeNotes, setIncludeNotes] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const busy = useSyncExternalStore(subscribeBusy, () => busyNow);
 
   const run = async (work: () => Promise<void>) => {
-    setBusy(true);
+    if (busyNow) return;
+    setExchangeBusy(true);
     dismiss("exchange");
     try {
       await work();
     } finally {
-      setBusy(false);
+      setExchangeBusy(false);
     }
   };
 
   // Her açılışta kapalı başlar: önceki dışa aktarmanın seçimi taşınmaz (notlar hassas veridir).
   const openExport = () => {
+    if (busyNow) return;
     setIncludeNotes(false);
     setAsking(true);
   };
@@ -79,16 +99,19 @@ export function DataActions() {
         {t("data.heading")}
       </h2>
       <div className="sidebar-actions">
-        <button type="button" disabled={busy} onClick={openExport}>
+        <button type="button" aria-disabled={busy || undefined} onClick={openExport}>
           {t("data.exportJson")}
         </button>
-        <button type="button" disabled={busy} onClick={() => void exportCsv()}>
+        <button type="button" aria-disabled={busy || undefined} onClick={() => void exportCsv()}>
           {t("data.exportCsv")}
         </button>
-        <button type="button" disabled={busy} onClick={() => void importJson()}>
+        <button type="button" aria-disabled={busy || undefined} onClick={() => void importJson()}>
           {t("data.importJson")}
         </button>
       </div>
+      <p className="sidebar-hint" role="status">
+        {busy ? t("data.working") : ""}
+      </p>
       {asking && (
         <Dialog title={t("data.exportTitle")} onClose={() => setAsking(false)}>
           <p>{t("data.exportIntro")}</p>

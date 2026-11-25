@@ -147,6 +147,7 @@ export const en: Messages = {
     copyName: "{{name}} copy",
     copyNameN: "{{name}} copy {{n}}",
     limit: "At most {{max}} layouts can be saved.",
+    builtinLocked: "Built-in layouts cannot be renamed or deleted.",
     nameEmpty: "Enter a name.",
     nameTaken: "Another layout already uses this name.",
     confirmDelete: "Delete the “{{name}}” layout? This cannot be undone.",
@@ -423,6 +424,7 @@ export const en: Messages = {
     status: { saving: "Saving…", saved: "Saved.", madeDefault: "Saved as the default for new charts." },
   },
   data: {
+    working: "Working…",
     heading: "Data",
     exportJson: "Export as JSON…",
     exportCsv: "Export as CSV…",

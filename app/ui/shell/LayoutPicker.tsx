@@ -31,6 +31,7 @@ export function LayoutPicker() {
   const menuRef = useRef<HTMLUListElement>(null);
   const menuId = useId();
   const errorId = useId();
+  const hintId = useId();
   const activeLabel = layoutLabel(t, active);
   const target = store.state.layouts.find((l) => l.id === targetId) ?? active;
   const targetLabel = layoutLabel(t, target);
@@ -55,8 +56,9 @@ export function LayoutPicker() {
     name.trim() === "" ? "nameEmpty" : isTaken(name, mode === "rename" ? target.id : undefined) ? "nameTaken" : null;
 
   const focusTrigger = () => triggerRef.current?.focus();
-  const enabledItems = () =>
-    [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])].filter((b) => !b.disabled);
+  // Devre dışı öğeler de odaklanır (WAI-ARIA menü deseni); nedenleri `aria-describedby`'dadır.
+  // Gerçekten `disabled` olan öğe (kullanıcı düzeninde "Varsayılana döndür") odak alamaz; gezintiye girmez (D22).
+  const menuItems = () => [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])];
 
   const openMenu = (focus: "first" | "last") => {
     setFocusOnOpen(focus);
@@ -69,7 +71,7 @@ export function LayoutPicker() {
 
   useEffect(() => {
     if (!menuOpen) return;
-    const items = enabledItems();
+    const items = menuItems();
     (focusOnOpen === "first" ? items[0] : items[items.length - 1])?.focus();
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
@@ -117,7 +119,7 @@ export function LayoutPicker() {
   };
 
   const onMenuKey = (e: KeyboardEvent) => {
-    const items = enabledItems();
+    const items = menuItems();
     const current = items.indexOf(document.activeElement as HTMLButtonElement);
     const move = (index: number) => {
       e.preventDefault();
@@ -157,6 +159,10 @@ export function LayoutPicker() {
     action();
     closeMenu(true);
   };
+  /** `aria-disabled` öğe tıklanınca hiçbir şey yapmaz; menü açık kalır. */
+  const unless = (off: boolean, action: () => void) => () => {
+    if (!off) action();
+  };
 
   return (
     <div className="layout-picker">
@@ -182,6 +188,7 @@ export function LayoutPicker() {
         {t("layout.actions")}
       </button>
       {menuOpen && (
+        <>
         <ul
           ref={menuRef}
           id={menuId}
@@ -195,9 +202,9 @@ export function LayoutPicker() {
               type="button"
               role="menuitem"
               tabIndex={-1}
-              disabled={atCap}
-              title={atCap ? t("layout.limit", { max: MAX_LAYOUTS }) : undefined}
-              onClick={() => startMode("saveAs", uniqueCopyName())}
+              aria-disabled={atCap || undefined}
+              aria-describedby={atCap ? `${hintId}-cap` : undefined}
+              onClick={unless(atCap, () => startMode("saveAs", uniqueCopyName()))}
             >
               {t("layout.saveAs")}
             </button>
@@ -207,8 +214,9 @@ export function LayoutPicker() {
               type="button"
               role="menuitem"
               tabIndex={-1}
-              disabled={active.builtin}
-              onClick={() => startMode("rename", active.name)}
+              aria-disabled={active.builtin || undefined}
+              aria-describedby={active.builtin ? `${hintId}-builtin` : undefined}
+              onClick={unless(active.builtin, () => startMode("rename", active.name))}
             >
               {t("layout.rename")}
             </button>
@@ -218,9 +226,9 @@ export function LayoutPicker() {
               type="button"
               role="menuitem"
               tabIndex={-1}
-              disabled={atCap}
-              title={atCap ? t("layout.limit", { max: MAX_LAYOUTS }) : undefined}
-              onClick={() => runItem(() => store.duplicate(active.id, uniqueCopyName()))}
+              aria-disabled={atCap || undefined}
+              aria-describedby={atCap ? `${hintId}-cap` : undefined}
+              onClick={unless(atCap, () => runItem(() => store.duplicate(active.id, uniqueCopyName())))}
             >
               {t("layout.duplicate")}
             </button>
@@ -230,8 +238,9 @@ export function LayoutPicker() {
               type="button"
               role="menuitem"
               tabIndex={-1}
-              disabled={active.builtin}
-              onClick={() => startMode("confirmDelete")}
+              aria-disabled={active.builtin || undefined}
+              aria-describedby={active.builtin ? `${hintId}-builtin` : undefined}
+              onClick={unless(active.builtin, () => startMode("confirmDelete"))}
             >
               {t("layout.delete")}
             </button>
@@ -248,6 +257,13 @@ export function LayoutPicker() {
             </button>
           </li>
         </ul>
+        <p id={`${hintId}-cap`} className="visually-hidden">
+          {t("layout.limit", { max: MAX_LAYOUTS })}
+        </p>
+        <p id={`${hintId}-builtin`} className="visually-hidden">
+          {t("layout.builtinLocked")}
+        </p>
+        </>
       )}
       {(mode === "saveAs" || mode === "rename") && (
         <form className="layout-inline" onSubmit={submitName} onKeyDown={onInlineKey}>

@@ -1,7 +1,7 @@
 // Modal olmayan bildirim bandı (spec §7: hesap ve kayıt hataları, açılış uyarıları).
 // Bildirimler yapı olarak saklanır ve çizimde çevrilir; dil değişince metin de değişir.
 // Aynı `id` ile gelen bildirim öncekinin yerini alır (ör. tekrarlayan kayıt hatası).
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CommandError, StoreWarning } from "../bindings";
 import { errorMessage } from "../i18n/errors";
@@ -61,21 +61,26 @@ export function storeWarningNotices(warnings: readonly StoreWarning[]): Notice[]
 export function NoticeBar() {
   const { t, i18n } = useTranslation();
   const { notices, dismiss } = useNotices();
+  // İlk boyamada var olan canlı bölge çoğu ekran okuyucuda duyurulmaz: açılış bildirimleri
+  // bileşen bağlandıktan sonra eklenir ve eklendikleri anda duyurulur.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   if (notices.length === 0) return null;
   return (
     <section className="notice-bar no-print" aria-label={t("notice.region")}>
-      {notices.map((n) => (
-        <div key={n.id} className={`notice notice--${n.type}`} role={n.type === "error" ? "alert" : "status"}>
-          <strong className="notice-kind">{t(`notice.${n.type}`)}</strong>
-          <span className="notice-text">
-            {n.type === "error" ? t(n.messageKey, { message: errorMessage(t, i18n, n.error) }) : t(n.messageKey, n.params)}
-          </span>
-          {n.type !== "error" && n.action === "tzdb" && <TzdbActions />}
-          <button type="button" onClick={() => dismiss(n.id)}>
-            {t("notice.dismiss")}
-          </button>
-        </div>
-      ))}
+      {mounted &&
+        notices.map((n) => (
+          <div key={n.id} className={`notice notice--${n.type}`} role={n.type === "error" ? "alert" : "status"}>
+            <strong className="notice-kind">{t(`notice.${n.type}`)}</strong>
+            <span className="notice-text">
+              {n.type === "error" ? t(n.messageKey, { message: errorMessage(t, i18n, n.error) }) : t(n.messageKey, n.params)}
+            </span>
+            {n.type !== "error" && n.action === "tzdb" && <TzdbActions />}
+            <button type="button" onClick={() => dismiss(n.id)}>
+              {t("notice.dismiss")}
+            </button>
+          </div>
+        ))}
     </section>
   );
 }

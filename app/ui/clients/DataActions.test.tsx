@@ -13,7 +13,7 @@ import { api } from "../api";
 import { useSession } from "../session/store";
 import { NoticeBar } from "../shell/notices";
 import { renderWithStores } from "../test/render";
-import { DataActions } from "./DataActions";
+import { DataActions, resetExchangeBusy } from "./DataActions";
 
 const ok = <T,>(data: T) => ({ status: "ok" as const, data });
 const report = { clients_added: 2, charts_added: 3, notes_added: 0, skipped: 1, warnings: [] };
@@ -23,7 +23,7 @@ function Revision() {
 }
 
 function renderData() {
-  renderWithStores(
+  return renderWithStores(
     <>
       <NoticeBar />
       <Revision />
@@ -35,6 +35,7 @@ function renderData() {
 const section = () => screen.getByRole("region", { name: "Veri" });
 
 beforeEach(() => {
+  resetExchangeBusy();
   for (const f of Object.values(api)) vi.mocked(f).mockReset();
 });
 
@@ -47,7 +48,7 @@ test("JSON export asks about notes first, unchecked by default, and reports the 
   expect(notes).not.toBeChecked();
   expect(notes).toHaveAccessibleDescription("Notlar hassas veridir; dosyayı kiminle paylaştığınıza dikkat edin.");
   fireEvent.click(within(dialog).getByRole("button", { name: "Dosya seç ve kaydet…" }));
-  expect(await screen.findByRole("status", { name: "" })).toHaveTextContent("“danisanlar.json” kaydedildi.");
+  expect(await within(await screen.findByRole("region", { name: "Bildirimler" })).findByRole("status")).toHaveTextContent("“danisanlar.json” kaydedildi.");
   expect(api.exportClientsJson).toHaveBeenCalledWith(false);
   expect(screen.queryByRole("dialog")).toBeNull();
 });
@@ -114,8 +115,43 @@ test("an import with reset settings is a warning; a refused import adds nothing 
   const button = within(section()).getByRole("button", { name: "JSON içe aktar…" });
   fireEvent.click(button);
   expect(await screen.findByText(/1 haritanın hesap ayarı okunamadı/)).toBeInTheDocument();
-  await waitFor(() => expect(button).toBeEnabled());
+  await waitFor(() => expect(button).not.toHaveAttribute("aria-disabled"));
   fireEvent.click(button);
   expect(await screen.findByRole("alert")).toHaveTextContent("İçe aktarılamadı; hiçbir kayıt eklenmedi: “dev.json” çok büyük; en çok 32 MB içe aktarılabilir.");
   expect(screen.getByRole("status", { name: "sürüm" })).toHaveTextContent("1");
+});
+
+test("while a file dialog is open the buttons say why and nothing else starts", async () => {
+  let release!: () => void;
+  vi.mocked(api.exportClientsCsv).mockReturnValue(new Promise((r) => (release = () => r(ok(null)))));
+  renderData();
+  const csv = within(section()).getByRole("button", { name: "CSV olarak dışa aktar…" });
+  fireEvent.click(csv);
+  await waitFor(() => expect(csv).toHaveAttribute("aria-disabled", "true"));
+  expect(within(section()).getByRole("status")).toHaveTextContent("Çalışıyor…");
+  fireEvent.click(csv);
+  fireEvent.click(within(section()).getByRole("button", { name: "JSON içe aktar…" }));
+  fireEvent.click(within(section()).getByRole("button", { name: "JSON olarak dışa aktar…" }));
+  expect(api.exportClientsCsv).toHaveBeenCalledOnce();
+  expect(api.importClientsJson).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  release();
+  await waitFor(() => expect(csv).not.toHaveAttribute("aria-disabled"));
+  expect(within(section()).getByRole("status")).toHaveTextContent(/^$/);
+});
+
+test("busy survives closing and reopening the sidebar while a file dialog is open", async () => {
+  let release!: () => void;
+  vi.mocked(api.importClientsJson).mockReturnValue(new Promise((r) => (release = () => r(ok(null)))));
+  const first = renderData();
+  fireEvent.click(within(section()).getByRole("button", { name: "JSON içe aktar…" }));
+  await waitFor(() => expect(within(section()).getByRole("button", { name: "JSON içe aktar…" })).toHaveAttribute("aria-disabled", "true"));
+  first.unmount();
+  renderData();
+  const again = within(section()).getByRole("button", { name: "JSON içe aktar…" });
+  expect(again).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(again);
+  expect(api.importClientsJson).toHaveBeenCalledOnce();
+  release();
+  await waitFor(() => expect(again).not.toHaveAttribute("aria-disabled"));
 });

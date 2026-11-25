@@ -1,7 +1,7 @@
 // Kenar çubuğunun açık danışan bölümü: haritaları (`list_charts`), harita ekleme, harita ve
 // danışan silme (onaylı, geri alınamaz) ve açık haritanın etiketleri. Açık harita silinirse
 // danışanın en son güncellenen haritası açılır; açık danışan silinirse pano boşalır.
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import type { ChartRecord, CommandError, OpenedClient } from "../bindings";
@@ -10,6 +10,7 @@ import { useSession } from "../session/store";
 import { ConfirmDialog } from "../shell/ConfirmDialog";
 import { useNotices } from "../shell/notices";
 import { useViewStore } from "../view/store";
+import { CLIENT_SEARCH_ID } from "./ClientList";
 import { TagEditor } from "./TagEditor";
 
 type Pending = { kind: "chart"; chart: ChartRecord } | { kind: "client" };
@@ -24,6 +25,7 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
   const [charts, setCharts] = useState<ChartRecord[]>([]);
   const [error, setError] = useState<CommandError | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     let live = true;
@@ -48,13 +50,21 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
     flush();
     const r = await api.deleteChart(chart.id);
     if (r.status === "error") return failed(r.error);
-    if (chart.id !== opened.chart_record.id) return session.touch();
+    if (chart.id !== opened.chart_record.id) {
+      session.touch();
+      // Silinen satırın düğmesi kaybolur: odak danışan başlığına geçer.
+      headingRef.current?.focus();
+      return;
+    }
     // Açık harita silindi: diğer haritalardan en son güncelleneni açılır (uyarısız).
     const rest = await api.listCharts(clientId);
     const next = rest.status === "ok" ? rest.data[0] : undefined;
     const e = next ? await session.openClient(clientId, next.id) : rest.status === "error" ? rest.error : null;
     // Diğer harita açılamazsa silinen harita ekranda bırakılmaz: pano boşalır.
-    if (!next || e) session.close();
+    if (!next || e) {
+      session.close();
+      document.getElementById(CLIENT_SEARCH_ID)?.focus();
+    } else headingRef.current?.focus();
     if (e) push({ id: "client", type: "error", messageKey: "notice.openFailed", error: e });
   };
 
@@ -64,12 +74,13 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
     const r = await api.deleteClient(clientId);
     if (r.status === "error") return failed(r.error);
     session.close();
+    document.getElementById(CLIENT_SEARCH_ID)?.focus();
   };
 
   const onlyChart = charts.length <= 1;
   return (
     <section className="open-client" aria-labelledby={`${id}-name`}>
-      <h2 id={`${id}-name`} className="sidebar-heading">
+      <h2 id={`${id}-name`} ref={headingRef} tabIndex={-1} className="sidebar-heading">
         {opened.client.name}
       </h2>
       <h3 className="sidebar-subheading">{t("clients.charts")}</h3>

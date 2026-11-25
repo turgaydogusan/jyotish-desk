@@ -1,7 +1,8 @@
 // Kenar çubuğunun liste yarısı (UI spec §4): arama, etiket süzgeci ve son açılanlar. Arama
 // `search_clients` (ad, etiket, not), süzgeç `list_clients_by_tag`, boş sorgu `list_clients`
 // ile okunur; sıralama Rust'tadır (son açılan önce). Danışan seçilince son haritası açılır.
-import { useEffect, useId, useRef, useState } from "react";
+// Liste tek sekme durağıdır; oklarla gezilir.
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api, type Result } from "../api";
 import type { Client, CommandError, SearchHit, TagCount } from "../bindings";
@@ -12,6 +13,8 @@ import { useNotices } from "../shell/notices";
 export const CLIENT_SEARCH_DEBOUNCE_MS = 150;
 /** Kenar çubuğunda gösterilen en çok danışan (Rust `MAX_LIST` 500). */
 export const SIDEBAR_LIMIT = 200;
+/** Kenar çubuğu arama kutusu: silmeden sonra odak buraya döner (OpenClient). */
+export const CLIENT_SEARCH_ID = "client-search";
 
 type Row = { client: Client; hit?: SearchHit };
 
@@ -33,6 +36,9 @@ export function ClientList() {
   const [error, setError] = useState<CommandError | null>(null);
   const [retry, setRetry] = useState(0);
   const seq = useRef(0);
+  // Liste tek sekme durağıdır: ↑/↓/Home/End satırlarda gezer (roving tabindex).
+  const [focusIndex, setFocusIndex] = useState(0);
+  const rowsRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     void api.listTags().then((r) => r.status === "ok" && setTags(r.data));
@@ -69,12 +75,30 @@ export function ClientList() {
   const heading = query.trim() !== "" ? t("clients.results") : tag !== "" ? t("clients.tagged", { tag }) : t("clients.recent");
   const openId = session.opened?.client.id;
 
+  // Liste değişince sekme durağı açık danışana, yoksa ilk satıra gider.
+  useEffect(() => {
+    if (!rows) return;
+    const i = rows.findIndex((r) => r.client.id === openId);
+    setFocusIndex(i >= 0 ? i : 0);
+  }, [rows, openId]);
+
+  const onRowsKey = (e: KeyboardEvent<HTMLUListElement>) => {
+    if (!rows || rows.length === 0) return;
+    const last = rows.length - 1;
+    const next =
+      e.key === "ArrowDown" ? Math.min(focusIndex + 1, last) : e.key === "ArrowUp" ? Math.max(focusIndex - 1, 0) : e.key === "Home" ? 0 : e.key === "End" ? last : null;
+    if (next === null) return;
+    e.preventDefault();
+    setFocusIndex(next);
+    rowsRef.current?.querySelectorAll<HTMLButtonElement>("button.client-row")[next]?.focus();
+  };
+
   return (
     <section className="client-list" aria-labelledby={`${id}-heading`}>
       <div className="sidebar-field">
-        <label htmlFor={`${id}-q`}>{t("clients.search")}</label>
+        <label htmlFor={CLIENT_SEARCH_ID}>{t("clients.search")}</label>
         <input
-          id={`${id}-q`}
+          id={CLIENT_SEARCH_ID}
           type="search"
           value={query}
           aria-describedby={`${id}-q-hint`}
@@ -118,10 +142,17 @@ export function ClientList() {
       )}
       {rows && rows.length === 0 && !error && <p className="sidebar-empty">{query.trim() !== "" || tag !== "" ? t("clients.noResults") : t("clients.none")}</p>}
       {rows && rows.length > 0 && (
-        <ul className="client-rows">
-          {rows.map(({ client, hit }) => (
+        <ul ref={rowsRef} className="client-rows" onKeyDown={onRowsKey}>
+          {rows.map(({ client, hit }, i) => (
             <li key={client.id}>
-              <button type="button" aria-current={client.id === openId ? "true" : undefined} onClick={() => void choose(client)}>
+              <button
+                type="button"
+                className="client-row"
+                tabIndex={i === focusIndex ? 0 : -1}
+                aria-current={client.id === openId ? "true" : undefined}
+                onFocus={() => setFocusIndex(i)}
+                onClick={() => void choose(client)}
+              >
                 <span className="client-name">{client.name}</span>
                 {hit?.matched === "Tag" && <span className="client-meta">{t("clients.matchedTag")}</span>}
                 {hit?.matched === "Note" && hit.snippet && <span className="client-meta">{t("clients.matchedNote", { snippet: hit.snippet })}</span>}

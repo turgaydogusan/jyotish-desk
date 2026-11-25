@@ -289,3 +289,12 @@ test("an empty client shows the empty text", async () => {
   renderPanel();
   expect(await screen.findByText("Henüz not yok.")).toBeInTheDocument();
 });
+
+test("after a note is deleted focus goes to New note", async () => {
+  vi.mocked(api.deleteNote).mockResolvedValue(ok(null));
+  renderPanel();
+  const items = await within(await screen.findByRole("list", { name: "Örnek Danışan notları" })).findAllByRole("listitem");
+  fireEvent.click(within(items[1]).getByRole("button", { name: /tarihli notu sil/ }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Not silinsin mi?" })).getByRole("button", { name: "Notu sil" }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Yeni not" })));
+});

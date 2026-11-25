@@ -89,9 +89,6 @@
   flex-direction: column;
   gap: 2px;
 }
-.button-danger {
-  border: 1px solid var(--danger);
-}
 .checkbox-row {
   display: flex;
   align-items: center;
@@ -100,4 +97,9 @@
 .data-actions {
   border-top: 1px solid var(--line);
   padding-top: 8px;
+}
+
+.sidebar-actions [aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: default;
 }

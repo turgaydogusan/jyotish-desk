@@ -1,3 +1,6 @@
+import clientsCss from "../clients/clients.css?raw";
+import dashboardCss from "../dashboard/dashboard.css?raw";
+import shellCss from "../shell/shell.css?raw";
 import css from "./tokens.css?raw";
 
 // Spec §2.1 tablosu, birebir.
@@ -90,4 +93,11 @@ test.each([
   for (const bg of ["--bg", "--panel"]) {
     expect(contrast(t["--warn"], t[bg]), `--warn on ${bg}`).toBeGreaterThanOrEqual(3);
   }
+});
+
+test("shared helper classes live in the stylesheets every screen loads", () => {
+  expect(css).toMatch(/\.visually-hidden\s*\{/);
+  expect(dashboardCss).not.toMatch(/\.visually-hidden\s*\{/);
+  expect(shellCss).toMatch(/\.button-danger\s*\{/);
+  expect(clientsCss).not.toMatch(/\.button-danger\s*\{/);
 });
