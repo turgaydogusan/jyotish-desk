@@ -22,3 +22,17 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+// Baskı sayfaları (Plan 12): önizlemedeki dört A4 kâğıt. Koyu tema seçilidir; kâğıt yine de
+// beyazdır (`.paper`). Kuzey biçimi varsayılandır.
+for (const sheet of ["cover", "charts", "dasha", "grahas"] as const) {
+  test(`print sheet ${sheet}`, async ({ page }) => {
+    await mockIpc(page, { session: true });
+    await page.addInitScript(() => localStorage.setItem("jyotish-desk.theme.v1", "dark"));
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+    await page.keyboard.press("Meta+p");
+    await expect(page.locator("section.print-page")).toHaveCount(4);
+    await expect(page.locator(`[data-page="${sheet}"]`)).toHaveScreenshot(`print-${sheet}.png`);
+  });
+}

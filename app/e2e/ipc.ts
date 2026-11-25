@@ -9,11 +9,18 @@ export const FIXTURE = JSON.parse(readFileSync(new URL("../ui/test/fixtures/delh
 export interface IpcOptions {
   /** `restore_session` dönüşü: `true` Delhi haritası, `false` oturum yok. */
   session: boolean;
+  /** Doğum saati bilinmeyen harita: uyarı ve notlar basılır (baskının en uzun sayfaları). */
+  unknownTime?: boolean;
 }
 
-export async function mockIpc(page: Page, { session }: IpcOptions) {
+export async function mockIpc(page: Page, { session, unknownTime = false }: IpcOptions) {
   await page.addInitScript(
-    ({ fixture, session }) => {
+    ({ fixture, session, unknownTime }) => {
+      if (unknownTime) {
+        fixture.opened.chart_record.birth.time = null;
+        fixture.opened.chart_record.birth.time_certainty = "Unknown";
+        fixture.opened.chart_record.resolved.warnings = ["TimeUnknownNoon"];
+      }
       const calls: { cmd: string; args: unknown }[] = [];
       Object.assign(window, { __ipcCalls: calls });
       // İkinci danışan: aynı hesaplanmış harita, başka kimlik ve ad (arayüz hesap yapmaz).
@@ -102,7 +109,7 @@ export async function mockIpc(page: Page, { session }: IpcOptions) {
         },
       });
     },
-    { fixture: FIXTURE, session },
+    { fixture: FIXTURE, session, unknownTime },
   );
 }
 

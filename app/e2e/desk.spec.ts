@@ -170,3 +170,69 @@ test("a tag written on the open chart appears in the tag filter and finds that c
   await expect(list.getByRole("button")).toContainText("Örnek Danışan");
   expect((await ipcCalls(page, "list_clients_by_tag")).at(-1)).toEqual({ tag: "Kariyer", limit: 200 });
 });
+
+test("Cmd+P opens the print preview; under print media only the sheets remain; Cmd+P again asks for the print dialog", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+p");
+  const toolbar = page.getByRole("group", { name: "Baskı seçenekleri" });
+  const sheets = page.locator("section.print-page");
+  await expect(toolbar).toBeVisible();
+  await expect(sheets).toHaveCount(4);
+  await expect(page).toHaveTitle("Örnek Danışan – Doğum haritası");
+  expect(await ipcCalls(page, "print_window")).toHaveLength(0);
+
+  await page.emulateMedia({ media: "print" });
+  await expect(toolbar).toBeHidden();
+  await expect(page.locator("header.topbar")).toBeHidden();
+  await expect(sheets.first()).toHaveCSS("break-after", "page");
+  await expect(sheets.last()).toHaveCSS("break-after", "auto");
+  // 15 mm iç dolgu = kâğıdın kenar boşluğu (96 dpi'de 56,69 px).
+  await expect(sheets.first()).toHaveCSS("padding-top", /^56\.6\d*px$/);
+  const retro = (row: string) => page.locator(`[data-page="grahas"] [data-row="${row}"] td`).nth(5);
+  await expect(retro("Saturn")).toHaveText("R");
+  await expect(retro("Rahu")).toHaveText("");
+  await expect(retro("Ketu")).toHaveText("");
+  await page.emulateMedia({ media: "screen" });
+
+  await page.keyboard.press("Meta+p");
+  await expect.poll(() => ipcCalls(page, "print_window")).toHaveLength(1);
+  await toolbar.getByRole("checkbox", { name: "Vimshottari dasa" }).uncheck();
+  await expect(sheets).toHaveCount(3);
+  await page.getByRole("button", { name: "Panoya dön" }).click();
+  await expect(page.getByRole("region", { name: "Harita D1", exact: true })).toBeVisible();
+  await expect(page).toHaveTitle("Jyotish Desk");
+});
+
+test("print sheets are paper-white in the dark theme and, at their longest, each fits one A4 and one Letter page", async ({ page }) => {
+  // Saati bilinmeyen harita: kapakta uyarı, harita ve dasa sayfalarında not basılır.
+  await mockIpc(page, { session: true, unknownTime: true });
+  await page.addInitScript(() => localStorage.setItem("jyotish-desk.theme.v1", "dark"));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+p");
+  const sheets = page.locator("section.print-page");
+  await expect(sheets).toHaveCount(4);
+  await expect(page.locator('[data-page="charts"] .print-note')).toContainText("Doğum saati bilinmiyor");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  for (const sheet of await sheets.all()) {
+    await expect(sheet).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expect(sheet).toHaveCSS("color", "rgb(44, 44, 42)");
+  }
+  await expect(page.locator('[data-page="charts"] .chart-cell').first()).toHaveCSS("stroke", "rgb(83, 74, 183)");
+
+  // WKWebView yazdırırken içeriği yaklaşık 1,067 kat büyütür (scripts/print-probe.sh ölçümü):
+  // kâğıdın CSS karşılığı A4'te 744 × 1053 px, Letter'da 765 × 990 px. En dar genişlik ve en
+  // kısa yükseklik birlikte denenir.
+  await page.setViewportSize({ width: 744, height: 990 });
+  await page.emulateMedia({ media: "print" });
+  for (const sheet of await sheets.all()) {
+    const box = (await sheet.boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(744);
+    expect(box.height).toBeGreaterThan(200);
+    expect(box.height).toBeLessThanOrEqual(990);
+    // Hiçbir tablo ya da çizim kâğıdın iç genişliğinden taşmaz.
+    expect(await sheet.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  }
+});
