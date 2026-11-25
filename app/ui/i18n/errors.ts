@@ -22,5 +22,9 @@ export function errorMessage(t: TFunction, i18n: I18n, error: CommandError): str
     const detail = String(error.params.detail ?? "other");
     params.detail = i18n.exists(`errors.fileIoDetail.${detail}`) ? t(`errors.fileIoDetail.${detail}`) : detail;
   }
+  if (error.code === "update_check_failed" || error.code === "update_install_failed") {
+    const reason = String(error.params.reason ?? "other");
+    params.reason = t(i18n.exists(`updateReason.${reason}`) ? `updateReason.${reason}` : "updateReason.other");
+  }
   return t(key, params);
 }

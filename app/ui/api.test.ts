@@ -36,6 +36,9 @@ vi.mock("./bindings", () => ({
     updateClient: vi.fn(),
     transitsAt: vi.fn(),
     keepStoredMoment: vi.fn(),
+    appInfo: vi.fn(),
+    checkForUpdate: vi.fn(),
+    installUpdate: vi.fn(),
   },
 }));
 
@@ -112,6 +115,9 @@ test("every wrapper forwards its arguments to the command of the same name", asy
     ["updateClient", [2, "A", null]],
     ["transitsAt", [{ kind: "now" }, { ayanamsa: "Lahiri" }, [], { birth_jd_ut: 1 }]],
     ["keepStoredMoment", [3]],
+    ["appInfo", []],
+    ["checkForUpdate", []],
+    ["installUpdate", ["0.9.1"]],
   ];
   for (const [name, args] of calls) {
     const command = vi.mocked(commands[name] as (...a: unknown[]) => Promise<unknown>);
@@ -145,6 +151,6 @@ test("every string argument of a command is a known, non-path one (found by type
     }
   }
   expect(found.sort()).toEqual(
-    ["addNote.body", "listClientsByTag.tag", "searchClients.query", "searchPlaces.query", "setChartTags.tags", "updateClient.name", "updateNote.body"].sort(),
+    ["addNote.body", "installUpdate.version", "listClientsByTag.tag", "searchClients.query", "searchPlaces.query", "setChartTags.tags", "updateClient.name", "updateNote.body"].sort(),
   );
 });

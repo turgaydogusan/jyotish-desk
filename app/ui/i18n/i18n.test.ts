@@ -78,6 +78,7 @@ const BACKEND_CODES = [
   "atlas_unavailable", "atlas_sqlite", "atlas_io", "atlas_schema",
   "file_io", "dialog_path", "import_too_large", "import_format", "import_version", "import_record",
   "prefs_too_new",
+  "update_unconfigured", "update_check_failed", "update_install_failed", "update_changed", "update_busy",
 ] as const;
 
 test("every backend error code reachable from the UI has a message", () => {
@@ -92,6 +93,14 @@ test("warning badges and hints cover every moment and chart warning", () => {
 
 test("atlas reasons are localized in every language", () => {
   for (const lang of [tr, en, fr]) expect(Object.keys(lang.atlasReason).sort()).toEqual(["io", "missing", "schema"]);
+});
+
+test("update failure reasons are localized in every language and an unknown reason falls back", () => {
+  for (const lang of [tr, en, fr]) expect(Object.keys(lang.updateReason).sort()).toEqual(["install", "manifest", "network", "other", "signature"]);
+  const t = i18n.getFixedT("tr");
+  expect(errorMessage(t, i18n, { code: "update_check_failed", params: { reason: "network" } })).toBe("Güncelleme denetlenemedi (ağa ulaşılamadı).");
+  expect(errorMessage(t, i18n, { code: "update_install_failed", params: { reason: "signature" } })).toBe("Güncelleme kurulamadı (imza doğrulanamadı). Kurulu sürüm değişmedi.");
+  expect(errorMessage(t, i18n, { code: "update_check_failed", params: { reason: "/Users/a" } })).toBe("Güncelleme denetlenemedi (beklenmeyen bir sorun).");
 });
 
 test("file error details are localized in every language", () => {

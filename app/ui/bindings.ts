@@ -65,9 +65,24 @@ export const commands = {
 	importClientsJson: (options?: InvokeOptions) => typedError<ImportResult | null, CommandError>(__TAURI_INVOKE("import_clients_json", undefined, options)),
 	searchPlaces: (query: string, limit: number, options?: InvokeOptions) => typedError<PlaceHit[], CommandError>(__TAURI_INVOKE("search_places", { query, limit }, options)),
 	previewMoment: (birth: BirthData, options?: InvokeOptions) => typedError<MomentPreview, CommandError>(__TAURI_INVOKE("preview_moment", { birth }, options)),
+	appInfo: (options?: InvokeOptions) => typedError<AppInfo, CommandError>(__TAURI_INVOKE("app_info", undefined, options)),
+	/**  Yeni sürüm var mı. `None`: kurulu sürüm günceldir. */
+	checkForUpdate: (options?: InvokeOptions) => typedError<UpdateInfo | null, CommandError>(__TAURI_INVOKE("check_for_update", undefined, options)),
+	/**
+	 *  Kullanıcının onayladığı sürümü indirir, imzasını doğrular ve kurar. Yayın bu arada
+	 *  değiştiyse (`version` artık son sürüm değilse) hiçbir şey kurulmaz: onay o sürüme verilmiştir.
+	 *  Yeni sürüm uygulama kapatılıp açılınca çalışır; uygulama kendini yeniden başlatmaz.
+	 */
+	installUpdate: (version: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("install_update", { version }, options)),
 };
 
 /* Types */
+export type AppInfo = {
+	version: string,
+	/**  Açık anahtar gömülü mü; değilse (anahtar üretilmeden yapılan derleme) denetim kapalıdır. */
+	updaterConfigured: boolean,
+};
+
 /**
  *  Genel tercihler (spec §5 `AppPrefs`). Varsayılan görünüm, kullanıcının pano düzenidir
  *  (`app_state` `panel_layout`, bkz. `view_state`); burada tutulmaz.
@@ -648,6 +663,13 @@ export type TransitView = {
 export type TzChoice = ({ Iana: string }) & { Fixed?: never } | 
 /**  UTC ofseti, saniye, doğuda pozitif. */
 ({ Fixed: number }) & { Iana?: never } | "Lmt";
+
+export type UpdateInfo = {
+	version: string,
+	notes: string | null,
+	/**  Yayın günü, `YYYY-MM-DD`. */
+	published: string | null,
+};
 
 /**  Hafta günü: Ravi, Soma, Mangala, Budha, Guru, Shukra, Shani. */
 export type Vara = "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";

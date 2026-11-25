@@ -77,6 +77,11 @@ export const api = {
   dashaChildren: (seed: DashaSeed, path: Graha[]) => wrap(() => commands.dashaChildren(seed, path)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
+  appInfo: () => wrap(() => commands.appInfo()),
+  // Güncelleme: denetim yalnızca kullanıcının isteğiyle çağrılır (Plan 13 D1); `version`
+  // kullanıcının kurmayı onayladığı sürümdür, adres ya da yol değildir (C2′).
+  checkForUpdate: () => wrap(() => commands.checkForUpdate()),
+  installUpdate: (version: string) => wrap(() => commands.installUpdate(version)),
 };
 
 export type Api = typeof api;

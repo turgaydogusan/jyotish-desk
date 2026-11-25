@@ -28,6 +28,12 @@ specta-typescript = "0.0.15"
 # Dosya seçme/kaydetme pencereleri Rust tarafında açılır (`DialogExt`); arayüze yol seçtiren
 # bir komut ve yetenek (capability) yoktur. Apache-2.0 OR MIT.
 tauri-plugin-dialog = "=2.8.4"
+# Güncelleme (spec §10; Plan 13 D3): imzalı paketi indirir, minisign imzasını doğrular ve kurar.
+# Yalnızca Rust'tan kullanılır (`UpdaterExt`); eklentinin IPC komutları yetenek dosyasında izinli
+# değildir. TLS işletim sisteminindir (`native-tls`: macOS'ta Security.framework); varsayılan
+# `rustls-tls` özelliği `ring` ve CDLA lisanslı kök sertifika paketini getirir. `zip`: macOS
+# paketi `.app.tar.gz`'dir. Apache-2.0 OR MIT.
+tauri-plugin-updater = { version = "=2.14.1", default-features = false, features = ["native-tls", "zip"] }
 
 [dev-dependencies]
 tempfile = "3"

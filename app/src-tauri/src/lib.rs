@@ -4,6 +4,7 @@ pub mod commands;
 pub mod data_dir;
 pub mod store_commands;
 pub mod transit_commands;
+pub mod update_commands;
 
 use std::sync::{Arc, Mutex};
 
@@ -57,6 +58,9 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store_commands::import_clients_json,
             atlas_commands::search_places,
             atlas_commands::preview_moment,
+            update_commands::app_info,
+            update_commands::check_for_update,
+            update_commands::install_update,
         ])
 }
 
@@ -64,6 +68,9 @@ pub fn run() {
     let builder = specta_builder();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Güncelleyici yalnızca `update_commands` üzerinden çalışır; açılışta denetim yapmaz.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update_commands::InstallGuard::default())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
