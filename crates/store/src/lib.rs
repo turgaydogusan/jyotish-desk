@@ -8,6 +8,7 @@ mod db;
 mod error;
 pub mod model;
 mod notes;
+mod open;
 pub mod schema;
 mod search;
 pub mod settings;
@@ -22,6 +23,7 @@ pub use model::{
     NewClient, Note, Place, ResolvedRecord, TimeCertainty, TzChoice,
 };
 pub use notes::{normalize_tags, TagCount, MAX_TAG_CHARS, RECENT_NOTES};
+pub use open::{OpenRecord, StoreWarning};
 pub use schema::SCHEMA_VERSION;
 pub use search::{SearchHit, SearchMatch};
 pub use settings::{
