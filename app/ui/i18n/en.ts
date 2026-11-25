@@ -196,4 +196,20 @@ export const en: Messages = {
   dasha: {
     approx: "Birth time unknown: dasha dates are approximate (≈).",
   },
+  shortcuts: {
+    title: "Keyboard shortcuts",
+    open: "Shortcuts",
+    close: "Close",
+    keys: "Keys",
+    action: "Action",
+    newChart: "New chart",
+    editChart: "Edit the open chart",
+    selectLayout: "Switch to the layout at that position",
+    toggleNotes: "Show or hide the notes panel",
+    help: "Open this help",
+    escape: "Clear the highlight, close a window",
+    movePanel: "Move the focused panel",
+    resizePanel: "Resize the focused panel",
+    tree: "Move through, open and close the dasha tree",
+  },
 };

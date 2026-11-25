@@ -145,3 +145,24 @@ test("a print failure is shown with a retry", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Yazdır…" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Yazdırma penceresi açılamadı.");
 });
+
+test("? opens the shortcut help as a modal that traps focus, blocks shortcuts and closes with Esc", () => {
+  renderApp();
+  const opener = screen.getByRole("button", { name: "Kısayollar" });
+  opener.focus();
+  fireEvent.keyDown(opener, { key: "?", shiftKey: true });
+  const dialog = screen.getByRole("dialog", { name: "Klavye kısayolları" });
+  expect(dialog).toHaveAttribute("aria-modal", "true");
+  expect(within(dialog).getByText("⌘N")).toBeInTheDocument();
+  expect(within(dialog).getByRole("row", { name: /⌘⇧N Notlar panelini aç\/kapat/ })).toBeInTheDocument();
+  const close = within(dialog).getByRole("button", { name: "Kapat" });
+  expect(document.activeElement).toBe(close);
+  fireEvent.keyDown(close, { key: "Tab" });
+  expect(document.activeElement).toBe(close);
+  // Modal açıkken arkadaki düzen değişmez.
+  fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
+  fireEvent.keyDown(close, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(opener);
+});

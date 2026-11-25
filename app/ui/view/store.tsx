@@ -4,10 +4,10 @@
 // dasha yoluna `useViewStore` ile ulaşır; birbirini çağırmaz.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
 import type { Graha, ViewState } from "../bindings";
-import { isEditableTarget } from "../keyboard";
 import type { Layout, LayoutState, Panel } from "../layout/model";
 import { activeLayout, newId, normalizeState, type LayoutAction } from "../layout/reducer";
 import { toViewState, type ViewModel } from "./model";
+import { matchShortcut } from "../shortcuts";
 import type { ViewPersistence } from "./persistence";
 import { viewReducer, type ViewAction } from "./reducer";
 
@@ -107,14 +107,10 @@ export function ViewStateProvider({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.isComposing || isEditableTarget(e.target)) return;
-      if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) return;
-      // Fiziksel tuş (`code`): AZERTY'de `key` rakam değildir.
-      if (!/^Digit[1-9]$/.test(e.code)) return;
-      const index = Number(e.code.slice(5)) - 1;
-      if (index >= stateRef.current.layout.layouts.length) return;
+      const command = matchShortcut(e);
+      if (command?.id !== "selectLayout" || command.index >= stateRef.current.layout.layouts.length) return;
       e.preventDefault();
-      dispatch({ type: "layout", action: { type: "selectIndex", index } });
+      dispatch({ type: "layout", action: { type: "selectIndex", index: command.index } });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

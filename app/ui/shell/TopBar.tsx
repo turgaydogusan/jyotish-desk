@@ -9,10 +9,11 @@ export interface TopBarProps {
   onThemeChange(pref: ThemePref): void;
   printView: boolean;
   onTogglePrint(): void;
+  onHelp(): void;
 }
 
 /** Üst çubuk (spec §4): solda danışan ve harita (uyarı rozetleriyle), ortada düzen seçici, sağda tema, dil ve baskı. */
-export function TopBar({ themePref, onThemeChange, printView, onTogglePrint }: TopBarProps) {
+export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : DEFAULT_LANGUAGE;
   return (
@@ -40,6 +41,9 @@ export function TopBar({ themePref, onThemeChange, printView, onTogglePrint }: T
             ))}
           </select>
         </label>
+        <button type="button" aria-keyshortcuts="?" onClick={onHelp}>
+          {t("shortcuts.open")}
+        </button>
         <button type="button" onClick={onTogglePrint}>
           {printView ? t("shell.backToDesk") : t("shell.printSpike")}
         </button>

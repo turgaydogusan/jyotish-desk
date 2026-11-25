@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Dashboard } from "../dashboard/Dashboard";
-import { isEditableTarget } from "../keyboard";
+import { matchShortcut } from "../shortcuts";
 import { useLayoutStore } from "../view/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
+import { HelpDialog } from "./HelpDialog";
 import { NoticeBar } from "./notices";
 import { PrintView } from "./PrintView";
 import "./shell.css";
@@ -13,6 +14,7 @@ export function Shell() {
   const { toggleNotes } = useLayoutStore();
   const [themePref, setThemePref] = useState<ThemePref>(() => loadThemePref());
   const [printView, setPrintView] = useState(false);
+  const [help, setHelp] = useState(false);
   const measureRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(measureRef);
 
@@ -23,15 +25,17 @@ export function Shell() {
     setThemePref(pref);
   };
 
-  // Cmd+Shift+N: notlar panelini etkin düzende aç/kapat (spec §3.2). Yazı alanlarında,
-  // tuş tekrarında, IME bileşiminde ve baskı görünümünde (pano yokken) yok sayılır.
+  // Genel kısayollar (shortcuts.ts). Cmd+Shift+N notlar panelini etkin düzende açar/kapatır
+  // (spec §3.2); baskı görünümünde (pano yokken) yok sayılır. `?` yardımı açar.
   useEffect(() => {
-    if (printView) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.isComposing || isEditableTarget(e.target)) return;
-      if (e.metaKey && e.shiftKey && !e.altKey && !e.ctrlKey && e.key.toLowerCase() === "n") {
+      const command = matchShortcut(e);
+      if (command?.id === "toggleNotes" && !printView) {
         e.preventDefault();
         toggleNotes();
+      } else if (command?.id === "help") {
+        e.preventDefault();
+        setHelp(true);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -45,11 +49,13 @@ export function Shell() {
         onThemeChange={changeTheme}
         printView={printView}
         onTogglePrint={() => setPrintView((v) => !v)}
+        onHelp={() => setHelp(true)}
       />
       <NoticeBar />
       <main className="shell-main">
         <div ref={measureRef}>{printView ? <PrintView /> : <Dashboard width={width} />}</div>
       </main>
+      {help && <HelpDialog onClose={() => setHelp(false)} />}
     </div>
   );
 }

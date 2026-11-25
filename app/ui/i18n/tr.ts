@@ -195,6 +195,22 @@ export const tr = {
   dasha: {
     approx: "Doğum saati bilinmiyor: dasa tarihleri yaklaşıktır (≈).",
   },
+  shortcuts: {
+    title: "Klavye kısayolları",
+    open: "Kısayollar",
+    close: "Kapat",
+    keys: "Tuşlar",
+    action: "İşlem",
+    newChart: "Yeni harita",
+    editChart: "Açık haritayı düzenle",
+    selectLayout: "Sıradaki düzene geç",
+    toggleNotes: "Notlar panelini aç/kapat",
+    help: "Bu yardımı aç",
+    escape: "Vurguyu temizle, pencereyi kapat",
+    movePanel: "Odaktaki paneli taşı",
+    resizePanel: "Odaktaki paneli boyutlandır",
+    tree: "Dasa ağacında gezin, aç, kapat",
+  },
 };
 
 type Strings<T> = { [K in keyof T]: T[K] extends string ? string : Strings<T[K]> };

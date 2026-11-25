@@ -196,4 +196,20 @@ export const fr: Messages = {
   dasha: {
     approx: "Heure de naissance inconnue : les dates de dasha sont approximatives (≈).",
   },
+  shortcuts: {
+    title: "Raccourcis clavier",
+    open: "Raccourcis",
+    close: "Fermer",
+    keys: "Touches",
+    action: "Action",
+    newChart: "Nouvelle carte",
+    editChart: "Modifier la carte ouverte",
+    selectLayout: "Passer à la disposition de ce rang",
+    toggleNotes: "Afficher ou masquer les notes",
+    help: "Ouvrir cette aide",
+    escape: "Effacer la mise en évidence, fermer une fenêtre",
+    movePanel: "Déplacer le panneau actif",
+    resizePanel: "Redimensionner le panneau actif",
+    tree: "Parcourir, ouvrir et fermer l’arbre des dashas",
+  },
 };
