@@ -4683,6 +4683,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 Expected: commit oluşur; iki tarama da çıktısız. Commit mesajında yasaklı sözcük yoktur (C13).
 
+**Task 8 inceleme düzeltmesi (ayrı commit, Task 9'dan önce):** İnceleme düzeltmesi test-önce uygulanır. (1) Palet ve `matchShortcut` IME bileşimini `isComposing` yanında WebKit'in 229 koduyla da tanır (`shell/Dialog` ve `PlaceSearch` gibi): bileşimi bitiren Enter etkin öğeyi çalıştırmaz. (2) `list_clients`/`search_clients` hatası palette `role=alert` ile gösterilir (`clients.loadFailed`; parametre loglanmaz, C1) ve "eşleşen yok" denmez. (3) Danışan yanıtı ait olduğu arama metniyle saklanır: metin değişince önceki danışanlar yeni yanıt gelene dek listede durmaz, Enter eşleşmeyen danışanı açmaz. (4) Paletin "notlar" ve "kenar çubuğu" komutları baskı görünümünde kısayolları gibi yok sayılır. Expected: `Test Files  40 passed (40)`, `Tests  336 passed (336)` (+3, `palette/Palette.test.tsx`; `shortcuts.test.ts` ve `App.test.tsx`'te birer test genişler); `build` `✓ built`. Sonraki görevlerin toplamları +3.
+
 ---
 
 ### Task 9: Notlar paneli: sıralı otomatik kayıt (en uzun bekleme, sayfa gizlenince kayıt), onaylı silme ve not gövdesi sınırı
@@ -5576,7 +5578,7 @@ pnpm --dir app test
 pnpm --dir app build
 for i in 1 2 3; do pnpm --dir app exec vitest run ui/notes 2>&1 | grep -E "Tests "; done
 ```
-Expected: `store` lib `test result: ok. 71 passed` (+1); clippy, fmt çıktısız; `Test Files  41 passed (41)`, `Tests  344 passed (344)`; `build` `✓ built`; notlar testi üç kez `11 passed`.
+Expected: `store` lib `test result: ok. 71 passed` (+1); clippy, fmt çıktısız; `Test Files  41 passed (41)`, `Tests  347 passed (347)`; `build` `✓ built`; notlar testi üç kez `11 passed`.
 
 - [ ] **Step 5: Commit**
 
@@ -6794,7 +6796,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: `store` lib `71 passed`; `jyotish-desk` lib `test result: ok. 19 passed` (+5: üç dosya komutu testi, kesme testi ve yetki testi), `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; fmt, clippy çıktısız; `Test Files  42 passed (42)`, `Tests  349 passed (349)`; `build` `✓ built`.
+Expected: `store` lib `71 passed`; `jyotish-desk` lib `test result: ok. 19 passed` (+5: üç dosya komutu testi, kesme testi ve yetki testi), `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; fmt, clippy çıktısız; `Test Files  42 passed (42)`, `Tests  352 passed (352)`; `build` `✓ built`.
 
 - [ ] **Step 6: Commit**
 
@@ -7060,7 +7062,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  42 passed (42)`, `Tests  349 passed (349)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
+Expected: `Test Files  42 passed (42)`, `Tests  352 passed (352)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
 
 - [ ] **Step 4: Kurallar**
 
@@ -7200,10 +7202,11 @@ Belirsiz adım yok; her kod adımı tam dosya içeriğini ya da `git apply` ile 
 | 6 | 37 | 310 | — |
 | 7 | 38 | 322 | T6 incelemesi kararı: silmeden önce `flush` (+3) |
 | 8 | 40 | 333 | — |
-| 9 | 41 | 344 | `store` lib 71 (+1) |
-| 10 | 42 | 349 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
-| 11 | 42 | 349 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
-| 12 | 42 | 349 | doğrulama |
+| 8 düzeltme | 40 | 336 | T8 incelemesi kararı: IME Enter (229), arama hatası gösterimi, eski danışan sonuçları (+3) |
+| 9 | 41 | 347 | `store` lib 71 (+1) |
+| 10 | 42 | 352 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
+| 11 | 42 | 352 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
+| 12 | 42 | 352 | doğrulama |
 
 ### Doğrulama
 
