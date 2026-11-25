@@ -97,6 +97,16 @@ pub(crate) fn format_ts(ts: Timestamp) -> String {
     ts.strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
 }
 
+/// Son eklenen satırın kimliği. IPC kimlikleri `u32`'dir (specta `i64`'ü reddeder).
+pub(crate) fn last_id(conn: &Connection) -> Result<u32, StoreError> {
+    u32::try_from(conn.last_insert_rowid()).map_err(|_| StoreError::InvalidInput("id"))
+}
+
+/// Metin sütunundaki geçersiz değer için rusqlite dönüşüm hatası.
+pub(crate) fn bad_column(idx: usize, what: &'static str) -> rusqlite::Error {
+    rusqlite::Error::FromSqlConversionFailure(idx, rusqlite::types::Type::Text, what.into())
+}
+
 #[cfg(test)]
 pub(crate) mod testutil {
     use super::*;

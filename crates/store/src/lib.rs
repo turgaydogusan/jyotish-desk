@@ -3,6 +3,7 @@
 //! saklanır. Hesap yapmaz: `jyotish-core`'dan yalnızca tipleri kullanır.
 
 pub mod birth;
+mod charts;
 mod db;
 mod error;
 pub mod model;
@@ -11,6 +12,7 @@ pub mod settings;
 pub mod view_state;
 
 pub use birth::{parse_birth, resolve_birth, resolve_parsed, ParsedBirth};
+pub use charts::{MAX_LIST, MAX_NAME_CHARS};
 pub use db::{Clock, Store};
 pub use error::StoreError;
 pub use model::{
