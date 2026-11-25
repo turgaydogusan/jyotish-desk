@@ -130,6 +130,9 @@ fn open_client_round_trips_and_is_fast() {
     .expect("add chart");
     assert_eq!(event.chart_record.kind, ChartKind::Event);
     // Doğum haritasına dönüş: son açılan o olur.
+    // Zaman damgaları milisaniye çözünürlüklüdür; eşitlikte büyük kimlik (olay haritası)
+    // kazanırdı ve test aralıklı düşerdi. Yeniden açılışı ayrı bir milisaniyeye it.
+    std::thread::sleep(Duration::from_millis(5));
     let before = open_client_blocking(&engine, &store, client_id, Some(chart_id)).expect("reopen");
 
     // Kapat ve yeniden aç (uygulama yeniden başlatma).
@@ -168,6 +171,52 @@ fn open_client_round_trips_and_is_fast() {
     .unwrap_err();
     assert_eq!(gap.code, "nonexistent_local_time");
     assert_eq!(gap.params["suggestion"], "2014-03-31T04:30:00");
+    // Hata kaydı engeller: harita, doğum verisi ve çözülmüş an çağrıdan öncekiyle aynı.
+    let unchanged =
+        open_client_blocking(&engine, &store, client_id, Some(chart_id)).expect("reopen after gap");
+    assert_eq!(unchanged.chart_record.birth, after.chart_record.birth);
+    assert_eq!(
+        unchanged.chart_record.resolved.jd_ut,
+        after.chart_record.resolved.jd_ut
+    );
+    assert_eq!(unchanged.chart, after.chart);
+
+    // Arayüzün otomatik kaydı (`save_view_state`) oturum geri yüklemesinden sağ çıkar.
+    let vs2 = ViewState {
+        dasha_expanded_path: vec![Graha::Saturn, Graha::Mercury, Graha::Ketu],
+        ..vs.clone()
+    };
+    store
+        .lock()
+        .unwrap()
+        .save_view_state(chart_id, &vs2)
+        .expect("save view state");
+    let restored = restore_session_blocking(&engine, &store)
+        .expect("restore")
+        .expect("a session");
+    assert_eq!(
+        restored.view_state.dasha_expanded_path,
+        vs2.dasha_expanded_path
+    );
+    assert_eq!(restored.view_state.panel_layout, vs2.panel_layout);
+
+    // Harita olmadan düzen kaydı (`save_panel_layout`/`load_panel_layout` gövdeleri).
+    let alone = PanelLayout {
+        active_layout_id: "user:2".into(),
+        ..layout()
+    };
+    store
+        .lock()
+        .unwrap()
+        .save_panel_layout(Some(&alone))
+        .expect("save layout");
+    assert_eq!(store.lock().unwrap().panel_layout().unwrap(), Some(alone));
+    store
+        .lock()
+        .unwrap()
+        .save_panel_layout(None)
+        .expect("clear layout");
+    assert_eq!(store.lock().unwrap().panel_layout().unwrap(), None);
     let err = open_client_blocking(&engine, &store, 999, None).unwrap_err();
     assert_eq!(
         (err.code.as_str(), err.params["what"].as_str()),

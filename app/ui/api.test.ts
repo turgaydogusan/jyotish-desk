@@ -5,6 +5,15 @@ vi.mock("./bindings", () => ({
     engineStatus: vi.fn(),
     planetLongitudes: vi.fn(),
     printWindow: vi.fn(),
+    restoreSession: vi.fn(),
+    createClient: vi.fn(),
+    updateChart: vi.fn(),
+    saveViewState: vi.fn(),
+    loadPanelLayout: vi.fn(),
+    savePanelLayout: vi.fn(),
+    dashaChildren: vi.fn(),
+    searchPlaces: vi.fn(),
+    previewMoment: vi.fn(),
   },
 }));
 
@@ -42,4 +51,31 @@ test("catches thrown errors into an ipc error", async () => {
     status: "error",
     error: { code: "ipc", params: { detail: "Error: boom" } },
   });
+});
+
+test("every wrapper forwards its arguments to the command of the same name", async () => {
+  const calls: [keyof typeof api, unknown[]][] = [
+    ["restoreSession", []],
+    ["createClient", [{ name: "A" }]],
+    ["updateChart", [3, { label: "" }]],
+    ["saveViewState", [3, { schema_version: 1 }]],
+    ["loadPanelLayout", []],
+    ["savePanelLayout", [null]],
+    ["dashaChildren", [{ birth_jd_ut: 1 }, ["Sun"]]],
+    ["searchPlaces", ["delhi", 8]],
+    ["previewMoment", [{ date: "2000-01-01" }]],
+  ];
+  for (const [name, args] of calls) {
+    const command = vi.mocked(commands[name] as (...a: unknown[]) => Promise<unknown>);
+    command.mockResolvedValueOnce({ status: "ok", data: name });
+    const call = api[name] as (...a: unknown[]) => Promise<unknown>;
+    expect(await call(...args)).toEqual({ status: "ok", data: name });
+    expect(command).toHaveBeenCalledWith(...args);
+  }
+});
+
+test("import and export commands are not reachable from the UI (Plan 08 deferred items 1 and 3)", () => {
+  for (const name of ["importJson", "importJhd", "exportJson", "exportCsv"]) {
+    expect(Object.keys(api)).not.toContain(name);
+  }
 });
