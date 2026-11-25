@@ -9,6 +9,7 @@ mod error;
 pub mod model;
 mod notes;
 pub mod schema;
+mod search;
 pub mod settings;
 pub mod view_state;
 
@@ -22,6 +23,7 @@ pub use model::{
 };
 pub use notes::{normalize_tags, TagCount, MAX_TAG_CHARS, RECENT_NOTES};
 pub use schema::SCHEMA_VERSION;
+pub use search::{SearchHit, SearchMatch};
 pub use settings::{
     load_calc_settings, AppPrefs, SettingsLoad, ValueMigration, APP_PREFS_SCHEMA_VERSION,
     CALC_SETTINGS_MIGRATIONS, LOCALES,
