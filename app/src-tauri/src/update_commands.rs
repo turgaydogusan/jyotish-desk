@@ -49,6 +49,24 @@ pub struct UpdateInfo {
 #[derive(Default)]
 pub struct InstallGuard(AtomicBool);
 
+impl InstallGuard {
+    /// Kurulumu başlatır; biri sürüyorsa `None`. Dönen izin düşünce (kurulum bitince, hata
+    /// verince, panikleyince ya da görevi yarıda bırakılınca) işaret kendiliğinden kalkar.
+    pub fn begin(&self) -> Option<InstallPermit<'_>> {
+        // `then` tembeldir: reddedilen denemede izin hiç oluşmaz, yoksa düşerken işareti kaldırırdı.
+        (!self.0.swap(true, Ordering::SeqCst)).then(|| InstallPermit(&self.0))
+    }
+}
+
+/// Süren kurulumun izni; `Drop` işareti kaldırır.
+pub struct InstallPermit<'a>(&'a AtomicBool);
+
+impl Drop for InstallPermit<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
 /// `plugins.updater.pubkey` boş değilse güncelleme yapılandırılmıştır.
 pub fn updater_configured(plugins: &serde_json::Value) -> bool {
     plugins
@@ -145,12 +163,10 @@ pub async fn install_update(
     guard: State<'_, InstallGuard>,
     version: String,
 ) -> Result<(), CommandError> {
-    if guard.0.swap(true, Ordering::SeqCst) {
+    let Some(_permit) = guard.begin() else {
         return Err(CommandError::new("update_busy", &[]));
-    }
-    let result = install(&app, &version).await;
-    guard.0.store(false, Ordering::SeqCst);
-    result
+    };
+    install(&app, &version).await
 }
 
 async fn install(app: &AppHandle, version: &str) -> Result<(), CommandError> {
@@ -231,6 +247,29 @@ mod tests {
     #[test]
     fn updater_artifacts_are_off_by_default_so_a_build_needs_no_signing_key() {
         assert!(conf()["bundle"].get("createUpdaterArtifacts").is_none());
+    }
+
+    #[test]
+    fn one_install_at_a_time_and_the_flag_clears_when_the_permit_drops() {
+        let guard = InstallGuard::default();
+        let permit = guard.begin();
+        assert!(permit.is_some());
+        assert!(guard.begin().is_none(), "a second install must be refused");
+        // Reddedilen deneme süren kurulumun işaretini kaldırmaz.
+        assert!(guard.begin().is_none());
+        drop(permit);
+        assert!(guard.begin().is_some());
+    }
+
+    #[test]
+    fn a_panicking_install_does_not_leave_the_updater_busy() {
+        let guard = InstallGuard::default();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _permit = guard.begin().unwrap();
+            panic!("install failed half way");
+        }));
+        assert!(result.is_err());
+        assert!(guard.begin().is_some());
     }
 
     #[test]
