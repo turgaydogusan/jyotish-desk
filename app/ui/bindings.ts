@@ -285,7 +285,7 @@ export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | 
 
 /**
  *  Gün doğumu tanımı. Panchang'ın vara ve gün doğumu/batımı hesabı bunu kullanır
- *  (`compute_panchang`); harita hesabı kullanmaz.
+ *  (`compute_panchang`; `compute_chart` panchangı bununla hesaplar).
  */
 export type SunriseDef = 
 /**  Disk merkezi, kırılmasız (`SE_BIT_HINDU_RISING`). */

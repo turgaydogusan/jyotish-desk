@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Uygulama sonrası düzeltmeler (kod geçerlidir, bu plandaki ilgili bloklar değil):**
+> - Task 4 `day_sunrise`: arama önce doğumdan 24 saat, sonra 30 saat öncesinden başlar (`SUNRISE_NEAR_START_DAYS`; bu plandaki `SUNRISE_RETRY_DAYS` ve başlangıç sırası hatalıdır, commit `fccede0`). Test sayıları bu yüzden plandan fazladır: `jyotish-core` lib +3, golden +1.
+> - Task 2 `sun_rise_set`: 50° enlemin üstünde `SE_BIT_FORCE_SLOW_METHOD` eklenir; SE'nin hızlı yöntemi Hint tanımında 55°'nin üstünde 60 sn toleransını aşar ve `swetest -rise` de aynı hatayı taşır.
+
 **Goal:** M3'ü tamamlamak: `Ephemeris` trait'ine `swe_rise_trans` tabanlı gün doğumu/batımı eklemek; `Chart`'a doğum anının panchangını (tithi, vara, nakshatra, yoga, karana, bitiş zamanları, gün doğumu ve batımı) ve ashtakavargayı (7 BAV + SAV) eklemek; saf `compute_transits` fonksiyonu ve Tauri komutu sağlamak; golden fixture'ları `swetest`'ten türetilmiş panchang ve SAV beklentileriyle genişletmek; Plan 06 son incelemesinin iki giriş koşulunu (D1, D2) kapatmak.
 
 **Architecture:**

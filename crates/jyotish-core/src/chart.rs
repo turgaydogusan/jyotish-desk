@@ -195,7 +195,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
     let ayanamsa = eph.ayanamsa(jd_ut, settings.ayanamsa.sidereal_mode())?;
     finite(ayanamsa.deg, "ayanamsa")?;
     let frame = rasi_frame(settings);
-    let to_sidereal = |frame_lon: f64| to_sidereal(settings.zodiac, frame_lon, ayanamsa.deg);
+    let sidereal = |frame_lon: f64| to_sidereal(settings.zodiac, frame_lon, ayanamsa.deg);
 
     let mut warnings = Vec::new();
     let (raw, low_precision) = raw_grahas(eph, jd_ut, frame, settings.node)?;
@@ -217,7 +217,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
     if houses.porphyry_fallback {
         warnings.push(ChartWarning::PlacidusPolarFallback);
     }
-    let lagna = Lagna::new(houses.asc, to_sidereal(houses.asc));
+    let lagna = Lagna::new(houses.asc, sidereal(houses.asc));
     let cusps = match settings.house_system {
         HouseSystem::WholeSign => whole_sign_cusps(lagna.sign),
         HouseSystem::Sripati | HouseSystem::Placidus => houses.cusps.to_vec(),
@@ -231,7 +231,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         .map(|r| {
             let sign = Sign::of(r.lon);
             let deg = deg_in_sign(r.lon);
-            let sidereal_lon = to_sidereal(r.lon);
+            let sidereal_lon = sidereal(r.lon);
             let (nakshatra, pada) = nakshatra_pada(sidereal_lon);
             let retrograde = r.speed < 0.0;
             let lord_sign = sign_of(sign_lord(sign)).unwrap_or(sign);
@@ -268,7 +268,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
     // raw[1] her zaman Ay'dır (PLANETS sırası); nakshatra her kipte sidereal'dir.
     let dasha = vimshottari(DashaSeed {
         birth_jd_ut: jd_ut,
-        moon_sidereal_lon: to_sidereal(raw[1].lon),
+        moon_sidereal_lon: sidereal(raw[1].lon),
         year_days: settings.dasha_year,
     })?;
     let panchang = compute_panchang(eph, jd_ut, geo_lat, geo_lon, settings)?;

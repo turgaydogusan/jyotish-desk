@@ -578,7 +578,7 @@ mod compute_tests {
         // görmez; doğumdan 24 saat önce başlayan arama görür.
         let p = panchang(&mut with_rises(&[JD - 1.2, JD - 0.075]), JD);
         assert_eq!(p.sunrise_jd_ut, Some(JD - 0.075));
-        // Gün doğumu 1 Ocak 2000 09:48 UT civarı (yerel ortalama ~11:44): Cumartesi, Cuma değil.
+        // Gün doğumu 1 Ocak 2000 10:12 UT (yerel ortalama ~12:08): Cumartesi, Cuma değil.
         assert_eq!(p.vara, Vara::Saturday);
         // Penceredeki tek doğuş doğumdan 2.4 saat önce: 30 saat önceki başlangıç görmez.
         let p = panchang(&mut with_rises(&[JD - 0.1]), JD);
