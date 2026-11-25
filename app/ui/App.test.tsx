@@ -477,6 +477,21 @@ test("About opens from the top bar as a modal and returns focus to its button", 
   expect(document.activeElement).toBe(opener);
 });
 
+test("while About is open the shortcuts behind it do nothing", async () => {
+  renderApp();
+  fireEvent.click(screen.getByRole("button", { name: "Hakkında" }));
+  const dialog = screen.getByRole("dialog", { name: "Jyotish Desk hakkında" });
+  expect(dialog).toHaveAttribute("aria-modal", "true");
+  await within(dialog).findByText("Sürüm 0.9.0");
+  // ⌘2 (düzen), ⌘K (palet), ⌘N (yeni harita) ve ⌘P (baskı): hiçbiri ikinci bir pencere açmaz
+  // ve arkadaki düzeni değiştirmez.
+  fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });
+  for (const key of ["k", "n", "p"]) fireEvent.keyDown(window, { key, metaKey: true });
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
+  expect(screen.getAllByRole("dialog")).toEqual([dialog]);
+  expect(api.printWindow).not.toHaveBeenCalled();
+});
+
 test("the palette opens About too", async () => {
   renderApp();
   fireEvent.keyDown(window, { key: "k", metaKey: true });
