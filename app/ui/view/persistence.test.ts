@@ -126,3 +126,21 @@ test("a save that throws reaches onError as task_failed and the queue keeps goin
   await p.idle();
   expect(api.saveViewState).toHaveBeenCalledTimes(3);
 });
+
+test("a save that throws before its first await does not wedge the queue", async () => {
+  vi.mocked(api.saveViewState)
+    .mockImplementationOnce(() => {
+      throw new Error("sync");
+    })
+    .mockResolvedValue(ok(null));
+  const onError = vi.fn();
+  const onSaved = vi.fn();
+  const p = storePersistence({ onError, onSaved });
+  p.save({ chartId: 4, viewState: vs });
+  await p.idle();
+  expect(onError).toHaveBeenCalledWith({ code: "task_failed", params: {} });
+  p.save({ chartId: 4, viewState: vs });
+  await p.idle();
+  expect(api.saveViewState).toHaveBeenCalledTimes(2);
+  expect(onSaved).toHaveBeenCalledOnce();
+});

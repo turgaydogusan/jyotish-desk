@@ -37,22 +37,30 @@ export function storePersistence(events: PersistenceEvents = {}, { hold = false 
   const send = (s: ViewSnapshot) => (s.chartId === null ? api.savePanelLayout(s.viewState.panel_layout) : api.saveViewState(s.chartId, s.viewState));
 
   const pump = async () => {
-    try {
-      for (let next = queue.shift(); next; next = queue.shift()) {
-        let r: Awaited<ReturnType<typeof send>>;
-        try {
-          r = await send(next);
-        } catch {
-          // `wrap` reddetmez; yine de fırlatan bir çağrı kuyruğu durdurmaz. Hata metni ve kayıt
-          // içeriği bildirime konmaz.
-          r = { status: "error", error: { code: "task_failed", params: {} } };
-        }
-        if (r.status === "error") events.onError?.(r.error);
-        else events.onSaved?.();
+    for (let next = queue.shift(); next; next = queue.shift()) {
+      let r: Awaited<ReturnType<typeof send>>;
+      try {
+        r = await send(next);
+      } catch {
+        // `wrap` reddetmez; yine de fırlatan bir çağrı kuyruğu durdurmaz. Hata metni ve kayıt
+        // içeriği bildirime konmaz.
+        r = { status: "error", error: { code: "task_failed", params: {} } };
       }
-    } finally {
-      running = null;
+      if (r.status === "error") events.onError?.(r.error);
+      else events.onSaved?.();
     }
+  };
+
+  // `running` pompanın kendi içinde değil burada temizlenir: `send` ilk `await`ten önce fırlatırsa
+  // pompa eşzamanlı biter ve içerideki temizlik, atamadan önce çalışıp kuyruğu kilitlerdi.
+  // Temizlik ile son tur arasında eklenen kayıt için pompa yeniden başlar.
+  const start = () => {
+    const turn: Promise<void> = pump().finally(() => {
+      if (running !== turn) return;
+      running = null;
+      if (queue.length > 0) start();
+    });
+    running = turn;
   };
 
   return {
@@ -63,7 +71,7 @@ export function storePersistence(events: PersistenceEvents = {}, { hold = false 
       const last = queue[queue.length - 1];
       if (last && last.chartId === snapshot.chartId) queue[queue.length - 1] = snapshot;
       else queue.push(snapshot);
-      running ??= pump();
+      if (running === null) start();
     },
     idle: () => running ?? Promise.resolve(),
   };
