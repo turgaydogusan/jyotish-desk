@@ -2640,6 +2640,8 @@ UI spec §4 kenar çubuğu. Sekme yoktur ("Sekme yoktur"): tek açık harita, ke
 - Modify: `app/ui/shell/Shell.tsx`
 - Modify: `app/ui/shell/TopBar.tsx`
 - Modify: `app/ui/shell/shell.css`
+- Test: `app/ui/view/store.test.tsx`
+- Modify: `app/ui/view/store.tsx`
 
 **Interfaces:**
 - Consumes: `Session` (Task 6), `api.listClients/listClientsByTag/searchClients/listTags/listCharts/deleteChart/deleteClient/setChartTags` (Task 3), `matchShortcut` `sidebar` (Task 5), `Dialog` (Plan 09).
@@ -2704,10 +2706,11 @@ vi.mock("../api", () => ({
 }));
 
 import { api } from "../api";
-import type { ChartRecord, Client, OpenedClient } from "../bindings";
+import type { ChartRecord, Client, Graha, OpenedClient } from "../bindings";
 import { useSession } from "../session/store";
 import { fixture } from "../test/fixture";
 import { renderWithStores } from "../test/render";
+import { useViewStore } from "../view/store";
 import { CLIENT_SEARCH_DEBOUNCE_MS, sortTags } from "./ClientList";
 import { Sidebar } from "./Sidebar";
 
@@ -2861,14 +2864,107 @@ test("tags are saved on Enter as the normalised list Rust returns", async () => 
   fireEvent.blur(box);
   expect(api.setChartTags).toHaveBeenCalledOnce();
 });
+
+// C5: bekleyen görünüm kaydı silme komutundan önce yazılır; silinen haritaya sonradan kayıt gitmez.
+function PathProbe() {
+  const { setDashaPath } = useViewStore();
+  return (
+    <button type="button" onClick={() => setDashaPath(["Rahu"] as Graha[])}>
+      yol
+    </button>
+  );
+}
+
+/** Debounce süresi dolmadan silme başlar: kayıt beklemededir. */
+function renderWithPendingSave() {
+  const { persistence } = renderWithStores(
+    <>
+      <PathProbe />
+      <OpenedProbe />
+      <Sidebar onAddChart={onAddChart} />
+    </>,
+    { debounceMs: 60_000 },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "yol" }));
+  expect(persistence.saved).toEqual([]);
+  return persistence;
+}
+
+test("a pending view save is written before the open chart is deleted and nothing is saved to it afterwards", async () => {
+  const charts = [chart(1, ""), chart(5, "Düzeltilmiş", "2000-01-02")];
+  vi.mocked(api.listCharts).mockResolvedValueOnce(ok(charts)).mockResolvedValue(ok([charts[1]]));
+  const next = opened();
+  next.chart_record = charts[1];
+  vi.mocked(api.openClient).mockResolvedValue(ok(next));
+  const persistence = renderWithPendingSave();
+  const savedAtDelete: (number | null)[][] = [];
+  vi.mocked(api.deleteChart).mockImplementation(async () => {
+    savedAtDelete.push(persistence.saved.map((s) => s.chartId));
+    return ok(null);
+  });
+  fireEvent.click(await within(sidebar()).findByRole("button", { name: "Haritayı sil: “Doğum haritası”" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Harita silinsin mi?" })).getByRole("button", { name: "Haritayı sil" }));
+  await waitFor(() => expect(screen.getByRole("status", { name: "açık" })).toHaveTextContent("Örnek Danışan#5"));
+  expect(savedAtDelete).toEqual([[1]]);
+  expect(persistence.saved.map((s) => s.chartId)).toEqual([1]);
+});
+
+test("a pending view save is written before the open client is deleted and nothing is saved to it afterwards", async () => {
+  const persistence = renderWithPendingSave();
+  const savedAtDelete: (number | null)[][] = [];
+  vi.mocked(api.deleteClient).mockImplementation(async () => {
+    savedAtDelete.push(persistence.saved.map((s) => s.chartId));
+    return ok(null);
+  });
+  fireEvent.click(within(sidebar()).getByRole("button", { name: "Danışanı sil…" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Danışan silinsin mi?" })).getByRole("button", { name: "Danışanı sil" }));
+  await waitFor(() => expect(screen.getByRole("status", { name: "açık" })).toHaveTextContent("-"));
+  expect(savedAtDelete).toEqual([[1]]);
+  expect(persistence.saved.map((s) => s.chartId)).toEqual([1]);
+});
+```
+
+`app/ui/view/store.test.tsx` değiştir (birleşik fark; T6 incelemesi kararı: silmeden önce bekleyen görünüm kaydını boşalt):
+
+```diff
+--- a/app/ui/view/store.test.tsx
++++ b/app/ui/view/store.test.tsx
+@@ -20,6 +20,7 @@
+       <button onClick={() => view.setDashaPath(["Rahu", "Jupiter"] as Graha[])}>path</button>
+       <button onClick={() => view.openChart(7, ["Venus"])}>open7</button>
+       <button onClick={() => view.openChart(8, "garbage")}>open8</button>
++      <button onClick={() => view.flush()}>flush</button>
+       <button
+         onClick={() => {
+           store.select(BUILTIN_LAYOUT_IDS.research);
+@@ -98,6 +99,19 @@
+   expect(p.saved).toHaveLength(1);
+ });
+ 
++test("flush writes the pending save at once and the debounce timer then writes nothing", () => {
++  const p = memoryPersistence();
++  setup(p);
++  fireEvent.click(screen.getByText("open7"));
++  fireEvent.click(screen.getByText("flush"));
++  expect(p.saved).toHaveLength(0); // bekleyen kayıt yok
++  fireEvent.click(screen.getByText("path"));
++  fireEvent.click(screen.getByText("flush"));
++  expect(p.saved.map((s) => [s.chartId, s.viewState.dasha_expanded_path])).toEqual([[7, ["Rahu", "Jupiter"]]]);
++  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
++  expect(p.saved).toHaveLength(1);
++});
++
+ test("a change dispatched in the same tick as openChart is kept and saved to the previous chart", () => {
+   const p = memoryPersistence();
+   setup(p);
 ```
 
 - [ ] **Step 2: Testlerin düştüğünü gör**
 
 ```bash
-pnpm --dir app exec vitest run ui/clients ui/App.test.tsx
+pnpm --dir app exec vitest run ui/clients ui/App.test.tsx ui/view/store.test.tsx
 ```
-Expected: `clients/Sidebar.test.tsx` `Failed to resolve import "./ClientList"` ile FAIL; App `Cmd+\\ and the Clients button…` FAIL (`Danışanlar` düğmesi yok).
+Expected: `clients/Sidebar.test.tsx` `Failed to resolve import "./ClientList"` ile FAIL; App `Cmd+\\ and the Clients button…` FAIL (`Danışanlar` düğmesi yok); `view/store.test.tsx` `flush writes the pending save at once…` FAIL (`view.flush is not a function`).
 
 - [ ] **Step 3: Uygulamayı yaz**
 
@@ -3026,6 +3122,7 @@ import { errorMessage } from "../i18n/errors";
 import { useSession } from "../session/store";
 import { ConfirmDialog } from "../shell/ConfirmDialog";
 import { useNotices } from "../shell/notices";
+import { useViewStore } from "../view/store";
 import { TagEditor } from "./TagEditor";
 
 type Pending = { kind: "chart"; chart: ChartRecord } | { kind: "client" };
@@ -3034,6 +3131,7 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
   const { t, i18n } = useTranslation();
   const session = useSession();
   const { push } = useNotices();
+  const { flush } = useViewStore();
   const id = useId();
   const clientId = opened.client.id;
   const [charts, setCharts] = useState<ChartRecord[]>([]);
@@ -3059,6 +3157,8 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
 
   const deleteChart = async (chart: ChartRecord) => {
     setPending(null);
+    // Bekleyen görünüm kaydı silmeden önce yazılır; silinen haritaya sonradan kayıt gitmez (C5).
+    flush();
     const r = await api.deleteChart(chart.id);
     if (r.status === "error") return failed(r.error);
     if (chart.id !== opened.chart_record.id) return session.touch();
@@ -3073,6 +3173,7 @@ export function OpenClient({ opened, onAddChart }: { opened: OpenedClient; onAdd
 
   const deleteClient = async () => {
     setPending(null);
+    flush();
     const r = await api.deleteClient(clientId);
     if (r.status === "error") return failed(r.error);
     session.close();
@@ -3695,6 +3796,33 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCance
  }
 ```
 
+`app/ui/view/store.tsx` değiştir (birleşik fark; `ViewStore.flush`: silme komutundan önce bekleyen kayıt yazılır, C5):
+
+```diff
+--- a/app/ui/view/store.tsx
++++ b/app/ui/view/store.tsx
+@@ -38,6 +38,11 @@
+   openChart(chartId: number, dashaPath: unknown): void;
+   /** Açık harita kapandı (ör. danışan silindi): bekleyen kayıt yazılır, sonraki kayıt yalnızca düzendir. */
+   closeChart(): void;
++  /**
++   * Bekleyen kaydı hemen yazar; bekleyen yoksa bir şey yapmaz. Haritayı ya da danışanı silen
++   * komuttan önce çağrılır: kayıt, silinen haritaya silmeden sonra gönderilmez (carried rule C5).
++   */
++  flush(): void;
+ }
+ 
+ const ViewContext = createContext<{ view: ViewStore; layout: LayoutStore } | null>(null);
+@@ -141,6 +146,7 @@
+       setDashaPath: (path) => dispatch({ type: "setDashaPath", path }),
+       openChart: (chartId, dashaPath) => dispatch({ type: "openChart", chartId, dashaPath }),
+       closeChart: () => dispatch({ type: "closeChart" }),
++      flush: () => flushRef.current(),
+     };
+     return { view, layout };
+   }, [state, dispatch]);
+```
+
 - [ ] **Step 4: Testlerin geçtiğini gör**
 
 ```bash
@@ -3702,7 +3830,7 @@ pnpm --dir app test
 pnpm --dir app build
 for i in 1 2 3; do pnpm --dir app test 2>&1 | grep -E "Tests "; done
 ```
-Expected: `Test Files  38 passed (38)`, `Tests  319 passed (319)`; `build` `✓ built`; üç tekrarın üçü de `319 passed`.
+Expected: `Test Files  38 passed (38)`, `Tests  322 passed (322)`; `build` `✓ built`; üç tekrarın üçü de `322 passed`. (319 + 3: `view/store.test.tsx` 1, `clients/Sidebar.test.tsx` 2. `OpenClient.tsx`'teki iki `flush();` satırı silinirse iki yeni kenar çubuğu testi `savedAtDelete` `[[]]` ile düşer.)
 
 - [ ] **Step 5: Commit**
 
@@ -3720,10 +3848,12 @@ git add app/ui/App.test.tsx \
   app/ui/shell/ConfirmDialog.tsx \
   app/ui/shell/Shell.tsx \
   app/ui/shell/TopBar.tsx \
-  app/ui/shell/shell.css
+  app/ui/shell/shell.css \
+  app/ui/view/store.test.tsx \
+  app/ui/view/store.tsx
 git diff --cached -U0 | grep '^+' | grep -inE 'k(a|ā|aa)la|\bcala\b'   # boş olmalı
 git diff --cached --name-only | grep -iE 'k(a|ā|aa)la|\bcala\b|^\.superpowers/'   # boş olmalı
-git commit -m "feat(ui): client sidebar with search, tag filter, recent clients, chart list, confirmed deletes and chart tags; Cmd+\ toggles it
+git commit -m "feat(ui): client sidebar with search, tag filter, recent clients, chart list, confirmed deletes (pending view save written first) and chart tags; Cmd+\ toggles it
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4529,7 +4659,7 @@ export function localItems(src: LocalSources, query: string, locale: string): Pa
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: `Test Files  40 passed (40)`, `Tests  330 passed (330)`; `build` `✓ built`.
+Expected: `Test Files  40 passed (40)`, `Tests  333 passed (333)`; `build` `✓ built`.
 
 - [ ] **Step 5: Commit**
 
@@ -5446,7 +5576,7 @@ pnpm --dir app test
 pnpm --dir app build
 for i in 1 2 3; do pnpm --dir app exec vitest run ui/notes 2>&1 | grep -E "Tests "; done
 ```
-Expected: `store` lib `test result: ok. 71 passed` (+1); clippy, fmt çıktısız; `Test Files  41 passed (41)`, `Tests  341 passed (341)`; `build` `✓ built`; notlar testi üç kez `11 passed`.
+Expected: `store` lib `test result: ok. 71 passed` (+1); clippy, fmt çıktısız; `Test Files  41 passed (41)`, `Tests  344 passed (344)`; `build` `✓ built`; notlar testi üç kez `11 passed`.
 
 - [ ] **Step 5: Commit**
 
@@ -6664,7 +6794,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: `store` lib `71 passed`; `jyotish-desk` lib `test result: ok. 19 passed` (+5: üç dosya komutu testi, kesme testi ve yetki testi), `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; fmt, clippy çıktısız; `Test Files  42 passed (42)`, `Tests  346 passed (346)`; `build` `✓ built`.
+Expected: `store` lib `71 passed`; `jyotish-desk` lib `test result: ok. 19 passed` (+5: üç dosya komutu testi, kesme testi ve yetki testi), `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; fmt, clippy çıktısız; `Test Files  42 passed (42)`, `Tests  349 passed (349)`; `build` `✓ built`.
 
 - [ ] **Step 6: Commit**
 
@@ -6930,7 +7060,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  42 passed (42)`, `Tests  346 passed (346)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
+Expected: `Test Files  42 passed (42)`, `Tests  349 passed (349)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
 
 - [ ] **Step 4: Kurallar**
 
@@ -7068,12 +7198,12 @@ Belirsiz adım yok; her kod adımı tam dosya içeriğini ya da `git apply` ile 
 | 4 | 36 | 303 | — |
 | 5 | 36 | 305 | — |
 | 6 | 37 | 310 | — |
-| 7 | 38 | 319 | — |
-| 8 | 40 | 330 | — |
-| 9 | 41 | 341 | `store` lib 71 (+1) |
-| 10 | 42 | 346 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
-| 11 | 42 | 346 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
-| 12 | 42 | 346 | doğrulama |
+| 7 | 38 | 322 | T6 incelemesi kararı: silmeden önce `flush` (+3) |
+| 8 | 40 | 333 | — |
+| 9 | 41 | 344 | `store` lib 71 (+1) |
+| 10 | 42 | 349 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
+| 11 | 42 | 349 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
+| 12 | 42 | 349 | doğrulama |
 
 ### Doğrulama
 
