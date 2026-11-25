@@ -10,15 +10,28 @@ export interface TopBarProps {
   printView: boolean;
   onTogglePrint(): void;
   onHelp(): void;
+  onNewChart(): void;
+  /** Açık harita yoksa verilmez (düğme gösterilmez). */
+  onEditChart?: () => void;
 }
 
 /** Üst çubuk (spec §4): solda danışan ve harita (uyarı rozetleriyle), ortada düzen seçici, sağda tema, dil ve baskı. */
-export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp }: TopBarProps) {
+export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp, onNewChart, onEditChart }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : DEFAULT_LANGUAGE;
   return (
     <header className="topbar no-print">
       <ChartTitle />
+      <div className="topbar-actions">
+        <button type="button" aria-keyshortcuts="Meta+N" onClick={onNewChart}>
+          {t("empty.action")}
+        </button>
+        {onEditChart && (
+          <button type="button" aria-keyshortcuts="Meta+E" onClick={onEditChart}>
+            {t("birth.edit")}
+          </button>
+        )}
+      </div>
       <div className="topbar-center">{!printView && <LayoutPicker />}</div>
       <div className="topbar-right">
         <label>

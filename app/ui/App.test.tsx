@@ -4,6 +4,10 @@ import { vi } from "vitest";
 vi.mock("./api", () => ({
   api: {
     printWindow: vi.fn(async () => ({ status: "ok", data: null })),
+    previewMoment: vi.fn(async () => ({ status: "error", error: { code: "invalid_input", params: { field: "birth.date" } } })),
+    searchPlaces: vi.fn(async () => ({ status: "ok", data: [] })),
+    createClient: vi.fn(),
+    updateChart: vi.fn(),
   },
 }));
 
@@ -30,10 +34,33 @@ test("opens on the interview layout with the restored chart", () => {
   expect(screen.queryByRole("list", { name: "Uyarılar" })).toBeNull();
 });
 
-test("without a session the desk shows the app title and empty panels", () => {
+test("without a session the desk is one empty state whose action opens the birth form", () => {
   renderApp({ opened: null });
   expect(screen.getByRole("heading", { level: 1, name: "Jyotish Desk" })).toBeInTheDocument();
-  expect(screen.getAllByText("Açık harita yok.").length).toBeGreaterThan(0);
+  const empty = screen.getByRole("region", { name: "Açık harita yok" });
+  expect(screen.queryByRole("group", { name: "D1 haritası" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Düzenle" })).toBeNull();
+  fireEvent.click(within(empty).getByRole("button", { name: "Yeni harita" }));
+  expect(screen.getByRole("dialog", { name: "Yeni harita" })).toBeInTheDocument();
+});
+
+test("Cmd+N creates a chart that replaces the empty state; Cmd+E edits it", async () => {
+  vi.mocked(api.createClient).mockResolvedValueOnce({ status: "ok", data: fixture().opened });
+  renderApp({ opened: null });
+  fireEvent.keyDown(window, { key: "n", metaKey: true });
+  const form = screen.getByRole("dialog", { name: "Yeni harita" });
+  fireEvent.change(within(form).getByLabelText("Danışan adı"), { target: { value: "Örnek Danışan" } });
+  fireEvent.change(within(form).getByLabelText("Tarih"), { target: { value: "2000-01-01" } });
+  fireEvent.change(within(form).getByLabelText("Saat"), { target: { value: "17:30" } });
+  fireEvent.change(within(form).getByLabelText("Enlem"), { target: { value: "28.6139" } });
+  fireEvent.change(within(form).getByLabelText("Boylam"), { target: { value: "77.209" } });
+  fireEvent.change(within(form).getByLabelText("Bölge adı"), { target: { value: "Asia/Kolkata" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Haritayı kaydet" }));
+  expect(await screen.findByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeInTheDocument();
+  fireEvent.keyDown(window, { key: "e", metaKey: true });
+  expect(screen.getByRole("dialog", { name: "Haritayı düzenle" })).toBeInTheDocument();
 });
 
 test("moment warnings are badges with a text label and a hint", () => {

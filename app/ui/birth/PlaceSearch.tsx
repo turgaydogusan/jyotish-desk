@@ -18,9 +18,11 @@ export interface PlaceSearchProps {
   onSelect(hit: PlaceHit): void;
   invalid?: boolean;
   describedBy?: string;
+  /** Dışarıdaki `<label htmlFor>` için; verilmezse kutu kendi `aria-label`'ını taşır. */
+  inputId?: string;
 }
 
-export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }: PlaceSearchProps) {
+export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy, inputId }: PlaceSearchProps) {
   const { t, i18n } = useTranslation();
   const id = useId();
   const [hits, setHits] = useState<PlaceHit[]>([]);
@@ -103,7 +105,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
   return (
     <div className="place-search">
       <input
-        id={`${id}-input`}
+        id={inputId ?? `${id}-input`}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={shown}
@@ -111,7 +113,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
         aria-activedescendant={shown && active >= 0 ? `${id}-opt-${active}` : undefined}
         aria-invalid={invalid || undefined}
         aria-describedby={[statusId, describedBy].filter(Boolean).join(" ")}
-        aria-label={t("birth.place")}
+        aria-label={inputId ? undefined : t("birth.place")}
         autoComplete="off"
         value={value}
         onChange={(e) => {

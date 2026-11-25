@@ -1,8 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { BirthForm } from "../birth/BirthForm";
 import { Dashboard } from "../dashboard/Dashboard";
+import { useSession } from "../session/store";
 import { matchShortcut } from "../shortcuts";
 import { useLayoutStore } from "../view/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
+import { EmptyState } from "./EmptyState";
 import { HelpDialog } from "./HelpDialog";
 import { NoticeBar } from "./notices";
 import { PrintView } from "./PrintView";
@@ -15,6 +18,8 @@ export function Shell() {
   const [themePref, setThemePref] = useState<ThemePref>(() => loadThemePref());
   const [printView, setPrintView] = useState(false);
   const [help, setHelp] = useState(false);
+  const [form, setForm] = useState<"new" | "edit" | null>(null);
+  const { opened } = useSession();
   const measureRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(measureRef);
 
@@ -36,11 +41,17 @@ export function Shell() {
       } else if (command?.id === "help") {
         e.preventDefault();
         setHelp(true);
+      } else if (command?.id === "newChart") {
+        e.preventDefault();
+        setForm("new");
+      } else if (command?.id === "editChart" && opened) {
+        e.preventDefault();
+        setForm("edit");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleNotes, printView]);
+  }, [toggleNotes, printView, opened]);
 
   return (
     <div className="shell">
@@ -50,12 +61,15 @@ export function Shell() {
         printView={printView}
         onTogglePrint={() => setPrintView((v) => !v)}
         onHelp={() => setHelp(true)}
+        onNewChart={() => setForm("new")}
+        onEditChart={opened ? () => setForm("edit") : undefined}
       />
       <NoticeBar />
       <main className="shell-main">
-        <div ref={measureRef}>{printView ? <PrintView /> : <Dashboard width={width} />}</div>
+        <div ref={measureRef}>{printView ? <PrintView /> : opened ? <Dashboard width={width} /> : <EmptyState onNew={() => setForm("new")} />}</div>
       </main>
       {help && <HelpDialog onClose={() => setHelp(false)} />}
+      {form && <BirthForm mode={form} onClose={() => setForm(null)} />}
     </div>
   );
 }
