@@ -1,7 +1,7 @@
 //! Hesap ayarları (spec §4 "Ayar katmanları", §5 `CalcSettings`, §6 varsayılanlar).
 //! Sürümlüdür; harita oluşturulurken tam kopyası haritaya yazılır.
 
-use ephemeris::{Body, SiderealMode};
+use ephemeris::{Body, SiderealMode, SunDisc};
 use serde::{Deserialize, Serialize};
 
 use crate::CoreError;
@@ -136,6 +136,15 @@ pub enum SunriseDef {
     DiskCenterNoRefraction,
     /// Üst kenar, atmosfer kırılmasıyla (batı konvansiyonu).
     UpperLimbRefracted,
+}
+
+impl SunriseDef {
+    pub fn sun_disc(self) -> SunDisc {
+        match self {
+            Self::DiskCenterNoRefraction => SunDisc::CenterNoRefraction,
+            Self::UpperLimbRefracted => SunDisc::UpperLimbRefracted,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -406,5 +415,18 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+
+    #[test]
+    fn sunrise_def_maps_to_sun_disc() {
+        use ephemeris::SunDisc;
+        assert_eq!(
+            SunriseDef::DiskCenterNoRefraction.sun_disc(),
+            SunDisc::CenterNoRefraction
+        );
+        assert_eq!(
+            SunriseDef::UpperLimbRefracted.sun_disc(),
+            SunDisc::UpperLimbRefracted
+        );
     }
 }

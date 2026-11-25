@@ -31,9 +31,9 @@ pub use error::CoreError;
 pub use graha::{Graha, GrahaPosition};
 pub use houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
 pub use panchang::{
-    elongation, karana_name, karana_no, local_weekday, nitya_yoga_no, paksha, tithi_no, Karana,
-    KaranaName, NityaYoga, Paksha, Panchang, PanchangNakshatra, Tithi, Vara, KARANA_SPAN_DEG,
-    TITHI_SPAN_DEG,
+    compute_panchang, elongation, karana_name, karana_no, local_weekday, nitya_yoga_no, paksha,
+    tithi_no, Karana, KaranaName, NityaYoga, Paksha, Panchang, PanchangNakshatra, Tithi, Vara,
+    END_BISECTIONS, END_SEARCH_DAYS, KARANA_SPAN_DEG, SUNRISE_WINDOW_DAYS, TITHI_SPAN_DEG,
 };
 pub use settings::{
     AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, NodeKind, SunriseDef, ZodiacMode,

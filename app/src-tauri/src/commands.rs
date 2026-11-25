@@ -85,6 +85,9 @@ impl From<CoreError> for CommandError {
             CoreError::InvalidDashaInput(field) => {
                 Self::new("invalid_dasha_input", &[("field", field.to_owned())])
             }
+            CoreError::PanchangSearch(what) => {
+                Self::new("panchang_search", &[("what", what.to_owned())])
+            }
         }
     }
 }
@@ -354,6 +357,9 @@ mod tests {
             CommandError::from(CoreError::Ephemeris(EphError::EngineStopped)).code,
             "engine_stopped"
         );
+        let e = CommandError::from(CoreError::PanchangSearch("tithi"));
+        assert_eq!(e.code, "panchang_search");
+        assert_eq!(e.params["what"], "tithi");
     }
 
     #[test]

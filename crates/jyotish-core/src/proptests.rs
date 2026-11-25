@@ -243,3 +243,60 @@ mod dasha_properties {
         }
     }
 }
+
+mod panchang_properties {
+    use ephemeris::Body;
+    use proptest::prelude::*;
+
+    use crate::fake::FakeEph;
+    use crate::panchang::{
+        compute_panchang, elongation, karana_no, nitya_yoga_no, tithi_no, END_SEARCH_DAYS,
+    };
+    use crate::settings::CalcSettings;
+    use crate::zodiac::{nakshatra_pada, normalize};
+
+    const JD: f64 = 2_451_545.0;
+    const ONE_SECOND: f64 = 1.0 / 86_400.0;
+    /// FakeEph varsayılan ayanamsası.
+    const AYANAMSA: f64 = 24.0;
+
+    proptest! {
+        #[test]
+        fn end_times_close_the_current_element(
+            sun in 0.0f64..360.0,
+            moon in 0.0f64..360.0,
+            sun_speed in 0.95f64..1.02,
+            moon_speed in 11.8f64..15.4,
+        ) {
+            let mut eph = FakeEph::default()
+                .with(Body::Sun, sun, sun_speed)
+                .with(Body::Moon, moon, moon_speed);
+            let p = compute_panchang(&mut eph, JD, 41.0, 29.0, &CalcSettings::default()).unwrap();
+            let ends = [
+                p.tithi.ends_jd_ut,
+                p.nakshatra.ends_jd_ut,
+                p.yoga.ends_jd_ut,
+                p.karana.ends_jd_ut,
+            ];
+            for end in ends {
+                prop_assert!((JD..=JD + END_SEARCH_DAYS).contains(&end), "{end}");
+            }
+            prop_assert!(p.karana.ends_jd_ut <= p.tithi.ends_jd_ut + ONE_SECOND);
+            // Bitişten 1 sn sonra her öğe bir sonraki numaradadır (sahte hareket doğrusal).
+            let after = |end: f64| {
+                let dt = end + ONE_SECOND - JD;
+                let s = normalize(sun - AYANAMSA + sun_speed * dt);
+                let m = normalize(moon - AYANAMSA + moon_speed * dt);
+                (s, m)
+            };
+            let (s, m) = after(p.tithi.ends_jd_ut);
+            prop_assert_eq!(tithi_no(elongation(s, m)), p.tithi.no % 30 + 1);
+            let (_, m) = after(p.nakshatra.ends_jd_ut);
+            prop_assert_eq!(nakshatra_pada(m).0, p.nakshatra.no % 27 + 1);
+            let (s, m) = after(p.yoga.ends_jd_ut);
+            prop_assert_eq!(nitya_yoga_no(s, m), p.yoga.no % 27 + 1);
+            let (s, m) = after(p.karana.ends_jd_ut);
+            prop_assert_eq!(karana_no(elongation(s, m)), p.karana.no % 60 + 1);
+        }
+    }
+}

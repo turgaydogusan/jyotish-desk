@@ -1,5 +1,6 @@
-//! Birim testleri için sahte ephemeris. Tropikal boylamlar sabittir;
-//! sidereal = tropikal − `ayanamsa`. Evler lagnadan eşit 30°'lik cusp'lardır.
+//! Birim testleri için sahte ephemeris. Tropikal boylamlar `epoch` anında verilir ve
+//! sabit hızla doğrusal ilerler; sidereal = tropikal − `ayanamsa`. Evler lagnadan eşit
+//! 30°'lik cusp'lardır. Gün doğumu/batımı her gün aynı UT saatindedir.
 
 use ephemeris::{
     Ayanamsa, Body, BodyPosition, EphError, Ephemeris, HouseSystem, Houses, Precision, RiseSet,
@@ -26,6 +27,10 @@ pub(crate) struct FakeEph {
     pub sunset_offset: f64,
     /// Güneş hiç doğup batmıyor (kutup gecesi ya da gündüzü).
     pub polar: bool,
+    /// Konumların tanımlandığı an; boylam `lon + hız × (jd − epoch)` olarak ilerler.
+    pub epoch: f64,
+    /// Son `sun_rise_set` çağrısında istenen disk tanımı.
+    pub last_sun_disc: Option<SunDisc>,
 }
 
 impl Default for FakeEph {
@@ -51,6 +56,8 @@ impl Default for FakeEph {
             sunrise_offset: 0.67,
             sunset_offset: 0.15,
             polar: false,
+            epoch: 2_451_545.0,
+            last_sun_disc: None,
         }
     }
 }
@@ -75,14 +82,14 @@ impl FakeEph {
 }
 
 impl Ephemeris for FakeEph {
-    fn body(&mut self, _jd_ut: f64, body: Body, zodiac: Zodiac) -> Result<BodyPosition, EphError> {
+    fn body(&mut self, jd_ut: f64, body: Body, zodiac: Zodiac) -> Result<BodyPosition, EphError> {
         let &(_, lon, speed) = self
             .positions
             .iter()
             .find(|p| p.0 == body)
             .ok_or_else(|| EphError::Calc(format!("fake: no {body:?}")))?;
         Ok(BodyPosition {
-            lon: self.in_frame(lon, zodiac),
+            lon: self.in_frame(lon + speed * (jd_ut - self.epoch), zodiac),
             lat: 0.0,
             distance_au: 1.0,
             lon_speed: speed,
@@ -130,8 +137,9 @@ impl Ephemeris for FakeEph {
         event: RiseSet,
         _geo_lat: f64,
         _geo_lon: f64,
-        _disc: SunDisc,
+        disc: SunDisc,
     ) -> Result<Option<f64>, EphError> {
+        self.last_sun_disc = Some(disc);
         if self.polar {
             return Ok(None);
         }

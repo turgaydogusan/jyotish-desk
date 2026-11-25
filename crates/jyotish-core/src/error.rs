@@ -17,4 +17,8 @@ pub enum CoreError {
     NonFiniteResult(&'static str),
     #[error("invalid dasha input: {0}")]
     InvalidDashaInput(&'static str),
+    /// Panchang öğesinin sonraki sınırı arama aralığında bulunamadı (yalnızca bozuk ya da
+    /// sahte ephemeris'te: gerçek Ay her zaman Güneş'ten hızlıdır).
+    #[error("no {0} boundary within the panchang search window")]
+    PanchangSearch(&'static str),
 }
