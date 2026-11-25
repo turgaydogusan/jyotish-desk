@@ -124,6 +124,7 @@ final class Probe: NSObject, WKNavigationDelegate {
     guard !(pdf.string ?? "").contains("Yazdır…") else { fail("the toolbar was printed") }
     guard title == "Örnek Danışan – Doğum haritası" else { fail("job title is “\(title)”") }
     if unknownTime, !(pdf.page(at: 1)?.string ?? "").contains("Doğum saati bilinmiyor") { fail("the unknown-time note is missing on the charts page") }
+    if unknownTime, !(pdf.page(at: 3)?.string ?? "").contains("ev sütunu basılmaz") { fail("the unknown-time note is missing on the graha page") }
     Swift.print("print-probe: \(label) ok, \(pdf.pageCount) pages, job title “\(title)”")
     exit(0)
   }

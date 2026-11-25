@@ -69,6 +69,8 @@ export interface DashaPage extends PageBase {
 
 export interface GrahasPage extends PageBase {
   id: "grahas";
+  /** Doğum saati bilinmiyorsa "≈" işaretinin ve eksik lagna satırı ile ev sütununun açıklaması. */
+  note: string | null;
   rowHeader: string;
   columns: { id: GrahaColumn; label: string; numeric: boolean }[];
   rows: { key: string; name: string; cells: string[] }[];
@@ -166,6 +168,7 @@ function grahasPage(t: TFunction, opened: OpenedClient): GrahasPage {
   return {
     id: "grahas",
     heading: t("print.page.grahas"),
+    note: unknown ? t("print.grahasNote") : null,
     rowHeader: t("table.graha"),
     columns: columns.map((c) => ({ id: c, label: t(`table.${c}`), numeric: NUMERIC_COLUMNS.has(c) })),
     rows: unknown ? grahas : [lagna, ...grahas],

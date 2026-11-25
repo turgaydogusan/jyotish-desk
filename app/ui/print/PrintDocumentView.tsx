@@ -92,30 +92,33 @@ function Dasha({ page }: { page: DashaPage }) {
 
 function Grahas({ page }: { page: GrahasPage }) {
   return (
-    <table className="print-table print-grahas">
-      <thead>
-        <tr>
-          <th scope="col">{page.rowHeader}</th>
-          {page.columns.map((c) => (
-            <th key={c.id} scope="col" className={c.numeric ? "num" : undefined}>
-              {c.label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {page.rows.map((r) => (
-          <tr key={r.key} data-row={r.key}>
-            <th scope="row">{r.name}</th>
-            {r.cells.map((text, i) => (
-              <td key={page.columns[i].id} className={page.columns[i].numeric ? "num" : undefined}>
-                {text}
-              </td>
+    <>
+      {page.note && <p className="print-note">{page.note}</p>}
+      <table className="print-table print-grahas">
+        <thead>
+          <tr>
+            <th scope="col">{page.rowHeader}</th>
+            {page.columns.map((c) => (
+              <th key={c.id} scope="col" className={c.numeric ? "num" : undefined}>
+                {c.label}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {page.rows.map((r) => (
+            <tr key={r.key} data-row={r.key}>
+              <th scope="row">{r.name}</th>
+              {r.cells.map((text, i) => (
+                <td key={page.columns[i].id} className={page.columns[i].numeric ? "num" : undefined}>
+                  {text}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
 

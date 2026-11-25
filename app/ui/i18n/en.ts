@@ -467,6 +467,7 @@ export const en: Messages = {
     lastPage: "At least one page must stay selected.",
     page: { cover: "Cover", charts: "Charts: D1 and D9", dasha: "Vimshottari dasha", grahas: "Graha table" },
     legend: "R: retrograde · c: combust · underlined: vargottama",
+    grahasNote: "Birth time unknown: the lagna row and the house column are not printed; the Moon's values that start with “≈” are approximate.",
     credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",
     dasha: { lord: "Antardasha", start: "Start", end: "End" },
   },

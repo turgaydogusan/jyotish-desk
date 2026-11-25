@@ -466,6 +466,7 @@ export const tr = {
     lastPage: "En az bir sayfa seçili olmalıdır.",
     page: { cover: "Kapak", charts: "Haritalar: D1 ve D9", dasha: "Vimshottari dasa", grahas: "Graha tablosu" },
     legend: "R: retro · c: yanık · altı çizili: vargottama",
+    grahasNote: "Doğum saati bilinmiyor: lagna satırı ve ev sütunu basılmaz; Ay'ın “≈” ile başlayan değerleri yaklaşıktır.",
     credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",
     dasha: { lord: "Antardasa", start: "Başlangıç", end: "Bitiş" },
   },

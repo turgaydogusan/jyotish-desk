@@ -75,6 +75,7 @@ test("dasha: nine mahadashas with nine antardashas each, dated in the birth offs
 test("graha table: every column, lagna first, plain R for retrograde grahas but never for the nodes", () => {
   const grahas = page<GrahasPage>(build(), "grahas");
   expect(grahas.columns.map((c) => c.id)).toEqual(["sign", "degree", "lon", "lat", "speed", "retro", "nakshatra", "pada", "combust", "dignity", "house"]);
+  expect(grahas.note).toBeNull();
   expect(grahas.rows.map((r) => r.key)).toEqual(["Lagna", "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]);
   const cell = (key: string, column: string) => grahas.rows.find((r) => r.key === key)!.cells[grahas.columns.findIndex((c) => c.id === column)];
   expect(cell("Saturn", "retro")).toBe("R");
@@ -90,6 +91,8 @@ test("graha table with an unknown birth time: no lagna row, no house column, the
   const grahas = page<GrahasPage>(build(unknownTimeOpened()), "grahas");
   expect(grahas.columns.map((c) => c.id)).not.toContain("house");
   expect(grahas.rows.map((r) => r.key)).not.toContain("Lagna");
+  // "≈" kâğıtta açıklamasız basılmaz (C9).
+  expect(grahas.note).toBe("Doğum saati bilinmiyor: lagna satırı ve ev sütunu basılmaz; Ay'ın “≈” ile başlayan değerleri yaklaşıktır.");
   const moon = grahas.rows.find((r) => r.key === "Moon")!.cells;
   const at = (column: string) => grahas.columns.findIndex((c) => c.id === column);
   expect([moon[at("sign")], moon[at("degree")], moon[at("nakshatra")], moon[at("pada")]]).toEqual(["≈ Ter", "≈ 19°28′", "≈ Swati", "≈ 4"]);

@@ -467,6 +467,7 @@ export const fr: Messages = {
     lastPage: "Au moins une page doit rester sélectionnée.",
     page: { cover: "Couverture", charts: "Cartes : D1 et D9", dasha: "Dasha Vimshottari", grahas: "Tableau des grahas" },
     legend: "R : rétrograde · c : combuste · souligné : vargottama",
+    grahasNote: "Heure de naissance inconnue : la ligne du lagna et la colonne des maisons ne sont pas imprimées ; les valeurs de la Lune précédées de « ≈ » sont approximatives.",
     credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",
     dasha: { lord: "Antardasha", start: "Début", end: "Fin" },
   },

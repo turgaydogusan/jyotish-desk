@@ -93,6 +93,15 @@ test("graha sheet: a row per graha under the lagna, R only where it is shown", (
   expect(retro("Ketu")).toHaveTextContent(/^$/);
 });
 
+test("with an unknown birth time the graha sheet explains the ≈ mark above the table", () => {
+  renderDoc(unknownTimeOpened(), { pages: ["grahas"], style: "north" });
+  const grahas = sheet("Graha tablosu");
+  const note = within(grahas).getByText(/Ay'ın “≈” ile başlayan değerleri yaklaşıktır/);
+  expect(note).toHaveClass("print-note");
+  expect(note.compareDocumentPosition(within(grahas).getByRole("table")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(within(grahas).getByRole("row", { name: /^Ay / })).toHaveTextContent("≈ Ter");
+});
+
 test("print CSS: zero page margin with padded sheets, one sheet per page, chrome hidden, tokens only", () => {
   expect(css).toMatch(/@page\s*{[^}]*size:\s*A4;[^}]*margin:\s*0;/);
   expect(css).toMatch(/\.print-page\s*{[^}]*padding:\s*15mm;/);
