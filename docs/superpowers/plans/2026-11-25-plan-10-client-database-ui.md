@@ -7027,6 +7027,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 Expected: commit oluşur; iki tarama da çıktısız. Commit mesajında yasaklı sözcük yoktur (C13).
 
+**Task 11 inceleme düzeltmesi (ayrı commit, Task 12'den önce):** Yalnızca e2e dosyaları değişir (`app/e2e/{visual.spec.ts,desk.spec.ts,ipc.ts}`); uygulama kodu ve temel PNG'ler değişmez. (1) `visual.spec.ts` `⌘\`'a basmadan önce 1. seviye başlığı (`Örnek Danışan`) bekler: kısayol dinleyicisi masa çizilince bağlanır, `goto`'dan hemen sonra basılan tuş kaybolabilir ve `toHaveCount(0)` tuşa yeniden basmaz (Plan 09 Task 13'te `desk.spec.ts` için düzeltilen aynı kırılganlık). (2) Spec §8 testi "form ya da onay yok" savını güçlendirir: `page.on("dialog")` yerel pencereleri (confirm, alert, prompt) kaydeder ve test sonunda liste boş olmalıdır; harita açıldıktan sonra `form` ve `alertdialog` sayısı 0'dır (masada `form` yalnızca doğum formu penceresinde ve düzen adı satır içi düzenlemesinde vardır; ikisi de bu akışta açık değildir). (3) `ipc.ts` taklidinde `delete_note` bilinmeyen kimlikte hata fırlatır; önceden `findIndex` `-1` döndürünce `splice(-1, 1)` son notu sessizce siliyordu. Eylem gerektirmeyenler: paletin hazır olma beklemesi yeterlidir (palet yalnızca yazılı metne ait yanıtı gösterir, `settled`; `ayşe` yazılıyken görünen ilk seçenek `search_clients` yanıtıdır, `list_clients` değil); CI'daki `if: failure()` e2e dışı bir hatada da çalışır ama `if-no-files-found: ignore` ile zararsızdır. Expected: `pnpm --dir app e2e` iki kez `6 passed` (test sayısı değişmez), `pnpm --dir app e2e:visual` `6 passed` (temeller yeniden üretilmez), `build` `✓ built`; vitest toplamı değişmez.
+
 ---
 
 ### Task 12: Son doğrulama
@@ -7156,6 +7158,7 @@ Expected: M1–M7 ve 1–12 beklendiği gibi ve her sonuç `progress.md`'ye yaz�
 22. **Spec düzeltmeleri:** v1 spec §4/§8 sekme ifadesi (D4), 64 KiB not sınırı (D10) ve 32 MiB içe aktarma sınırı (D2) spec'lere yazılır.
 23. **Küçükler:** içe aktarma dosyasının başında UTF-8 BOM; içe aktarmadan gelen virgüllü etiketin etiket kutusunda bölünmesi; etiket süzgecinin artık olmayan etiketi tutması; `list_tags` hatalarının yok sayılması; "Yeni not"un geride bıraktığı boş notlar; yerel pencerenin `set_parent` ile uygulama penceresine bağlanması; `storePersistence` kayıt pompasının çevresinde `try/finally`.
 24. **Task 10 incelemesinden ertelenenler:** içe aktarma dosyası UTF-8 değilse `file_io` yerine `import_format` ve `file_io.detail`'in (`ErrorKind` metni, İngilizce) arayüz dilinde gösterilmesi; `ImportReport.warnings` sayısının sınırı (bugün yalnızca 32 MiB dosya sınırıyla sınırlı); `api.test.ts`'in yol denetiminin `bindings.ts`'teki her dize bağımsız değişkenini adından bağımsız bulması; `rename`'den sonra üst klasörün `fsync`'i (yalnızca dayanıklılık). Plan 11, dışa aktarma biçim belgesiyle (madde 13) birlikte.
+25. **Task 11 incelemesinden ertelenenler:** e2e IPC taklidi `limit` bağımsız değişkenini yok sayar ve etiket komutları (`list_tags`, `list_clients_by_tag`) sabit boş liste döndürür; etiketli ya da sınırlı liste akışını sınayan ilk e2e testiyle birlikte gerçekçi hale getirilir. Plan 11, M6-9 (madde 11) ile.
 
 ---
 
@@ -7213,6 +7216,7 @@ Belirsiz adım yok; her kod adımı tam dosya içeriğini ya da `git apply` ile 
 | 10 | 42 | 357 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
 | 10 düzeltme | 42 | 358 | T10 incelemesi kararı: "Notları dahil et" her açılışta kapalı (+1); `jyotish-desk` lib 24 (+5: geçici dosya `create_new` ve benzersiz ad, `0600`, sıradan olmayan dosyanın reddi) |
 | 11 | 42 | 358 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
+| 11 düzeltme | 42 | 358 | T11 incelemesi kararı: görsel testte tuştan önce başlık beklenir, spec §8 testinde `form`/`alertdialog`/yerel pencere savları, taklitte `delete_note` bilinmeyen kimlikte hata; e2e 6, görsel 6 (sayı değişmez) |
 | 12 | 42 | 358 | doğrulama |
 
 ### Doğrulama
