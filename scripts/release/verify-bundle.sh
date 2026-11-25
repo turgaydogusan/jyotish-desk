@@ -9,6 +9,13 @@
 set -eu
 
 MODE="${1:-unsigned}"
+case "$MODE" in
+  unsigned | signed) ;;
+  *)
+    echo "usage: verify-bundle.sh unsigned|signed" >&2
+    exit 2
+    ;;
+esac
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BUNDLE="$ROOT/target/universal-apple-darwin/release/bundle"
 APP="$BUNDLE/macos/Jyotish Desk.app"
@@ -51,7 +58,6 @@ if [ "$MODE" = "unsigned" ]; then
   echo "verify-bundle: unsigned bundle is well formed (not signed, not notarized, no updater package)"
   exit 0
 fi
-[ "$MODE" = "signed" ] || fail "usage: verify-bundle.sh unsigned|signed"
 
 codesign --verify --deep --strict "$APP" || fail "codesign verification"
 ok "code signature"

@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
+import { ROOT } from "./check-version.mjs";
 import { buildLatestJson, PLATFORMS } from "./latest-json.mjs";
 
 const input = {
@@ -33,4 +38,36 @@ test("a malformed version, asset name, signature or date is refused", () => {
   assert.throws(() => buildLatestJson({ ...input, signature: " \n" }), /signature/);
   assert.throws(() => buildLatestJson({ ...input, signature: "a\nb" }), /signature/);
   assert.throws(() => buildLatestJson({ ...input, pubDate: "yesterday" }), /pub_date/);
+});
+
+test("the command line package.sh uses writes latest.json from the notes and signature files", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jd-latest-json-test-"));
+  const cli = (...args) => spawnSync(process.execPath, [join(ROOT, "scripts/release/latest-json.mjs"), ...args], { encoding: "utf8" });
+  try {
+    const notes = join(dir, "notes.md");
+    const sig = join(dir, "bundle.sig");
+    const out = join(dir, "latest.json");
+    writeFileSync(notes, input.notes);
+    // İmza değil, yalnızca base64 biçimli bir yer tutucu.
+    writeFileSync(sig, input.signature);
+
+    const ok = cli(input.version, notes, sig, input.asset, out);
+    assert.equal(ok.status, 0, ok.stderr);
+    const json = JSON.parse(readFileSync(out, "utf8"));
+    const expected = buildLatestJson({ ...input, pubDate: json.pub_date });
+    assert.deepEqual(json, expected);
+    assert.ok(!Number.isNaN(Date.parse(json.pub_date)));
+
+    // Eksik bağımsız değişken: kullanım iletisi, dosya yazılmaz.
+    const short = cli(input.version, notes, sig, input.asset);
+    assert.equal(short.status, 2);
+    assert.match(short.stderr, /^usage: latest-json\.mjs /);
+
+    // Geçersiz sürüm: dosya yazılmaz.
+    const bad = join(dir, "bad.json");
+    assert.notEqual(cli("0.9", notes, sig, input.asset, bad).status, 0);
+    assert.ok(!existsSync(bad));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
