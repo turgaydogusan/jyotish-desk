@@ -7,6 +7,7 @@ mod charts;
 mod db;
 mod error;
 pub mod model;
+mod notes;
 pub mod schema;
 pub mod settings;
 pub mod view_state;
@@ -19,6 +20,7 @@ pub use model::{
     BirthData, ChartKind, ChartRecord, Client, FoldChoice, Gender, MomentWarning, NewChart,
     NewClient, Note, Place, ResolvedRecord, TimeCertainty, TzChoice,
 };
+pub use notes::{normalize_tags, TagCount, MAX_TAG_CHARS, RECENT_NOTES};
 pub use schema::SCHEMA_VERSION;
 pub use settings::{
     load_calc_settings, AppPrefs, SettingsLoad, ValueMigration, APP_PREFS_SCHEMA_VERSION,
