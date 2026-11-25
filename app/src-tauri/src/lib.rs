@@ -1,6 +1,7 @@
+pub mod client_commands;
 pub mod commands;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use tauri::path::BaseDirectory;
 use tauri::Manager;
@@ -22,6 +23,13 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::compute_transits,
             commands::dasha_children,
             commands::print_window,
+            client_commands::open_client,
+            client_commands::restore_session,
+            client_commands::create_client,
+            client_commands::add_chart,
+            client_commands::update_chart,
+            client_commands::save_calc_settings,
+            client_commands::save_view_state,
         ])
 }
 
@@ -36,6 +44,13 @@ pub fn run() {
             // açar (paketlenmiş uygulama sessizce kapanır). Yerel hata penceresi sonra eklenecek.
             let engine = ephemeris::Engine::spawn(ephe)?;
             app.manage(Arc::new(engine));
+            // Danışan veritabanı: ~/Library/Application Support/<identifier>/. Açılamazsa
+            // (ör. daha yeni bir sürümün veritabanı) setup hatası, motorla aynı yol.
+            let data_dir = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&data_dir)?;
+            let db = store::Store::open(&data_dir.join(client_commands::DB_FILE_NAME))?;
+            let state: client_commands::StoreState = Arc::new(Mutex::new(db));
+            app.manage(state);
             Ok(())
         })
         .run(tauri::generate_context!())

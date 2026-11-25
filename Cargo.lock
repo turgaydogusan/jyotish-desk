@@ -1853,15 +1853,18 @@ dependencies = [
 name = "jyotish-desk"
 version = "0.1.0"
 dependencies = [
+ "atlas",
  "ephemeris",
  "jyotish-core",
  "serde",
  "serde_json",
  "specta",
  "specta-typescript",
+ "store",
  "tauri",
  "tauri-build",
  "tauri-specta",
+ "tempfile",
 ]
 
 [[package]]

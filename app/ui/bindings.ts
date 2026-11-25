@@ -30,6 +30,13 @@ export const commands = {
 	 *  Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
 	 */
 	printWindow: (options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("print_window", undefined, options)),
+	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
+	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
+	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
+	addChart: (clientId: number, chart: NewChart, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("add_chart", { clientId, chart }, options)),
+	updateChart: (chartId: number, chart: NewChart, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("update_chart", { chartId, chart }, options)),
+	saveCalcSettings: (chartId: number, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("save_calc_settings", { chartId, settings }, options)),
+	saveViewState: (chartId: number, viewState: ViewState, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("save_view_state", { chartId, viewState }, options)),
 };
 
 /* Types */
@@ -59,6 +66,19 @@ export type Bhavas = {
 	 *  Whole Sign: burç başları. Sripati: sandhi. Placidus: cusp.
 	 */
 	cusps: (number | null)[],
+};
+
+export type BirthData = {
+	/**  Yerel takvim tarihi, `YYYY-MM-DD`. */
+	date: string,
+	/**  Yerel saat, `HH:MM:SS` (kesirli saniye olabilir). Saat bilinmiyorsa boş. */
+	time: string | null,
+	time_certainty: TimeCertainty,
+	place: Place,
+	tz: TzChoice,
+	fold: FoldChoice | null,
+	/**  Doğum verisinin kaynağı gibi kısa not (seans notları `Note`'tadır). */
+	notes: string,
 };
 
 export type CalcSettings = {
@@ -95,12 +115,32 @@ export type Chart = {
 	ashtakavarga: Ashtakavarga,
 };
 
+export type ChartKind = "Natal" | 
+/**  Olay haritası (evlilik, kuruluş, soru anı…). */
+"Event";
+
 export type ChartMeta = {
 	engine_version: string,
 	swe_version: string,
 	/**  Hesapta kullanılan ayarların tam kopyası. */
 	settings: CalcSettings,
 	warnings: ChartWarning[],
+};
+
+export type ChartRecord = {
+	id: number,
+	uuid: string,
+	client_id: number,
+	/**  Boşsa arayüz harita türünün yerelleştirilmiş adını gösterir. */
+	label: string,
+	kind: ChartKind,
+	birth: BirthData,
+	resolved: ResolvedRecord,
+	/**  Ada göre sıralı (büyük/küçük harf duyarsız). */
+	tags: string[],
+	last_opened_at: string | null,
+	created_at: string,
+	updated_at: string,
 };
 
 /**  Ölümcül olmayan durumlar (spec §7); arayüz kodları i18n ile çevirir. */
@@ -115,6 +155,17 @@ export type ChartWarning =
  *  başlıyor sayılarak bulunur.
  */
 "SunriseUnavailable";
+
+export type Client = {
+	id: number,
+	uuid: string,
+	name: string,
+	gender: Gender | null,
+	last_chart_id: number | null,
+	last_opened_at: string | null,
+	created_at: string,
+	updated_at: string,
+};
 
 /**  Yanma orbları, derece (BPHS). */
 export type CombustionOrbs = {
@@ -170,6 +221,10 @@ export type Dignity = "Exalted" | "Moolatrikona" | "OwnSign" | "GreatFriend" | "
 export type EngineStatus = {
 	seVersion: string,
 };
+
+export type FoldChoice = "Earlier" | "Later";
+
+export type Gender = "Male" | "Female" | "Other";
 
 export type Graha = "Sun" | "Moon" | "Mars" | "Mercury" | "Jupiter" | "Venus" | "Saturn" | "Rahu" | "Ketu";
 
@@ -236,6 +291,28 @@ export type Lagna = {
 	pada: number,
 };
 
+export type Layout = {
+	id: string,
+	name: string,
+	builtin: boolean,
+	panels: Panel[],
+};
+
+/**  Çözüm uyarıları (atlas `MomentWarning`'in IPC karşılığı; UI spec §5 rozetleri). */
+export type MomentWarning = "TimeUnknownNoon" | "LmtFromLongitude" | "PreTzdbReliability";
+
+export type NewChart = {
+	label: string,
+	kind: ChartKind,
+	birth: BirthData,
+};
+
+export type NewClient = {
+	name: string,
+	gender: Gender | null,
+	chart: NewChart,
+};
+
 export type NityaYoga = {
 	/**  1 Vishkambha … 27 Vaidhriti. */
 	no: number,
@@ -243,6 +320,30 @@ export type NityaYoga = {
 };
 
 export type NodeKind = "Mean" | "True";
+
+export type Note = {
+	id: number,
+	uuid: string,
+	client_id: number,
+	chart_id: number | null,
+	body: string,
+	created_at: string,
+	updated_at: string,
+};
+
+/**
+ *  `open_client` dönüşü (spec §4: `{client, birth, calc_settings, view_state, chart,
+ *  recent_notes}`; doğum verisi `chart_record.birth`'tedir).
+ */
+export type OpenedClient = {
+	client: Client,
+	chart_record: ChartRecord,
+	calc_settings: CalcSettings,
+	view_state: ViewState,
+	chart: Chart,
+	recent_notes: Note[],
+	warnings: StoreWarning[],
+};
 
 export type Paksha = 
 /**  Büyüyen Ay: tithi 1–15. */
@@ -275,13 +376,81 @@ export type PanchangNakshatra = {
 	ends_jd_ut: number | null,
 };
 
+/**  `kind` bilinmeyen bir değer de olabilir (daha yeni sürümün paneli); korunur. */
+export type Panel = {
+	id: string,
+	kind: string,
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+	/**
+	 *  Panel ayarları (varga, stil, transit halkası…); anahtarlar arayüzündür. TS'te
+	 *  `{ [key in string]: unknown }` (serde_json `Value`'nun i64'ü specta'da yasaktır).
+	 */
+	settings: { [key in string]: unknown },
+};
+
+/**  UI spec §3.2 biçimi: `{ active_layout_id, layouts: [{ id, name, builtin, panels }] }`. */
+export type PanelLayout = {
+	/**  Geçersizse boş dizgi; arayüz ilk hazır düzene döner. */
+	active_layout_id: string,
+	layouts: Layout[],
+};
+
+export type Place = {
+	/**  Manuel koordinatta boş olabilir. */
+	name: string,
+	country: string,
+	admin1: string,
+	lat: number | null,
+	lon: number | null,
+	geoname_id: number | null,
+};
+
 export type PlanetRow = {
 	body: string,
 	lon: number | null,
 	retrograde: boolean,
 };
 
+/**
+ *  Kayıtta saklanan çözülmüş an (spec §5 `resolved_*`, `tzdb_version`). Açılışta atlas
+ *  sorgusu gerekmez; hesap `jd_ut` ile yapılır.
+ */
+export type ResolvedRecord = {
+	/**  RFC 3339 UTC (`2000-01-01T12:00:00Z`). */
+	utc: string,
+	jd_ut: number | null,
+	offset_secs: number,
+	abbrev: string,
+	warnings: MomentWarning[],
+	tzdb_version: string,
+};
+
 export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | "Libra" | "Scorpio" | "Sagittarius" | "Capricorn" | "Aquarius" | "Pisces";
+
+/**  Açılışın ölümcül olmayan durumları; arayüz uyarı bandında gösterir (spec §7). */
+export type StoreWarning = 
+/**
+ *  Saklanan ayar okunamadı ya da göç edilemedi; genel varsayılan kullanıldı. Saklanan
+ *  JSON değiştirilmedi.
+ */
+({ CalcSettingsReset: {
+	found_version: number | null,
+} }) & { TzdbChanged?: never } | 
+/**  `last_chart_id` silinmiş bir haritayı gösteriyordu; en son güncellenen açıldı. */
+"LastChartMissing" | 
+/**
+ *  Gömülü tzdb değişti ve bu haritanın UTC anını değiştiriyor. Saklanan an kullanıldı;
+ *  karar kullanıcınındır (`update_chart` ile kabul edilir). `current_utc` yeni tzdb'nin
+ *  sonucudur; yeni tzdb ile çözülemiyorsa boştur.
+ */
+({ TzdbChanged: {
+	stored_version: string,
+	current_version: string,
+	current_utc: string | null,
+} }) & { CalcSettingsReset?: never };
 
 /**
  *  Gün doğumu tanımı. Panchang'ın vara ve gün doğumu/batımı hesabı bunu kullanır
@@ -292,6 +461,10 @@ export type SunriseDef =
 "DiskCenterNoRefraction" | 
 /**  Üst kenar, atmosfer kırılmasıyla (batı konvansiyonu). */
 "UpperLimbRefracted";
+
+export type TimeCertainty = "Exact" | "Approx" | 
+/**  Saat bilinmiyor: `BirthData.time` boştur, hesap yerel 12:00 ile yapılır. */
+"Unknown";
 
 export type Tithi = {
 	/**  1..=30. */
@@ -323,6 +496,11 @@ export type TransitSnapshot = {
 	/**  Yalnızca `LowPrecision` olabilir. */
 	warnings: ChartWarning[],
 };
+
+/**  Saat dilimi seçimi (spec §5 `tz {Iana(id) | Fixed(secs) | Lmt}`). */
+export type TzChoice = ({ Iana: string }) & { Fixed?: never } | 
+/**  UTC ofseti, saniye, doğuda pozitif. */
+({ Fixed: number }) & { Iana?: never } | "Lmt";
 
 /**  Hafta günü: Ravi, Soma, Mangala, Budha, Guru, Shukra, Shani. */
 export type Vara = "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";
@@ -375,6 +553,17 @@ export type VargaPlacement = {
 	sign: Sign,
 	/**  Varga içi derece, [0, 30): parçadaki konum 30°'ye ölçeklenmiş (modül belgesi). */
 	deg: number | null,
+};
+
+export type ViewState = {
+	schema_version: number,
+	/**
+	 *  Kullanıcının pano düzenleri. `None`: hiç kaydedilmemiş ya da okunamadı; arayüz
+	 *  hazır düzenleri (`defaultLayoutState`) kullanır.
+	 */
+	panel_layout: PanelLayout | null,
+	/**  Dasha ağacında açık dal: kökten lord yolu, en çok `MAX_DASHA_LEVEL`. */
+	dasha_expanded_path: Graha[],
 };
 
 export type ZodiacMode = 
