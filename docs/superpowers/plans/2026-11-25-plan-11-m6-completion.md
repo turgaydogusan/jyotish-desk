@@ -42,7 +42,7 @@ Muhafazakâr seçenek seçildi; her karar bir satır gerekçeyle.
 - **D19 — Oturum geri yükleme mevcut akıştır (Plan 09/10); bu plan yalnızca spec §8 gidiş-dönüş testini tercihleri ve `save_view_state` komut gövdesini kapsayacak biçimde genişletir.** Gerekçe: `tests/open_client.rs` ayarları, düzeni, dasha yolunu, etiketleri ve notları zaten denetler; eksik olan tercihler ve komut gövdesidir.
 - **D20 (ön inceleme) — `transit_commands` lib testleri tek bir `Engine`'i paylaşır (`OnceLock`).** Gerekçe: süreçte yalnızca bir SE örneği açılabilir (`EphError::AlreadyOpen`); paralel koşan üç testin her biri motor açarsa testler aralıklı düşer.
 - **D21 (ön inceleme) — `ImportReport.warnings_total` `#[serde(default)]` taşımaz.** Gerekçe: `specta_builder` serde fazlarını kapatır ve IPC tiplerinde `default` özniteliği olmadığını varsayar; rapor yalnızca Rust'tan arayüze gider, eski veriden okunmaz.
-- **D22 (ön inceleme) — Düzen menüsünde yalnızca `aria-disabled` öğeler odaklanır; gerçekten `disabled` olan "Varsayılana döndür" (kullanıcı düzeninde) gezintinin dışındadır.** Gerekçe: `disabled` düğme odak almaz; listede dursa ok tuşları onda takılır.
+- **D22 (ön inceleme; Task 12 incelemesinde değişti, `63395f6`) — Düzen menüsünde hiçbir öğe yerel `disabled` değildir; kullanıcı düzeninde "Varsayılana döndür" de `aria-disabled` olur, odaklanır ve nedeni (`layout.resetBuiltinOnly`) vardır. Devre dışı öğeler soluk çizilir; nedenler menünün altında görünür satırlardır (`.layout-menu-hint`) ve `aria-describedby` ile bağlanır.** Gerekçe: devre dışı denetimin nedeni her yerde bağlanır; gören kullanıcı da öğenin neden çalışmadığını okur; ok tuşları hiçbir öğede takılmaz. Aynı incelemede: danışan listesinin sekme durağı satır sırasına değil danışana bağlıdır, değiştirici tuşlu oklar yutulmaz; `Dialog` kapanırken açan öğe kaldırılmışsa odak ana bölgeye geçer. Vitest toplamı +5 (Task 12: 438).
 - **D23 (ön inceleme) — Task 16 yasaklı sözcük taraması plan belgelerini (`docs/superpowers/plans`) dışarıda tutar.** Gerekçe: kuralın kendi metni bu dosyadadır ve dosya `6d48791`'den sonra commit edilmiştir; tarama kodu, mesajları ve diğer belgeleri kapsar.
 
 ## Global Constraints
@@ -5529,7 +5529,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: yeni dosyalar `notices.test.tsx` 1, `focus.test.ts` 2; tokens +1, Sidebar +2, Notes +1, DataActions +2, Palette +2 geçer; değişen LayoutPicker ve Graha testleri yeşil; toplam `Test Files  54 passed (54)`, `Tests  433 passed (433)`; build `✓ built`; e2e `6 passed`; görsel `6 passed` (`.visually-hidden` ve `.button-danger` yer değiştirdi, kuralları değişmedi; görüntü farkı çıkarsa kural metnini karşılaştır, temeli yenileme).
+Expected: yeni dosyalar `notices.test.tsx` 1, `focus.test.ts` 2; tokens +1, Sidebar +2, Notes +1, DataActions +2, Palette +2 geçer; değişen LayoutPicker ve Graha testleri yeşil; toplam `Test Files  54 passed (54)`, `Tests  438 passed (438)`; build `✓ built`; e2e `6 passed`; görsel `6 passed` (`.visually-hidden` ve `.button-danger` yer değiştirdi, kuralları değişmedi; görüntü farkı çıkarsa kural metnini karşılaştır, temeli yenileme).
 
 - [ ] **Step 5: Commit**
 
@@ -5989,7 +5989,7 @@ pnpm --dir app test && pnpm --dir app build
 pnpm --dir app e2e
 rm -rf app/test-results
 ```
-Expected: Notes +6, Sidebar +3, persistence +1 geçer; toplam `Test Files  54 passed (54)`, `Tests  443 passed (443)`; build `✓ built`; e2e `6 passed` (e2e not akışı notu yazdığı için boş taze not silinmez).
+Expected: Notes +6, Sidebar +3, persistence +1 geçer; toplam `Test Files  54 passed (54)`, `Tests  448 passed (448)`; build `✓ built`; e2e `6 passed` (e2e not akışı notu yazdığı için boş taze not silinmez).
 
 - [ ] **Step 5: Commit**
 
@@ -6639,7 +6639,7 @@ cargo test -p store --release --lib -- --ignored search_of_two_hundred_clients -
 cargo clippy --workspace --all-targets -- -D warnings
 pnpm --dir app test && pnpm --dir app build
 ```
-Expected: store `79 passed; 0 failed; 1 ignored`; desk lib `33 passed`; bağlama, fikstür ve gidiş-dönüş testleri geçer (`ui_fixture` değişmez: fikstürde dışa aktarma yoktur); ölçüm satırı `search_clients(200 hits): …ms` ve `1 passed` (50 ms'yi aşarsa test düşer: görev burada durur, süre ve `EXPLAIN QUERY PLAN` çıktısı bildirilir); clippy çıktısız; vitest `Test Files  54 passed (54)`, `Tests  447 passed (447)` (i18n +2, DataActions +1, api +1); build `✓ built`.
+Expected: store `79 passed; 0 failed; 1 ignored`; desk lib `33 passed`; bağlama, fikstür ve gidiş-dönüş testleri geçer (`ui_fixture` değişmez: fikstürde dışa aktarma yoktur); ölçüm satırı `search_clients(200 hits): …ms` ve `1 passed` (50 ms'yi aşarsa test düşer: görev burada durur, süre ve `EXPLAIN QUERY PLAN` çıktısı bildirilir); clippy çıktısız; vitest `Test Files  54 passed (54)`, `Tests  452 passed (452)` (i18n +2, DataActions +1, api +1); build `✓ built`.
 
 - [ ] **Step 5: Commit**
 
@@ -6919,7 +6919,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: desk lib `34 passed`; store `80 passed; 0 failed; 1 ignored`; vitest `Test Files  54 passed (54)`, `Tests  451 passed (451)`; build `✓ built`; e2e iki kez `9 passed`; görsel `6 passed` (temeller yenilenmez).
+Expected: desk lib `34 passed`; store `80 passed; 0 failed; 1 ignored`; vitest `Test Files  54 passed (54)`, `Tests  456 passed (456)`; build `✓ built`; e2e iki kez `9 passed`; görsel `6 passed` (temeller yenilenmez).
 
 - [ ] **Step 5: Commit**
 
@@ -6974,7 +6974,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  54 passed (54)`, `Tests  451 passed (451)`; build `✓ built`; e2e `9 passed`; görsel `6 passed`.
+Expected: `Test Files  54 passed (54)`, `Tests  456 passed (456)`; build `✓ built`; e2e `9 passed`; görsel `6 passed`.
 
 - [ ] **Step 4: Kural taramaları (`6d48791`'den bu yana)**
 
@@ -7021,7 +7021,7 @@ Kapı geçtiyse ilerleme notlarına `Plan 11 Task 16 elle denetim: geçti (<tari
 - Spec M6 tamamdır: ayarlar penceresi ve haritaya özel ayarlar, fark rozeti, tzdb farkını kabul ya da saklanan anı koruma, oturum geri yükleme (gidiş-dönüş testiyle), transit tablosu, halkası ve tarih seçimi, `birth_info` ve `dasha_strip` panelleri, cinsiyet alanı.
 - Plan 10'un kapsam dışı listesindeki 1, 6, 7, 9, 10 (18, 19 ile), 11, 12, 13 (Plan 11 bölümleri), 17, 20, 21, 22, 23, 24, 25, 26 maddeleri ve Plan 11'e işaretli kayıt maddeleri (palet test boşlukları, m4, m6, m8, m10, m11) kapanmıştır.
 - Şema değişmemiştir (göç 1); yeni bağımlılık yoktur; C1–C17 taramaları temizdir.
-- Kapılar: Vitest 54/451, `jyotish-desk` lib 34, `store` lib 80 (+1 ölçüm testi `#[ignore]`), `jyotish-core` lib 110, golden 8, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, e2e 9, görsel 6; elle denetim kapısı geçmiştir.
+- Kapılar: Vitest 54/456, `jyotish-desk` lib 34, `store` lib 80 (+1 ölçüm testi `#[ignore]`), `jyotish-core` lib 110, golden 8, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, e2e 9, görsel 6; elle denetim kapısı geçmiştir.
 
 ## Bu planın kapsamadıkları
 
@@ -7085,10 +7085,10 @@ Boşluk yok; kapsam dışı maddeler yukarıda listelidir.
 | Task 9 | 51/409 | 29 | 77 | |
 | Task 10 | 52/412 | | | |
 | Task 11 | 52/422 | | | |
-| Task 12 | 54/433 | | | |
-| Task 13 | 54/443 | | | |
-| Task 14 | 54/447 | 33 | 79 (+1 ignored) | |
-| Task 15 | 54/451 | 34 | 80 (+1 ignored) | e2e 9, görsel 6 |
+| Task 12 | 54/438 | | | |
+| Task 13 | 54/448 | | | |
+| Task 14 | 54/452 | 33 | 79 (+1 ignored) | |
+| Task 15 | 54/456 | 34 | 80 (+1 ignored) | e2e 9, görsel 6 |
 | Task 16 | değişmez | | | |
 
 **5. Yürütme notu.** Kod blokları `6d48791` ağacına karşı yazılmıştır ve plan yazılırken koşulmamıştır. Beklenen sayılar bu zincirden gelir: bir görevin sayısı tutmazsa önceki görevin adımı denetlenir; sayı elle düzeltilmez.
