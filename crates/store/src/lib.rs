@@ -4,6 +4,7 @@
 
 pub mod birth;
 mod charts;
+mod csv;
 mod db;
 mod error;
 pub mod exchange;
@@ -17,6 +18,7 @@ pub mod view_state;
 
 pub use birth::{parse_birth, resolve_birth, resolve_parsed, ParsedBirth};
 pub use charts::{MAX_LIST, MAX_NAME_CHARS};
+pub use csv::CSV_COLUMNS;
 pub use db::{Clock, Store};
 pub use error::StoreError;
 pub use exchange::{
