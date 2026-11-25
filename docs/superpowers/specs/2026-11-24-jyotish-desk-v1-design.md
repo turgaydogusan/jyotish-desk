@@ -91,7 +91,7 @@ LICENSE, NOTICE
 - Haritanın hesap ayarı genel varsayılandan farklıysa başlıkta bir fark rozeti görünür (ör. "Raman · True Rahu"). Rozette "varsayılana döndür" ve "bunu varsayılan yap" seçenekleri var.
 - Transit bindirmenin açık/kapalı durumu saklanır, tarihi saklanmaz. Her açılışta tarih "şimdi" olur.
 
-**PDF:** Print'e özel HTML düzeni ve macOS'un yerleşik "PDF olarak kaydet" özelliği. M0'da spike yapılır. WKWebView `@page` desteği yetersiz çıkarsa yedek plan Rust tarafında Typst.
+**PDF:** Print'e özel HTML düzeni ve macOS'un yerleşik "PDF olarak kaydet" özelliği. Yazdırma penceresini Rust açar (`print_window`); arayüz dosya yolu vermez. Kenar boşluğu sayfanın iç dolgusudur, çünkü WKWebView yazdırma işinde kâğıt kenarları sıfırdır. Yol `scripts/print-probe.sh` ile A4 ve Letter kâğıtta denetlenir (bulgular: `docs/spikes/2026-11-24-wkwebview-print.md`). Typst yedeğine gerek görülmedi.
 
 ## 5. Veri modeli
 
