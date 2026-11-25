@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { BUILTIN_LAYOUT_IDS, MAX_LAYOUTS } from "../layout/model";
-import { memoryPersistence } from "../layout/persistence";
 import { HighlightProvider, useHighlight } from "../highlight/store";
-import { LayoutProvider, useLayoutStore } from "../layout/store";
+import { initialViewModel } from "../view/model";
+import { memoryPersistence } from "../view/persistence";
+import { useLayoutStore, ViewStateProvider } from "../view/store";
 import { LayoutPicker } from "./LayoutPicker";
 
 function ActiveId() {
@@ -23,14 +24,14 @@ function Pin() {
 
 function setup() {
   render(
-    <LayoutProvider persistence={memoryPersistence()}>
+    <ViewStateProvider initial={initialViewModel(null)} persistence={memoryPersistence()}>
       <HighlightProvider>
         <LayoutPicker />
         <ActiveId />
         <Pin />
         <button type="button">outside</button>
       </HighlightProvider>
-    </LayoutProvider>,
+    </ViewStateProvider>,
   );
 }
 

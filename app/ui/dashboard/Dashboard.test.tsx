@@ -14,9 +14,10 @@ import { api } from "../api";
 import { HighlightProvider } from "../highlight/store";
 import { hasOverlap } from "../layout/grid";
 import type { LayoutState, Panel } from "../layout/model";
-import { memoryPersistence } from "../layout/persistence";
-import { LayoutProvider } from "../layout/store";
 import { SkyProvider } from "../panels/sky";
+import { initialViewModel } from "../view/model";
+import { memoryPersistence } from "../view/persistence";
+import { ViewStateProvider } from "../view/store";
 import { Dashboard } from "./Dashboard";
 import { GRID_GAP_PX } from "./metrics";
 
@@ -45,15 +46,15 @@ afterEach(() => {
 const MOVE = { buttons: 1, pointerId: 1 };
 
 function setup(width = WIDTH, panels = PANELS, initial: LayoutState = state(panels)) {
-  const persistence = memoryPersistence(initial);
+  const persistence = memoryPersistence();
   const utils = render(
-    <LayoutProvider persistence={persistence} debounceMs={0}>
+    <ViewStateProvider initial={initialViewModel(initial)} persistence={persistence} debounceMs={0}>
       <HighlightProvider>
         <SkyProvider now={() => 0}>
           <Dashboard width={width} />
         </SkyProvider>
       </HighlightProvider>
-    </LayoutProvider>,
+    </ViewStateProvider>,
   );
   const frame = (id: string) => utils.container.querySelector<HTMLElement>(`[data-panel-id="${id}"]`)!;
   const box = (id: string) => {
@@ -106,7 +107,7 @@ test("dragging the header moves the panel by whole cells and commits on pointer 
   fireEvent.pointerUp(window, { pointerId: 1 });
   expect(box("a")).toEqual([8, 2, 4, 4]);
   await waitFor(() => expect(persistence.saved).toHaveLength(1));
-  const saved = persistence.saved[0].layouts.find((l) => l.id === "user:t")!;
+  const saved = persistence.saved[0].viewState.panel_layout!.layouts.find((l) => l.id === "user:t")!;
   expect(saved.panels.find((p) => p.id === "a")).toMatchObject({ x: 8, y: 2 });
 });
 
@@ -244,8 +245,8 @@ test("switching the active layout mid-drag cancels the drag and commits nothing"
   await new Promise((r) => setTimeout(r, 20));
   // Yalnızca seçim değişti: hiçbir kayıtta düzenlerin içeriği ilk kayıttan farklı olmamalı.
   expect(persistence.saved.length).toBeGreaterThan(0);
-  const first = JSON.stringify(persistence.saved[0].layouts);
-  for (const s of persistence.saved) expect(JSON.stringify(s.layouts)).toBe(first);
+  const first = JSON.stringify(persistence.saved[0].viewState.panel_layout!.layouts);
+  for (const s of persistence.saved) expect(JSON.stringify(s.viewState.panel_layout!.layouts)).toBe(first);
 });
 
 test("a drag that ends where it started commits nothing", async () => {

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Dashboard } from "../dashboard/Dashboard";
 import { isEditableTarget } from "../keyboard";
-import { useLayoutStore } from "../layout/store";
+import { useLayoutStore } from "../view/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
 import { PrintView } from "./PrintView";
 import "./shell.css";

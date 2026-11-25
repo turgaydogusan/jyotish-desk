@@ -17,7 +17,7 @@ vi.mock("./api", () => ({
 
 import { api } from "./api";
 import { App } from "./App";
-import { memoryPersistence } from "./layout/persistence";
+import { memoryPersistence } from "./view/persistence";
 import { THEME_STORAGE_KEY } from "./theme/theme";
 
 function renderApp() {

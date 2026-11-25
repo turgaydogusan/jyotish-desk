@@ -8,7 +8,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { MAX_LAYOUTS, type Layout } from "../layout/model";
-import { useLayoutStore } from "../layout/store";
+import { useLayoutStore } from "../view/store";
 
 export function layoutLabel(t: TFunction, layout: Layout): string {
   return layout.builtin ? t(`layout.${layout.id.slice("builtin:".length)}`) : layout.name;

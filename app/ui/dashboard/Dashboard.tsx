@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { columnsForWidth, movePanel, reflow, resizePanel, GRID_COLUMNS } from "../layout/grid";
 import type { Panel } from "../layout/model";
-import { useLayoutStore } from "../layout/store";
+import { useLayoutStore } from "../view/store";
 import "./dashboard.css";
 import { gridMetrics, pxToGridDelta } from "./metrics";
 import { PanelFrame, type DragMode } from "./PanelFrame";
