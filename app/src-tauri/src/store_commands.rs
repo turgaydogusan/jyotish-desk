@@ -535,11 +535,16 @@ mod tests {
     #[test]
     fn the_webview_is_granted_no_dialog_or_file_system_permission() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/capabilities");
-        // Finder'ın `.DS_Store`'u gibi gizli dosyalar yetenek dosyası değildir.
+        // Tauri `capabilities/**/*` ile gizli dosyaları da okur; yalnızca macOS'un üst veri
+        // dosyaları (`.DS_Store`, `._*`) yok sayılır.
+        assert!(is_capability_candidate(".extra.json"));
+        assert!(is_capability_candidate(".d"));
+        assert!(!is_capability_candidate(".DS_Store"));
+        assert!(!is_capability_candidate("._default.json"));
         let names: Vec<String> = std::fs::read_dir(dir)
             .unwrap()
             .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-            .filter(|n| !n.starts_with('.'))
+            .filter(|n| is_capability_candidate(n))
             .collect();
         assert_eq!(names, ["default.json"]);
         let v: serde_json::Value =
@@ -549,8 +554,22 @@ mod tests {
         let conf: serde_json::Value =
             serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
         assert!(conf["app"]["security"].get("capabilities").is_none());
-        // Dosya sistemi eklentisi kurulmaz: pencere eklentisinin bağımlılığıdır, o kadar.
-        assert!(!include_str!("lib.rs").contains("tauri_plugin_fs"));
+        // Dosya sistemi eklentisi hiçbir kaynak dosyada kurulmaz: pencere eklentisinin
+        // bağımlılığıdır, o kadar.
+        // Aranan ad parçalardan kurulur: bu testin kendi metni onu içermez.
+        let needle = ["tauri_plugin", "_fs"].concat();
+        let src = concat!(env!("CARGO_MANIFEST_DIR"), "/src");
+        for e in std::fs::read_dir(src).unwrap() {
+            let path = e.unwrap().path();
+            if path.extension().is_some_and(|x| x == "rs") {
+                let text = std::fs::read_to_string(&path).unwrap();
+                assert!(!text.contains(&needle), "{}", path.display());
+            }
+        }
+    }
+
+    fn is_capability_candidate(name: &str) -> bool {
+        name != ".DS_Store" && !name.starts_with("._")
     }
 
     #[test]
