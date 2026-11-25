@@ -338,3 +338,40 @@ test("Esc on an untouched form closes at once; with changes it asks first", asyn
   fireEvent.click(within(screen.getByRole("dialog", { name: "Değişiklikler atılsın mı?" })).getByRole("button", { name: "Değişiklikleri at" }));
   expect(onClose).toHaveBeenCalledOnce();
 });
+
+test("a preview reply for an older draft is ignored", async () => {
+  let first!: (v: Awaited<ReturnType<typeof api.previewMoment>>) => void;
+  vi.mocked(api.previewMoment).mockReturnValueOnce(new Promise((r) => (first = r)));
+  renderForm("new");
+  await fillDelhi();
+  fireEvent.change(input("Saat"), { target: { value: "17:31" } });
+  await wait(PREVIEW_DEBOUNCE_MS);
+  await act(async () => first({ status: "error", error: fixture().gap_error }));
+  expect(input("Saat")).not.toHaveAttribute("aria-invalid");
+  expect(within(dialog()).getByRole("region", { name: "Önizleme" })).toHaveTextContent("UTC 2000-01-01");
+});
+
+test("a second save click while saving sends nothing", async () => {
+  let release!: () => void;
+  vi.mocked(api.createClient).mockReturnValueOnce(new Promise((r) => (release = () => r({ status: "ok", data: fixture().opened }))));
+  renderForm("new");
+  await fillDelhi();
+  const save = within(dialog()).getByRole("button", { name: "Haritayı kaydet" });
+  fireEvent.click(save);
+  fireEvent.click(save);
+  expect(save).toBeDisabled();
+  await act(async () => release());
+  expect(api.createClient).toHaveBeenCalledOnce();
+  expect(onClose).toHaveBeenCalledOnce();
+});
+
+test("a DST suggestion with seconds keeps them in the button and the field", async () => {
+  vi.mocked(api.previewMoment).mockResolvedValueOnce({
+    status: "error",
+    error: { code: "nonexistent_local_time", params: { local: "2014-03-31T03:30:15", suggestion: "2014-03-31T04:30:15" } },
+  });
+  renderForm("new");
+  await fillDelhi();
+  fireEvent.click(within(dialog()).getByRole("button", { name: "04:30:15 kullan" }));
+  expect(input("Saat")).toHaveValue("04:30:15");
+});

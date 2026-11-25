@@ -58,3 +58,14 @@ test("unknown birth time hides the lagna row and house column and marks the Moon
   expect(moon.querySelector('[title="yaklaşık"]')).toHaveAttribute("aria-hidden", "true");
   expect(row("Güneş").querySelector('[title="yaklaşık"]')).toBeNull();
 });
+
+test("the lagna row shows its longitude, leaves latitude and speed empty, and a missing longitude is a dash", () => {
+  const lagna = () => screen.getByRole("rowheader", { name: "Lagna" }).closest("tr")!;
+  const first = renderTable({ columns: ["lon", "lat", "speed"] });
+  expect([...lagna().querySelectorAll("td")].map((c) => c.textContent)).toEqual(["76°20′", "", ""]);
+  first.unmount();
+  const o = fixture().opened;
+  (o.chart.lagna as { lon: number | null }).lon = null;
+  renderTable({ columns: ["lon"] }, o);
+  expect([...lagna().querySelectorAll("td")].map((c) => c.textContent)).toEqual(["—"]);
+});

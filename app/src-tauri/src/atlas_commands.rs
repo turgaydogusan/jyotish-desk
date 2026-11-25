@@ -111,6 +111,11 @@ impl From<AtlasError> for CommandError {
     }
 }
 
+/// Kırpılmış ve `MAX_QUERY_CHARS` karaktere (bayta değil) kesilmiş sorgu.
+fn clean_query(query: &str) -> String {
+    query.trim().chars().take(MAX_QUERY_CHARS).collect()
+}
+
 /// Önek araması (`Atlas::search`). Boş sorgu boş liste; `limit` `MAX_PLACE_HITS`'e kırpılır.
 pub fn search_places_blocking(
     atlas: &AtlasState,
@@ -118,7 +123,7 @@ pub fn search_places_blocking(
     limit: u32,
 ) -> Result<Vec<PlaceHit>, CommandError> {
     let atlas = atlas.get()?;
-    let query: String = query.trim().chars().take(MAX_QUERY_CHARS).collect();
+    let query = clean_query(query);
     let limit = limit.min(MAX_PLACE_HITS) as usize;
     if query.is_empty() || limit == 0 {
         return Ok(Vec::new());
@@ -223,8 +228,24 @@ mod tests {
         assert!(search_places_blocking(&atlas, "delhi", 0)
             .unwrap()
             .is_empty());
-        let long = "a".repeat(10_000);
-        assert!(search_places_blocking(&atlas, &long, 8).unwrap().is_empty());
+        // Kesme saf işlevde ölçülür: 10 000 karakterlik sorgu kesilmeden de boş dönerdi.
+        assert_eq!(
+            clean_query(&"a".repeat(10_000)).chars().count(),
+            MAX_QUERY_CHARS
+        );
+        assert_eq!(
+            clean_query(&"ş".repeat(10_000)).chars().count(),
+            MAX_QUERY_CHARS
+        );
+        assert_eq!(clean_query("  new delhi  "), "new delhi");
+    }
+
+    #[test]
+    fn a_query_cut_at_the_limit_still_finds_its_prefix() {
+        let atlas = shipped_atlas();
+        let padded = format!("new delhi{}", " ".repeat(MAX_QUERY_CHARS));
+        let hits = search_places_blocking(&atlas, &padded, 5).unwrap();
+        assert_eq!(hits.first().map(|h| h.name.as_str()), Some("New Delhi"));
     }
 
     #[test]

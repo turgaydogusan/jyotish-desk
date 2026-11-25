@@ -26,20 +26,31 @@ export async function mockIpc(page: Page, { session }: IpcOptions) {
       // Notlar bellek içi; kimlik ve zaman sırayla artar.
       const notes: { id: number; uuid: string; client_id: number; chart_id: number | null; body: string; created_at: string; updated_at: string }[] = [];
       let noteSeq = 0;
+      // Etiketler bellek içi: harita kimliği → etiketler (Rust normalleştirmesi taklit edilmez).
+      const tags: Record<number, string[]> = {};
+      const chartOf = (clientId: number) => opened[clientId].chart_record.id;
       const stamp = () => new Date(Date.UTC(2026, 10, 25, 10, 0, noteSeq)).toISOString();
       const respond: Record<string, (args: Record<string, unknown>) => unknown> = {
         open_client: (args) => opened[args.clientId as number],
-        list_clients: () => clients(),
-        list_clients_by_tag: () => [],
+        list_clients: (args) => clients().slice(0, args.limit as number),
+        list_clients_by_tag: (args) => clients().filter((c) => (tags[chartOf(c.id)] ?? []).includes(String(args.tag))).slice(0, args.limit as number),
         search_clients: (args) => {
           const q = String(args.query).toLocaleLowerCase("tr");
           return clients()
             .filter((c) => c.name.toLocaleLowerCase("tr").includes(q))
-            .map((client) => ({ client, matched: "Name", snippet: null }));
+            .map((client) => ({ client, matched: "Name", snippet: null }))
+            .slice(0, args.limit as number);
         },
-        list_tags: () => [],
+        list_tags: () => {
+          const count = new Map<string, number>();
+          for (const list of Object.values(tags)) for (const t of list) count.set(t, (count.get(t) ?? 0) + 1);
+          return [...count].map(([name, charts]) => ({ name, charts }));
+        },
         list_charts: (args) => [opened[args.clientId as number].chart_record],
-        set_chart_tags: (args) => args.tags,
+        set_chart_tags: (args) => {
+          tags[args.chartId as number] = (args.tags as string[]).filter((t) => t.trim() !== "");
+          return tags[args.chartId as number];
+        },
         list_notes: (args) => notes.filter((n) => n.client_id === args.clientId).reverse(),
         add_note: (args) => {
           noteSeq += 1;
@@ -66,6 +77,8 @@ export async function mockIpc(page: Page, { session }: IpcOptions) {
         save_calc_settings: (args) => ({ ...fixture.opened.chart, meta: { ...fixture.opened.chart.meta, settings: args.settings } }),
         save_panel_layout: () => null,
         save_view_state: () => null,
+        keep_stored_moment: () => fixture.opened,
+        update_client: (args) => ({ ...opened[args.clientId as number].client, name: args.name, gender: args.gender }),
         create_client: () => fixture.opened,
         update_chart: () => fixture.opened,
         search_places: () => fixture.places,

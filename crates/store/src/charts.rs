@@ -988,4 +988,24 @@ mod tests {
             })
         ));
     }
+
+    #[test]
+    fn an_update_into_a_dst_gap_changes_nothing() {
+        let mut s = store();
+        let (_, ch) = s.create_client(&new_client("Ayşe")).unwrap();
+        let before = s.chart(ch.id).unwrap();
+        // İstanbul 2014-03-31 03:00–04:00 yaşanmadı (yaz saati geçişi).
+        let e = s
+            .update_chart(
+                ch.id,
+                &NewChart {
+                    label: "x".into(),
+                    kind: ChartKind::Event,
+                    birth: istanbul("2014-03-31", "03:30"),
+                },
+            )
+            .unwrap_err();
+        assert!(matches!(e, StoreError::Moment(_)), "{e:?}");
+        assert_eq!(s.chart(ch.id).unwrap(), before);
+    }
 }

@@ -68,7 +68,7 @@ test("dasha tree by keyboard loads level 4 on demand", async ({ page }) => {
   await expect(tree.getByRole("treeitem", { name: /^Rahu–Rahu–Rahu–Rahu, / })).toBeVisible();
   await page.keyboard.press("ArrowRight");
   await expect(page.locator(":focus")).toHaveAttribute("aria-level", "4");
-  expect(await ipcCalls(page, "dasha_children")).toHaveLength(1);
+  await expect.poll(async () => (await ipcCalls(page, "dasha_children")).length).toBe(1);
 });
 
 test("spec §8: Cmd+K, a name and Enter open that client's chart with no form or confirmation", async ({ page }) => {
@@ -116,4 +116,57 @@ test("the sidebar opens a recent client, a new note is saved as it is typed, and
   await page.keyboard.press("Meta+Backslash");
   await expect(sidebar).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Danışanlar" })).toHaveAttribute("aria-expanded", "false");
+});
+
+test("Cmd+, edits the open chart's settings; the change is saved for that chart and the difference badge appears", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+Comma");
+  const dialog = page.getByRole("dialog", { name: "Hesap ayarları" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("combobox", { name: "Ayanamsa" }).selectOption({ label: "Raman" });
+  await expect.poll(async () => (await ipcCalls(page, "save_calc_settings")).length).toBe(1);
+  const [call] = (await ipcCalls(page, "save_calc_settings")) as { chartId: number; settings: { ayanamsa: unknown } }[];
+  expect(call.chartId).toBe(1);
+  expect(call.settings.ayanamsa).toBe("Raman");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Ayar farkı/ })).toBeVisible();
+});
+
+test("the transit layout shows Now; a chosen moment is applied and Now returns to the present", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+Digit3");
+  const table = page.getByRole("region", { name: "Transit tablosu" });
+  await expect(table).toBeVisible();
+  const now = table.getByRole("button", { name: "Şimdi" });
+  await expect(now).toHaveAttribute("aria-pressed", "true");
+  await table.getByLabel("Tarih").fill("2030-01-01");
+  await table.getByLabel("Saat").fill("12:00");
+  await table.getByRole("button", { name: "Uygula" }).click();
+  await expect(now).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(async () => JSON.stringify((await ipcCalls(page, "transits_at")).at(-1))).toContain("2030-01-01");
+  await now.click();
+  await expect(now).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(async () => JSON.stringify((await ipcCalls(page, "transits_at")).at(-1))).toContain('"Now"');
+});
+
+test("a tag written on the open chart appears in the tag filter and finds that client", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const sidebar = page.getByRole("complementary", { name: "Danışanlar" });
+  const box = sidebar.getByRole("textbox", { name: "Etiketler" });
+  await box.fill("Kariyer");
+  await box.press("Enter");
+  const filter = sidebar.getByRole("combobox", { name: "Etiket" });
+  await expect(filter.locator("option", { hasText: "Kariyer (1)" })).toHaveCount(1);
+  await filter.selectOption({ label: "Kariyer (1)" });
+  const list = sidebar.getByRole("region", { name: "“Kariyer” etiketli" });
+  await expect(list.getByRole("button")).toHaveCount(1);
+  await expect(list.getByRole("button")).toContainText("Örnek Danışan");
+  expect((await ipcCalls(page, "list_clients_by_tag")).at(-1)).toEqual({ tag: "Kariyer", limit: 200 });
 });
