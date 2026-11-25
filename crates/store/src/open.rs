@@ -3,7 +3,7 @@
 //! uygulama katmanındadır.
 
 use jyotish_core::CalcSettings;
-use rusqlite::{params, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
 use crate::birth::{parse_birth, resolve_parsed};
@@ -74,20 +74,24 @@ impl Store {
         let mut chart = self.chart(chart_id)?;
 
         let load = self.calc_settings(chart_id)?;
-        let calc_settings = self.settle_settings(chart_id, load, &mut warnings)?;
         let view_state = self.view_state(chart_id)?;
-        self.check_tzdb(&mut chart, &mut warnings)?;
         let recent_notes = self.notes(client_id, RECENT_NOTES)?;
 
+        // Ayar göçü, tzdb sürümü ve "son açılan" işaretleri tek işlemde yazılır: biri
+        // başarısız olursa hiçbiri kalmaz (Plan 08 ertelenen madde 9).
         let now = self.now();
-        self.conn.execute(
+        let tx = self.conn.transaction()?;
+        let calc_settings = settle_settings(&tx, chart_id, load, &mut warnings)?;
+        check_tzdb(&tx, &mut chart, &mut warnings)?;
+        tx.execute(
             "UPDATE clients SET last_chart_id = ?1, last_opened_at = ?2 WHERE id = ?3",
             params![chart_id, now, client_id],
         )?;
-        self.conn.execute(
+        tx.execute(
             "UPDATE charts SET last_opened_at = ?1 WHERE id = ?2",
             params![now, chart_id],
         )?;
+        tx.commit()?;
         client.last_chart_id = Some(chart_id);
         client.last_opened_at = Some(now.clone());
         chart.last_opened_at = Some(now);
@@ -98,33 +102,6 @@ impl Store {
             view_state,
             recent_notes,
             warnings,
-        })
-    }
-
-    /// Ayar okumasının sonucunu uygular: göç edilmiş ayar yeni JSON olarak yazılır; sıfırlanan
-    /// ayar uyarı verir ve saklanan JSON'a dokunulmaz.
-    fn settle_settings(
-        &self,
-        chart_id: u32,
-        load: SettingsLoad,
-        warnings: &mut Vec<StoreWarning>,
-    ) -> Result<CalcSettings, StoreError> {
-        Ok(match load {
-            SettingsLoad::Current(s) => s,
-            SettingsLoad::Migrated { settings, .. } => {
-                self.conn.execute(
-                    "UPDATE charts SET calc_settings_json = ?1 WHERE id = ?2",
-                    params![serde_json::to_string(&settings)?, chart_id],
-                )?;
-                settings
-            }
-            SettingsLoad::Reset {
-                settings,
-                found_version,
-            } => {
-                warnings.push(StoreWarning::CalcSettingsReset { found_version });
-                settings
-            }
         })
     }
 
@@ -160,35 +137,6 @@ impl Store {
             })
     }
 
-    /// Saklanan tzdb sürümü güncel değilse ve saat dilimi IANA ise an yeniden çözülür.
-    /// Sonuç aynıysa sürüm sessizce güncellenir; farklıysa ya da çözülemezse uyarı.
-    fn check_tzdb(
-        &self,
-        chart: &mut ChartRecord,
-        warnings: &mut Vec<StoreWarning>,
-    ) -> Result<(), StoreError> {
-        let current = atlas::tzdb_version();
-        if chart.resolved.tzdb_version == current || !matches!(chart.birth.tz, TzChoice::Iana(_)) {
-            return Ok(());
-        }
-        let fresh = parse_birth(&chart.birth).and_then(|p| resolve_parsed(&p));
-        match fresh {
-            Ok(r) if r.utc == chart.resolved.utc => {
-                self.conn.execute(
-                    "UPDATE charts SET tzdb_version = ?1 WHERE id = ?2",
-                    params![current, chart.id],
-                )?;
-                chart.resolved.tzdb_version = current.to_owned();
-            }
-            other => warnings.push(StoreWarning::TzdbChanged {
-                stored_version: chart.resolved.tzdb_version.clone(),
-                current_version: current.to_owned(),
-                current_utc: other.ok().map(|r| r.utc),
-            }),
-        }
-        Ok(())
-    }
-
     /// Oturum geri yükleme: en son açılan danışan ve haritası.
     pub fn last_opened(&self) -> Result<Option<(u32, u32)>, StoreError> {
         Ok(self
@@ -203,11 +151,67 @@ impl Store {
     }
 }
 
+/// Ayar okumasının sonucunu uygular: göç edilmiş ayar yeni JSON olarak yazılır; sıfırlanan
+/// ayar uyarı verir ve saklanan JSON'a dokunulmaz.
+fn settle_settings(
+    conn: &Connection,
+    chart_id: u32,
+    load: SettingsLoad,
+    warnings: &mut Vec<StoreWarning>,
+) -> Result<CalcSettings, StoreError> {
+    Ok(match load {
+        SettingsLoad::Current(s) => s,
+        SettingsLoad::Migrated { settings, .. } => {
+            conn.execute(
+                "UPDATE charts SET calc_settings_json = ?1 WHERE id = ?2",
+                params![serde_json::to_string(&settings)?, chart_id],
+            )?;
+            settings
+        }
+        SettingsLoad::Reset {
+            settings,
+            found_version,
+        } => {
+            warnings.push(StoreWarning::CalcSettingsReset { found_version });
+            settings
+        }
+    })
+}
+
+/// Saklanan tzdb sürümü güncel değilse ve saat dilimi IANA ise an yeniden çözülür.
+/// Sonuç aynıysa sürüm sessizce güncellenir; farklıysa ya da çözülemezse uyarı.
+fn check_tzdb(
+    conn: &Connection,
+    chart: &mut ChartRecord,
+    warnings: &mut Vec<StoreWarning>,
+) -> Result<(), StoreError> {
+    let current = atlas::tzdb_version();
+    if chart.resolved.tzdb_version == current || !matches!(chart.birth.tz, TzChoice::Iana(_)) {
+        return Ok(());
+    }
+    let fresh = parse_birth(&chart.birth).and_then(|p| resolve_parsed(&p));
+    match fresh {
+        Ok(r) if r.utc == chart.resolved.utc => {
+            conn.execute(
+                "UPDATE charts SET tzdb_version = ?1 WHERE id = ?2",
+                params![current, chart.id],
+            )?;
+            chart.resolved.tzdb_version = current.to_owned();
+        }
+        other => warnings.push(StoreWarning::TzdbChanged {
+            stored_version: chart.resolved.tzdb_version.clone(),
+            current_version: current.to_owned(),
+            current_utc: other.ok().map(|r| r.utc),
+        }),
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::charts::testutil::new_client;
-    use crate::db::testutil::store;
+    use crate::db::testutil::{store, stuck_store};
     use crate::settings::AppPrefs;
     use jyotish_core::{AyanamsaSystem, Graha};
     use proptest::prelude::*;
@@ -359,16 +363,16 @@ mod tests {
             ..CalcSettings::default()
         };
         let mut warnings = Vec::new();
-        let got = s
-            .settle_settings(
-                ch.id,
-                SettingsLoad::Migrated {
-                    settings: migrated.clone(),
-                    from: 0,
-                },
-                &mut warnings,
-            )
-            .unwrap();
+        let got = settle_settings(
+            &s.conn,
+            ch.id,
+            SettingsLoad::Migrated {
+                settings: migrated.clone(),
+                from: 0,
+            },
+            &mut warnings,
+        )
+        .unwrap();
         assert_eq!(got, migrated);
         assert!(warnings.is_empty());
         let stored: String = s
@@ -381,16 +385,16 @@ mod tests {
             .unwrap();
         assert_eq!(stored, serde_json::to_string(&migrated).unwrap());
         // Reset: uyarı verir, saklanan JSON'a dokunmaz.
-        let reset = s
-            .settle_settings(
-                ch.id,
-                SettingsLoad::Reset {
-                    settings: CalcSettings::default(),
-                    found_version: Some(9),
-                },
-                &mut warnings,
-            )
-            .unwrap();
+        let reset = settle_settings(
+            &s.conn,
+            ch.id,
+            SettingsLoad::Reset {
+                settings: CalcSettings::default(),
+                found_version: Some(9),
+            },
+            &mut warnings,
+        )
+        .unwrap();
         assert_eq!(reset, CalcSettings::default());
         assert_eq!(
             warnings,
@@ -407,6 +411,42 @@ mod tests {
             )
             .unwrap();
         assert_eq!(after, stored);
+    }
+
+    #[test]
+    fn open_writes_are_one_transaction() {
+        let mut s = store();
+        let (a, ch) = s.create_client(&new_client("A")).unwrap();
+        // Eski tzdb sürümü, aynı sonuç: açılış sürümü yazmak ister; son yazım başarısız olur.
+        s.conn
+            .execute(
+                "UPDATE charts SET tzdb_version = '1999a' WHERE id = ?1",
+                params![ch.id],
+            )
+            .unwrap();
+        s.conn
+            .execute_batch(
+                "CREATE TEMP TRIGGER fail_open BEFORE UPDATE OF last_opened_at ON charts
+                 BEGIN SELECT RAISE(ABORT, 'fail'); END;",
+            )
+            .unwrap();
+        assert!(matches!(
+            s.open_client(a.id, None),
+            Err(StoreError::Sqlite(_))
+        ));
+        assert_eq!(s.client(a.id).unwrap().last_opened_at, None);
+        assert_eq!(s.chart(ch.id).unwrap().resolved.tzdb_version, "1999a");
+        assert_eq!(s.last_opened().unwrap(), None);
+    }
+
+    #[test]
+    fn last_opened_follows_open_order_within_one_millisecond() {
+        let mut s = stuck_store();
+        let (a, _) = s.create_client(&new_client("A")).unwrap();
+        let (b, _) = s.create_client(&new_client("B")).unwrap();
+        s.open_client(b.id, None).unwrap();
+        s.open_client(a.id, None).unwrap();
+        assert_eq!(s.last_opened().unwrap().map(|(c, _)| c), Some(a.id));
     }
 
     proptest! {

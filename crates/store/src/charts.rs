@@ -323,8 +323,10 @@ impl Store {
         let (birth, resolved) = resolve_birth(&chart.birth)?;
         let calc_json = serde_json::to_string(&self.app_prefs()?.calc_settings)?;
         let now = self.now();
+        // Harita ve danışanın `updated_at`'i birlikte yazılır (Plan 08 ertelenen madde 9).
+        let tx = self.conn.transaction()?;
         let id = insert_chart(
-            &self.conn,
+            &tx,
             &ChartRow {
                 uuid: &Uuid::new_v4().to_string(),
                 client_id,
@@ -338,10 +340,11 @@ impl Store {
                 updated_at: &now,
             },
         )?;
-        self.conn.execute(
+        tx.execute(
             "UPDATE clients SET updated_at = ?1 WHERE id = ?2",
             params![now, client_id],
         )?;
+        tx.commit()?;
         self.chart(id)
     }
 
@@ -566,7 +569,9 @@ impl Store {
     /// danışanda kalır (`chart_id` boşalır).
     pub fn delete_chart(&mut self, id: u32) -> Result<(), StoreError> {
         let chart = self.chart(id)?;
-        let count: u32 = self.conn.query_row(
+        // Sayım ve silme aynı işlemde: arada eklenen/silinen harita kuralı bozamaz.
+        let tx = self.conn.transaction()?;
+        let count: u32 = tx.query_row(
             "SELECT count(*) FROM charts WHERE client_id = ?1",
             params![chart.client_id],
             |r| r.get(0),
@@ -574,7 +579,6 @@ impl Store {
         if count <= 1 {
             return Err(StoreError::LastChart);
         }
-        let tx = self.conn.transaction()?;
         tx.execute("DELETE FROM charts WHERE id = ?1", params![id])?;
         prune_tags(&tx)?;
         tx.commit()?;
@@ -813,6 +817,23 @@ mod tests {
             s.delete_client(c.id),
             Err(StoreError::NotFound { what: "client", .. })
         ));
+    }
+
+    #[test]
+    fn add_chart_writes_the_chart_and_the_client_together() {
+        let mut s = store();
+        let (c, _) = s.create_client(&new_client("A")).unwrap();
+        s.conn
+            .execute_batch(
+                "CREATE TEMP TRIGGER fail_touch BEFORE UPDATE OF updated_at ON clients
+                 BEGIN SELECT RAISE(ABORT, 'fail'); END;",
+            )
+            .unwrap();
+        assert!(matches!(
+            s.add_chart(c.id, &new_client("A").chart),
+            Err(StoreError::Sqlite(_))
+        ));
+        assert_eq!(s.charts_of(c.id).unwrap().len(), 1);
     }
 
     #[test]

@@ -16,6 +16,8 @@ pub type Clock = Box<dyn FnMut() -> Timestamp + Send>;
 pub struct Store {
     pub(crate) conn: Connection,
     clock: Clock,
+    /// Son verilen zaman damgası (ms). `now` bundan büyük bir değer verir.
+    last_ms: Option<i64>,
 }
 
 impl Store {
@@ -48,6 +50,7 @@ impl Store {
         Ok(Store {
             conn,
             clock: Box::new(Timestamp::now),
+            last_ms: None,
         })
     }
 
@@ -57,9 +60,16 @@ impl Store {
         self
     }
 
-    /// Şimdi, `format_ts` biçiminde.
+    /// Şimdi, `format_ts` biçiminde. Aynı `Store`'dan gelen damgalar milisaniye düzeyinde
+    /// kesin artandır: aynı milisaniyedeki iki açılış ya da saat geri giderse bir önceki
+    /// damganın 1 ms sonrası verilir. Böylece `last_opened_at` sırası açılış sırasıdır.
     pub fn now(&mut self) -> String {
-        format_ts((self.clock)())
+        let mut ms = (self.clock)().as_millisecond();
+        if let Some(last) = self.last_ms {
+            ms = ms.max(last + 1);
+        }
+        self.last_ms = Some(ms);
+        format_ts(Timestamp::from_millisecond(ms).unwrap_or(Timestamp::MAX))
     }
 
     /// Veritabanının şema sürümü (`PRAGMA user_version`).
@@ -125,12 +135,29 @@ pub(crate) mod testutil {
             .expect("open in memory")
             .with_clock(step_clock())
     }
+
+    /// Hiç ilerlemeyen saat (2025-11-24T16:00:00Z): aynı milisaniyedeki işlemler için.
+    pub fn stuck_store() -> Store {
+        Store::open_in_memory()
+            .expect("open in memory")
+            .with_clock(Box::new(|| {
+                Timestamp::from_second(1_764_000_000).expect("valid timestamp")
+            }))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::testutil::store;
+    use super::testutil::{store, stuck_store};
     use super::*;
+
+    #[test]
+    fn timestamps_strictly_increase_when_the_clock_does_not() {
+        let mut s = stuck_store();
+        assert_eq!(s.now(), "2025-11-24T16:00:00.000Z");
+        assert_eq!(s.now(), "2025-11-24T16:00:00.001Z");
+        assert_eq!(s.now(), "2025-11-24T16:00:00.002Z");
+    }
 
     #[test]
     fn fresh_database_has_schema_and_foreign_keys() {
