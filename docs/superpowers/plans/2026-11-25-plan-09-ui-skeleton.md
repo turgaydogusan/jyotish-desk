@@ -4946,7 +4946,7 @@ Harita panelinin araç çubuğu iki seçim kutusu taşır (varga, biçim); seçi
 
 **Interfaces:**
 - Consumes: `chartDataFromChart`, `useSession` (Task 5), `useLayoutStore` (Task 4), `ChartSvg`, `geometry.ts` (Plan 04).
-- Produces: düzen eylemi `{type: "setPanelSettings", panelId, patch}` ve `LayoutStore.setPanelSettings(panelId, patch)`; `ChartData.hasLagna`; `VARGA_NAMES: Record<Varga, string>`; panel ayarları `settings.varga: Varga`, `settings.style: "north" | "south" | "circle"`; i18n `chart.varga`, `chart.style`, `chart.timeUnknown`, `chart.timeUnknownVarga`, `chartStyle.*`.
+- Produces: düzen eylemi `{type: "setPanelSettings", panelId, patch}` ve `LayoutStore.setPanelSettings(panelId, patch)`; `ChartSvg` içinde `hasLagna = data.ascSign !== null` (ayrı `ChartData` alanı yok); `VARGA_NAMES: Record<Varga, string>`; panel ayarları `settings.varga: Varga`, `settings.style: "north" | "south" | "circle"`; i18n `chart.varga`, `chart.style`, `chart.timeUnknown`, `chart.timeUnknownVarga`, `chartStyle.*`.
 
 - [ ] **Step 1: Önce testleri yaz**
 
