@@ -9,6 +9,9 @@ use ephemeris::{
 
 use crate::zodiac::normalize;
 
+/// `FakeEph::sunrises` verildiğinde doğuş aramasının ileriye baktığı süre (26 saat).
+pub(crate) const FAKE_RISE_HORIZON_DAYS: f64 = 26.0 / 24.0;
+
 pub(crate) struct FakeEph {
     /// (cisim, tropikal boylam, boylam hızı °/gün)
     pub positions: Vec<(Body, f64, f64)>,
@@ -27,6 +30,10 @@ pub(crate) struct FakeEph {
     pub sunset_offset: f64,
     /// Güneş hiç doğup batmıyor (kutup gecesi ya da gündüzü).
     pub polar: bool,
+    /// `Some` ise gün doğumları yalnızca bu anlardır (`sunrise_offset` yok sayılır) ve arama,
+    /// SE'nin yüksek enlem araması gibi, başlangıçtan en çok `FAKE_RISE_HORIZON_DAYS` ileriye
+    /// bakar.
+    pub sunrises: Option<Vec<f64>>,
     /// Konumların tanımlandığı an; boylam `lon + hız × (jd − epoch)` olarak ilerler.
     pub epoch: f64,
     /// Son `sun_rise_set` çağrısında istenen disk tanımı.
@@ -56,6 +63,7 @@ impl Default for FakeEph {
             sunrise_offset: 0.67,
             sunset_offset: 0.15,
             polar: false,
+            sunrises: None,
             epoch: 2_451_545.0,
             last_sun_disc: None,
         }
@@ -142,6 +150,12 @@ impl Ephemeris for FakeEph {
         self.last_sun_disc = Some(disc);
         if self.polar {
             return Ok(None);
+        }
+        if let (RiseSet::Rise, Some(rises)) = (event, &self.sunrises) {
+            return Ok(rises
+                .iter()
+                .copied()
+                .find(|&t| t > after_jd_ut && t <= after_jd_ut + FAKE_RISE_HORIZON_DAYS));
         }
         let offset = match event {
             RiseSet::Rise => self.sunrise_offset,

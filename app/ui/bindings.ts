@@ -206,7 +206,10 @@ export type PlanetRow = {
 
 export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | "Libra" | "Scorpio" | "Sagittarius" | "Capricorn" | "Aquarius" | "Pisces";
 
-/**  Gün doğumu tanımı. Bu planda kullanılmaz (M3 panchang); ayar olarak saklanır. */
+/**
+ *  Gün doğumu tanımı. Panchang'ın vara ve gün doğumu/batımı hesabı bunu kullanır
+ *  (`compute_panchang`); harita hesabı kullanmaz.
+ */
 export type SunriseDef = 
 /**  Disk merkezi, kırılmasız (`SE_BIT_HINDU_RISING`). */
 "DiskCenterNoRefraction" | 

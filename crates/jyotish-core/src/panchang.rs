@@ -200,8 +200,10 @@ pub const END_BISECTIONS: u32 = 20;
 /// Doğum gününün gün doğumu, doğumdan en çok bu kadar önce aranır. Ardışık gün doğumları
 /// 65° enleme kadar ~24 sa ± 15 dk arayla gelir; pencerede en çok iki doğuş olur.
 pub const SUNRISE_WINDOW_DAYS: f64 = 1.25;
-/// İlk aramada doğuş bulunamazsa ikinci aramanın başlangıcı (doğumdan bu kadar önce).
-const SUNRISE_RETRY_DAYS: f64 = 1.0;
+/// Gün doğumu önce doğumdan bu kadar önceden aranır: SE'nin yüksek enlem araması başlangıçtan
+/// yalnızca ~24–26 saat ileriye bakar, yani bu başlangıç doğuma kadarki her doğuşu görür.
+/// Burada doğuş yoksa pencerenin başından (`SUNRISE_WINDOW_DAYS`) bir kez daha aranır.
+const SUNRISE_NEAR_START_DAYS: f64 = 1.0;
 /// Pencerede taranan en çok doğuş (güvenlik sınırı).
 const MAX_SUNRISE_STEPS: usize = 4;
 /// Bulunan doğuşun ardından bir sonrakini aramak için atlanan süre (≈ 14 dk).
@@ -285,11 +287,15 @@ fn day_sunrise<E: Ephemeris + ?Sized>(
     geo_lon: f64,
     disc: SunDisc,
 ) -> Result<Option<f64>, CoreError> {
-    let mut found = None;
-    // SE'nin yüksek enlem araması (|enlem| > 65°) başlangıçtan yalnızca ~26 saat ileriye
-    // bakar (swecl.c `swe_rise_trans_true_hor`); 30 saatlik pencerenin son saatleri ikinci
-    // başlangıçla taranır.
-    for start in [jd_ut - SUNRISE_WINDOW_DAYS, jd_ut - SUNRISE_RETRY_DAYS] {
+    // SE'nin yüksek enlem araması (|enlem| > 65°) başlangıçtan yalnızca ~24–26 saat ileriye
+    // bakar (swecl.c `swe_rise_trans_true_hor`: 2 saatlik 15 örnek; iki örnek arasına sığan
+    // kısa bir gündüz ancak tepe noktası başlangıçtan en çok ~25 saat sonraysa görülür).
+    // Bu yüzden önce doğumdan 24 saat öncesinden aranır: `(jd_ut − 1, jd_ut]` içindeki her
+    // doğuş bu zincirin ufkundadır ve varsa sonuncusu aranan doğuştur. Orada doğuş yoksa
+    // pencerenin ilk 6 saati pencerenin başından taranır. Sıra önemlidir: önce
+    // pencerenin başından aramak, ufkun ötesindeki daha geç bir doğuşu kaçırır.
+    for start in [jd_ut - SUNRISE_NEAR_START_DAYS, jd_ut - SUNRISE_WINDOW_DAYS] {
+        let mut found = None;
         let mut from = start;
         for _ in 0..MAX_SUNRISE_STEPS {
             match eph.sun_rise_set(from, RiseSet::Rise, geo_lat, geo_lon, disc)? {
@@ -302,10 +308,10 @@ fn day_sunrise<E: Ephemeris + ?Sized>(
             }
         }
         if found.is_some() {
-            break;
+            return Ok(found);
         }
     }
-    Ok(found)
+    Ok(None)
 }
 
 /// `sunrise`'tan sonraki ilk gün batımı; 1 gün içinde değilse `None`.
@@ -502,7 +508,7 @@ mod compute_tests {
 
     use super::*;
     use crate::fake::FakeEph;
-    use crate::settings::SunriseDef;
+    use crate::settings::{SunriseDef, ZodiacMode};
 
     const JD: f64 = 2_451_545.0;
     /// İkiye bölme 1.5 gün / 2^20 ≈ 0.12 sn verir; 0.2 sn pay.
@@ -559,6 +565,59 @@ mod compute_tests {
         assert_eq!(p.vara, Vara::Saturday);
         // 02:24 UT → 04:20 yerel ortalama saat, 06:00'dan önce: önceki gün, Cuma.
         assert_eq!(panchang(&mut polar(), 2_451_544.6).vara, Vara::Friday);
+    }
+
+    #[test]
+    fn last_sunrise_is_found_past_the_search_horizon() {
+        let with_rises = |rises: &[f64]| FakeEph {
+            sunrises: Some(rises.to_vec()),
+            ..FakeEph::default()
+        };
+        // Ardışık doğuşlar 27 saat arayla (kutup gecesi ya da gündüzü sınırı): ilki doğumdan
+        // 28.8 saat, ikincisi 1.8 saat önce. İlk doğuştan başlayan 26 saatlik arama ikinciyi
+        // görmez; doğumdan 24 saat önce başlayan arama görür.
+        let p = panchang(&mut with_rises(&[JD - 1.2, JD - 0.075]), JD);
+        assert_eq!(p.sunrise_jd_ut, Some(JD - 0.075));
+        // Gün doğumu 1 Ocak 2000 09:48 UT civarı (yerel ortalama ~11:44): Cumartesi, Cuma değil.
+        assert_eq!(p.vara, Vara::Saturday);
+        // Penceredeki tek doğuş doğumdan 2.4 saat önce: 30 saat önceki başlangıç görmez.
+        let p = panchang(&mut with_rises(&[JD - 0.1]), JD);
+        assert_eq!(p.sunrise_jd_ut, Some(JD - 0.1));
+        // Tek doğuş 24–30 saat önce: yalnızca pencerenin başından arayan başlangıç görür.
+        let p = panchang(&mut with_rises(&[JD - 1.1]), JD);
+        assert_eq!(p.sunrise_jd_ut, Some(JD - 1.1));
+        assert_eq!(p.vara, Vara::Friday);
+        // Pencerenin dışındaki doğuşlar sayılmaz.
+        let p = panchang(&mut with_rises(&[JD - 1.3, JD + 0.05]), JD);
+        assert_eq!(p.sunrise_jd_ut, None);
+    }
+
+    #[test]
+    fn non_finite_sun_longitude_is_an_error() {
+        let mut eph = FakeEph::default().with(Body::Sun, f64::NAN, 0.98);
+        assert_eq!(
+            compute_panchang(&mut eph, JD, 41.0, 29.0, &CalcSettings::default()),
+            Err(CoreError::NonFiniteResult("panchang"))
+        );
+    }
+
+    #[test]
+    fn tropical_rasi_mode_keeps_the_sidereal_nakshatra_and_yoga() {
+        let sidereal = panchang(&mut FakeEph::default(), JD);
+        let tropical = compute_panchang(
+            &mut FakeEph::default(),
+            JD,
+            41.0,
+            29.0,
+            &CalcSettings {
+                zodiac: ZodiacMode::TropicalRasiSiderealNakshatra,
+                ..CalcSettings::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(tropical.nakshatra, sidereal.nakshatra);
+        assert_eq!(tropical.yoga, sidereal.yoga);
+        assert_eq!(tropical, sidereal);
     }
 
     #[test]

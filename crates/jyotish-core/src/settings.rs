@@ -128,7 +128,8 @@ impl CombustionOrbs {
     }
 }
 
-/// Gün doğumu tanımı. Bu planda kullanılmaz (M3 panchang); ayar olarak saklanır.
+/// Gün doğumu tanımı. Panchang'ın vara ve gün doğumu/batımı hesabı bunu kullanır
+/// (`compute_panchang`); harita hesabı kullanmaz.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum SunriseDef {
