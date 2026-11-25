@@ -286,3 +286,12 @@ test("without transits the drawing has no transit labels", () => {
   const { container } = render(<ChartSvg data={{ ascSign: 0, planets: [] }} style="south" labels={labels} />);
   expect(container.querySelector(".chart-transit")).toBeNull();
 });
+
+test("a static drawing is one image: no buttons or tab stops, the same cells and marks", () => {
+  const { container } = render(<ChartSvg data={data} style="north" labels={labels} interactive={false} />);
+  expect(screen.getByRole("img", { name: "Chart" })).toBe(container.querySelector("svg.chart"));
+  expect(container.querySelectorAll('[role="button"], [tabindex], [aria-pressed]')).toHaveLength(0);
+  expect(container.querySelectorAll(".chart-house")).toHaveLength(12);
+  expect(container.querySelector('[data-graha="Mercury"]')).toHaveTextContent(`Me${RETRO_MARK}c`);
+  expect(container.querySelector('[data-graha="Moon"] text')).toHaveAttribute("text-decoration", "underline");
+});

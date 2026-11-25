@@ -17,6 +17,11 @@ export interface ChartSvgProps {
   pressed?: HighlightTarget | null;
   onHover?: (target: HighlightTarget | null) => void;
   onPin?: (target: HighlightTarget) => void;
+  /**
+   * `false`: basılı çizim (Plan 12). Evler ve gezegenler düğme değildir, sekme durağı olmaz;
+   * svg tek bir resimdir (`role="img"`) ve ayrıntıyı yanındaki tablo taşır. Varsayılan `true`.
+   */
+  interactive?: boolean;
 }
 
 function cellHighlighted(cell: ChartCell, h: HighlightTarget | null): boolean {
@@ -47,7 +52,7 @@ function planetName(p: ChartPlanet, labels: ChartLabels): string {
   return parts.join(", ");
 }
 
-export function ChartSvg({ data, style, labels, highlight = null, pressed = highlight, onHover, onPin }: ChartSvgProps) {
+export function ChartSvg({ data, style, labels, highlight = null, pressed = highlight, onHover, onPin, interactive = true }: ChartSvgProps) {
   // Saat bilinmiyorsa lagna yoktur: 1. ev Koç çizilir, lagna işareti ve dolgusu çizilmez,
   // evler yalnızca burç adıyla anılır (ev numarası anlamsızdır).
   const hasLagna = data.ascSign !== null;
@@ -85,12 +90,29 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
     }
   };
 
+  /** Düğme davranışı: yalnızca etkileşimli çizimde; basılı çizimde hiçbir öznitelik eklenmez. */
+  const button = (target: HighlightTarget, isPressed: boolean, name: string) =>
+    interactive
+      ? {
+          role: "button",
+          tabIndex: 0,
+          "aria-pressed": isPressed,
+          "aria-label": name,
+          onMouseEnter: () => onHover?.(target),
+          onMouseLeave: () => onHover?.(null),
+          onFocus: () => onHover?.(target),
+          onBlur: () => onHover?.(null),
+          onClick: () => onPin?.(target),
+          onKeyDown: activate(target),
+        }
+      : {};
+
   return (
     <svg
       className="chart"
       data-style={style}
       viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
-      role="group"
+      role={interactive ? "group" : "img"}
       aria-label={labels.title}
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -107,16 +129,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
             className={`chart-house${on ? " chart-house--highlight" : ""}`}
             data-house={cell.house}
             data-sign={cell.sign}
-            role="button"
-            tabIndex={0}
-            aria-pressed={isPressed}
-            aria-label={hasLagna ? labels.house(cell.house, labels.signs[cell.sign]) : labels.signs[cell.sign]}
-            onMouseEnter={() => onHover?.(house)}
-            onMouseLeave={() => onHover?.(null)}
-            onFocus={() => onHover?.(house)}
-            onBlur={() => onHover?.(null)}
-            onClick={() => onPin?.(house)}
-            onKeyDown={activate(house)}
+            {...button(house, isPressed, hasLagna ? labels.house(cell.house, labels.signs[cell.sign]) : labels.signs[cell.sign])}
           >
             <path className={classes.join(" ")} d={pathOf(cell.points)} />
             {cell.signAnchor && (
@@ -146,16 +159,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
               data-house={cell.house}
               data-x={x}
               data-y={y}
-              role="button"
-              tabIndex={0}
-              aria-pressed={isPressed}
-              aria-label={planetName(p, labels)}
-              onMouseEnter={() => onHover?.(target)}
-              onMouseLeave={() => onHover?.(null)}
-              onFocus={() => onHover?.(target)}
-              onBlur={() => onHover?.(null)}
-              onClick={() => onPin?.(target)}
-              onKeyDown={activate(target)}
+              {...button(target, isPressed, planetName(p, labels))}
             >
               <rect
                 className="chart-planet-bg"

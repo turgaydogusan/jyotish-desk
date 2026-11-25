@@ -1,0 +1,152 @@
+/* A4 baskı düzenleri (UI spec §7). Kenar boşluğu sayfa kutusundan değil, sayfanın iç
+   dolgusundan gelir: wry yazdırma işinde NSPrintInfo kenarlarını 0 yapar (Plan 12 D3).
+   Renkler yalnızca belirteçlerdir; `.paper` (tokens.css) baskı paletini ekranda da verir. */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+.print-document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0 24px;
+}
+/* Ekranda bir A4 kâğıt; baskıda kâğıdın kendisi (aşağıdaki @media print).
+   Yazı tipi adıyla verilir (Plan 12 D6): sistem fontu Türkçe `lang` altında PDF'in metin
+   katmanında noktalı "i"yi yitirir ("Tarih" → "Tar!h"); arama ve kopyalama bozulur. */
+.print-page {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+  border: 1px solid var(--line);
+  font-size: 10pt;
+  line-height: 1.35;
+}
+.print-running {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  padding-bottom: 1.5mm;
+  border-bottom: 0.5pt solid var(--ink);
+  font-size: 8pt;
+}
+.print-heading {
+  margin: 5mm 0 4mm;
+  font-size: 16pt;
+  color: var(--ink);
+}
+.print-subheading {
+  margin: 6mm 0 2mm;
+  font-size: 11pt;
+  color: var(--ink);
+}
+.print-note,
+.print-legend,
+.print-credit {
+  margin: 0 0 3mm;
+  font-size: 9pt;
+}
+.print-legend {
+  margin-top: 2mm;
+  text-align: center;
+}
+.print-credit {
+  margin-top: 10mm;
+}
+
+.print-rows {
+  margin: 0;
+}
+.print-row {
+  display: flex;
+  gap: 4mm;
+  padding: 0.8mm 0;
+  border-bottom: 0.5pt solid var(--line);
+}
+.print-row dt {
+  flex: 0 0 42mm;
+  font-weight: var(--fw-medium);
+}
+.print-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.print-warnings {
+  margin: 0;
+  padding-left: 5mm;
+}
+
+/* İki harita alt alta; 82 mm ile sayfa, saat notu basılsa da Letter kâğıda sığar (bkz. D3: baskı ölçeği). */
+.print-chart {
+  width: 82mm;
+  margin: 0 auto 3mm;
+}
+.print-chart figcaption {
+  margin-bottom: 1mm;
+  font-weight: var(--fw-medium);
+  text-align: center;
+}
+.print-chart .chart {
+  height: auto;
+  aspect-ratio: 1;
+}
+/* Kâğıtta --select beyazdır: lagna evi dolguyla değil kalın çizgiyle belirtilir (C9). */
+.paper .chart-cell--lagna {
+  stroke-width: 1.2;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+.print-table th,
+.print-table td {
+  padding: 0.6mm 1.5mm;
+  border-bottom: 0.5pt solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+.print-table .num {
+  text-align: right;
+}
+.print-table caption {
+  padding-bottom: 1mm;
+  text-align: left;
+}
+.print-dasha {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5mm 6mm;
+}
+.print-dasha-block {
+  font-size: 8pt;
+}
+.print-dasha-block th,
+.print-dasha-block td {
+  padding: 0.4mm 1mm;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-document {
+    display: block;
+    padding: 0;
+  }
+  .print-page {
+    width: auto;
+    min-height: 0;
+    border: 0;
+    break-after: page;
+    break-inside: avoid;
+  }
+  .print-page:last-child {
+    break-after: auto;
+  }
+}
