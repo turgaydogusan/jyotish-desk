@@ -76,6 +76,7 @@ const BACKEND_CODES = [
   "non_finite_result", "invalid_dasha_input", "panchang_search", "invalid_transit_input",
   "atlas_unavailable", "atlas_sqlite", "atlas_io", "atlas_schema",
   "file_io", "dialog_path", "import_too_large", "import_format", "import_version", "import_record",
+  "prefs_too_new",
 ] as const;
 
 test("every backend error code reachable from the UI has a message", () => {

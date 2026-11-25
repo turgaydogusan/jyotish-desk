@@ -96,6 +96,7 @@ export const fr: Messages = {
     store_migration: "La base n’a pas pu être mise à jour ({{detail}}).",
     store_json: "Les données enregistrées sont illisibles ({{detail}}).",
     store_too_new: "La base est plus récente que l’application (version {{found}}, prise en charge {{supported}}). Mettez l’application à jour.",
+    prefs_too_new: "Les préférences ont été enregistrées par une version plus récente de l’application (version {{found}}, prise en charge {{supported}}). La modification n’a pas été enregistrée ; mettez l’application à jour.",
     store_unavailable: "La base des consultants est indisponible.",
     not_found: "Enregistrement introuvable ({{what}} {{id}}).",
     invalid_input: "Valeur invalide : {{field}}.",

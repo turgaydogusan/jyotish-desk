@@ -12,6 +12,9 @@ impl Store {
     /// Yalnızca düzeni yazar; `None` kayıtlı düzeni siler (arayüz hazır düzenlere döner).
     /// Okuma `Store::panel_layout` iledir (toleranslı).
     pub fn save_panel_layout(&mut self, layout: Option<&PanelLayout>) -> Result<(), StoreError> {
+        if let Some(pl) = layout {
+            crate::view_state::check_panel_layout(pl)?;
+        }
         match layout {
             Some(pl) => self.app_state_set(PANEL_LAYOUT_KEY, &serde_json::to_string(pl)?),
             None => {

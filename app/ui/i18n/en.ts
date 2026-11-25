@@ -96,6 +96,7 @@ export const en: Messages = {
     store_migration: "The database could not be upgraded ({{detail}}).",
     store_json: "Stored data could not be read ({{detail}}).",
     store_too_new: "The database is newer than this app (version {{found}}, supported {{supported}}). Update the app.",
+    prefs_too_new: "Preferences were saved by a newer version of the app (version {{found}}, supported {{supported}}). The change was not saved; update the app.",
     store_unavailable: "The client database is unavailable.",
     not_found: "Record not found ({{what}} {{id}}).",
     invalid_input: "Invalid value: {{field}}.",

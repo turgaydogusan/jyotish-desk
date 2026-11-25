@@ -37,10 +37,11 @@ pub use open::{OpenRecord, StoreWarning};
 pub use schema::SCHEMA_VERSION;
 pub use search::{SearchHit, SearchMatch};
 pub use settings::{
-    load_calc_settings, AppPrefs, SettingsLoad, ValueMigration, APP_PREFS_SCHEMA_VERSION,
-    CALC_SETTINGS_MIGRATIONS, LOCALES,
+    load_calc_settings, AppPrefs, PrefsLoad, PrefsWarning, SettingsLoad, ValueMigration,
+    APP_PREFS_SCHEMA_VERSION, CALC_SETTINGS_MIGRATIONS, LOCALES,
 };
 pub use view_state::{
-    chart_view_json, chart_view_path, parse_dasha_path, parse_panel_layout, parse_view_state,
-    Layout, Panel, PanelLayout, ViewState, MAX_LAYOUTS, MAX_PANELS, VIEW_STATE_SCHEMA_VERSION,
+    chart_view_json, chart_view_path, check_panel_layout, check_view_state, parse_dasha_path,
+    parse_panel_layout, parse_view_state, Layout, Panel, PanelLayout, ViewState, MAX_LAYOUTS,
+    MAX_PANELS, MAX_VIEW_STATE_BYTES, VIEW_STATE_SCHEMA_VERSION,
 };

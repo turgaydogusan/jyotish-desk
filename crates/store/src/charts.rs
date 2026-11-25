@@ -524,6 +524,7 @@ impl Store {
     /// Otomatik kayıt (≈ 500 ms debounce arayüzde). `updated_at` değişmez: görünüm içerik
     /// değildir. `panel_layout: None` kayıtlı düzeni siler (arayüz varsayılana döner).
     pub fn save_view_state(&mut self, chart_id: u32, vs: &ViewState) -> Result<(), StoreError> {
+        crate::view_state::check_view_state(vs)?;
         let tx = self.conn.transaction()?;
         let n = tx.execute(
             "UPDATE charts SET view_state_json = ?1 WHERE id = ?2",
@@ -611,7 +612,7 @@ mod tests {
     use crate::birth::fixtures::{delhi, istanbul};
     use crate::db::testutil::store;
     use crate::settings::AppPrefs;
-    use crate::view_state::{Layout, Panel};
+    use crate::view_state::{Layout, Panel, MAX_LAYOUTS, MAX_PANELS, MAX_VIEW_STATE_BYTES};
     use jyotish_core::{AyanamsaSystem, Graha};
     use serde_json::Map;
 
@@ -859,5 +860,87 @@ mod tests {
         let up = s.update_client(a.id, "Ahmet", Some(Gender::Male)).unwrap();
         assert_eq!((up.name.as_str(), up.gender), ("Ahmet", Some(Gender::Male)));
         assert!(up.updated_at > a.updated_at);
+    }
+
+    fn layouts(n: usize, panels: usize) -> PanelLayout {
+        PanelLayout {
+            active_layout_id: "user:0".into(),
+            layouts: (0..n)
+                .map(|i| Layout {
+                    id: format!("user:{i}"),
+                    name: format!("L{i}"),
+                    builtin: false,
+                    panels: (0..panels)
+                        .map(|j| Panel {
+                            id: format!("p{j}"),
+                            kind: "notes".into(),
+                            x: 0,
+                            y: j as u32 * 4,
+                            w: 3,
+                            h: 4,
+                            settings: serde_json::Map::new(),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn save_view_state_rejects_what_the_parsers_would_trim() {
+        let mut s = store();
+        let (_, ch) = s.create_client(&new_client("A")).unwrap();
+        let ok = ViewState {
+            panel_layout: Some(layouts(MAX_LAYOUTS, MAX_PANELS)),
+            ..ViewState::default()
+        };
+        s.save_view_state(ch.id, &ok).unwrap();
+        for bad in [
+            ViewState {
+                panel_layout: Some(layouts(MAX_LAYOUTS + 1, 1)),
+                ..ViewState::default()
+            },
+            ViewState {
+                panel_layout: Some(layouts(1, MAX_PANELS + 1)),
+                ..ViewState::default()
+            },
+            ViewState {
+                schema_version: 2,
+                ..ViewState::default()
+            },
+            ViewState {
+                dasha_expanded_path: vec![jyotish_core::Graha::Sun; 6],
+                ..ViewState::default()
+            },
+        ] {
+            assert!(
+                matches!(
+                    s.save_view_state(ch.id, &bad),
+                    Err(StoreError::InvalidInput("view_state" | "panel_layout"))
+                ),
+                "{bad:?}"
+            );
+        }
+        // Reddedilen kayıt öncekini değiştirmez.
+        assert_eq!(s.view_state(ch.id).unwrap(), ok);
+    }
+
+    #[test]
+    fn save_panel_layout_rejects_over_cap_and_oversized_layouts() {
+        let mut s = store();
+        assert!(matches!(
+            s.save_panel_layout(Some(&layouts(MAX_LAYOUTS + 1, 1))),
+            Err(StoreError::InvalidInput("panel_layout"))
+        ));
+        let mut huge = layouts(1, 1);
+        huge.layouts[0].panels[0].settings.insert(
+            "blob".into(),
+            serde_json::Value::String("x".repeat(MAX_VIEW_STATE_BYTES)),
+        );
+        assert!(matches!(
+            s.save_panel_layout(Some(&huge)),
+            Err(StoreError::InvalidInput("panel_layout"))
+        ));
+        assert_eq!(s.panel_layout().unwrap(), None);
     }
 }

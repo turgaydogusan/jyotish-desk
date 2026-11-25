@@ -88,6 +88,13 @@ impl From<StoreError> for CommandError {
             StoreError::ImportFormat(detail) => {
                 Self::new("import_format", &[("detail", clip(&detail))])
             }
+            StoreError::PrefsTooNew { found } => Self::new(
+                "prefs_too_new",
+                &[
+                    ("found", found.to_string()),
+                    ("supported", store::APP_PREFS_SCHEMA_VERSION.to_string()),
+                ],
+            ),
             StoreError::ImportVersion { found, supported } => Self::new(
                 "import_version",
                 &[
@@ -354,6 +361,12 @@ mod tests {
         assert_eq!(e.code, "ambiguous_local_time");
         assert_eq!(e.params["later_offset_secs"], "7200");
         assert_eq!(CommandError::from(StoreError::LastChart).code, "last_chart");
+        let e = CommandError::from(StoreError::PrefsTooNew { found: 2 });
+        assert_eq!(e.code, "prefs_too_new");
+        assert_eq!(
+            (e.params["found"].as_str(), e.params["supported"].as_str()),
+            ("2", "1")
+        );
         let e = CommandError::from(StoreError::Jhd {
             line: 5,
             field: "timezone",

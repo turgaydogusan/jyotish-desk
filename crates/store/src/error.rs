@@ -29,6 +29,9 @@ pub enum StoreError {
     ImportFormat(String),
     #[error("unsupported import schema version {found} (supported: {supported})")]
     ImportVersion { found: u32, supported: u32 },
+    /// Tercihler bu sürümden yeni bir uygulamayla yazılmış; üzerine yazılmaz (Plan 11 D3).
+    #[error("app preferences version {found} is newer than supported")]
+    PrefsTooNew { found: u32 },
     #[error("invalid import record {item}: {field}")]
     ImportRecord { item: String, field: &'static str },
     /// JHD satırı okunamadı. `line` 1'den sayılır; dosya adından gelen alanlarda 0'dır.

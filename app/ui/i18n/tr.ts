@@ -95,6 +95,7 @@ export const tr = {
     store_migration: "Veritabanı güncellenemedi ({{detail}}).",
     store_json: "Saklanan veri okunamadı ({{detail}}).",
     store_too_new: "Veritabanı bu sürümden yeni (sürüm {{found}}, desteklenen {{supported}}). Uygulamayı güncelleyin.",
+    prefs_too_new: "Tercihler bu sürümden yeni bir uygulamayla kaydedilmiş (sürüm {{found}}, desteklenen {{supported}}). Değişiklik kaydedilmedi; uygulamayı güncelleyin.",
     store_unavailable: "Danışan veritabanı kullanılamıyor.",
     not_found: "Kayıt bulunamadı ({{what}} {{id}}).",
     invalid_input: "Geçersiz değer: {{field}}.",

@@ -103,6 +103,37 @@ pub const APP_PREFS_SCHEMA_VERSION: u32 = 1;
 pub const LOCALES: [&str; 3] = ["tr", "en", "fr"];
 const APP_PREFS_KEY: &str = "app_prefs";
 
+/// Tercih okumasının ölümcül olmayan durumları; arayüz açılış bandında gösterir (spec §7).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum PrefsWarning {
+    /// Kayıt JSON nesnesi değil; yerleşik varsayılanlar kullanıldı.
+    Unreadable,
+    /// Genel hesap varsayılanı okunamadı ya da göç edilemedi; yerleşik varsayılan kullanıldı.
+    /// Saklanan JSON değiştirilmedi.
+    CalcSettingsReset { found_version: Option<u32> },
+    /// Tercihler bu sürümden yeni bir uygulamayla yazıldı; yerleşik varsayılanlar kullanıldı ve
+    /// kayıt korunur (`set_app_prefs` üzerine yazmaz).
+    TooNew { found: u32 },
+}
+
+/// `app_prefs_load` sonucu: kullanılacak tercihler ve okuma uyarıları.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct PrefsLoad {
+    pub prefs: AppPrefs,
+    pub warnings: Vec<PrefsWarning>,
+}
+
+/// Saklanan kaydın sürümü; alan yoksa ya da sayı değilse güncel sürüm sayılır (Plan 03 kayıtları
+/// her zaman damgalıdır; damgasız kayıt elle yazılmıştır).
+fn stored_prefs_version(obj: &serde_json::Map<String, Value>) -> u32 {
+    obj.get("schema_version")
+        .and_then(Value::as_u64)
+        .and_then(|v| u32::try_from(v).ok())
+        .unwrap_or(APP_PREFS_SCHEMA_VERSION)
+}
+
 /// Genel tercihler (spec §5 `AppPrefs`). Varsayılan görünüm, kullanıcının pano düzenidir
 /// (`app_state` `panel_layout`, bkz. `view_state`); burada tutulmaz.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -125,35 +156,63 @@ impl Default for AppPrefs {
 }
 
 impl Store {
-    /// Toleranslı okuma: kayıt yoksa ya da bozuksa varsayılanlar; tanınmayan dil "tr";
-    /// okunamayan ayar spec §6 varsayılanı.
-    pub fn app_prefs(&self) -> Result<AppPrefs, StoreError> {
-        let mut prefs = AppPrefs::default();
+    /// Toleranslı okuma, uyarılarla: kayıt yoksa varsayılanlar; tanınmayan dil "tr"; okunamayan
+    /// hesap varsayılanı yerleşik varsayılanla değişir ve `CalcSettingsReset` uyarısı verir;
+    /// daha yeni sürümlü kayıtta hiçbir alan okunmaz (`TooNew`).
+    pub fn app_prefs_load(&self) -> Result<PrefsLoad, StoreError> {
+        let mut out = PrefsLoad {
+            prefs: AppPrefs::default(),
+            warnings: Vec::new(),
+        };
         let Some(raw) = self.app_state_get(APP_PREFS_KEY)? else {
-            return Ok(prefs);
+            return Ok(out);
         };
         let Ok(Value::Object(mut obj)) = serde_json::from_str::<Value>(&raw) else {
-            return Ok(prefs);
+            out.warnings.push(PrefsWarning::Unreadable);
+            return Ok(out);
         };
+        let found = stored_prefs_version(&obj);
+        if found > APP_PREFS_SCHEMA_VERSION {
+            out.warnings.push(PrefsWarning::TooNew { found });
+            return Ok(out);
+        }
         if let Some(Value::String(l)) = obj.get("locale") {
             if LOCALES.contains(&l.as_str()) {
-                prefs.locale = l.clone();
+                out.prefs.locale = l.clone();
             }
         }
-        if let Some(v) = obj.remove("calc_settings") {
-            prefs.calc_settings = load_calc_value(v, &CalcSettings::default())
-                .settings()
-                .clone();
+        match obj
+            .remove("calc_settings")
+            .map(|v| load_calc_value(v, &CalcSettings::default()))
+        {
+            Some(SettingsLoad::Reset { found_version, .. }) => out
+                .warnings
+                .push(PrefsWarning::CalcSettingsReset { found_version }),
+            Some(load) => out.prefs.calc_settings = load.settings().clone(),
+            None => {}
         }
-        Ok(prefs)
+        Ok(out)
     }
 
-    /// "Bunu varsayılan yap" ve dil seçimi. Mevcut haritalar değişmez (spec §4).
+    /// `app_prefs_load` tercihleri, uyarısız (yeni harita varsayılanı için).
+    pub fn app_prefs(&self) -> Result<AppPrefs, StoreError> {
+        Ok(self.app_prefs_load()?.prefs)
+    }
+
+    /// Doğrular ve güncel sürümle yazar. Daha yeni sürümlü kaydın üzerine yazmaz.
     pub fn set_app_prefs(&self, prefs: &AppPrefs) -> Result<(), StoreError> {
         if !LOCALES.contains(&prefs.locale.as_str()) {
             return Err(StoreError::InvalidInput("locale"));
         }
         prefs.calc_settings.validate()?;
+        if let Some(raw) = self.app_state_get(APP_PREFS_KEY)? {
+            if let Ok(Value::Object(obj)) = serde_json::from_str::<Value>(&raw) {
+                let found = stored_prefs_version(&obj);
+                if found > APP_PREFS_SCHEMA_VERSION {
+                    return Err(StoreError::PrefsTooNew { found });
+                }
+            }
+        }
         let stored = AppPrefs {
             schema_version: APP_PREFS_SCHEMA_VERSION,
             ..prefs.clone()
@@ -330,5 +389,67 @@ mod tests {
             )))
         ));
         assert_eq!(s.app_prefs().unwrap(), AppPrefs::default());
+    }
+
+    #[test]
+    fn app_prefs_load_reports_reset_unreadable_and_too_new() {
+        let s = store();
+        assert_eq!(
+            s.app_prefs_load().unwrap(),
+            PrefsLoad {
+                prefs: AppPrefs::default(),
+                warnings: vec![]
+            }
+        );
+        // Okunamayan genel varsayılan: yerleşik varsayılan, dil korunur, uyarı.
+        s.app_state_set(
+            APP_PREFS_KEY,
+            r#"{"schema_version":1,"locale":"en","calc_settings":{"schema_version":9}}"#,
+        )
+        .unwrap();
+        let load = s.app_prefs_load().unwrap();
+        assert_eq!(load.prefs.locale, "en");
+        assert_eq!(load.prefs.calc_settings, CalcSettings::default());
+        assert_eq!(
+            load.warnings,
+            [PrefsWarning::CalcSettingsReset {
+                found_version: Some(9)
+            }]
+        );
+        // Bozuk JSON.
+        s.app_state_set(APP_PREFS_KEY, "[1,2]").unwrap();
+        assert_eq!(
+            s.app_prefs_load().unwrap().warnings,
+            [PrefsWarning::Unreadable]
+        );
+        // Daha yeni uygulamanın kaydı: hiçbir alanı okunmaz.
+        s.app_state_set(
+            APP_PREFS_KEY,
+            r#"{"schema_version":2,"locale":"fr","calc_settings":{}}"#,
+        )
+        .unwrap();
+        let load = s.app_prefs_load().unwrap();
+        assert_eq!(load.prefs, AppPrefs::default());
+        assert_eq!(load.warnings, [PrefsWarning::TooNew { found: 2 }]);
+        assert_eq!(s.app_prefs().unwrap(), AppPrefs::default());
+    }
+
+    #[test]
+    fn set_app_prefs_refuses_to_overwrite_newer_prefs() {
+        let s = store();
+        let newer = r#"{"schema_version":2,"locale":"fr","calc_settings":{}}"#;
+        s.app_state_set(APP_PREFS_KEY, newer).unwrap();
+        assert!(matches!(
+            s.set_app_prefs(&AppPrefs::default()),
+            Err(StoreError::PrefsTooNew { found: 2 })
+        ));
+        assert_eq!(
+            s.app_state_get(APP_PREFS_KEY).unwrap().as_deref(),
+            Some(newer)
+        );
+        // Okunamayan eski kayıt ise yenisiyle değiştirilebilir.
+        s.app_state_set(APP_PREFS_KEY, "[1,2]").unwrap();
+        s.set_app_prefs(&AppPrefs::default()).unwrap();
+        assert!(s.app_prefs_load().unwrap().warnings.is_empty());
     }
 }

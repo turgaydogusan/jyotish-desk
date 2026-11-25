@@ -19,6 +19,32 @@ pub const VIEW_STATE_SCHEMA_VERSION: u32 = 1;
 pub const MAX_LAYOUTS: usize = 64;
 /// Bir düzende okunan en çok panel; fazlası atılır. Arayüzün `MAX_PANELS`'i ile aynıdır.
 pub const MAX_PANELS: usize = 48;
+/// Yazılan görünüm kaydının en büyük JSON boyutu (bayt). Arayüzün ürettiği en büyük düzen
+/// (64 × 48 panel) bunun onda biri bile değildir; sınır bozuk ya da kötü niyetli yazımı keser.
+pub const MAX_VIEW_STATE_BYTES: usize = 1 << 20;
+
+/// Yazım denetimi (Plan 11 D4): ayrıştırıcıların kırpacağı kayıt reddedilir, saklanmaz.
+pub fn check_panel_layout(pl: &PanelLayout) -> Result<(), crate::StoreError> {
+    let fits =
+        pl.layouts.len() <= MAX_LAYOUTS && pl.layouts.iter().all(|l| l.panels.len() <= MAX_PANELS);
+    if !fits || serde_json::to_vec(pl)?.len() > MAX_VIEW_STATE_BYTES {
+        return Err(crate::StoreError::InvalidInput("panel_layout"));
+    }
+    Ok(())
+}
+
+/// `save_view_state` denetimi: sürüm, dasha yolu uzunluğu ve düzen sınırları.
+pub fn check_view_state(vs: &ViewState) -> Result<(), crate::StoreError> {
+    if vs.schema_version != VIEW_STATE_SCHEMA_VERSION
+        || vs.dasha_expanded_path.len() > usize::from(MAX_DASHA_LEVEL)
+    {
+        return Err(crate::StoreError::InvalidInput("view_state"));
+    }
+    match &vs.panel_layout {
+        Some(pl) => check_panel_layout(pl),
+        None => Ok(()),
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
