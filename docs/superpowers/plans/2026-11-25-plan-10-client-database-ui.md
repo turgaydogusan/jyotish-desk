@@ -5607,6 +5607,8 @@ Expected: commit oluşur; iki tarama da çıktısız. Commit mesajında yasaklı
 
 ---
 
+**Task 9 inceleme düzeltmesi (ayrı commit, Task 10'dan önce):** İnceleme düzeltmesi test-önce uygulanır. (1) `NoteEditor`'ın `mounted` bayrağı etki her kurulduğunda açılır: `StrictMode` altında (geliştirme derlemesi; elle denetimler burada yapılır) panel açıkken düşen kayıt bildirim bandına değil notun yanındaki hataya gider. (2) `deleteNote` `enqueueNoteSave` sırasından geçer: notun bekleyen kaydı silmeden sonra çalışıp "yazılmadı" bildirimi üretmez. (3) Silme başarısız olursa silme başlarken durdurulan otomatik kayıt beklemeden gönderilir. (4) "Yeni not" ekleme sürerken ikinci kez tıklanırsa ikinci bir boş not açmaz. (5) "Açık harita yok" durumu kendi testinde doğrulanır. Expected: `Test Files  41 passed (41)`, `Tests  352 passed (352)` (+5, `notes/NotesPanel.test.tsx`); notlar testi üç kez `16 passed`; `build` `✓ built`. Sonraki görevlerin toplamları +5.
+
 ### Task 10: İçe/dışa aktarma: Rust tarafı dosya pencereleri, boyut sınırı, atomik yazım ve dosyadan gelen alanların sınırları
 
 Plan 08 ertelenen madde 3 (JSON için) ve 13; madde 1 (JHD) kapanmaz, JHD arayüzden erişilemez kalır (D2). `tauri-plugin-dialog` `=2.8.4` (Apache-2.0 OR MIT; `rfd` 0.17.2 MIT, `tauri-plugin-fs` 2.7.1 Apache-2.0 OR MIT getirir; MSRV 1.90) eklenir ve pencereler **Rust'ta** `DialogExt` ile `spawn_blocking` içinde açılır: arayüz hiçbir zaman dosya yolu göndermez, eklentinin JS komutları için yetenek (capability) verilmez. Yol alan dört komut (`export_json`, `export_csv`, `import_json`, `import_jhd`) specta kaydından çıkar; yerlerine `export_clients_json(include_notes)`, `export_clients_csv()`, `import_clients_json()` gelir (vazgeçilirse `null`). Kapılar: içe aktarma dosyası okunmadan önce `metadata().len()` ile `MAX_IMPORT_BYTES = 32 MiB` denetlenir (yeni kod `import_too_large{file, max_mb}`; okurken büyüyen dosya da reddedilir); dışa aktarma aynı klasörde geçici dosyaya yazılıp `sync_all` + `rename` ile taşınır (yarıda kesilen yazım eski dosyayı bozmaz); hata parametrelerinde yalnızca dosya adı (`file`), tam yol yok; `import_format.detail` ve `import_record.item` 120 karakterde kesilir; başka tzdb ile korunan anda `abbrev` ve `tzdb_version` 32 karakteri, ofset ±18 saati aşarsa kayıt reddedilir; içe aktarılan not gövdesi `MAX_NOTE_BYTES`'ı aşarsa kayıt reddedilir (hepsi ya da hiçbiri). Arayüz: kenar çubuğunun "Veri" bölümü; JSON dışa aktarma önce bir pencere açar, "Notları dahil et" varsayılan kapalı ve hassasiyet ipucu bağlı (spec §5). Sonuçlar bildirim bandında: yeni `info` bildirimi (kenar çizgisi + "Bilgi" metni, renk tek taşıyıcı değil). İçe aktarmadan sonra `session.touch()` listeleri yeniler. `api.test.ts`'in C2 denetimi güçlenir: `bindings.ts`'te yol alan hiçbir komut yoktur (C2'nin kaldırılma koşulu bu görevdir; yerine C2′). "Arayüzün dosya penceresi ya da dosya sistemi yetkisi yok" iddiası bir Rust testiyle korunur: `capabilities/` klasöründe tek dosya vardır ve `default.json`'ın izinleri yalnızca `["core:event:default"]`'tur (C2′, Fable MF4).
@@ -6796,7 +6798,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: `store` lib `71 passed`; `jyotish-desk` lib `test result: ok. 19 passed` (+5: üç dosya komutu testi, kesme testi ve yetki testi), `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; fmt, clippy çıktısız; `Test Files  42 passed (42)`, `Tests  352 passed (352)`; `build` `✓ built`.
+Expected: `store` lib `71 passed`; `jyotish-desk` lib `test result: ok. 19 passed` (+5: üç dosya komutu testi, kesme testi ve yetki testi), `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; fmt, clippy çıktısız; `Test Files  42 passed (42)`, `Tests  357 passed (357)`; `build` `✓ built`.
 
 - [ ] **Step 6: Commit**
 
@@ -7062,7 +7064,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  42 passed (42)`, `Tests  352 passed (352)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
+Expected: `Test Files  42 passed (42)`, `Tests  357 passed (357)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
 
 - [ ] **Step 4: Kurallar**
 
@@ -7204,9 +7206,10 @@ Belirsiz adım yok; her kod adımı tam dosya içeriğini ya da `git apply` ile 
 | 8 | 40 | 333 | — |
 | 8 düzeltme | 40 | 336 | T8 incelemesi kararı: IME Enter (229), arama hatası gösterimi, eski danışan sonuçları (+3) |
 | 9 | 41 | 347 | `store` lib 71 (+1) |
-| 10 | 42 | 352 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
-| 11 | 42 | 352 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
-| 12 | 42 | 352 | doğrulama |
+| 9 düzeltme | 41 | 352 | T9 incelemesi kararı: StrictMode'da kayıt hatası yeri, silmenin kayıt sırasına girmesi, başarısız silmeden sonra kayıt, çift Yeni not, haritasız durum testi (+5) |
+| 10 | 42 | 357 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
+| 11 | 42 | 357 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
+| 12 | 42 | 357 | doğrulama |
 
 ### Doğrulama
 
