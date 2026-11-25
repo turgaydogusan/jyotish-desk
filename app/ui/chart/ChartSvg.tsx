@@ -33,6 +33,11 @@ function labelText(p: ChartPlanet, graha: ChartLabels["graha"]): string {
   return `${graha[p.id]}${showsRetro(p.id, p.retrograde) ? RETRO_MARK : ""}${p.combust ? "c" : ""}`;
 }
 
+/** Transit etiketi: parantez biçimsel işarettir (renk değil, C9). */
+function transitText(p: ChartPlanet, graha: ChartLabels["graha"]): string {
+  return `(${graha[p.id]}${showsRetro(p.id, p.retrograde) ? RETRO_MARK : ""})`;
+}
+
 /** Erişilebilir ad sözcüklerden kurulur, glif okunmaz: "Ma, Sc 19°, retro, vargottama". */
 function planetName(p: ChartPlanet, labels: ChartLabels): string {
   const parts = [`${labels.graha[p.id]}, ${labels.signs[p.sign]} ${Math.floor(p.degInSign)}°`];
@@ -53,19 +58,25 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
   const { graha, lagna } = labels;
   const textKey = JSON.stringify([graha, lagna]);
   const placed = useMemo(() => {
-    const bySign = new Map<number, ChartPlanet[]>();
-    for (const p of data.planets) {
-      if (!drawable(p)) continue;
-      bySign.set(p.sign, [...(bySign.get(p.sign) ?? []), p]);
-    }
+    const group = (list: readonly ChartPlanet[]) => {
+      const bySign = new Map<number, ChartPlanet[]>();
+      for (const p of list) {
+        if (!drawable(p)) continue;
+        bySign.set(p.sign, [...(bySign.get(p.sign) ?? []), p]);
+      }
+      return bySign;
+    };
+    const natal = group(data.planets);
+    const transit = group(data.transits ?? []);
     return cells.map((cell) => {
-      const planets = bySign.get(cell.sign) ?? [];
-      const texts = planets.map((p) => labelText(p, graha));
+      const planets = natal.get(cell.sign) ?? [];
+      const transits = transit.get(cell.sign) ?? [];
+      const texts = [...planets.map((p) => labelText(p, graha)), ...transits.map((p) => transitText(p, graha))];
       const layout: LabelLayout = layoutLabels(cell, texts, hasLagna && cell.lagnaAnchor ? lagna : "");
-      return { cell, planets, layout };
+      return { cell, planets, transits, layout };
     });
     // textKey, graha ve lagna'yı kapsar.
-  }, [cells, data.planets, textKey, hasLagna]);
+  }, [cells, data.planets, data.transits, textKey, hasLagna]);
 
   const activate = (target: HighlightTarget) => (e: KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -168,6 +179,27 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
                 {p.combust && <tspan>c</tspan>}
               </text>
             </g>
+          );
+        }),
+      )}
+      {placed.map(({ cell, planets, transits, layout }) =>
+        transits.map((p, i) => {
+          const { x, y } = layout.boxes[planets.length + i];
+          return (
+            <text
+              key={`transit-${p.id}`}
+              className="chart-transit"
+              data-transit={p.id}
+              data-house={cell.house}
+              x={x}
+              y={y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{ fontSize: `${layout.fontSize}px` }}
+              aria-hidden="true"
+            >
+              {transitText(p, labels.graha)}
+            </text>
           );
         }),
       )}

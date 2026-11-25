@@ -29,6 +29,9 @@ export const en: Messages = {
     "11": "Pi",
   },
   chart: {
+    transitRing: "Transit ring",
+    transitRingOnlyD1: "The transit ring is drawn in D1 only.",
+    transitList: "Transit: {{list}}",
     title: "{{varga}} chart",
     lagna: "As",
     house: "House {{house}}, {{sign}}",

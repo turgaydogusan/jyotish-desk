@@ -28,6 +28,9 @@ export const tr = {
     "11": "Bal",
   },
   chart: {
+    transitRing: "Transit halkası",
+    transitRingOnlyD1: "Transit halkası yalnızca D1'de çizilir.",
+    transitList: "Transit: {{list}}",
     title: "{{varga}} haritası",
     lagna: "Lg",
     house: "{{house}}. ev, {{sign}}",

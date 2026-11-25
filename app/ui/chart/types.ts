@@ -24,6 +24,8 @@ export interface ChartData {
   /** Lagna burcu; henüz hesaplanmıyorsa `null` (1. ev Koç kabul edilir, çağıran uyarı gösterir). */
   ascSign: number | null;
   planets: ChartPlanet[];
+  /** Transit halkası (yalnızca D1, Plan 11 D9): etkileşimsiz, parantezli kısaltmalar. */
+  transits?: ChartPlanet[];
 }
 
 export type ChartStyle = "north" | "south" | "circle";

@@ -69,3 +69,10 @@
   stroke-width: 2px;
   vector-effect: non-scaling-stroke;
 }
+
+/* Transit halkası: italik ve parantezli; renk tek başına anlam taşımaz (C9), baskıda okunur. */
+.chart-transit {
+  fill: var(--text-2);
+  font-style: italic;
+  pointer-events: none;
+}

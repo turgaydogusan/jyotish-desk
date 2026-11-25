@@ -1,8 +1,11 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { api } from "../api";
 import type { Panel } from "../layout/model";
 import { fixture, unknownTimeOpened } from "../test/fixture";
 import { renderWithStores } from "../test/render";
 import { ChartPanel } from "./ChartPanel";
+
+vi.mock("../api", () => ({ api: { transitsAt: vi.fn() } }));
 
 const LAYOUT = (settings: Record<string, unknown>) => ({
   schema_version: 1,
@@ -58,4 +61,30 @@ test("D9 marks vargottama and never combust", () => {
 test.each(["north", "south", "circle"])("Delhi D1 %s markup matches the snapshot", async (style) => {
   const { container } = renderPanel({ varga: "D1", style });
   await expect(container.querySelector("svg")!.outerHTML).toMatchFileSnapshot(`../chart/__snapshots__/delhi-d1-${style}.svg`);
+});
+
+test("the transit ring toggle is saved with the layout and reads no transits while off", async () => {
+  const { persistence } = renderPanel({ varga: "D1", style: "north", transit_ring: false });
+  const ring = screen.getByRole("checkbox", { name: "Transit halkası" });
+  expect(ring).not.toBeChecked();
+  expect(api.transitsAt).not.toHaveBeenCalled();
+  fireEvent.click(ring);
+  await waitFor(() => expect(persistence.saved.length).toBeGreaterThan(0));
+  const saved = persistence.saved.at(-1)!.viewState.panel_layout!.layouts.find((l) => l.id === "user:t")!.panels[0];
+  expect(saved.settings).toEqual({ varga: "D1", style: "north", transit_ring: true });
+});
+
+test("with the ring on, D1 draws the nine transits and lists them for screen readers; other vargas do not", async () => {
+  vi.mocked(api.transitsAt).mockResolvedValue({ status: "ok", data: fixture().transit });
+  const d1 = renderPanel({ varga: "D1", transit_ring: true });
+  await waitFor(() => expect(d1.container.querySelectorAll(".chart-transit")).toHaveLength(9));
+  expect(screen.getByText(/^Transit:/)).toHaveClass("visually-hidden");
+  d1.unmount();
+  vi.mocked(api.transitsAt).mockClear();
+  const d9 = renderPanel({ varga: "D9", transit_ring: true });
+  expect(d9.container.querySelector(".chart-transit")).toBeNull();
+  const ring = screen.getByRole("checkbox", { name: "Transit halkası" });
+  expect(ring).toBeDisabled();
+  expect(ring).toHaveAccessibleDescription("Transit halkası yalnızca D1'de çizilir.");
+  expect(api.transitsAt).not.toHaveBeenCalled();
 });

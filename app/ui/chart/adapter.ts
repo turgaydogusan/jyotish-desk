@@ -1,7 +1,7 @@
 // Chart → ChartData. Burç, derece, retro, yanma ve vargottama Rust'tan hazır gelir
 // (`Chart.vargas`, `Chart.grahas`); arayüz hiçbir boylamdan burç türetmez (spec §4).
-import type { Chart, Sign, Varga } from "../bindings";
-import type { ChartData, ChartPlanet } from "./types";
+import type { Chart, Sign, TransitView, Varga } from "../bindings";
+import { isGrahaId, type ChartData, type ChartPlanet } from "./types";
 
 /** 0 = Mesha (Koç) … 11 = Meena (Balık); bindings `Sign` sırası. */
 export const SIGNS = [
@@ -72,4 +72,11 @@ export function chartDataFromChart(chart: Chart, varga: Varga, { showLagna }: { 
     };
   });
   return { ascSign: showLagna ? signIndex(v.lagna_sign) : null, planets };
+}
+
+/** `transits_at` dönüşü → çizim verisi (burç ve derece Rust'tan; dönüşüm yalnızca biçimdir). */
+export function transitPlanets(view: TransitView): ChartPlanet[] {
+  return view.snapshot.grahas.flatMap((g) =>
+    isGrahaId(g.graha) && g.deg_in_sign !== null ? [{ id: g.graha, sign: signIndex(g.sign), degInSign: g.deg_in_sign, retrograde: g.retrograde }] : [],
+  );
 }

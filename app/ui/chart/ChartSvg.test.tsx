@@ -259,3 +259,30 @@ test.each(STYLES)("%s without a lagna draws no lagna marker or fill and names ho
   expect(container.querySelector('[data-house="1"]')).toHaveAttribute("data-sign", "0");
   expect(container.querySelector('[data-house="1"]')).toHaveAttribute("aria-label", "Ar");
 });
+
+test("transit labels share the house layout, are parenthesised and not interactive", () => {
+  const data: ChartData = {
+    ascSign: 0,
+    planets: [{ id: "Sun", sign: 0, degInSign: 10, retrograde: false }],
+    transits: [
+      { id: "Saturn", sign: 0, degInSign: 3, retrograde: true },
+      { id: "Moon", sign: 5, degInSign: 20, retrograde: false },
+    ],
+  };
+  const { container } = render(<ChartSvg data={data} style="north" labels={labels} />);
+  const transits = [...container.querySelectorAll(".chart-transit")];
+  expect(transits.map((t) => t.textContent)).toEqual([`(${labels.graha.Saturn}R)`, `(${labels.graha.Moon})`]);
+  for (const t of transits) {
+    expect(t.closest("[role=button]")).toBeNull();
+    expect(t).toHaveAttribute("aria-hidden", "true");
+  }
+  // Natal ve transit etiketi aynı hücrede çakışmaz.
+  const sun = container.querySelector('[data-graha="Sun"]')!;
+  const sat = container.querySelector('[data-transit="Saturn"]')!;
+  expect(`${sun.getAttribute("data-x")},${sun.getAttribute("data-y")}`).not.toBe(`${sat.getAttribute("x")},${sat.getAttribute("y")}`);
+});
+
+test("without transits the drawing has no transit labels", () => {
+  const { container } = render(<ChartSvg data={{ ascSign: 0, planets: [] }} style="south" labels={labels} />);
+  expect(container.querySelector(".chart-transit")).toBeNull();
+});

@@ -1,12 +1,13 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import type { Varga } from "../bindings";
-import { chartDataFromChart, isVarga, VARGA_NAMES, VARGAS } from "../chart/adapter";
-import { ChartSvg } from "../chart/ChartSvg";
-import { CHART_STYLES, isChartStyle } from "../chart/types";
+import { chartDataFromChart, isVarga, transitPlanets, VARGA_NAMES, VARGAS } from "../chart/adapter";
+import { ChartSvg, type ChartSvgProps } from "../chart/ChartSvg";
+import { CHART_STYLES, isChartStyle, type ChartData } from "../chart/types";
 import { useHighlight } from "../highlight/store";
 import { timeUnknown } from "../session/birth";
 import { useSession } from "../session/store";
+import { useTransit } from "../transit/store";
 import { useLayoutStore } from "../view/store";
 import { chartLabels } from "./labels";
 import "./panels.css";
@@ -28,10 +29,20 @@ export function ChartPanel({ panel }: PanelProps) {
   const id = useId();
   const varga = chartVarga(panel.settings);
   const style = isChartStyle(panel.settings.style) ? panel.settings.style : "north";
+  const ringOn = panel.settings.transit_ring === true;
+  const ringDrawn = ringOn && varga === "D1";
 
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
   const unknown = timeUnknown(opened);
   const data = chartDataFromChart(opened.chart, varga, { showLagna: !unknown });
+  const svgProps = {
+    style,
+    labels: chartLabels(t, varga),
+    highlight: highlight.active,
+    pressed: highlight.pinned,
+    onHover: highlight.hover,
+    onPin: highlight.togglePin,
+  };
   return (
     <div className="chart-panel">
       <div className="chart-panel-toolbar">
@@ -59,6 +70,21 @@ export function ChartPanel({ panel }: PanelProps) {
             </option>
           ))}
         </select>
+        <label className="chart-ring-toggle">
+          <input
+            type="checkbox"
+            checked={ringOn}
+            disabled={varga !== "D1"}
+            aria-describedby={varga !== "D1" ? `${id}-ring` : undefined}
+            onChange={(e) => setPanelSettings(panel.id, { transit_ring: e.target.checked })}
+          />
+          {t("chart.transitRing")}
+        </label>
+        {varga !== "D1" && (
+          <span id={`${id}-ring`} className="visually-hidden">
+            {t("chart.transitRingOnlyD1")}
+          </span>
+        )}
       </div>
       {unknown && (
         <p className="panel-notice" role="note">
@@ -69,19 +95,25 @@ export function ChartPanel({ panel }: PanelProps) {
       )}
       {data ? (
         <div className="chart-panel-figure">
-          <ChartSvg
-            data={data}
-            style={style}
-            labels={chartLabels(t, varga)}
-            highlight={highlight.active}
-            pressed={highlight.pinned}
-            onHover={highlight.hover}
-            onPin={highlight.togglePin}
-          />
+          {ringDrawn ? <RingChart data={data} {...svgProps} /> : <ChartSvg data={data} {...svgProps} />}
         </div>
       ) : (
         <p className="panel-message">{t("chart.vargaMissing", { varga })}</p>
       )}
     </div>
+  );
+}
+
+/** Halka açıkken: transitler okunur (tüketici kaydı) ve natal çizime eklenir. */
+function RingChart({ data, ...props }: { data: ChartData } & Omit<ChartSvgProps, "data">) {
+  const { t } = useTranslation();
+  const { view } = useTransit();
+  const transits = view ? transitPlanets(view) : [];
+  const list = transits.map((p) => `${t(`grahaName.${p.id}`)} ${t(`sign.${p.sign}`)} ${Math.floor(p.degInSign)}°`).join(", ");
+  return (
+    <>
+      <ChartSvg data={{ ...data, transits }} {...props} />
+      {view && <p className="visually-hidden">{t("chart.transitList", { list })}</p>}
+    </>
   );
 }

@@ -29,6 +29,9 @@ export const fr: Messages = {
     "11": "Poi",
   },
   chart: {
+    transitRing: "Anneau des transits",
+    transitRingOnlyD1: "L’anneau des transits n’est tracé qu’en D1.",
+    transitList: "Transit : {{list}}",
     title: "Carte {{varga}}",
     lagna: "As",
     house: "Maison {{house}}, {{sign}}",
