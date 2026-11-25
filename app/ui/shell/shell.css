@@ -72,8 +72,14 @@
 .layout-error:empty {
   display: none;
 }
+.shell-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
 .shell-main {
   flex: 1;
+  min-width: 0;
   padding: 8px;
   background: var(--bg);
 }

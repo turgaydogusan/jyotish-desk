@@ -20,6 +20,7 @@ function Probe() {
       <button onClick={() => view.setDashaPath(["Rahu", "Jupiter"] as Graha[])}>path</button>
       <button onClick={() => view.openChart(7, ["Venus"])}>open7</button>
       <button onClick={() => view.openChart(8, "garbage")}>open8</button>
+      <button onClick={() => view.flush()}>flush</button>
       <button
         onClick={() => {
           store.select(BUILTIN_LAYOUT_IDS.research);
@@ -94,6 +95,19 @@ test("opening another chart flushes the pending save to the previous chart first
   expect(p.saved.map((s) => [s.chartId, s.viewState.dasha_expanded_path])).toEqual([[7, ["Rahu", "Jupiter"]]]);
   expect(screen.getByTestId("chart")).toHaveTextContent("8");
   expect(screen.getByTestId("path")).toHaveTextContent(""); // bozuk yol boş yol olur
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
+  expect(p.saved).toHaveLength(1);
+});
+
+test("flush writes the pending save at once and the debounce timer then writes nothing", () => {
+  const p = memoryPersistence();
+  setup(p);
+  fireEvent.click(screen.getByText("open7"));
+  fireEvent.click(screen.getByText("flush"));
+  expect(p.saved).toHaveLength(0); // bekleyen kayıt yok
+  fireEvent.click(screen.getByText("path"));
+  fireEvent.click(screen.getByText("flush"));
+  expect(p.saved.map((s) => [s.chartId, s.viewState.dasha_expanded_path])).toEqual([[7, ["Rahu", "Jupiter"]]]);
   act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS * 2));
   expect(p.saved).toHaveLength(1);
 });

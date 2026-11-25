@@ -1,0 +1,94 @@
+.sidebar {
+  flex: 0 0 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  color: var(--text);
+  overflow: auto;
+}
+.sidebar-heading {
+  margin: 4px 0;
+  font-size: var(--fs-panel-title);
+  font-weight: var(--fw-medium);
+}
+.sidebar-subheading {
+  margin: 4px 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+}
+.sidebar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar-hint {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-table);
+}
+.sidebar-error {
+  color: var(--danger);
+  font-size: var(--fs-table);
+}
+.sidebar-empty {
+  color: var(--text-2);
+}
+.sidebar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.client-rows,
+.chart-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.client-rows button,
+.chart-rows button:first-child {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+}
+.chart-rows li {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+/* Açık danışan ve harita: zemin rengi + kenar çizgisi + kalın ad (renk tek başına değil). */
+.client-rows button[aria-current="true"],
+.chart-rows button[aria-current="true"] {
+  background: var(--select);
+  border-color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+.client-meta {
+  color: var(--text-2);
+  font-size: var(--fs-table);
+}
+.icon-button[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.button-danger {
+  border: 1px solid var(--danger);
+}

@@ -38,6 +38,11 @@ export interface ViewStore {
   openChart(chartId: number, dashaPath: unknown): void;
   /** Açık harita kapandı (ör. danışan silindi): bekleyen kayıt yazılır, sonraki kayıt yalnızca düzendir. */
   closeChart(): void;
+  /**
+   * Bekleyen kaydı hemen yazar; bekleyen yoksa bir şey yapmaz. Haritayı ya da danışanı silen
+   * komuttan önce çağrılır: kayıt, silinen haritaya silmeden sonra gönderilmez (carried rule C5).
+   */
+  flush(): void;
 }
 
 const ViewContext = createContext<{ view: ViewStore; layout: LayoutStore } | null>(null);
@@ -141,6 +146,7 @@ export function ViewStateProvider({
       setDashaPath: (path) => dispatch({ type: "setDashaPath", path }),
       openChart: (chartId, dashaPath) => dispatch({ type: "openChart", chartId, dashaPath }),
       closeChart: () => dispatch({ type: "closeChart" }),
+      flush: () => flushRef.current(),
     };
     return { view, layout };
   }, [state, dispatch]);

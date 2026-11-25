@@ -10,6 +10,9 @@ vi.mock("./api", () => ({
     updateChart: vi.fn(),
     saveViewState: vi.fn(async () => ({ status: "ok", data: null })),
     savePanelLayout: vi.fn(async () => ({ status: "ok", data: null })),
+    listClients: vi.fn(async () => ({ status: "ok", data: [] })),
+    listTags: vi.fn(async () => ({ status: "ok", data: [] })),
+    listCharts: vi.fn(async () => ({ status: "ok", data: [] })),
   },
 }));
 
@@ -165,6 +168,18 @@ test("Cmd+Shift+N still works after a choice in a select (M6-2)", () => {
   theme.focus();
   fireEvent.keyDown(theme, { key: "N", metaKey: true, shiftKey: true });
   expect(screen.queryByRole("region", { name: "Notlar" })).toBeNull();
+});
+
+test("Cmd+\\ and the Clients button show and hide the client sidebar", () => {
+  renderApp();
+  const toggle = screen.getByRole("button", { name: "Danışanlar" });
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
+  fireEvent.keyDown(window, { key: "\\", code: "Backslash", metaKey: true });
+  expect(screen.queryByRole("complementary", { name: "Danışanlar" })).toBeNull();
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(toggle);
+  expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
 });
 
 test("theme menu sets data-theme and remembers the choice", () => {

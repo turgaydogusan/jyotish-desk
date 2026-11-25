@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { isLanguage, LANGUAGES, setLanguage, DEFAULT_LANGUAGE } from "../i18n";
 import { isThemePref, THEME_PREFS, type ThemePref } from "../theme/theme";
+import { SIDEBAR_ID } from "../clients/Sidebar";
 import { ChartTitle } from "./ChartTitle";
 import { LayoutPicker } from "./LayoutPicker";
 
@@ -13,14 +14,21 @@ export interface TopBarProps {
   onNewChart(): void;
   /** Açık harita yoksa verilmez (düğme gösterilmez). */
   onEditChart?: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar(): void;
 }
 
 /** Üst çubuk (spec §4): solda danışan ve harita (uyarı rozetleriyle), ortada düzen seçici, sağda tema, dil ve baskı. */
-export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp, onNewChart, onEditChart }: TopBarProps) {
+export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp, onNewChart, onEditChart, sidebarOpen, onToggleSidebar }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : DEFAULT_LANGUAGE;
   return (
     <header className="topbar no-print">
+      {!printView && (
+        <button type="button" aria-expanded={sidebarOpen} aria-controls={SIDEBAR_ID} aria-keyshortcuts="Meta+Backslash" onClick={onToggleSidebar}>
+          {t("clients.toggle")}
+        </button>
+      )}
       <ChartTitle />
       <div className="topbar-actions">
         <button type="button" aria-keyshortcuts="Meta+N" onClick={onNewChart}>
