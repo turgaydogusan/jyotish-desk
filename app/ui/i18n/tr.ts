@@ -407,6 +407,17 @@ export const tr = {
     body: "Danışanın doğum bilgisini girerek başlayın.",
     action: "Yeni harita",
   },
+  transit: {
+    date: "Transit anı",
+    dateLabel: "Tarih",
+    timeLabel: "Saat",
+    apply: "Uygula",
+    now: "Şimdi",
+    shownNow: "Şimdi: {{when}}",
+    shown: "Gösterilen an: {{when}}",
+    caption: "Transit konumları, {{when}}",
+    col: { graha: "Graha", sign: "Burç", degree: "Derece", nakshatra: "Nakshatra", house: "Natal ev", retro: "Retro" },
+  },
 };
 
 type Strings<T> = { [K in keyof T]: T[K] extends string ? string : Strings<T[K]> };

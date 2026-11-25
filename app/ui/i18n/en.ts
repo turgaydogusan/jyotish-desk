@@ -408,4 +408,15 @@ export const en: Messages = {
     body: "Start by entering the client's birth data.",
     action: "New chart",
   },
+  transit: {
+    date: "Transit moment",
+    dateLabel: "Date",
+    timeLabel: "Time",
+    apply: "Apply",
+    now: "Now",
+    shownNow: "Now: {{when}}",
+    shown: "Shown moment: {{when}}",
+    caption: "Transit positions, {{when}}",
+    col: { graha: "Graha", sign: "Sign", degree: "Degree", nakshatra: "Nakshatra", house: "Natal house", retro: "Retro" },
+  },
 };

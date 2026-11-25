@@ -6,6 +6,7 @@ import { PANEL_KINDS, type Panel } from "../layout/model";
 import { NotesPanel } from "../notes/NotesPanel";
 import { fixture } from "../test/fixture";
 import { renderWithStores } from "../test/render";
+import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { ChartPanel } from "./ChartPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { panelDefinition, PANEL_REGISTRY } from "./registry";
@@ -28,9 +29,10 @@ test("registry covers the seven kinds; chart, graha_table, dasha_tree and notes 
   expect(PANEL_REGISTRY.graha_table.component).toBe(GrahaTablePanel);
   expect(PANEL_REGISTRY.dasha_tree.component).toBe(DashaTreePanel);
   expect(PANEL_REGISTRY.notes.component).toBe(NotesPanel);
-  for (const kind of ["dasha_strip", "transit_table", "birth_info"] as const) {
+  for (const kind of ["dasha_strip", "birth_info"] as const) {
     expect(PANEL_REGISTRY[kind].component).toBe(UnavailablePanel);
   }
+  expect(PANEL_REGISTRY.transit_table.component).toBe(TransitTablePanel);
   expect(panelDefinition("yoga_list")).toMatchObject({ titleKey: "panel.unknown", component: UnavailablePanel });
   const keys = new Set(Object.keys(tr.panel).map((k) => `panel.${k}`));
   for (const kind of [...PANEL_KINDS, "yoga_list"]) expect(keys.has(panelDefinition(kind).titleKey)).toBe(true);

@@ -1,3 +1,4 @@
+import { TransitProvider } from "./transit/store";
 import { useState, type ReactNode } from "react";
 import { EMPTY_BOOT, type Boot } from "./boot";
 import { HighlightProvider } from "./highlight/store";
@@ -51,7 +52,9 @@ function Stores({ boot, persistence, children }: { boot: Boot; persistence?: Vie
   );
   return (
     <ViewStateProvider initial={initial} persistence={store}>
-      <SessionProvider initial={boot.opened}>{children}</SessionProvider>
+      <SessionProvider initial={boot.opened}>
+        <TransitProvider>{children}</TransitProvider>
+      </SessionProvider>
     </ViewStateProvider>
   );
 }

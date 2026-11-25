@@ -8,6 +8,7 @@ import type { LayoutState } from "../layout/model";
 import { PrefsProvider } from "../settings/prefs";
 import { SessionProvider } from "../session/store";
 import { NoticeProvider } from "../shell/notices";
+import { TransitProvider } from "../transit/store";
 import { initialViewModel } from "../view/model";
 import { memoryPersistence } from "../view/persistence";
 import { ViewStateProvider } from "../view/store";
@@ -33,7 +34,9 @@ export function renderWithStores(ui: ReactNode, { opened = fixture().opened, lay
       <PrefsProvider initial={prefs}>
         <ViewStateProvider initial={initial} persistence={persistence} debounceMs={debounceMs}>
           <SessionProvider initial={opened}>
-            <HighlightProvider>{ui}</HighlightProvider>
+            <TransitProvider>
+              <HighlightProvider>{ui}</HighlightProvider>
+            </TransitProvider>
           </SessionProvider>
         </ViewStateProvider>
       </PrefsProvider>

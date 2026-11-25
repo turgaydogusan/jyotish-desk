@@ -1,0 +1,60 @@
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+
+vi.mock("../api", () => ({ api: { transitsAt: vi.fn() } }));
+
+import { api } from "../api";
+import type { Panel } from "../layout/model";
+import { fixture, unknownTimeOpened } from "../test/fixture";
+import { renderWithStores } from "../test/render";
+import { browserTimeZone } from "./store";
+import { TransitTablePanel } from "./TransitTablePanel";
+
+const panel: Panel = { id: "tt", kind: "transit_table", x: 0, y: 0, w: 6, h: 8, settings: {} };
+
+beforeEach(() => vi.mocked(api.transitsAt).mockResolvedValue({ status: "ok", data: fixture().transit }));
+afterEach(() => vi.mocked(api.transitsAt).mockReset());
+
+test("nine rows: sign, degree, nakshatra, natal house and the retro mark (none on the nodes)", async () => {
+  renderWithStores(<TransitTablePanel panel={panel} />);
+  const table = await screen.findByRole("table");
+  const rows = within(table).getAllByRole("row").slice(1);
+  expect(rows).toHaveLength(9);
+  const tr = fixture().transit.snapshot.grahas;
+  rows.forEach((row, i) => {
+    const cells = within(row).getAllByRole("cell");
+    expect(cells[3]).toHaveTextContent(String(tr[i].natal_house));
+    const nodes = tr[i].graha === "Rahu" || tr[i].graha === "Ketu";
+    expect(cells[4]).toHaveTextContent(tr[i].retrograde && !nodes ? "R" : "");
+  });
+});
+
+test("unknown birth time hides the natal house column values", async () => {
+  renderWithStores(<TransitTablePanel panel={panel} />, { opened: unknownTimeOpened() });
+  const table = await screen.findByRole("table");
+  for (const row of within(table).getAllByRole("row").slice(1)) expect(within(row).getAllByRole("cell")[3]).toHaveTextContent("—");
+});
+
+test("apply sends the wall-clock time in the browser's time zone; now goes back to now", async () => {
+  renderWithStores(<TransitTablePanel panel={panel} />);
+  await screen.findByRole("table");
+  fireEvent.change(screen.getByLabelText("Tarih"), { target: { value: "2026-12-01" } });
+  fireEvent.change(screen.getByLabelText("Saat"), { target: { value: "09:30" } });
+  fireEvent.click(screen.getByRole("button", { name: "Uygula" }));
+  await waitFor(() =>
+    expect(vi.mocked(api.transitsAt).mock.calls.at(-1)?.[0]).toEqual({ Local: { date: "2026-12-01", time: "09:30", tz: browserTimeZone() } }),
+  );
+  const now = screen.getByRole("button", { name: "Şimdi" });
+  expect(now).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(now);
+  await waitFor(() => expect(vi.mocked(api.transitsAt).mock.calls.at(-1)?.[0]).toBe("Now"));
+  expect(now).toHaveAttribute("aria-pressed", "true");
+});
+
+test("an error is shown in the panel with a retry", async () => {
+  vi.mocked(api.transitsAt).mockResolvedValueOnce({ status: "error", error: { code: "nonexistent_local_time", params: { local: "2014-03-31T03:30:00", suggestion: "2014-03-31T04:30:00" } } });
+  renderWithStores(<TransitTablePanel panel={panel} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Yeniden dene" }));
+  expect(await screen.findByRole("table")).toBeInTheDocument();
+  expect(api.transitsAt).toHaveBeenCalledTimes(2);
+});

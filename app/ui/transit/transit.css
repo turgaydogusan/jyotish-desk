@@ -1,0 +1,35 @@
+.transit-panel {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.transit-date {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.transit-zone,
+.transit-shown {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.transit-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.transit-table th,
+.transit-table td {
+  padding: 2px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.transit-table .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

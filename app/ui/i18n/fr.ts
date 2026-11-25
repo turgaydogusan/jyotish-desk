@@ -408,4 +408,15 @@ export const fr: Messages = {
     body: "Commencez par saisir les données de naissance du consultant.",
     action: "Nouvelle carte",
   },
+  transit: {
+    date: "Moment du transit",
+    dateLabel: "Date",
+    timeLabel: "Heure",
+    apply: "Appliquer",
+    now: "Maintenant",
+    shownNow: "Maintenant : {{when}}",
+    shown: "Moment affiché : {{when}}",
+    caption: "Positions des transits, {{when}}",
+    col: { graha: "Graha", sign: "Signe", degree: "Degré", nakshatra: "Nakshatra", house: "Maison natale", retro: "Rétro" },
+  },
 };
