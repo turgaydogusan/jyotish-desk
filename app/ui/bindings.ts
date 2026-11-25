@@ -37,9 +37,38 @@ export const commands = {
 	updateChart: (chartId: number, chart: NewChart, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("update_chart", { chartId, chart }, options)),
 	saveCalcSettings: (chartId: number, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("save_calc_settings", { chartId, settings }, options)),
 	saveViewState: (chartId: number, viewState: ViewState, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("save_view_state", { chartId, viewState }, options)),
+	updateClient: (clientId: number, name: string, gender: Gender | null, options?: InvokeOptions) => typedError<Client, CommandError>(__TAURI_INVOKE("update_client", { clientId, name, gender }, options)),
+	deleteClient: (clientId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_client", { clientId }, options)),
+	deleteChart: (chartId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_chart", { chartId }, options)),
+	listClients: (limit: number, options?: InvokeOptions) => typedError<Client[], CommandError>(__TAURI_INVOKE("list_clients", { limit }, options)),
+	listCharts: (clientId: number, options?: InvokeOptions) => typedError<ChartRecord[], CommandError>(__TAURI_INVOKE("list_charts", { clientId }, options)),
+	searchClients: (query: string, limit: number, options?: InvokeOptions) => typedError<SearchHit[], CommandError>(__TAURI_INVOKE("search_clients", { query, limit }, options)),
+	addNote: (clientId: number, chartId: number | null, body: string, options?: InvokeOptions) => typedError<Note, CommandError>(__TAURI_INVOKE("add_note", { clientId, chartId, body }, options)),
+	updateNote: (noteId: number, body: string, options?: InvokeOptions) => typedError<Note, CommandError>(__TAURI_INVOKE("update_note", { noteId, body }, options)),
+	deleteNote: (noteId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_note", { noteId }, options)),
+	listNotes: (clientId: number, limit: number, options?: InvokeOptions) => typedError<Note[], CommandError>(__TAURI_INVOKE("list_notes", { clientId, limit }, options)),
+	setChartTags: (chartId: number, tags: string[], options?: InvokeOptions) => typedError<string[], CommandError>(__TAURI_INVOKE("set_chart_tags", { chartId, tags }, options)),
+	listTags: (options?: InvokeOptions) => typedError<TagCount[], CommandError>(__TAURI_INVOKE("list_tags", undefined, options)),
+	getAppPrefs: (options?: InvokeOptions) => typedError<AppPrefs, CommandError>(__TAURI_INVOKE("get_app_prefs", undefined, options)),
+	setAppPrefs: (prefs: AppPrefs, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("set_app_prefs", { prefs }, options)),
+	exportJson: (path: string, selection: ExportOptions, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("export_json", { path, selection }, options)),
+	exportCsv: (path: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("export_csv", { path }, options)),
+	importJson: (path: string, options?: InvokeOptions) => typedError<ImportReport, CommandError>(__TAURI_INVOKE("import_json", { path }, options)),
+	importJhd: (paths: string[], options?: InvokeOptions) => typedError<JhdImportResult, CommandError>(__TAURI_INVOKE("import_jhd", { paths }, options)),
 };
 
 /* Types */
+/**
+ *  Genel tercihler (spec §5 `AppPrefs`). Varsayılan görünüm, kullanıcının pano düzenidir
+ *  (`app_state` `panel_layout`, bkz. `view_state`); burada tutulmaz.
+ */
+export type AppPrefs = {
+	schema_version: number,
+	locale: string,
+	/**  Yeni haritalara tam kopyası yazılan genel varsayılan (spec §4 "Ayar katmanları"). */
+	calc_settings: CalcSettings,
+};
+
 /**  Spec §5 `Ashtakavarga`. Burç sütunları Koç'tan (0) Balık'a (11). */
 export type Ashtakavarga = {
 	/**  `ASHTAKAVARGA_GRAHAS` sırasında yedi BAV. */
@@ -222,6 +251,19 @@ export type EngineStatus = {
 	seVersion: string,
 };
 
+export type ExportOptions = {
+	/**  "Notları dahil et"; varsayılan kapalı. */
+	include_notes: boolean,
+	/**  Boşsa tüm danışanlar. */
+	client_ids: number[] | null,
+};
+
+/**  JHD dosyası başına hata. */
+export type FileFailure = {
+	file: string,
+	error: CommandError,
+};
+
 export type FoldChoice = "Earlier" | "Later";
 
 export type Gender = "Male" | "Female" | "Other";
@@ -260,6 +302,32 @@ export type HouseSystem = "WholeSign" |
 "Sripati" | 
 /**  KP. */
 "Placidus";
+
+export type ImportReport = {
+	clients_added: number,
+	charts_added: number,
+	notes_added: number,
+	/**  Zaten var olan (UUID ya da JHD eşleşmesi) ve atlanan kayıtlar. */
+	skipped: number,
+	warnings: ImportWarning[],
+};
+
+export type ImportWarning = {
+	/**  Harita UUID'si ya da JHD dosya adı. */
+	item: string,
+	code: ImportWarningCode,
+};
+
+export type ImportWarningCode = 
+/**  Haritanın ayarı okunamadı; o anki genel varsayılan yazıldı. */
+"CalcSettingsReset" | 
+/**  JHD: saat dilimi ofseti ile boylam 60°'den fazla uyuşmuyor; işaret kuralı şüpheli. */
+"JhdOffsetLongitudeMismatch";
+
+export type JhdImportResult = {
+	report: ImportReport,
+	failed: FileFailure[],
+};
 
 export type Karana = {
 	/**  1..=60 (yarım tithi sırası). */
@@ -428,6 +496,15 @@ export type ResolvedRecord = {
 	tzdb_version: string,
 };
 
+export type SearchHit = {
+	client: Client,
+	matched: SearchMatch,
+	/**  Not eşleşmesinde notun eşleşen bölümü (işaretsiz düz metin); diğerlerinde boş. */
+	snippet: string | null,
+};
+
+export type SearchMatch = "Name" | "Tag" | "Note";
+
 export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | "Libra" | "Scorpio" | "Sagittarius" | "Capricorn" | "Aquarius" | "Pisces";
 
 /**  Açılışın ölümcül olmayan durumları; arayüz uyarı bandında gösterir (spec §7). */
@@ -461,6 +538,11 @@ export type SunriseDef =
 "DiskCenterNoRefraction" | 
 /**  Üst kenar, atmosfer kırılmasıyla (batı konvansiyonu). */
 "UpperLimbRefracted";
+
+export type TagCount = {
+	name: string,
+	charts: number,
+};
 
 export type TimeCertainty = "Exact" | "Approx" | 
 /**  Saat bilinmiyor: `BirthData.time` boştur, hesap yerel 12:00 ile yapılır. */

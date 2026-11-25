@@ -1,5 +1,6 @@
 pub mod client_commands;
 pub mod commands;
+pub mod store_commands;
 
 use std::sync::{Arc, Mutex};
 
@@ -30,6 +31,24 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             client_commands::update_chart,
             client_commands::save_calc_settings,
             client_commands::save_view_state,
+            store_commands::update_client,
+            store_commands::delete_client,
+            store_commands::delete_chart,
+            store_commands::list_clients,
+            store_commands::list_charts,
+            store_commands::search_clients,
+            store_commands::add_note,
+            store_commands::update_note,
+            store_commands::delete_note,
+            store_commands::list_notes,
+            store_commands::set_chart_tags,
+            store_commands::list_tags,
+            store_commands::get_app_prefs,
+            store_commands::set_app_prefs,
+            store_commands::export_json,
+            store_commands::export_csv,
+            store_commands::import_json,
+            store_commands::import_jhd,
         ])
 }
 
