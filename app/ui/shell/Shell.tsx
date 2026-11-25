@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BirthForm } from "../birth/BirthForm";
-import { Sidebar } from "../clients/Sidebar";
+import { Sidebar, SIDEBAR_ID } from "../clients/Sidebar";
 import type { PaletteItem } from "../palette/items";
 import { Palette } from "../palette/Palette";
 import { Dashboard } from "../dashboard/Dashboard";
@@ -16,6 +16,16 @@ import "./shell.css";
 import { TopBar } from "./TopBar";
 import { useElementWidth } from "./useElementWidth";
 
+/**
+ * Kenar çubuğu gizlenmeden önce: odak içindeyse açma düğmesine geçer. Odak belgeye düşmez ve
+ * odaktaki alan (etiketler) çıkışta kaydını yapar; kaldırılan öğe odak çıkışı olayı almaz.
+ */
+function leaveSidebar() {
+  if (document.getElementById(SIDEBAR_ID)?.contains(document.activeElement)) {
+    document.querySelector<HTMLElement>(`[aria-controls="${SIDEBAR_ID}"]`)?.focus();
+  }
+}
+
 export function Shell() {
   const layout = useLayoutStore();
   const { toggleNotes } = layout;
@@ -25,6 +35,10 @@ export function Shell() {
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
   const [sidebar, setSidebar] = useState(true);
   const [palette, setPalette] = useState(false);
+  const toggleSidebar = () => {
+    leaveSidebar();
+    setSidebar((v) => !v);
+  };
   const session = useSession();
   const { opened } = session;
   const { push } = useNotices();
@@ -62,6 +76,7 @@ export function Shell() {
         setForm("edit");
       } else if (command?.id === "sidebar" && !now.printView) {
         e.preventDefault();
+        leaveSidebar();
         setSidebar((v) => !v);
       } else if (command?.id === "palette") {
         e.preventDefault();
@@ -95,7 +110,7 @@ export function Shell() {
         }
         // Kısayollarındaki gibi: baskı görünümünde (pano ve kenar çubuğu yokken) yok sayılır.
         if (item.command === "toggleNotes") return printView ? undefined : toggleNotes();
-        if (item.command === "sidebar") return printView ? undefined : setSidebar((v) => !v);
+        if (item.command === "sidebar") return printView ? undefined : toggleSidebar();
         return setHelp(true);
     }
   };
@@ -111,7 +126,7 @@ export function Shell() {
         onNewChart={() => setForm("new")}
         onEditChart={opened ? () => setForm("edit") : undefined}
         sidebarOpen={sidebar}
-        onToggleSidebar={() => setSidebar((v) => !v)}
+        onToggleSidebar={toggleSidebar}
         onPalette={() => setPalette(true)}
       />
       <NoticeBar />

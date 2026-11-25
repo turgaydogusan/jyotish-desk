@@ -16,6 +16,7 @@ vi.mock("./api", () => ({
     searchClients: vi.fn(async () => ({ status: "ok", data: [] })),
     openClient: vi.fn(),
     listNotes: vi.fn(async () => ({ status: "ok", data: [] })),
+    setChartTags: vi.fn(async (_chartId: number, tags: string[]) => ({ status: "ok", data: tags })),
   },
 }));
 
@@ -192,6 +193,21 @@ test("Cmd+\\ and the Clients button show and hide the client sidebar", () => {
   expect(toggle).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(toggle);
   expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
+});
+
+test("Cmd+\\ from the tags field saves the typed tags and moves focus to the Clients button", async () => {
+  renderApp();
+  const toggle = screen.getByRole("button", { name: "Danışanlar" });
+  const tags = screen.getByLabelText("Etiketler");
+  tags.focus();
+  fireEvent.change(tags, { target: { value: "kariyer" } });
+  fireEvent.keyDown(tags, { key: "\\", code: "Backslash", metaKey: true });
+  expect(screen.queryByRole("complementary", { name: "Danışanlar" })).toBeNull();
+  expect(api.setChartTags).toHaveBeenCalledWith(fixture().opened.chart_record.id, ["kariyer"]);
+  expect(toggle).toHaveFocus();
+  // Kayıt yanıtı kenar çubuğu kapandıktan sonra gelir; yeniden açılınca alan kayıtlı etiketi gösterir.
+  fireEvent.click(toggle);
+  await waitFor(() => expect(screen.getByLabelText("Etiketler")).toHaveValue("kariyer"));
 });
 
 test("Cmd+K, a name and Enter open that client's last chart with no form in between (spec §8)", async () => {

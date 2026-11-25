@@ -48,9 +48,12 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
   const { t, i18n } = useTranslation();
   const session = useSession();
   const id = useId();
-  const editing = mode === "edit" && session.opened !== null;
-  const adding = mode === "add" && session.opened !== null;
-  const [draft, setDraft] = useState<BirthDraft>(() => initialDraft(mode, session.opened));
+  // Form, açıldığı andaki haritaya ve danışana yazar: form açıkken geç gelen bir `open_client`
+  // yanıtı açık haritayı değiştirse de kayıt başka haritaya ya da danışana gitmez.
+  const [target] = useState(() => session.opened);
+  const editing = mode === "edit" && target !== null;
+  const adding = mode === "add" && target !== null;
+  const [draft, setDraft] = useState<BirthDraft>(() => initialDraft(mode, target));
   const [shown, setShown] = useState<FieldErrors>({});
   const [preview, setPreview] = useState<{ ok: MomentPreview } | { error: CommandError } | null>(null);
   const [formError, setFormError] = useState<CommandError | null>(null);
@@ -103,12 +106,11 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
       return;
     }
     setSaving(true);
-    const o = session.opened;
     const r =
-      editing && o
-        ? await api.updateChart(o.chart_record.id, toNewChart(draft, birth))
-        : adding && o
-          ? await api.addChart(o.client.id, toNewChart(draft, birth))
+      editing && target
+        ? await api.updateChart(target.chart_record.id, toNewChart(draft, birth))
+        : adding && target
+          ? await api.addChart(target.client.id, toNewChart(draft, birth))
           : await api.createClient(toNewClient(draft, birth));
     setSaving(false);
     if (r.status === "ok") {

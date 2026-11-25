@@ -163,6 +163,51 @@ test("add mode keeps the open client's name locked and saves with add_chart", as
   expect(onClose).toHaveBeenCalledOnce();
 });
 
+/** Geç gelen `open_client` yanıtı: form açıkken açık harita değişir. */
+function LateOpen() {
+  const { open } = useSession();
+  const other = fixture().opened;
+  other.client = { ...other.client, id: 2, name: "Burak" };
+  other.chart_record = { ...other.chart_record, id: 20, client_id: 2 };
+  return (
+    <button type="button" onClick={() => open(other)}>
+      geç yanıt
+    </button>
+  );
+}
+
+function renderWithLateOpen(mode: "add" | "edit") {
+  renderWithStores(
+    <>
+      <OpenedName />
+      <LateOpen />
+      <BirthForm mode={mode} onClose={onClose} />
+    </>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "geç yanıt" }));
+  expect(screen.getByRole("status", { name: "açık" })).toHaveTextContent("Burak");
+}
+
+test("edit saves to the chart the form was opened for when another chart opens under it", async () => {
+  renderWithLateOpen("edit");
+  fireEvent.change(input("Harita etiketi"), { target: { value: "Düzeltilmiş" } });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(api.updateChart).toHaveBeenCalledWith(fixture().opened.chart_record.id, expect.objectContaining({ label: "Düzeltilmiş" }));
+  expect(api.updateChart).toHaveBeenCalledOnce();
+});
+
+test("add saves to the client the form was opened for when another client opens under it", async () => {
+  vi.mocked(api.addChart).mockResolvedValueOnce({ status: "ok", data: fixture().opened });
+  renderWithLateOpen("add");
+  expect(input("Danışan adı")).toHaveValue("Örnek Danışan");
+  await fillDelhi();
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(api.addChart).toHaveBeenCalledWith(fixture().opened.client.id, expect.objectContaining({ birth: expect.objectContaining({ date: "2000-01-01" }) }));
+  expect(api.createClient).not.toHaveBeenCalled();
+});
+
 test("saving replaces boot and store notices with the warnings of the returned chart", async () => {
   const stale: Notice[] = [
     { id: "boot", type: "error", messageKey: "notice.restoreFailed", error: { code: "store_sqlite", params: {} } },
