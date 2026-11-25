@@ -31,6 +31,7 @@ export const commands = {
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
 	addChart: (clientId: number, chart: NewChart, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("add_chart", { clientId, chart }, options)),
 	updateChart: (chartId: number, chart: NewChart, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("update_chart", { chartId, chart }, options)),
+	keepStoredMoment: (chartId: number, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("keep_stored_moment", { chartId }, options)),
 	saveCalcSettings: (chartId: number, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("save_calc_settings", { chartId, settings }, options)),
 	saveViewState: (chartId: number, viewState: ViewState, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("save_view_state", { chartId, viewState }, options)),
 	updateClient: (clientId: number, name: string, gender: Gender | null, options?: InvokeOptions) => typedError<Client, CommandError>(__TAURI_INVOKE("update_client", { clientId, name, gender }, options)),
@@ -47,7 +48,7 @@ export const commands = {
 	listNotes: (clientId: number, limit: number, options?: InvokeOptions) => typedError<Note[], CommandError>(__TAURI_INVOKE("list_notes", { clientId, limit }, options)),
 	setChartTags: (chartId: number, tags: string[], options?: InvokeOptions) => typedError<string[], CommandError>(__TAURI_INVOKE("set_chart_tags", { chartId, tags }, options)),
 	listTags: (options?: InvokeOptions) => typedError<TagCount[], CommandError>(__TAURI_INVOKE("list_tags", undefined, options)),
-	getAppPrefs: (options?: InvokeOptions) => typedError<AppPrefs, CommandError>(__TAURI_INVOKE("get_app_prefs", undefined, options)),
+	getAppPrefs: (options?: InvokeOptions) => typedError<PrefsLoad, CommandError>(__TAURI_INVOKE("get_app_prefs", undefined, options)),
 	setAppPrefs: (prefs: AppPrefs, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("set_app_prefs", { prefs }, options)),
 	/**  Kullanıcının pano düzeni (`app_state`); kayıt yoksa ya da okunamazsa `None`. */
 	loadPanelLayout: (options?: InvokeOptions) => typedError<PanelLayout | null, CommandError>(__TAURI_INVOKE("load_panel_layout", undefined, options)),
@@ -490,6 +491,31 @@ export type PlaceHit = {
 	/**  IANA kimliği; form saat dilimini buradan önerir. */
 	timezone: string,
 };
+
+/**  `app_prefs_load` sonucu: kullanılacak tercihler ve okuma uyarıları. */
+export type PrefsLoad = {
+	prefs: AppPrefs,
+	warnings: PrefsWarning[],
+};
+
+/**  Tercih okumasının ölümcül olmayan durumları; arayüz açılış bandında gösterir (spec §7). */
+export type PrefsWarning = 
+/**  Kayıt JSON nesnesi değil; yerleşik varsayılanlar kullanıldı. */
+"Unreadable" | 
+/**
+ *  Genel hesap varsayılanı okunamadı ya da göç edilemedi; yerleşik varsayılan kullanıldı.
+ *  Saklanan JSON değiştirilmedi.
+ */
+({ CalcSettingsReset: {
+	found_version: number | null,
+} }) & { TooNew?: never } | 
+/**
+ *  Tercihler bu sürümden yeni bir uygulamayla yazıldı; yerleşik varsayılanlar kullanıldı ve
+ *  kayıt korunur (`set_app_prefs` üzerine yazmaz).
+ */
+({ TooNew: {
+	found: number,
+} }) & { CalcSettingsReset?: never };
 
 /**
  *  Kayıtta saklanan çözülmüş an (spec §5 `resolved_*`, `tzdb_version`). Açılışta atlas

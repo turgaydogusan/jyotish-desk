@@ -9,12 +9,12 @@ use std::time::{Duration, Instant};
 use ephemeris::Engine;
 use jyotish_core::{AyanamsaSystem, CalcSettings, Graha};
 use jyotish_desk_lib::client_commands::{
-    add_chart_blocking, create_client_blocking, open_client_blocking, restore_session_blocking,
-    save_calc_settings_blocking, update_chart_blocking, DB_FILE_NAME,
+    add_chart_blocking, create_client_blocking, keep_stored_moment_blocking, open_client_blocking,
+    restore_session_blocking, save_calc_settings_blocking, update_chart_blocking, DB_FILE_NAME,
 };
 use serde_json::{json, Map};
 use store::{
-    BirthData, ChartKind, Layout, NewChart, NewClient, Panel, PanelLayout, Place, Store,
+    AppPrefs, BirthData, ChartKind, Layout, NewChart, NewClient, Panel, PanelLayout, Place, Store,
     TimeCertainty, TzChoice, ViewState,
 };
 
@@ -135,6 +135,14 @@ fn open_client_round_trips_and_is_fast() {
     std::thread::sleep(Duration::from_millis(5));
     let before = open_client_blocking(&engine, &store, client_id, Some(chart_id)).expect("reopen");
 
+    // Genel varsayılan (spec §4 "Ayar katmanları") da yeniden başlatmadan sağ çıkar.
+    let prefs = AppPrefs {
+        locale: "en".into(),
+        calc_settings: raman.clone(),
+        ..AppPrefs::default()
+    };
+    store.lock().unwrap().set_app_prefs(&prefs).unwrap();
+
     // Kapat ve yeniden aç (uygulama yeniden başlatma).
     drop(store);
     let store = Mutex::new(Store::open(&path).expect("reopen store"));
@@ -151,6 +159,16 @@ fn open_client_round_trips_and_is_fast() {
     assert_eq!(after.recent_notes[0].body, "ilk seans");
     assert_eq!(after.chart, before.chart);
     assert!(after.warnings.is_empty());
+    let load = store.lock().unwrap().app_prefs_load().unwrap();
+    assert_eq!(load.prefs, prefs);
+    assert!(load.warnings.is_empty());
+    // "Saklanan zamanı koru" haritayı yeniden açar; an ve harita değişmez.
+    let kept = keep_stored_moment_blocking(&engine, &store, chart_id).expect("keep");
+    assert_eq!(
+        kept.chart_record.resolved.utc,
+        after.chart_record.resolved.utc
+    );
+    assert_eq!(kept.chart, after.chart);
 
     // Düzenle kipi: DST boşluğu kaydı engeller, harita değişmez.
     let gap = update_chart_blocking(

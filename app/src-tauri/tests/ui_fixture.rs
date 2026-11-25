@@ -25,7 +25,7 @@ const CHART_UUID: &str = "00000000-0000-4000-8000-000000000002";
 fn delhi() -> BirthData {
     BirthData {
         date: "2000-01-01".into(),
-        time: Some("17:30".into()),
+        time: Some("17:30:00".into()),
         time_certainty: TimeCertainty::Exact,
         place: Place {
             name: "New Delhi".into(),
@@ -93,6 +93,13 @@ fn ui_fixture_is_up_to_date() {
         opened.chart.dasha.seed,
     )
     .expect("transit");
+    // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
+    assert_eq!(opened.chart_record.birth, delhi());
+    let prefs = store
+        .lock()
+        .expect("store")
+        .app_prefs_load()
+        .expect("prefs");
     let value = json!({
         "opened": opened,
         "dasha_children": { "path": path, "periods": children },
@@ -100,6 +107,7 @@ fn ui_fixture_is_up_to_date() {
         "preview": preview,
         "gap_error": gap_error,
         "transit": transit,
+        "prefs": prefs,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")

@@ -148,10 +148,10 @@ test("keys pressed during IME composition neither move nor select nor close", as
 });
 
 test("an unavailable atlas is explained and leaves the field usable", async () => {
-  vi.mocked(api.searchPlaces).mockResolvedValue({ status: "error", error: { code: "atlas_unavailable", params: {} } });
+  vi.mocked(api.searchPlaces).mockResolvedValue({ status: "error", error: { code: "atlas_unavailable", params: { reason: "missing" } } });
   render(<Harness onSelect={() => {}} />);
   await type("delhi");
-  expect(screen.getByRole("status")).toHaveTextContent("Yer atlası açılamadı; koordinatları elle girin.");
+  expect(screen.getByRole("status")).toHaveTextContent("Yer araması kullanılamıyor (atlas dosyası yok). Enlem, boylam ve saat dilimini elle girebilirsiniz.");
   expect(box()).toHaveAttribute("aria-expanded", "false");
   expect(box()).toHaveValue("delhi");
   // Alan boşalınca eski aramanın hatası kalkar.

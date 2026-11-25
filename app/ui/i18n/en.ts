@@ -115,7 +115,7 @@ export const en: Messages = {
     invalid_dasha_input: "Invalid dasha request: {{field}}.",
     panchang_search: "Panchang boundary not found ({{what}}).",
     invalid_transit_input: "Invalid transit request: {{field}}.",
-    atlas_unavailable: "The place atlas is unavailable; enter coordinates manually.",
+    atlas_unavailable: "Place search is unavailable ({{reason}}). You can enter latitude, longitude and time zone by hand.",
     atlas_sqlite: "The place atlas could not be read ({{detail}}).",
     atlas_io: "The place atlas file could not be read ({{detail}}).",
     atlas_schema: "Place atlas version mismatch ({{found}}, expected {{expected}}).",
@@ -172,6 +172,7 @@ export const en: Messages = {
     PlacidusPolarFallback: "Placidus failed at this latitude; Porphyry was used.",
     SunriseUnavailable: "No sunrise or sunset at the birth place.",
   },
+  atlasReason: { missing: "the atlas file is missing", schema: "the atlas file cannot be read", io: "the atlas file cannot be accessed" },
   notice: {
     region: "Notifications",
     dismiss: "Dismiss",

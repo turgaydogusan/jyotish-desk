@@ -114,7 +114,7 @@ export const tr = {
     invalid_dasha_input: "Dasa isteği geçersiz: {{field}}.",
     panchang_search: "Panchang sınırı bulunamadı ({{what}}).",
     invalid_transit_input: "Transit isteği geçersiz: {{field}}.",
-    atlas_unavailable: "Yer atlası açılamadı; koordinatları elle girin.",
+    atlas_unavailable: "Yer araması kullanılamıyor ({{reason}}). Enlem, boylam ve saat dilimini elle girebilirsiniz.",
     atlas_sqlite: "Yer atlası okunamadı ({{detail}}).",
     atlas_io: "Yer atlası dosyası okunamadı ({{detail}}).",
     atlas_schema: "Yer atlası sürümü uyuşmuyor ({{found}}, beklenen {{expected}}).",
@@ -171,6 +171,7 @@ export const tr = {
     PlacidusPolarFallback: "Placidus bu enlemde hesaplanamadı; Porphyry kullanıldı.",
     SunriseUnavailable: "Doğum yerinde gün doğumu ya da batımı yok.",
   },
+  atlasReason: { missing: "atlas dosyası yok", schema: "atlas dosyası okunamıyor", io: "atlas dosyasına erişilemiyor" },
   notice: {
     region: "Bildirimler",
     dismiss: "Kapat",

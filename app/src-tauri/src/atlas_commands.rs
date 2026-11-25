@@ -23,19 +23,54 @@ pub const MAX_QUERY_CHARS: usize = 100;
 
 /// Atlas durumu. Dosya açılamazsa uygulama yine açılır: yer araması `atlas_unavailable`
 /// döner, elle koordinat girişi çalışır (spec §12 "manuel koordinat birinci sınıf").
-pub struct AtlasState(Option<Mutex<Atlas>>);
+/// Atlasın neden açılamadığı (Plan 11 D18). Yol taşımaz (C1, C2′).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AtlasUnavailable {
+    /// Dosya yok (paket eksik ya da geliştirme kopyasında atlas üretilmemiş).
+    Missing,
+    /// Dosya var ama şema beklenen değil ya da SQLite veritabanı değil.
+    Schema,
+    /// Okuma hatası (izin, aygıt).
+    Io,
+}
+
+impl AtlasUnavailable {
+    fn code(self) -> &'static str {
+        match self {
+            Self::Missing => "missing",
+            Self::Schema => "schema",
+            Self::Io => "io",
+        }
+    }
+}
+
+pub struct AtlasState(Result<Mutex<Atlas>, AtlasUnavailable>);
 
 impl AtlasState {
     pub fn open(path: &Path) -> Self {
-        Self(Atlas::open(path).ok().map(Mutex::new))
+        if !path.exists() {
+            return Self(Err(AtlasUnavailable::Missing));
+        }
+        Self(Atlas::open(path).map(Mutex::new).map_err(|e| match e {
+            AtlasError::Io(_) => AtlasUnavailable::Io,
+            AtlasError::Sqlite(_) | AtlasError::SchemaMismatch { .. } | AtlasError::Geonames(_) => {
+                AtlasUnavailable::Schema
+            }
+        }))
     }
 
     pub fn unavailable() -> Self {
-        Self(None)
+        Self(Err(AtlasUnavailable::Missing))
     }
 
     pub fn is_available(&self) -> bool {
-        self.0.is_some()
+        self.0.is_ok()
+    }
+
+    fn get(&self) -> Result<&Mutex<Atlas>, CommandError> {
+        self.0
+            .as_ref()
+            .map_err(|r| CommandError::new("atlas_unavailable", &[("reason", r.code().to_owned())]))
     }
 }
 
@@ -82,9 +117,7 @@ pub fn search_places_blocking(
     query: &str,
     limit: u32,
 ) -> Result<Vec<PlaceHit>, CommandError> {
-    let Some(atlas) = &atlas.0 else {
-        return Err(CommandError::new("atlas_unavailable", &[]));
-    };
+    let atlas = atlas.get()?;
     let query: String = query.trim().chars().take(MAX_QUERY_CHARS).collect();
     let limit = limit.min(MAX_PLACE_HITS) as usize;
     if query.is_empty() || limit == 0 {
@@ -92,7 +125,7 @@ pub fn search_places_blocking(
     }
     let places = atlas
         .lock()
-        .map_err(|_| CommandError::new("atlas_unavailable", &[]))?
+        .map_err(|_| CommandError::new("atlas_unavailable", &[("reason", "io".to_owned())]))?
         .search(&query, limit)?;
     Ok(places
         .into_iter()
@@ -283,5 +316,31 @@ mod tests {
         );
         let e = CommandError::from(AtlasError::Io(std::io::Error::other("x")));
         assert_eq!(e.code, "atlas_io");
+    }
+
+    #[test]
+    fn unavailable_atlas_reports_why_without_a_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = AtlasState::open(&dir.path().join("atlas.sqlite"));
+        let e = search_places_blocking(&missing, "delhi", 5).unwrap_err();
+        assert_eq!(
+            (e.code.as_str(), e.params["reason"].as_str()),
+            ("atlas_unavailable", "missing")
+        );
+        assert_eq!(e.params.len(), 1);
+        let junk = dir.path().join("junk.sqlite");
+        std::fs::write(&junk, b"not a database").unwrap();
+        let e = search_places_blocking(&AtlasState::open(&junk), "delhi", 5).unwrap_err();
+        assert!(
+            ["schema", "io"].contains(&e.params["reason"].as_str()),
+            "{:?}",
+            e.params
+        );
+        assert_eq!(
+            search_places_blocking(&AtlasState::unavailable(), "delhi", 5)
+                .unwrap_err()
+                .params["reason"],
+            "missing"
+        );
     }
 }

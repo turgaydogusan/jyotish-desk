@@ -115,7 +115,7 @@ export const fr: Messages = {
     invalid_dasha_input: "Requête de dasha invalide : {{field}}.",
     panchang_search: "Limite du panchang introuvable ({{what}}).",
     invalid_transit_input: "Requête de transit invalide : {{field}}.",
-    atlas_unavailable: "L’atlas des lieux est indisponible ; saisissez les coordonnées.",
+    atlas_unavailable: "La recherche de lieux est indisponible ({{reason}}). Vous pouvez saisir la latitude, la longitude et le fuseau à la main.",
     atlas_sqlite: "L’atlas des lieux est illisible ({{detail}}).",
     atlas_io: "Le fichier de l’atlas est illisible ({{detail}}).",
     atlas_schema: "Version de l’atlas incompatible ({{found}}, attendue {{expected}}).",
@@ -172,6 +172,7 @@ export const fr: Messages = {
     PlacidusPolarFallback: "Placidus impossible à cette latitude ; Porphyry utilisé.",
     SunriseUnavailable: "Pas de lever ni de coucher du Soleil au lieu de naissance.",
   },
+  atlasReason: { missing: "fichier d’atlas absent", schema: "fichier d’atlas illisible", io: "fichier d’atlas inaccessible" },
   notice: {
     region: "Notifications",
     dismiss: "Fermer",

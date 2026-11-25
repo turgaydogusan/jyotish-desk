@@ -30,6 +30,12 @@ vi.mock("./bindings", () => ({
     dashaChildren: vi.fn(),
     searchPlaces: vi.fn(),
     previewMoment: vi.fn(),
+    getAppPrefs: vi.fn(),
+    setAppPrefs: vi.fn(),
+    saveCalcSettings: vi.fn(),
+    updateClient: vi.fn(),
+    transitsAt: vi.fn(),
+    keepStoredMoment: vi.fn(),
   },
 }));
 
@@ -98,6 +104,12 @@ test("every wrapper forwards its arguments to the command of the same name", asy
     ["dashaChildren", [{ birth_jd_ut: 1 }, ["Sun"]]],
     ["searchPlaces", ["delhi", 8]],
     ["previewMoment", [{ date: "2000-01-01" }]],
+    ["getAppPrefs", []],
+    ["setAppPrefs", [{ locale: "en" }]],
+    ["saveCalcSettings", [3, { ayanamsa: "Lahiri" }]],
+    ["updateClient", [2, "A", null]],
+    ["transitsAt", [{ kind: "now" }, { ayanamsa: "Lahiri" }, [], { birth_jd_ut: 1 }]],
+    ["keepStoredMoment", [3]],
   ];
   for (const [name, args] of calls) {
     const command = vi.mocked(commands[name] as (...a: unknown[]) => Promise<unknown>);

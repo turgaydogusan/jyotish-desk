@@ -31,6 +31,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             client_commands::create_client,
             client_commands::add_chart,
             client_commands::update_chart,
+            client_commands::keep_stored_moment,
             client_commands::save_calc_settings,
             client_commands::save_view_state,
             store_commands::update_client,

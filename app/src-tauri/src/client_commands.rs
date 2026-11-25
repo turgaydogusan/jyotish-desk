@@ -204,6 +204,26 @@ pub fn update_chart_blocking(
     open_client_blocking(engine, store, rec.client_id, Some(chart_id))
 }
 
+/// tzdb farkında "Saklanan zamanı koru" (Plan 11 D5): kayıt güncel tzdb ile damgalanır, an
+/// değişmez; harita yeniden açılır (uyarısız).
+pub fn keep_stored_moment_blocking(
+    engine: &Engine,
+    store: &Mutex<Store>,
+    chart_id: u32,
+) -> Result<OpenedClient, CommandError> {
+    let rec = lock(store)?.keep_stored_moment(chart_id)?;
+    open_client_blocking(engine, store, rec.client_id, Some(chart_id))
+}
+
+/// `save_view_state` gövdesi (görünüm durumu: dasha yolu + kullanıcının düzeni).
+pub fn save_view_state_body(
+    store: &Mutex<Store>,
+    chart_id: u32,
+    view_state: &ViewState,
+) -> Result<(), CommandError> {
+    Ok(lock(store)?.save_view_state(chart_id, view_state)?)
+}
+
 /// Ayar değişikliği (otomatik kayıt, "varsayılana döndür"): kaydeder ve yeniden hesaplar.
 pub fn save_calc_settings_blocking(
     engine: &Engine,
@@ -298,6 +318,17 @@ pub async fn update_chart(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn keep_stored_moment(
+    engine: State<'_, Arc<Engine>>,
+    store: State<'_, StoreState>,
+    chart_id: u32,
+) -> Result<OpenedClient, CommandError> {
+    let (engine, store) = (Arc::clone(&engine), Arc::clone(&store));
+    blocking(move || keep_stored_moment_blocking(&engine, &store, chart_id)).await
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn save_calc_settings(
     engine: State<'_, Arc<Engine>>,
     store: State<'_, StoreState>,
@@ -315,7 +346,8 @@ pub async fn save_view_state(
     chart_id: u32,
     view_state: ViewState,
 ) -> Result<(), CommandError> {
-    with_store(&store, move |s| s.save_view_state(chart_id, &view_state)).await
+    let store = Arc::clone(&store);
+    blocking(move || save_view_state_body(&store, chart_id, &view_state)).await
 }
 
 #[cfg(test)]
@@ -415,5 +447,58 @@ mod tests {
         assert_eq!(e.params["detail"].chars().count(), MAX_PARAM_CHARS + 1);
         let e = CommandError::from(StoreError::ImportFormat("kısa".into()));
         assert_eq!(e.params["detail"], "kısa");
+    }
+
+    #[test]
+    fn save_view_state_body_writes_and_maps_errors() {
+        use store::{PanelLayout, ViewState};
+        // `store`'un test yardımcısı crate dışına açık değildir; danışan burada kurulur.
+        let new_client = store::NewClient {
+            name: "A".into(),
+            gender: None,
+            chart: store::NewChart {
+                label: String::new(),
+                kind: store::ChartKind::Natal,
+                birth: store::BirthData {
+                    date: "2000-01-01".into(),
+                    time: Some("17:30".into()),
+                    time_certainty: store::TimeCertainty::Exact,
+                    place: store::Place {
+                        name: "New Delhi".into(),
+                        country: "India".into(),
+                        admin1: "NCT".into(),
+                        lat: 28.6139,
+                        lon: 77.2090,
+                        geoname_id: Some(1_261_481),
+                    },
+                    tz: store::TzChoice::Iana("Asia/Kolkata".into()),
+                    fold: None,
+                    notes: String::new(),
+                },
+            },
+        };
+        let store = Mutex::new(Store::open_in_memory().unwrap());
+        let (_, chart) = lock(&store).unwrap().create_client(&new_client).unwrap();
+        let vs = ViewState {
+            dasha_expanded_path: vec![jyotish_core::Graha::Rahu],
+            ..ViewState::default()
+        };
+        save_view_state_body(&store, chart.id, &vs).unwrap();
+        assert_eq!(lock(&store).unwrap().view_state(chart.id).unwrap(), vs);
+        let e = save_view_state_body(&store, 999, &vs).unwrap_err();
+        assert_eq!(
+            (e.code.as_str(), e.params["what"].as_str()),
+            ("not_found", "chart")
+        );
+        let bad = ViewState {
+            schema_version: 9,
+            panel_layout: None::<PanelLayout>,
+            ..ViewState::default()
+        };
+        let e = save_view_state_body(&store, chart.id, &bad).unwrap_err();
+        assert_eq!(
+            (e.code.as_str(), e.params["field"].as_str()),
+            ("invalid_input", "view_state")
+        );
     }
 }

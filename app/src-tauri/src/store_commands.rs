@@ -11,7 +11,7 @@ use serde::Serialize;
 use specta::Type;
 use store::{
     AppPrefs, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note, PanelLayout,
-    SearchHit, Store, TagCount,
+    PrefsLoad, SearchHit, Store, TagCount,
 };
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
@@ -334,8 +334,8 @@ pub async fn list_tags(store: State<'_, StoreState>) -> Result<Vec<TagCount>, Co
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_app_prefs(store: State<'_, StoreState>) -> Result<AppPrefs, CommandError> {
-    with_store(&store, |s| s.app_prefs()).await
+pub async fn get_app_prefs(store: State<'_, StoreState>) -> Result<PrefsLoad, CommandError> {
+    with_store(&store, |s| s.app_prefs_load()).await
 }
 
 #[tauri::command]

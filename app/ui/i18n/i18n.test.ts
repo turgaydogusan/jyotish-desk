@@ -88,3 +88,7 @@ test("warning badges and hints cover every moment and chart warning", () => {
   expect(Object.keys(tr.badge).sort()).toEqual([...warnings].sort());
   expect(Object.keys(tr.badgeHint).sort()).toEqual([...warnings].sort());
 });
+
+test("atlas reasons are localized in every language", () => {
+  for (const lang of [tr, en, fr]) expect(Object.keys(lang.atlasReason).sort()).toEqual(["io", "missing", "schema"]);
+});

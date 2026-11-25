@@ -8,13 +8,18 @@
 // Hata parametreleri (`CommandError.params`) kişisel veri içerebilir: hiçbir yerde loglanmaz.
 import {
   commands,
+  type AppPrefs,
+  type Bhavas,
+  type CalcSettings,
   type CommandError,
   type DashaSeed,
+  type Gender,
   type Graha,
   type NewChart,
   type NewClient,
   type BirthData,
   type PanelLayout,
+  type TransitAt,
   type ViewState,
 } from "./bindings";
 
@@ -46,6 +51,12 @@ export const api = {
   createClient: (input: NewClient) => wrap(() => commands.createClient(input)),
   addChart: (clientId: number, chart: NewChart) => wrap(() => commands.addChart(clientId, chart)),
   updateChart: (chartId: number, chart: NewChart) => wrap(() => commands.updateChart(chartId, chart)),
+  keepStoredMoment: (chartId: number) => wrap(() => commands.keepStoredMoment(chartId)),
+  updateClient: (clientId: number, name: string, gender: Gender | null) => wrap(() => commands.updateClient(clientId, name, gender)),
+  saveCalcSettings: (chartId: number, settings: CalcSettings) => wrap(() => commands.saveCalcSettings(chartId, settings)),
+  getAppPrefs: () => wrap(() => commands.getAppPrefs()),
+  setAppPrefs: (prefs: AppPrefs) => wrap(() => commands.setAppPrefs(prefs)),
+  transitsAt: (at: TransitAt, settings: CalcSettings, natalBhavas: Bhavas, seed: DashaSeed) => wrap(() => commands.transitsAt(at, settings, natalBhavas, seed)),
   deleteClient: (clientId: number) => wrap(() => commands.deleteClient(clientId)),
   deleteChart: (chartId: number) => wrap(() => commands.deleteChart(chartId)),
   listClients: (limit: number) => wrap(() => commands.listClients(limit)),
