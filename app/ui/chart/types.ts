@@ -56,7 +56,10 @@ export interface ChartLabels {
 /** Retro işareti: harita etiketinde ve gezegen tablosunda düz "R" (spec §2.3). */
 export const RETRO_MARK = "R";
 
-/** Rahu ve Ketu her zaman geri gider; işaret yalnızca diğer grahalarda gösterilir. */
+/**
+ * Retro işareti Rahu ve Ketu'da gösterilmez (kullanıcı kararı): ortalama düğüm hep geri gider.
+ * Gerçek düğüm ara sıra ileri gidebilir; yönü gezegen tablosundaki hız sütunu gösterir.
+ */
 export function showsRetro(id: GrahaId, retrograde: boolean): boolean {
   return retrograde && id !== "Rahu" && id !== "Ketu";
 }

@@ -22,7 +22,7 @@ export function PrintView() {
     body: g.graha,
     sign: signIndex(g.sign),
     lon: g.lon,
-    retrograde: showsRetro(g.graha, g.retrograde),
+    showRetro: showsRetro(g.graha, g.retrograde),
   }));
   return (
     <div>

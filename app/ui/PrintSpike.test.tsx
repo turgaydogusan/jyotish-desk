@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { PrintSpike } from "./PrintSpike";
 
 const rows = [
-  { body: "Sun", sign: 8, lon: 256.5, retrograde: false },
-  { body: "Moon", sign: 0, lon: 10.0, retrograde: false },
+  { body: "Sun", sign: 8, lon: 256.5, showRetro: false },
+  { body: "Moon", sign: 0, lon: 10.0, showRetro: false },
 ];
 
 test("renders two A4 pages with chart svg and planet table", () => {

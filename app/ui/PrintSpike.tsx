@@ -1,3 +1,4 @@
+import { RETRO_MARK } from "./chart/types";
 import "./print.css";
 
 /** Baskı denemesinin satırı: burç Rust'tan gelir (`Chart.grahas[].sign`), burada türetilmez. */
@@ -6,7 +7,8 @@ export interface SpikeRow {
   /** 0 = Mesha … 11 = Meena; `null` bilinmiyor. */
   sign: number | null;
   lon: number | null;
-  retrograde: boolean;
+  /** Retro işareti basılır mı (`showsRetro`: Rahu/Ketu'da hiç). */
+  showRetro: boolean;
 }
 
 // Güney Hint düzeni: 4×4 ızgaranın dış halkası, Meena sol üstten saat yönünde.
@@ -57,7 +59,7 @@ export function PrintSpike({ rows }: { rows: SpikeRow[] }) {
               <tr key={r.body}>
                 <td>{r.body}</td>
                 <td>{r.lon === null ? "—" : r.lon.toFixed(4)}</td>
-                <td>{r.retrograde ? "R" : ""}</td>
+                <td>{r.showRetro ? RETRO_MARK : ""}</td>
               </tr>
             ))}
           </tbody>
