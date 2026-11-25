@@ -51,6 +51,10 @@ export const commands = {
 	listTags: (options?: InvokeOptions) => typedError<TagCount[], CommandError>(__TAURI_INVOKE("list_tags", undefined, options)),
 	getAppPrefs: (options?: InvokeOptions) => typedError<AppPrefs, CommandError>(__TAURI_INVOKE("get_app_prefs", undefined, options)),
 	setAppPrefs: (prefs: AppPrefs, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("set_app_prefs", { prefs }, options)),
+	/**  Kullanıcının pano düzeni (`app_state`); kayıt yoksa ya da okunamazsa `None`. */
+	loadPanelLayout: (options?: InvokeOptions) => typedError<PanelLayout | null, CommandError>(__TAURI_INVOKE("load_panel_layout", undefined, options)),
+	/**  Açık harita olmadan düzen kaydı (otomatik kayıt); `None` kayıtlı düzeni siler. */
+	savePanelLayout: (layout: PanelLayout | null, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("save_panel_layout", { layout }, options)),
 	exportJson: (path: string, selection: ExportOptions, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("export_json", { path, selection }, options)),
 	exportCsv: (path: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("export_csv", { path }, options)),
 	importJson: (path: string, options?: InvokeOptions) => typedError<ImportReport, CommandError>(__TAURI_INVOKE("import_json", { path }, options)),

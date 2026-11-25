@@ -1,5 +1,5 @@
 import { hasOverlap } from "./grid";
-import { BUILTIN_LAYOUT_IDS, builtinLayout, defaultLayoutState, type LayoutState } from "./model";
+import { BUILTIN_LAYOUT_IDS, builtinLayout, defaultLayoutState, MAX_LAYOUTS, type LayoutState } from "./model";
 import { activeLayout, layoutReducer, newId, NOTES_PANEL, normalizeState } from "./reducer";
 
 const { interview, research, transit } = BUILTIN_LAYOUT_IDS;
@@ -44,6 +44,14 @@ test("rename changes user layouts only", () => {
   expect(layoutReducer(s, { type: "rename", id: "user:1", name: " Yeni " }).layouts.at(-1)!.name).toBe("Yeni");
   expect(layoutReducer(s, { type: "rename", id: interview, name: "X" })).toBe(s);
   expect(layoutReducer(s, { type: "rename", id: "user:1", name: "" })).toBe(s);
+});
+
+test("saveAs and duplicate stop at MAX_LAYOUTS so nothing is lost on the next read", () => {
+  let s = defaultLayoutState();
+  for (let i = s.layouts.length; i < MAX_LAYOUTS; i++) s = layoutReducer(s, { type: "saveAs", id: `user:${i}`, name: `L${i}` });
+  expect(s.layouts).toHaveLength(MAX_LAYOUTS);
+  expect(layoutReducer(s, { type: "saveAs", id: "user:x", name: "X" })).toBe(s);
+  expect(layoutReducer(s, { type: "duplicate", sourceId: research, id: "user:y", name: "Y" })).toBe(s);
 });
 
 test("duplicate inserts a copy right after its source without changing the active layout", () => {

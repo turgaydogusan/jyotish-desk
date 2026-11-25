@@ -4,12 +4,15 @@ import {
   defaultLayoutState,
   isKnownPanelKind,
   LAYOUT_SCHEMA_VERSION,
+  MAX_LAYOUTS,
+  MAX_PANELS,
   PANEL_KINDS,
   parseLayoutState,
   serializeLayoutState,
   type Layout,
   type Panel,
 } from "./model";
+import parityRaw from "./fixtures/layout-parity.json?raw";
 
 const ids = (layouts: Layout[]) => layouts.map((l) => l.id);
 const BUILTINS = [BUILTIN_LAYOUT_IDS.interview, BUILTIN_LAYOUT_IDS.research, BUILTIN_LAYOUT_IDS.transit];
@@ -167,4 +170,39 @@ test("a newer schema version is read best-effort", () => {
   const s = parseLayoutState({ schema_version: 99, active_layout_id: "builtin:transit", layouts: [] });
   expect(s.schema_version).toBe(LAYOUT_SCHEMA_VERSION);
   expect(s.active_layout_id).toBe("builtin:transit");
+});
+
+// Rust `store::parse_panel_layout` ile ortak fikstür (Plan 09): iki ayrıştırıcı aynı
+// düzenleri ve panelleri tutar. Arayüz ayrıca eksik hazır düzenleri ekler; onlar fikstürde
+// yoktur ve karşılaştırmaya girmez.
+interface ParityCase {
+  name: string;
+  input: unknown;
+  layouts: { id: string; panels: string[] }[];
+}
+const parity = JSON.parse(parityRaw) as { max_layouts: number; max_panels: number; cases: ParityCase[] };
+
+test("caps are the same numbers as the Rust store", () => {
+  expect([MAX_LAYOUTS, MAX_PANELS]).toEqual([parity.max_layouts, parity.max_panels]);
+});
+
+test.each(parity.cases.map((c) => [c.name, c] as const))("parity: %s", (_, c) => {
+  const keep = new Set(c.layouts.map((l) => l.id));
+  const got = parseLayoutState(c.input)
+    .layouts.filter((l) => keep.has(l.id) || !l.builtin)
+    .map((l) => ({ id: l.id, panels: l.panels.map((p) => p.id) }));
+  const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+  expect(got.sort(byId)).toEqual([...c.layouts].sort(byId));
+});
+
+test("layout and panel counts are capped like the Rust store", () => {
+  const panels = Array.from({ length: MAX_PANELS + 10 }, (_, i) => ({ id: `p${i}`, kind: "chart", x: 0, y: i, w: 3, h: 4 }));
+  const layouts = Array.from({ length: MAX_LAYOUTS + 6 }, (_, i) => ({ id: `user:${i}`, name: "L", panels }));
+  const all = parseLayoutState({ layouts }).layouts;
+  const users = all.filter((l) => !l.builtin);
+  // Hazır düzenler sınırın içindedir: toplam `MAX_LAYOUTS`.
+  expect(all).toHaveLength(MAX_LAYOUTS);
+  expect(users).toHaveLength(MAX_LAYOUTS - 3);
+  expect(users.every((l) => l.panels.length === MAX_PANELS)).toBe(true);
+  expect(users[MAX_LAYOUTS - 4].id).toBe(`user:${MAX_LAYOUTS - 4}`);
 });

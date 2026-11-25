@@ -82,6 +82,7 @@ export const tr = {
     cancel: "Vazgeç",
     copyName: "{{name}} kopyası",
     copyNameN: "{{name}} kopyası {{n}}",
+    limit: "En çok {{max}} düzen kaydedilebilir.",
     nameEmpty: "Bir ad yazın.",
     nameTaken: "Bu ad başka bir düzende kullanılıyor.",
     confirmDelete: "“{{name}}” düzeni silinsin mi? Bu işlem geri alınamaz.",

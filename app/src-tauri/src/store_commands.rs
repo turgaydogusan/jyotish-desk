@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 use serde::Serialize;
 use specta::Type;
 use store::{
-    AppPrefs, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note, SearchHit, Store,
-    TagCount,
+    AppPrefs, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note, PanelLayout,
+    SearchHit, Store, TagCount,
 };
 use tauri::State;
 
@@ -211,6 +211,25 @@ pub async fn set_app_prefs(
     prefs: AppPrefs,
 ) -> Result<(), CommandError> {
     with_store(&store, move |s| s.set_app_prefs(&prefs)).await
+}
+
+/// Kullanıcının pano düzeni (`app_state`); kayıt yoksa ya da okunamazsa `None`.
+#[tauri::command]
+#[specta::specta]
+pub async fn load_panel_layout(
+    store: State<'_, StoreState>,
+) -> Result<Option<PanelLayout>, CommandError> {
+    with_store(&store, |s| s.panel_layout()).await
+}
+
+/// Açık harita olmadan düzen kaydı (otomatik kayıt); `None` kayıtlı düzeni siler.
+#[tauri::command]
+#[specta::specta]
+pub async fn save_panel_layout(
+    store: State<'_, StoreState>,
+    layout: Option<PanelLayout>,
+) -> Result<(), CommandError> {
+    with_store(&store, move |s| s.save_panel_layout(layout.as_ref())).await
 }
 
 #[tauri::command]

@@ -9,6 +9,7 @@ mod db;
 mod error;
 pub mod exchange;
 pub mod jhd;
+mod layout;
 pub mod model;
 mod notes;
 mod open;
@@ -41,5 +42,5 @@ pub use settings::{
 };
 pub use view_state::{
     chart_view_json, chart_view_path, parse_dasha_path, parse_panel_layout, parse_view_state,
-    Layout, Panel, PanelLayout, ViewState, VIEW_STATE_SCHEMA_VERSION,
+    Layout, Panel, PanelLayout, ViewState, MAX_LAYOUTS, MAX_PANELS, VIEW_STATE_SCHEMA_VERSION,
 };

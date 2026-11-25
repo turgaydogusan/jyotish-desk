@@ -83,6 +83,7 @@ export const en: Messages = {
     cancel: "Cancel",
     copyName: "{{name}} copy",
     copyNameN: "{{name}} copy {{n}}",
+    limit: "At most {{max}} layouts can be saved.",
     nameEmpty: "Enter a name.",
     nameTaken: "Another layout already uses this name.",
     confirmDelete: "Delete the “{{name}}” layout? This cannot be undone.",

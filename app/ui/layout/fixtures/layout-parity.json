@@ -1,0 +1,81 @@
+{
+  "max_layouts": 64,
+  "max_panels": 48,
+  "cases": [
+    {
+      "name": "a valid user layout is kept as is",
+      "input": {
+        "active_layout_id": "user:a",
+        "layouts": [
+          {
+            "id": "user:a",
+            "name": "A",
+            "builtin": false,
+            "panels": [
+              { "id": "p1", "kind": "chart", "x": 0, "y": 0, "w": 6, "h": 12, "settings": { "varga": "D9" } },
+              { "id": "p2", "kind": "graha_table", "x": 6, "y": 0, "w": 6, "h": 9, "settings": {} }
+            ]
+          }
+        ]
+      },
+      "layouts": [{ "id": "user:a", "panels": ["p1", "p2"] }]
+    },
+    {
+      "name": "invalid panels are dropped, the first of duplicate ids wins, unknown kinds stay",
+      "input": {
+        "layouts": [
+          {
+            "id": "user:b",
+            "name": "B",
+            "panels": [
+              { "id": "ok", "kind": "astro_clock", "x": 0, "y": 0, "w": 3, "h": 4 },
+              { "id": "ok", "kind": "chart", "x": 3, "y": 0, "w": 3, "h": 4 },
+              { "id": "neg", "kind": "chart", "x": -1, "y": 0, "w": 3, "h": 4 },
+              { "id": "zero", "kind": "chart", "x": 0, "y": 0, "w": 0, "h": 4 },
+              { "id": "half", "kind": "chart", "x": 1.5, "y": 0, "w": 3, "h": 4 },
+              { "id": "big", "kind": "chart", "x": 4294967296, "y": 0, "w": 3, "h": 4 },
+              { "id": "text", "kind": "chart", "x": 0, "y": "1", "w": 3, "h": 4 },
+              { "id": " ", "kind": "chart", "x": 0, "y": 0, "w": 3, "h": 4 },
+              { "id": "nokind", "kind": "", "x": 0, "y": 0, "w": 3, "h": 4 },
+              { "id": "float", "kind": "chart", "x": 3.0, "y": 1e1, "w": 3, "h": 4 },
+              "garbage"
+            ]
+          }
+        ]
+      },
+      "layouts": [{ "id": "user:b", "panels": ["ok", "float"] }]
+    },
+    {
+      "name": "invalid and duplicate layouts are dropped",
+      "input": {
+        "layouts": [
+          { "id": "user:c", "name": "C", "panels": [] },
+          { "id": "user:c", "name": "duplicate", "panels": [{ "id": "x", "kind": "chart", "x": 0, "y": 0, "w": 3, "h": 4 }] },
+          { "id": "", "name": "no id" },
+          { "id": "user:d", "name": "  " },
+          { "id": "user:e", "name": "E", "panels": "not a list" },
+          7
+        ]
+      },
+      "layouts": [
+        { "id": "user:c", "panels": [] },
+        { "id": "user:e", "panels": [] }
+      ]
+    },
+    {
+      "name": "a builtin layout keeps the panels the user saved",
+      "input": {
+        "active_layout_id": "builtin:research",
+        "layouts": [
+          {
+            "id": "builtin:research",
+            "name": "Araştırma",
+            "builtin": true,
+            "panels": [{ "id": "only", "kind": "dasha_tree", "x": 0, "y": 0, "w": 6, "h": 9 }]
+          }
+        ]
+      },
+      "layouts": [{ "id": "builtin:research", "panels": ["only"] }]
+    }
+  ]
+}

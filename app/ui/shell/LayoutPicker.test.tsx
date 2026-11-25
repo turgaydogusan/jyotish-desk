@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { BUILTIN_LAYOUT_IDS } from "../layout/model";
+import { BUILTIN_LAYOUT_IDS, MAX_LAYOUTS } from "../layout/model";
 import { memoryPersistence } from "../layout/persistence";
 import { HighlightProvider, useHighlight } from "../highlight/store";
 import { LayoutProvider, useLayoutStore } from "../layout/store";
@@ -114,6 +114,19 @@ test("duplicate adds a copy after the source without switching", () => {
     "Transit",
   ]);
   expect(picker()).toHaveDisplayValue("Görüşme");
+});
+
+test("save as and duplicate are disabled at the layout limit", () => {
+  setup();
+  for (let i = 3; i < MAX_LAYOUTS; i++) {
+    menu();
+    fireEvent.click(item("Kopyala"));
+  }
+  expect(options()).toHaveLength(MAX_LAYOUTS);
+  menu();
+  expect(item("Farklı kaydet…")).toBeDisabled();
+  expect(item("Kopyala")).toBeDisabled();
+  expect(item("Kopyala")).toHaveAttribute("title", `En çok ${MAX_LAYOUTS} düzen kaydedilebilir.`);
 });
 
 describe("actions menu keyboard", () => {

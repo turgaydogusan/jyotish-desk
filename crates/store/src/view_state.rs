@@ -14,6 +14,11 @@ use serde_json::{json, Map, Value};
 const MAX_PATH: usize = MAX_DASHA_LEVEL as usize;
 
 pub const VIEW_STATE_SCHEMA_VERSION: u32 = 1;
+/// Okunan en çok düzen (hazır düzenler dahil); fazlası atılır. Arayüzün `MAX_LAYOUTS`'u
+/// ile aynıdır (`app/ui/layout/fixtures/layout-parity.json`).
+pub const MAX_LAYOUTS: usize = 64;
+/// Bir düzende okunan en çok panel; fazlası atılır. Arayüzün `MAX_PANELS`'i ile aynıdır.
+pub const MAX_PANELS: usize = 48;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -80,10 +85,21 @@ fn non_empty_str(v: Option<&Value>) -> Option<String> {
     }
 }
 
+/// Tamsayı konum/boyut: `3` ve kesirsiz `3.0`/`1e1` kabul edilir (arayüz `Number.isInteger`
+/// ile aynı), aralık `min..=u32::MAX`.
 fn int(v: Option<&Value>, min: u32) -> Option<u32> {
-    v.and_then(Value::as_u64)
-        .and_then(|n| u32::try_from(n).ok())
-        .filter(|n| *n >= min)
+    let v = v?;
+    let n = match v.as_u64() {
+        Some(n) => n,
+        None => {
+            let f = v.as_f64()?;
+            if f.fract() != 0.0 || !(0.0..=f64::from(u32::MAX)).contains(&f) {
+                return None;
+            }
+            f as u64
+        }
+    };
+    u32::try_from(n).ok().filter(|n| *n >= min)
 }
 
 fn parse_panel(v: &Value) -> Option<Panel> {
@@ -107,6 +123,9 @@ fn parse_layout(v: &Value) -> Option<Layout> {
     let mut panels: Vec<Panel> = Vec::new();
     if let Some(Value::Array(items)) = o.get("panels") {
         for p in items.iter().filter_map(parse_panel) {
+            if panels.len() == MAX_PANELS {
+                break;
+            }
             if !panels.iter().any(|q| q.id == p.id) {
                 panels.push(p);
             }
@@ -127,6 +146,9 @@ pub fn parse_panel_layout(v: &Value) -> Option<PanelLayout> {
     let mut layouts: Vec<Layout> = Vec::new();
     if let Some(Value::Array(items)) = o.get("layouts") {
         for l in items.iter().filter_map(parse_layout) {
+            if layouts.len() == MAX_LAYOUTS {
+                break;
+            }
             if !layouts.iter().any(|m| m.id == l.id) {
                 layouts.push(l);
             }
@@ -262,6 +284,45 @@ mod tests {
         assert_eq!(l.panels.len(), 1);
         assert_eq!(l.panels[0].kind, "astro_clock");
         assert!(l.panels[0].settings.is_empty());
+    }
+
+    /// Arayüzle ortak fikstür: iki ayrıştırıcı aynı düzenleri ve panelleri tutar.
+    const PARITY: &str = include_str!("../../../app/ui/layout/fixtures/layout-parity.json");
+
+    #[test]
+    fn parity_fixture_matches_the_ui_parser() {
+        let fixture: Value = serde_json::from_str(PARITY).unwrap();
+        assert_eq!(fixture["max_layouts"], json!(MAX_LAYOUTS));
+        assert_eq!(fixture["max_panels"], json!(MAX_PANELS));
+        for case in fixture["cases"].as_array().unwrap() {
+            let name = case["name"].as_str().unwrap();
+            let pl = parse_panel_layout(&case["input"]).unwrap();
+            let got: Vec<Value> = pl
+                .layouts
+                .iter()
+                .map(|l| json!({"id": l.id, "panels": l.panels.iter().map(|p| &p.id).collect::<Vec<_>>()}))
+                .collect();
+            assert_eq!(Value::Array(got), case["layouts"], "{name}");
+        }
+    }
+
+    #[test]
+    fn layout_and_panel_counts_are_capped() {
+        let panels: Vec<Value> = (0..MAX_PANELS + 10)
+            .map(
+                |i| json!({"id": format!("p{i}"), "kind": "chart", "x": 0, "y": i, "w": 3, "h": 4}),
+            )
+            .collect();
+        let layouts: Vec<Value> = (0..MAX_LAYOUTS + 6)
+            .map(|i| json!({"id": format!("user:{i}"), "name": "L", "panels": panels}))
+            .collect();
+        let pl = parse_panel_layout(&json!({ "layouts": layouts })).unwrap();
+        assert_eq!(pl.layouts.len(), MAX_LAYOUTS);
+        assert!(pl.layouts.iter().all(|l| l.panels.len() == MAX_PANELS));
+        assert_eq!(
+            pl.layouts[MAX_LAYOUTS - 1].id,
+            format!("user:{}", MAX_LAYOUTS - 1)
+        );
     }
 
     #[test]

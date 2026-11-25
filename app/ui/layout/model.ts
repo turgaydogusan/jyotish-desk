@@ -43,6 +43,12 @@ export interface LayoutState {
 }
 
 export const LAYOUT_SCHEMA_VERSION = 1;
+/** En çok düzen (hazır düzenler dahil) ve düzen başına panel; Rust `store`
+ *  `MAX_LAYOUTS`/`MAX_PANELS` ile aynı (fixtures/layout-parity.json). Sınır yazarken de
+ *  uygulanır (reducer `saveAs`/`duplicate`): arayüz Rust'ın okuyacağından fazlasını yazmaz. */
+export const MAX_LAYOUTS = 64;
+export const MAX_PANELS = 48;
+const MAX_U32 = 0xffff_ffff;
 
 export const BUILTIN_LAYOUT_IDS = {
   interview: "builtin:interview",
@@ -137,7 +143,7 @@ function isNonEmptyString(v: unknown): v is string {
 }
 
 function isInt(v: unknown, min: number): v is number {
-  return typeof v === "number" && Number.isInteger(v) && v >= min;
+  return typeof v === "number" && Number.isInteger(v) && v >= min && v <= MAX_U32;
 }
 
 function parsePanel(raw: unknown): Panel | null {
@@ -153,6 +159,7 @@ function parsePanels(raw: unknown): Panel[] {
   const seen = new Set<string>();
   const out: Panel[] = [];
   for (const item of raw) {
+    if (out.length === MAX_PANELS) break;
     const p = parsePanel(item);
     if (p === null || seen.has(p.id)) continue;
     seen.add(p.id);
@@ -178,18 +185,22 @@ function parseLayout(raw: unknown): Layout | null {
  * - bilinmeyen alanlar yok sayılır, geçersiz panel ve düzenler atılır,
  * - bilinmeyen panel türleri korunur,
  * - eksik hazır düzenler yeniden eklenir; hazır düzenler her zaman başta ve sabit sıradadır,
- * - geçersiz `active_layout_id` ilk hazır düzene döner.
+ * - geçersiz `active_layout_id` ilk hazır düzene döner,
+ * - en çok `MAX_LAYOUTS` düzen (hazır düzenler dahil) ve düzen başına `MAX_PANELS` panel okunur.
  * `schema_version` yoksa 1 kabul edilir. Daha yeni bir sürüm de aynı kurallarla okunur.
  */
 export function parseLayoutState(raw: unknown): LayoutState {
   if (!isRecord(raw)) return defaultLayoutState();
   const parsed = Array.isArray(raw.layouts) ? raw.layouts.map(parseLayout) : [];
   const byId = new Map<string, Layout>();
-  for (const l of parsed) if (l !== null && !byId.has(l.id)) byId.set(l.id, l);
+  for (const l of parsed) {
+    if (byId.size === MAX_LAYOUTS) break;
+    if (l !== null && !byId.has(l.id)) byId.set(l.id, l);
+  }
 
   const builtins = BUILTIN_ORDER.map((id) => byId.get(id) ?? BUILTIN_FACTORIES[id]());
   const users = [...byId.values()].filter((l) => !l.builtin);
-  const layouts = [...builtins, ...users];
+  const layouts = [...builtins, ...users].slice(0, MAX_LAYOUTS);
 
   const active = raw.active_layout_id;
   const activeId =

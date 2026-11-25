@@ -83,6 +83,7 @@ export const fr: Messages = {
     cancel: "Annuler",
     copyName: "Copie de {{name}}",
     copyNameN: "Copie {{n}} de {{name}}",
+    limit: "Au plus {{max}} dispositions peuvent être enregistrées.",
     nameEmpty: "Saisissez un nom.",
     nameTaken: "Une autre disposition porte déjà ce nom.",
     confirmDelete: "Supprimer la disposition « {{name}} » ? Cette action est irréversible.",

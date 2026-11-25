@@ -1,4 +1,5 @@
 // Düzen seçici ve işlemler menüsü: farklı kaydet, yeniden adlandır, kopyala, sil, sıfırla.
+// `MAX_LAYOUTS` düzende "farklı kaydet" ve "kopyala" devre dışıdır (ipucu sınırı söyler).
 // Ad girişi ve silme onayı satır içinde açılır (WKWebView'da window.prompt'a güvenilmez).
 // Menü ARIA menü düzenini izler: açılınca ilk etkin öğe odaklanır, oklar/Home/End gezdirir,
 // Esc kapatır (preventDefault: vurgu sabitlemesi korunur), Tab ve dış tıklama kapatır.
@@ -6,7 +7,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import type { Layout } from "../layout/model";
+import { MAX_LAYOUTS, type Layout } from "../layout/model";
 import { useLayoutStore } from "../layout/store";
 
 export function layoutLabel(t: TFunction, layout: Layout): string {
@@ -33,6 +34,8 @@ export function LayoutPicker() {
   const activeLabel = layoutLabel(t, active);
   const target = store.state.layouts.find((l) => l.id === targetId) ?? active;
   const targetLabel = layoutLabel(t, target);
+  /** Düzen sınırı (`MAX_LAYOUTS`): yeni düzen eklenemez; düğmeler görünür biçimde kapanır. */
+  const atCap = store.state.layouts.length >= MAX_LAYOUTS;
 
   const sameName = (a: string, b: string) =>
     a.trim().localeCompare(b.trim(), i18n.language, { sensitivity: "accent" }) === 0;
@@ -188,7 +191,14 @@ export function LayoutPicker() {
           onKeyDown={onMenuKey}
         >
           <li role="none">
-            <button type="button" role="menuitem" tabIndex={-1} onClick={() => startMode("saveAs", uniqueCopyName())}>
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              disabled={atCap}
+              title={atCap ? t("layout.limit", { max: MAX_LAYOUTS }) : undefined}
+              onClick={() => startMode("saveAs", uniqueCopyName())}
+            >
               {t("layout.saveAs")}
             </button>
           </li>
@@ -208,6 +218,8 @@ export function LayoutPicker() {
               type="button"
               role="menuitem"
               tabIndex={-1}
+              disabled={atCap}
+              title={atCap ? t("layout.limit", { max: MAX_LAYOUTS }) : undefined}
               onClick={() => runItem(() => store.duplicate(active.id, uniqueCopyName()))}
             >
               {t("layout.duplicate")}

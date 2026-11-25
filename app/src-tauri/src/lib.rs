@@ -46,6 +46,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store_commands::list_tags,
             store_commands::get_app_prefs,
             store_commands::set_app_prefs,
+            store_commands::load_panel_layout,
+            store_commands::save_panel_layout,
             store_commands::export_json,
             store_commands::export_csv,
             store_commands::import_json,

@@ -1,6 +1,6 @@
 // Düzen durumu için saf reducer. Kimlikler eylemle gelir; reducer rastgelelik üretmez.
 import { movePanel, normalizePanels } from "./grid";
-import { builtinLayout, type Layout, type LayoutState, type Panel } from "./model";
+import { builtinLayout, MAX_LAYOUTS, type Layout, type LayoutState, type Panel } from "./model";
 
 export type LayoutAction =
   | { type: "select"; id: string }
@@ -50,7 +50,8 @@ export function layoutReducer(state: LayoutState, action: LayoutAction): LayoutS
     }
     case "saveAs": {
       const name = action.name.trim();
-      if (name === "" || state.layouts.some((l) => l.id === action.id)) return state;
+      // Sınırda yeni düzen eklenmez (Rust fazlasını okumaz; LayoutPicker düğmeyi kapatır).
+      if (name === "" || state.layouts.length >= MAX_LAYOUTS || state.layouts.some((l) => l.id === action.id)) return state;
       const copy: Layout = { id: action.id, name, builtin: false, panels: copyPanels(activeLayout(state).panels) };
       return { ...state, active_layout_id: copy.id, layouts: [...state.layouts, copy] };
     }
@@ -63,7 +64,7 @@ export function layoutReducer(state: LayoutState, action: LayoutAction): LayoutS
     case "duplicate": {
       const name = action.name.trim();
       const index = state.layouts.findIndex((l) => l.id === action.sourceId);
-      if (name === "" || index < 0 || state.layouts.some((l) => l.id === action.id)) return state;
+      if (name === "" || index < 0 || state.layouts.length >= MAX_LAYOUTS || state.layouts.some((l) => l.id === action.id)) return state;
       const copy: Layout = { id: action.id, name, builtin: false, panels: copyPanels(state.layouts[index].panels) };
       const layouts = [...state.layouts];
       layouts.splice(index + 1, 0, copy);
