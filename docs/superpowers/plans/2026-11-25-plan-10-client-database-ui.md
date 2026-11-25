@@ -6832,6 +6832,8 @@ Expected: commit oluşur; iki tarama da çıktısız. Commit mesajında yasaklı
 
 ---
 
+**Task 10 inceleme düzeltmesi (ayrı commit, Task 11'den önce):** İnceleme düzeltmesi test-önce uygulanır. (1) "Notları dahil et" JSON dışa aktarma penceresi her açıldığında kapalı başlar; önceki dışa aktarmanın ya da vazgeçilen pencerenin seçimi taşınmaz (spec §5). (2) `write_atomic`'in geçici dosyası `create_new` ile açılır ve adı hedefin adından türemez (`.jyotish-desk-<pid>-<sıra>.tmp`, ad doluysa sıradaki, en çok 16 deneme): eşzamanlı iki yazım aynı geçici dosyayı paylaşmaz, var olan bir dosyanın ya da bağlantının üzerine yazılmaz, uzun hedef adı dosya adı sınırını aşmaz; yalnızca çağrının kendi açtığı geçici dosya silinir. (3) Unix'te dışa aktarılan dosya `0600` izniyle oluşur (`std::os::unix::fs::OpenOptionsExt`, `cfg(unix)`; yeni bağımlılık yok): dışa aktarma not içerebilir. (4) `read_bounded` sıradan dosya olmayan yolu (klasör, adlandırılmış boru, aygıt) açmadan `file_io` ile reddeder: boru boyut denetiminden 0 ile geçer ve açılması çalışan iş parçacığını süresiz bekletirdi. (5) Yetki testi gizli dosyaları (`.DS_Store`) saymaz, `tauri.conf.json`'da satır içi yetenek olmadığını ve `lib.rs`'in `tauri_plugin_fs` kurmadığını da doğrular (yalnızca test; düzeltmeden önce de geçer). (6) `i18n.test.ts`'teki eskimiş yorum düzeltilir. Expected: `jyotish-desk` lib `test result: ok. 24 passed` (+5: eşzamanlı yazım, uzun ad, izin, geçici dosyanın yeniliği, sıradan olmayan dosya; son dördü `cfg(unix)`); `Test Files  42 passed (42)`, `Tests  358 passed (358)` (+1, `clients/DataActions.test.tsx`); fmt, clippy çıktısız; `build` `✓ built`. Düzeltmeden önce geçici dosya testi derlenmez (`create_temp`, `temp_name`, `write_atomic_with`, `TEMP_ATTEMPTS` yok); öbür dört Rust testi ve vitest testi kendi savlarında düşer. Sonraki görevlerin toplamları: vitest +1, `jyotish-desk` lib +5.
+
 ### Task 11: Uçtan uca: `Cmd+K` ile formsuz danışan açma (spec §8), kenar çubuğu ve notlar; CI'da Playwright izleri (M6-4)
 
 Spec §8'in kabul ölçütü: `Cmd+K` → ad → `Enter` ile danışanın haritası açılır ve hiçbir form ya da onay penceresi görünmez. IPC taklidine (`e2e/ipc.ts`) M6 komutları eklenir: ikinci danışan aynı hesaplanmış haritanın kimliği değiştirilmiş kopyasıdır (arayüz hesap yapmaz, C4), notlar bellek içidir. İkinci test `⌘\`'ı odak not kutusundayken basar: ⌘ kısayolları yazı alanından çalışır (C16). Kenar çubuğu artık varsayılan açık olduğundan görsel testler ekran görüntüsünden önce `⌘\` ile kapatır; temel PNG'ler değişmez (C11). CI'da e2e başarısız olursa `app/test-results/` (izler, `retain-on-failure`) 7 gün saklanır; yalnızca fikstür verisi içerir.
@@ -7045,7 +7047,7 @@ cargo test --workspace
 PATH="$HOME/.rustup/toolchains/1.93-aarch64-apple-darwin/bin:$PATH" cargo check -p store -p jyotish-desk --all-targets
 cargo deny check
 ```
-Expected: fmt ve iki clippy çıktısız; `cargo test --workspace` her ikili `ok`: atlas 6+10+12+8+3, ephemeris 1+7+1+1+1+7+5+15, `jyotish-core` lib 108, golden 8, `jyotish-desk` lib 19, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, `store` lib 71; 0 failed. MSRV `Finished`; deny `advisories ok, bans ok, licenses ok, sources ok`.
+Expected: fmt ve iki clippy çıktısız; `cargo test --workspace` her ikili `ok`: atlas 6+10+12+8+3, ephemeris 1+7+1+1+1+7+5+15, `jyotish-core` lib 108, golden 8, `jyotish-desk` lib 24, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, `store` lib 71; 0 failed. MSRV `Finished`; deny `advisories ok, bans ok, licenses ok, sources ok`.
 
 - [ ] **Step 2: Üretilen dosyalar güncel**
 
@@ -7064,7 +7066,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  42 passed (42)`, `Tests  357 passed (357)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
+Expected: `Test Files  42 passed (42)`, `Tests  358 passed (358)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
 
 - [ ] **Step 4: Kurallar**
 
@@ -7153,6 +7155,7 @@ Expected: M1–M7 ve 1–12 beklendiği gibi ve her sonuç `progress.md`'ye yaz�
 21. **Plan 08 Task 12 test boşlukları** (doğum verisinin fikstürle karşılaştırılmaması, DST boşluğunda değişiklik olmaması, `save_view_state` komutunun testsizliği): M6-9 ile.
 22. **Spec düzeltmeleri:** v1 spec §4/§8 sekme ifadesi (D4), 64 KiB not sınırı (D10) ve 32 MiB içe aktarma sınırı (D2) spec'lere yazılır.
 23. **Küçükler:** içe aktarma dosyasının başında UTF-8 BOM; içe aktarmadan gelen virgüllü etiketin etiket kutusunda bölünmesi; etiket süzgecinin artık olmayan etiketi tutması; `list_tags` hatalarının yok sayılması; "Yeni not"un geride bıraktığı boş notlar; yerel pencerenin `set_parent` ile uygulama penceresine bağlanması; `storePersistence` kayıt pompasının çevresinde `try/finally`.
+24. **Task 10 incelemesinden ertelenenler:** içe aktarma dosyası UTF-8 değilse `file_io` yerine `import_format` ve `file_io.detail`'in (`ErrorKind` metni, İngilizce) arayüz dilinde gösterilmesi; `ImportReport.warnings` sayısının sınırı (bugün yalnızca 32 MiB dosya sınırıyla sınırlı); `api.test.ts`'in yol denetiminin `bindings.ts`'teki her dize bağımsız değişkenini adından bağımsız bulması; `rename`'den sonra üst klasörün `fsync`'i (yalnızca dayanıklılık). Plan 11, dışa aktarma biçim belgesiyle (madde 13) birlikte.
 
 ---
 
@@ -7208,8 +7211,9 @@ Belirsiz adım yok; her kod adımı tam dosya içeriğini ya da `git apply` ile 
 | 9 | 41 | 347 | `store` lib 71 (+1) |
 | 9 düzeltme | 41 | 352 | T9 incelemesi kararı: StrictMode'da kayıt hatası yeri, silmenin kayıt sırasına girmesi, başarısız silmeden sonra kayıt, çift Yeni not, haritasız durum testi (+5) |
 | 10 | 42 | 357 | `jyotish-desk` lib 19 (+5); `store` 71 (bir test genişledi) |
-| 11 | 42 | 357 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
-| 12 | 42 | 357 | doğrulama |
+| 10 düzeltme | 42 | 358 | T10 incelemesi kararı: "Notları dahil et" her açılışta kapalı (+1); `jyotish-desk` lib 24 (+5: geçici dosya `create_new` ve benzersiz ad, `0600`, sıradan olmayan dosyanın reddi) |
+| 11 | 42 | 358 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
+| 12 | 42 | 358 | doğrulama |
 
 ### Doğrulama
 
