@@ -1,5 +1,10 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+
+vi.mock("../api", () => ({ api: { dashaChildren: vi.fn() } }));
+
+import { api } from "../api";
+import { fixture } from "../test/fixture";
 
 import { hasOverlap } from "../layout/grid";
 import type { LayoutState, Panel } from "../layout/model";
@@ -31,8 +36,8 @@ afterEach(() => {
 
 const MOVE = { buttons: 1, pointerId: 1 };
 
-function setup(width = WIDTH, panels = PANELS, initial: LayoutState = state(panels)) {
-  const utils = renderWithStores(<Dashboard width={width} />, { layout: initial });
+function setup(width = WIDTH, panels = PANELS, initial: LayoutState = state(panels), opened = fixture().opened) {
+  const utils = renderWithStores(<Dashboard width={width} />, { layout: initial, opened });
   const frame = (id: string) => utils.container.querySelector<HTMLElement>(`[data-panel-id="${id}"]`)!;
   const box = (id: string) => {
     const f = frame(id);
@@ -121,6 +126,20 @@ test("narrow windows reflow to 8 and 4 columns read-only", async () => {
   expect(box("b")).toEqual(before);
   const narrow = setup(320);
   expect(narrow.container.querySelectorAll('.dashboard[data-columns="4"]')).toHaveLength(1);
+});
+
+test("the header shows an inline loading indicator between 100 ms and 1 s", async () => {
+  vi.useFakeTimers();
+  let resolve: (v: Awaited<ReturnType<typeof api.dashaChildren>>) => void = () => {};
+  vi.mocked(api.dashaChildren).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  const opened = fixture().opened;
+  opened.view_state.dasha_expanded_path = ["Rahu", "Rahu", "Rahu"];
+  setup(WIDTH, [{ id: "d", kind: "dasha_tree", x: 0, y: 0, w: 4, h: 8, settings: {} }], undefined, opened);
+  expect(screen.queryByRole("status")).toBeNull();
+  act(() => vi.advanceTimersByTime(150));
+  expect(screen.getByRole("status")).toHaveTextContent("Yükleniyor");
+  await act(async () => resolve({ status: "ok", data: fixture().dasha_children.periods }));
+  expect(screen.queryByRole("status")).toBeNull();
 });
 
 // ---- Sürükleme sağlamlığı ----

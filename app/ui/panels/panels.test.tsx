@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { DashaTreePanel } from "../dasha/DashaTreePanel";
 import { setLanguage } from "../i18n";
 import { tr } from "../i18n/tr";
 import { PANEL_KINDS, type Panel } from "../layout/model";
@@ -20,11 +21,12 @@ const chartPanel = (settings: Record<string, unknown> = { varga: "D1", style: "n
 });
 const tablePanel: Panel = { id: "t", kind: "graha_table", x: 6, y: 0, w: 6, h: 8, settings: {} };
 
-test("registry covers the seven kinds; only chart and graha_table are implemented here", () => {
+test("registry covers the seven kinds; chart, graha_table and dasha_tree are implemented", () => {
   expect(Object.keys(PANEL_REGISTRY).sort()).toEqual([...PANEL_KINDS].sort());
   expect(PANEL_REGISTRY.chart.component).toBe(ChartPanel);
   expect(PANEL_REGISTRY.graha_table.component).toBe(GrahaTablePanel);
-  for (const kind of ["dasha_tree", "dasha_strip", "transit_table", "notes", "birth_info"] as const) {
+  expect(PANEL_REGISTRY.dasha_tree.component).toBe(DashaTreePanel);
+  for (const kind of ["dasha_strip", "transit_table", "notes", "birth_info"] as const) {
     expect(PANEL_REGISTRY[kind].component).toBe(UnavailablePanel);
   }
   expect(panelDefinition("yoga_list")).toMatchObject({ titleKey: "panel.unknown", component: UnavailablePanel });
@@ -119,7 +121,7 @@ test("hovering a graha in the table highlights it in the chart, click pins, Esc 
 });
 
 test("unavailable and unknown panels explain themselves without an error", () => {
-  render(<UnavailablePanel panel={{ ...tablePanel, kind: "dasha_tree" }} />);
+  render(<UnavailablePanel panel={{ ...tablePanel, kind: "dasha_strip" }} />);
   expect(screen.getByText("Bu panel sonraki bir sürümde gelecek.")).toBeInTheDocument();
   render(<UnavailablePanel panel={{ ...tablePanel, kind: "yoga_list" }} />);
   expect(screen.getByText("“yoga_list” paneli bu sürümde tanınmıyor. Düzen olduğu gibi korunuyor.")).toBeInTheDocument();

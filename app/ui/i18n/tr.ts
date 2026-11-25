@@ -192,6 +192,9 @@ export const tr = {
     GreatEnemy: "Çok düşman",
     Debilitated: "Düşük",
   },
+  dasha: {
+    approx: "Doğum saati bilinmiyor: dasa tarihleri yaklaşıktır (≈).",
+  },
 };
 
 type Strings<T> = { [K in keyof T]: T[K] extends string ? string : Strings<T[K]> };

@@ -193,4 +193,7 @@ export const en: Messages = {
     GreatEnemy: "Great enemy",
     Debilitated: "Debilitated",
   },
+  dasha: {
+    approx: "Birth time unknown: dasha dates are approximate (≈).",
+  },
 };

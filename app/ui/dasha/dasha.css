@@ -1,0 +1,41 @@
+.dasha-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dasha-tree,
+.dasha-tree ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dasha-item {
+  cursor: default;
+}
+.dasha-item:focus-visible > .dasha-row {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.dasha-row {
+  display: flex;
+  gap: 8px;
+  padding: 1px 4px;
+}
+.dasha-item[aria-expanded="true"] > .dasha-row {
+  font-weight: var(--fw-medium);
+}
+.dasha-twisty {
+  width: 1ch;
+  color: var(--text-2);
+}
+.dasha-lord {
+  min-width: 7ch;
+}
+.dasha-dates {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.dasha-pending {
+  padding-inline-start: 24px;
+  color: var(--text-2);
+}
