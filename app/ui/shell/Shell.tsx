@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BirthForm } from "../birth/BirthForm";
 import { Sidebar } from "../clients/Sidebar";
+import type { PaletteItem } from "../palette/items";
+import { Palette } from "../palette/Palette";
 import { Dashboard } from "../dashboard/Dashboard";
 import { useSession } from "../session/store";
 import { matchShortcut } from "../shortcuts";
@@ -8,20 +10,24 @@ import { useLayoutStore } from "../view/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
 import { EmptyState } from "./EmptyState";
 import { HelpDialog } from "./HelpDialog";
-import { NoticeBar } from "./notices";
+import { NoticeBar, useNotices } from "./notices";
 import { PrintView } from "./PrintView";
 import "./shell.css";
 import { TopBar } from "./TopBar";
 import { useElementWidth } from "./useElementWidth";
 
 export function Shell() {
-  const { toggleNotes } = useLayoutStore();
+  const layout = useLayoutStore();
+  const { toggleNotes } = layout;
   const [themePref, setThemePref] = useState<ThemePref>(() => loadThemePref());
   const [printView, setPrintView] = useState(false);
   const [help, setHelp] = useState(false);
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
   const [sidebar, setSidebar] = useState(true);
-  const { opened } = useSession();
+  const [palette, setPalette] = useState(false);
+  const session = useSession();
+  const { opened } = session;
+  const { push } = useNotices();
   const measureRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(measureRef);
 
@@ -57,11 +63,41 @@ export function Shell() {
       } else if (command?.id === "sidebar" && !now.printView) {
         e.preventDefault();
         setSidebar((v) => !v);
+      } else if (command?.id === "palette") {
+        e.preventDefault();
+        setPalette(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  const openClient = (clientId: number, chartId: number | null = null) =>
+    void session.openClient(clientId, chartId).then((error) => error && push({ id: "client", type: "error", messageKey: "notice.openFailed", error }));
+
+  // Paletten seçilen öğe. Danışan seçimi doğrudan açar (form ya da onay yok, spec §8).
+  const runPalette = (item: PaletteItem, meta: boolean) => {
+    switch (item.kind) {
+      case "client":
+        if (meta) setSidebar(true);
+        return openClient(item.clientId);
+      case "chart":
+        return openClient(item.clientId, item.chartId);
+      case "layout":
+        return layout.select(item.layoutId);
+      case "varga": {
+        const panel = layout.active.panels.find((p) => p.kind === "chart");
+        return panel && layout.setPanelSettings(panel.id, { varga: item.varga });
+      }
+      case "command":
+        if (item.command === "newChart" || item.command === "addChart" || item.command === "editChart") {
+          return setForm(item.command === "newChart" ? "new" : item.command === "addChart" ? "add" : "edit");
+        }
+        if (item.command === "toggleNotes") return toggleNotes();
+        if (item.command === "sidebar") return setSidebar((v) => !v);
+        return setHelp(true);
+    }
+  };
 
   return (
     <div className="shell">
@@ -75,6 +111,7 @@ export function Shell() {
         onEditChart={opened ? () => setForm("edit") : undefined}
         sidebarOpen={sidebar}
         onToggleSidebar={() => setSidebar((v) => !v)}
+        onPalette={() => setPalette(true)}
       />
       <NoticeBar />
       <div className="shell-body">
@@ -84,6 +121,7 @@ export function Shell() {
         </main>
       </div>
       {help && <HelpDialog onClose={() => setHelp(false)} />}
+      {palette && <Palette onClose={() => setPalette(false)} onRun={runPalette} />}
       {form && <BirthForm mode={form} onClose={() => setForm(null)} />}
     </div>
   );

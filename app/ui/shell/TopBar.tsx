@@ -16,10 +16,11 @@ export interface TopBarProps {
   onEditChart?: () => void;
   sidebarOpen: boolean;
   onToggleSidebar(): void;
+  onPalette(): void;
 }
 
 /** Üst çubuk (spec §4): solda danışan ve harita (uyarı rozetleriyle), ortada düzen seçici, sağda tema, dil ve baskı. */
-export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp, onNewChart, onEditChart, sidebarOpen, onToggleSidebar }: TopBarProps) {
+export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onHelp, onNewChart, onEditChart, sidebarOpen, onToggleSidebar, onPalette }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const language = isLanguage(i18n.language) ? i18n.language : DEFAULT_LANGUAGE;
   return (
@@ -42,6 +43,9 @@ export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onH
       </div>
       <div className="topbar-center">{!printView && <LayoutPicker />}</div>
       <div className="topbar-right">
+        <button type="button" aria-keyshortcuts="Meta+K" onClick={onPalette}>
+          {t("palette.open")}
+        </button>
         <label>
           {t("theme.label")}
           <select value={themePref} onChange={(e) => isThemePref(e.target.value) && onThemeChange(e.target.value)}>

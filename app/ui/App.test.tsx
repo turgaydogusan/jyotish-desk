@@ -13,6 +13,8 @@ vi.mock("./api", () => ({
     listClients: vi.fn(async () => ({ status: "ok", data: [] })),
     listTags: vi.fn(async () => ({ status: "ok", data: [] })),
     listCharts: vi.fn(async () => ({ status: "ok", data: [] })),
+    searchClients: vi.fn(async () => ({ status: "ok", data: [] })),
+    openClient: vi.fn(),
   },
 }));
 
@@ -180,6 +182,42 @@ test("Cmd+\\ and the Clients button show and hide the client sidebar", () => {
   expect(toggle).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(toggle);
   expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
+});
+
+test("Cmd+K, a name and Enter open that client's last chart with no form in between (spec §8)", async () => {
+  const other = fixture().opened;
+  other.client = { ...other.client, id: 2, name: "Ayşe Yılmaz" };
+  other.chart_record = { ...other.chart_record, id: 20, client_id: 2 };
+  vi.mocked(api.searchClients).mockResolvedValueOnce({ status: "ok", data: [{ client: other.client, matched: "Name", snippet: null }] });
+  vi.mocked(api.openClient).mockResolvedValueOnce({ status: "ok", data: other });
+  renderApp();
+  fireEvent.keyDown(window, { key: "\\", code: "Backslash", metaKey: true });
+  expect(screen.queryByRole("complementary", { name: "Danışanlar" })).toBeNull();
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "ayşe" } });
+  await within(palette).findByRole("option", { name: /Ayşe Yılmaz/ }, { timeout: 3000 });
+  fireEvent.keyDown(within(palette).getByRole("combobox"), { key: "Enter", metaKey: true });
+  expect(await screen.findByRole("heading", { level: 1, name: "Ayşe Yılmaz" })).toBeInTheDocument();
+  expect(api.openClient).toHaveBeenCalledWith(2, null);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  // Cmd+Enter kenar çubuğunu da gösterir (sekme yoktur).
+  expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
+});
+
+test("the palette's varga item sets the first chart panel and its layout item switches layouts", async () => {
+  renderApp();
+  fireEvent.click(screen.getByRole("button", { name: "Ara" }));
+  let palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "saptamsa" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /D7 Saptamsa/ }));
+  expect(screen.getByRole("group", { name: "D7 haritası" })).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "D1 haritası" })).toBeNull();
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "araştırma" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /Araştırma/ }));
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Araştırma");
 });
 
 test("theme menu sets data-theme and remembers the choice", () => {
