@@ -4,7 +4,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use atlas::Timestamp;
-use rusqlite::Connection;
+use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::schema::{MIGRATIONS, SCHEMA_VERSION};
 use crate::StoreError;
@@ -68,6 +68,26 @@ impl Store {
             .conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))?;
         Ok(usize::try_from(v).unwrap_or(usize::MAX))
+    }
+
+    pub(crate) fn app_state_get(&self, key: &str) -> Result<Option<String>, StoreError> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT value_json FROM app_state WHERE key = ?1",
+                params![key],
+                |r| r.get(0),
+            )
+            .optional()?)
+    }
+
+    pub(crate) fn app_state_set(&self, key: &str, value_json: &str) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO app_state (key, value_json) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
+            params![key, value_json],
+        )?;
+        Ok(())
     }
 }
 
@@ -183,6 +203,15 @@ mod tests {
         assert_eq!(mode, "delete");
         drop(c);
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn app_state_upserts() {
+        let s = store();
+        assert_eq!(s.app_state_get("a").unwrap(), None);
+        s.app_state_set("a", "1").unwrap();
+        s.app_state_set("a", "2").unwrap();
+        assert_eq!(s.app_state_get("a").unwrap().as_deref(), Some("2"));
     }
 
     #[test]

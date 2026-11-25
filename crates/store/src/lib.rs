@@ -7,6 +7,7 @@ mod db;
 mod error;
 pub mod model;
 pub mod schema;
+pub mod settings;
 
 pub use birth::{parse_birth, resolve_birth, resolve_parsed, ParsedBirth};
 pub use db::{Clock, Store};
@@ -16,3 +17,7 @@ pub use model::{
     NewClient, Note, Place, ResolvedRecord, TimeCertainty, TzChoice,
 };
 pub use schema::SCHEMA_VERSION;
+pub use settings::{
+    load_calc_settings, AppPrefs, SettingsLoad, ValueMigration, APP_PREFS_SCHEMA_VERSION,
+    CALC_SETTINGS_MIGRATIONS, LOCALES,
+};
