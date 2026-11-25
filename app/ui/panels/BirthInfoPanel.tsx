@@ -39,12 +39,10 @@ export function BirthInfoPanel(_props: PanelProps) {
   return <BirthInfo opened={opened} />;
 }
 
-function BirthInfo({ opened }: { opened: OpenedClient }) {
-  const { t } = useTranslation();
-  const id = useId();
+/** Doğum bilgisi satırları (etiket, değer); panel ve baskı kapağı (print/model.ts) aynı listeyi kullanır. */
+export function birthInfoRows(t: TFunction, opened: OpenedClient): [string, string][] {
   const b = opened.chart_record.birth;
   const r = opened.chart_record.resolved;
-  const warnings: string[] = [...r.warnings, ...opened.chart.meta.warnings];
   const rows: [string, string][] = [
     [t("birthInfo.date"), b.date],
     [t("birthInfo.time"), timeText(t, b)],
@@ -59,6 +57,14 @@ function BirthInfo({ opened }: { opened: OpenedClient }) {
     [t("birthInfo.kind"), t(`chart.kind.${opened.chart_record.kind}`)],
   ];
   if (b.notes.trim() !== "") rows.push([t("birthInfo.source"), b.notes]);
+  return rows;
+}
+
+function BirthInfo({ opened }: { opened: OpenedClient }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const warnings: string[] = [...opened.chart_record.resolved.warnings, ...opened.chart.meta.warnings];
+  const rows = birthInfoRows(t, opened);
   return (
     <section className="birth-info" aria-label={t("panel.birth_info")}>
       <dl className="birth-info-list">

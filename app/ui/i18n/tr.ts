@@ -456,6 +456,12 @@ export const tr = {
     body: "Danışanın doğum bilgisini girerek başlayın.",
     action: "Yeni harita",
   },
+  print: {
+    page: { cover: "Kapak", charts: "Haritalar: D1 ve D9", dasha: "Vimshottari dasa", grahas: "Graha tablosu" },
+    legend: "R: retro · c: yanık · altı çizili: vargottama",
+    credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",
+    dasha: { lord: "Antardasa", start: "Başlangıç", end: "Bitiş" },
+  },
   transit: {
     date: "Transit anı",
     dateLabel: "Tarih",

@@ -457,6 +457,12 @@ export const fr: Messages = {
     body: "Commencez par saisir les données de naissance du consultant.",
     action: "Nouvelle carte",
   },
+  print: {
+    page: { cover: "Couverture", charts: "Cartes : D1 et D9", dasha: "Dasha Vimshottari", grahas: "Tableau des grahas" },
+    legend: "R : rétrograde · c : combuste · souligné : vargottama",
+    credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",
+    dasha: { lord: "Antardasha", start: "Début", end: "Fin" },
+  },
   transit: {
     date: "Moment du transit",
     dateLabel: "Date",

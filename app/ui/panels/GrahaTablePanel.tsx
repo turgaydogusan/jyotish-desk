@@ -1,26 +1,16 @@
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { GrahaPosition, Lagna } from "../bindings";
-import { signIndex } from "../chart/adapter";
-import { RETRO_MARK, showsRetro } from "../chart/types";
+import type { GrahaPosition } from "../bindings";
 import { useHighlight } from "../highlight/store";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
 import { useSession } from "../session/store";
 import { useLayoutStore } from "../view/store";
 import { timeUnknown } from "../session/birth";
-import { formatDegree, formatSignedDegree, formatSpeed } from "./format";
+import { APPROX_COLUMNS, grahaCellText, lagnaCellText, NUMERIC_COLUMNS as NUMERIC } from "./grahaCells";
 import { GRAHA_COLUMNS, grahaColumns, toggleColumn, type GrahaColumn } from "./grahaColumns";
-import { nakshatraName } from "./labels";
 import "./panels.css";
 import type { PanelProps } from "./types";
-
-const NUMERIC: ReadonlySet<GrahaColumn> = new Set(["degree", "lon", "lat", "speed", "pada", "house"]);
-const dash = "—";
-
-function deg(v: number | null): string {
-  return v === null ? dash : formatDegree(v);
-}
 
 /** Yaklaşık değer: "≈" işareti (fare için `title`) ve ekran okuyucu için bir kez okunan metin. */
 function Approx({ on, label, children }: { on: boolean; label: string; children: ReactNode }) {
@@ -36,62 +26,23 @@ function Approx({ on, label, children }: { on: boolean; label: string; children:
   );
 }
 
+/** Hücre metni `grahaCells.ts`'ten; burada yalnızca erişilebilirlik sarmalayıcıları eklenir. */
 function grahaCell(t: TFunction, g: GrahaPosition, column: GrahaColumn, approx: boolean): ReactNode {
-  const a = (node: ReactNode) => (
+  const text = grahaCellText(t, g, column);
+  if (column === "retro" && text !== "") {
+    return (
+      <>
+        <span aria-hidden="true">{text}</span>
+        <span className="visually-hidden">{t("chart.retro")}</span>
+      </>
+    );
+  }
+  if (!APPROX_COLUMNS.has(column)) return text;
+  return (
     <Approx on={approx} label={t("table.approx")}>
-      {node}
+      {text}
     </Approx>
   );
-  switch (column) {
-    case "sign":
-      return a(t(`sign.${signIndex(g.sign)}`));
-    case "degree":
-      return a(deg(g.deg_in_sign));
-    case "lon":
-      return a(deg(g.lon));
-    case "lat":
-      return g.lat === null ? dash : formatSignedDegree(g.lat);
-    case "speed":
-      return g.speed === null ? dash : formatSpeed(g.speed);
-    case "retro":
-      return showsRetro(g.graha, g.retrograde) ? (
-        <>
-          <span aria-hidden="true">{RETRO_MARK}</span>
-          <span className="visually-hidden">{t("chart.retro")}</span>
-        </>
-      ) : (
-        ""
-      );
-    case "nakshatra":
-      return a(nakshatraName(g.nakshatra));
-    case "pada":
-      return a(String(g.pada));
-    case "combust":
-      return g.combust ? t("chart.combust") : "";
-    case "dignity":
-      return g.dignity === null ? dash : t(`dignity.${g.dignity}`);
-    case "house":
-      return String(g.house);
-  }
-}
-
-function lagnaCell(t: TFunction, l: Lagna, column: GrahaColumn): ReactNode {
-  switch (column) {
-    case "sign":
-      return t(`sign.${signIndex(l.sign)}`);
-    case "degree":
-      return deg(l.deg_in_sign);
-    case "lon":
-      return deg(l.lon);
-    case "nakshatra":
-      return nakshatraName(l.nakshatra);
-    case "pada":
-      return String(l.pada);
-    case "house":
-      return "1";
-    default:
-      return "";
-  }
 }
 
 /**
@@ -149,7 +100,7 @@ export function GrahaTablePanel({ panel }: PanelProps) {
               <th scope="row">{t("table.lagnaRow")}</th>
               {columns.map((c) => (
                 <td key={c} className={NUMERIC.has(c) ? "num" : undefined}>
-                  {lagnaCell(t, opened.chart.lagna, c)}
+                  {lagnaCellText(t, opened.chart.lagna, c)}
                 </td>
               ))}
             </tr>

@@ -457,6 +457,12 @@ export const en: Messages = {
     body: "Start by entering the client's birth data.",
     action: "New chart",
   },
+  print: {
+    page: { cover: "Cover", charts: "Charts: D1 and D9", dasha: "Vimshottari dasha", grahas: "Graha table" },
+    legend: "R: retrograde · c: combust · underlined: vargottama",
+    credit: "{{app}} {{engine}} · Swiss Ephemeris {{swe}}",
+    dasha: { lord: "Antardasha", start: "Start", end: "End" },
+  },
   transit: {
     date: "Transit moment",
     dateLabel: "Date",
