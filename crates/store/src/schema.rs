@@ -5,7 +5,9 @@ use rusqlite_migration::{Migrations, M};
 
 /// Göç 1: v1 şeması. Spec §5'teki tablolara ek sütunlar karar tablosundadır
 /// (`admin1`, `geoname_id`, `tz_kind`, `birth_notes`, `resolved_jd_ut`, `resolved_abbrev`,
-/// `resolved_warnings_json`).
+/// `resolved_warnings_json`). `tags.name_key` etiketin kimliğidir (`notes::tag_key`): SQLite
+/// `NOCASE` yalnızca ASCII katladığından teklik Rust'ta üretilen anahtardadır; `name` ilk
+/// yazımı saklar.
 const V1: &str = "
 CREATE TABLE clients (
     id             INTEGER PRIMARY KEY,
@@ -61,8 +63,9 @@ CREATE TABLE client_notes (
 );
 CREATE INDEX client_notes_client ON client_notes(client_id, created_at);
 CREATE TABLE tags (
-    id   INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE COLLATE NOCASE
+    id       INTEGER PRIMARY KEY,
+    name     TEXT NOT NULL,
+    name_key TEXT NOT NULL UNIQUE
 );
 CREATE TABLE chart_tags (
     chart_id INTEGER NOT NULL REFERENCES charts(id) ON DELETE CASCADE,

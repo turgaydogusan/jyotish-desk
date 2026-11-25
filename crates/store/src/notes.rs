@@ -1,11 +1,11 @@
 //! Seans notları (`client_notes`, spec §4 notlar paneli) ve harita etiketleri (spec §5:
 //! etiketler harita düzeyindedir).
 
-use rusqlite::{params, OptionalExtension, Row};
+use rusqlite::{params, Connection, OptionalExtension, Row};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::charts::prune_tags;
+use crate::charts::{prune_tags, MAX_LIST};
 use crate::db::last_id;
 use crate::model::Note;
 use crate::{Store, StoreError};
@@ -36,23 +36,53 @@ fn row_to_note(r: &Row<'_>) -> rusqlite::Result<Note> {
     })
 }
 
-/// Etiket listesini kırpar, boşları atar, büyük/küçük harf duyarsız tekilleştirir
-/// (ilk yazım kalır).
+/// Etiketin kimlik anahtarı (`tags.name_key`): Unicode küçük harf; ayrıca Türkçe dört "i"
+/// (`I`, `ı`, `İ`, `i`) tek harfe iner ("KARIYER", "KARİYER", "kariyer" aynı etikettir).
+/// Aksanlar korunur ("Öfke" ile "Ofke" ayrı etiketlerdir).
+pub(crate) fn tag_key(tag: &str) -> String {
+    tag.to_lowercase()
+        .chars()
+        .filter(|c| *c != '\u{307}')
+        .map(|c| if c == 'ı' { 'i' } else { c })
+        .collect()
+}
+
+/// Etiket listesini kırpar, boşları atar, büyük/küçük harf duyarsız (`tag_key`)
+/// tekilleştirir (ilk yazım korunur).
 pub fn normalize_tags(tags: &[String]) -> Result<Vec<String>, StoreError> {
     let mut out: Vec<String> = Vec::new();
+    let mut keys: Vec<String> = Vec::new();
     for t in tags {
         let t = t.trim();
-        if t.is_empty() {
+        let key = tag_key(t);
+        if key.is_empty() {
             continue;
         }
         if t.chars().count() > MAX_TAG_CHARS {
             return Err(StoreError::InvalidInput("tags"));
         }
-        if !out.iter().any(|o| o.to_lowercase() == t.to_lowercase()) {
+        if !keys.contains(&key) {
+            keys.push(key);
             out.push(t.to_owned());
         }
     }
     Ok(out)
+}
+
+/// Etiketi yoksa oluşturur ve haritaya bağlar. Aynı anahtarlı etiket varsa onun yazımı
+/// korunur. `set_chart_tags` ve JSON içe aktarma aynı yolu kullanır.
+pub(crate) fn attach_tag(conn: &Connection, chart_id: u32, tag: &str) -> Result<(), StoreError> {
+    let key = tag_key(tag);
+    conn.execute(
+        "INSERT OR IGNORE INTO tags (name, name_key) VALUES (?1, ?2)",
+        params![tag, key],
+    )?;
+    conn.execute(
+        "INSERT OR IGNORE INTO chart_tags (chart_id, tag_id)
+         SELECT ?1, id FROM tags WHERE name_key = ?2",
+        params![chart_id, key],
+    )?;
+    Ok(())
 }
 
 impl Store {
@@ -112,7 +142,7 @@ impl Store {
         Ok(())
     }
 
-    /// Danışanın notları, en yeni önce.
+    /// Danışanın notları, en yeni önce; en çok `MAX_LIST`.
     pub fn notes(&self, client_id: u32, limit: u32) -> Result<Vec<Note>, StoreError> {
         self.client(client_id)?;
         let sql = format!(
@@ -120,7 +150,7 @@ impl Store {
              ORDER BY created_at DESC, id DESC LIMIT ?2"
         );
         let mut stmt = self.conn.prepare_cached(&sql)?;
-        let rows = stmt.query_map(params![client_id, limit], row_to_note)?;
+        let rows = stmt.query_map(params![client_id, limit.min(MAX_LIST)], row_to_note)?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
@@ -140,12 +170,7 @@ impl Store {
             params![chart_id],
         )?;
         for t in &tags {
-            tx.execute("INSERT OR IGNORE INTO tags (name) VALUES (?1)", params![t])?;
-            tx.execute(
-                "INSERT INTO chart_tags (chart_id, tag_id)
-                 SELECT ?1, id FROM tags WHERE name = ?2",
-                params![chart_id, t],
-            )?;
+            attach_tag(&tx, chart_id, t)?;
         }
         tx.execute(
             "UPDATE charts SET updated_at = ?1 WHERE id = ?2",
@@ -264,5 +289,40 @@ mod tests {
             s.set_chart_tags(a.id, &[long]),
             Err(StoreError::InvalidInput("tags"))
         ));
+    }
+
+    #[test]
+    fn tag_identity_folds_non_ascii_case_across_charts() {
+        let mut s = store();
+        let (_, a) = s.create_client(&new_client("A")).unwrap();
+        let (_, b) = s.create_client(&new_client("B")).unwrap();
+        let got = s
+            .set_chart_tags(
+                a.id,
+                &[
+                    "Öfke".into(),
+                    "ÖFKE".into(),
+                    "araştırma".into(),
+                    "İş".into(),
+                ],
+            )
+            .unwrap();
+        assert_eq!(got, ["araştırma", "Öfke", "İş"]);
+        // Başka haritada farklı yazım yeni etiket açmaz; ilk yazım korunur.
+        let got = s
+            .set_chart_tags(
+                b.id,
+                &["öfke".into(), "ARAŞTIRMA".into(), "IŞ".into(), "iş".into()],
+            )
+            .unwrap();
+        assert_eq!(got, ["araştırma", "Öfke", "İş"]);
+        let all = s.tags().unwrap();
+        assert_eq!(all.len(), 3);
+        assert!(all.iter().all(|t| t.charts == 2));
+        // Aksan katlanmaz: "Ofke" ayrı bir etikettir.
+        s.set_chart_tags(b.id, &["Ofke".into()]).unwrap();
+        assert_eq!(s.tags().unwrap().len(), 4);
+        // Yalnızca birleştirici noktadan oluşan etiket boş sayılır.
+        assert!(normalize_tags(&["\u{307}".into()]).unwrap().is_empty());
     }
 }
