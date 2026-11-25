@@ -9,15 +9,27 @@ import { storePersistence, type ViewPersistence } from "./view/persistence";
 import { ViewStateProvider } from "./view/store";
 
 function bootNotices(boot: Boot): Notice[] {
-  if (boot.error) return [{ id: "boot", type: "error", messageKey: "notice.restoreFailed", error: boot.error }];
-  return boot.opened ? storeWarningNotices(boot.opened.warnings) : [];
+  const layout: Notice[] = boot.layoutError ? [{ id: "layout", type: "error", messageKey: "notice.layoutLoadFailed", error: boot.layoutError }] : [];
+  if (boot.error) return [...layout, { id: "boot", type: "error", messageKey: "notice.restoreFailed", error: boot.error }];
+  return [...layout, ...(boot.opened ? storeWarningNotices(boot.opened.warnings) : [])];
 }
 
-/** Görünüm deposu ve kayıt: kayıt hatası bildirim bandına gider (aynı kimlik, tek bildirim). */
+/**
+ * Görünüm deposu ve kayıt: kayıt hatası bildirim bandına gider (aynı kimlik, tek bildirim) ve
+ * sonraki başarılı kayıtla kalkar. Kayıtlı düzen okunamadıysa kayıtlar tutulur (M6-3).
+ */
 function Stores({ boot, persistence, children }: { boot: Boot; persistence?: ViewPersistence; children: ReactNode }) {
-  const { push } = useNotices();
+  const { push, dismiss } = useNotices();
   const [store] = useState(
-    () => persistence ?? storePersistence((error) => push({ id: "save", type: "error", messageKey: "notice.saveFailed", error })),
+    () =>
+      persistence ??
+      storePersistence(
+        {
+          onError: (error) => push({ id: "save", type: "error", messageKey: "notice.saveFailed", error }),
+          onSaved: () => dismiss("save"),
+        },
+        { hold: boot.layoutError !== null },
+      ),
   );
   const [initial] = useState(() =>
     initialViewModel(

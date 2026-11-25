@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { vi } from "vitest";
 
 vi.mock("./api", () => ({
@@ -8,6 +8,8 @@ vi.mock("./api", () => ({
     searchPlaces: vi.fn(async () => ({ status: "ok", data: [] })),
     createClient: vi.fn(),
     updateChart: vi.fn(),
+    saveViewState: vi.fn(async () => ({ status: "ok", data: null })),
+    savePanelLayout: vi.fn(async () => ({ status: "ok", data: null })),
   },
 }));
 
@@ -18,10 +20,13 @@ import { fixture, unknownTimeOpened } from "./test/fixture";
 import { THEME_STORAGE_KEY } from "./theme/theme";
 import { memoryPersistence } from "./view/persistence";
 
-function renderApp(boot: Partial<Boot> = {}) {
-  const full: Boot = { layout: null, opened: fixture().opened, error: null, ...boot };
-  return render(<App boot={full} persistence={memoryPersistence()} />);
+/** `store: true` gerçek store kalıcılığını (taklit `api`) kullanır; varsayılan bellek içi. */
+function renderApp(boot: Partial<Boot> = {}, { store = false } = {}) {
+  const full: Boot = { layout: null, layoutError: null, opened: fixture().opened, error: null, ...boot };
+  return render(<App boot={full} persistence={store ? undefined : memoryPersistence()} />);
 }
+
+const toggleNotes = () => fireEvent.keyDown(window, { key: "N", metaKey: true, shiftKey: true });
 
 test("opens on the interview layout with the restored chart", () => {
   renderApp();
@@ -89,6 +94,26 @@ test("a restore failure and store warnings are shown in the notice bar and can b
     "UyarıSon açılan harita silinmiş; en son güncellenen harita açıldı.Kapat",
     "UyarıSaat dilimi verisi değişti (2025a → 2026a); saklanan an kullanılıyor.Kapat",
   ]);
+});
+
+test("a layout read failure is announced and view changes are not saved over the stored layout", async () => {
+  vi.mocked(api.saveViewState).mockClear();
+  renderApp({ layoutError: { code: "store_sqlite", params: { detail: "disk" } } }, { store: true });
+  expect(within(screen.getByRole("region", { name: "Bildirimler" })).getByRole("alert")).toHaveTextContent(
+    "Kayıtlı düzen okunamadı: Danışan veritabanı okunamadı ya da yazılamadı (disk).",
+  );
+  toggleNotes();
+  await new Promise((r) => setTimeout(r, 600));
+  expect(api.saveViewState).not.toHaveBeenCalled();
+});
+
+test("a save error notice goes away after the next successful save", async () => {
+  vi.mocked(api.saveViewState).mockResolvedValueOnce({ status: "error", error: { code: "store_sqlite", params: { detail: "disk" } } });
+  renderApp({}, { store: true });
+  toggleNotes();
+  expect(await screen.findByRole("alert", {}, { timeout: 3000 })).toHaveTextContent("Görünüm kaydedilemedi");
+  toggleNotes();
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull(), { timeout: 3000 });
 });
 
 test("Cmd+2 switches to the research layout with the graha table", () => {

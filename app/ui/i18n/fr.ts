@@ -172,6 +172,7 @@ export const fr: Messages = {
     warning: "Avertissement",
     restoreFailed: "La dernière session n’a pas pu être ouverte : {{message}}",
     saveFailed: "La vue n’a pas pu être enregistrée : {{message}}",
+    layoutLoadFailed: "La disposition enregistrée n’a pas pu être lue : {{message}} Les changements de vue de cette session ne seront pas enregistrés ; la disposition enregistrée reste intacte.",
   },
   storeWarning: {
     LastChartMissing: "La dernière carte ouverte a été supprimée ; la plus récemment modifiée a été ouverte.",

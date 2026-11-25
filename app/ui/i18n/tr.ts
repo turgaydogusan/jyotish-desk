@@ -171,6 +171,7 @@ export const tr = {
     warning: "Uyarı",
     restoreFailed: "Son oturum açılamadı: {{message}}",
     saveFailed: "Görünüm kaydedilemedi: {{message}}",
+    layoutLoadFailed: "Kayıtlı düzen okunamadı: {{message}} Bu oturumdaki görünüm değişiklikleri kaydedilmeyecek; kayıtlı düzen olduğu gibi duruyor.",
   },
   storeWarning: {
     LastChartMissing: "Son açılan harita silinmiş; en son güncellenen harita açıldı.",

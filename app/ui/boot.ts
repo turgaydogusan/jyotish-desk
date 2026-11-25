@@ -7,14 +7,17 @@ import { loadLayout } from "./view/persistence";
 
 export interface Boot {
   layout: unknown | null;
+  /** Kayıtlı düzen okunamadı: hazır düzenler gösterilir, görünüm kayıtları tutulur. */
+  layoutError: CommandError | null;
   opened: OpenedClient | null;
   error: CommandError | null;
 }
 
 export async function boot(): Promise<Boot> {
-  const [layout, session] = await Promise.all([loadLayout(), api.restoreSession()]);
-  if (session.status === "error") return { layout, opened: null, error: session.error };
-  return { layout, opened: session.data, error: null };
+  const [loaded, session] = await Promise.all([loadLayout(), api.restoreSession()]);
+  const base = { layout: loaded.layout, layoutError: loaded.error };
+  if (session.status === "error") return { ...base, opened: null, error: session.error };
+  return { ...base, opened: session.data, error: null };
 }
 
-export const EMPTY_BOOT: Boot = { layout: null, opened: null, error: null };
+export const EMPTY_BOOT: Boot = { layout: null, layoutError: null, opened: null, error: null };

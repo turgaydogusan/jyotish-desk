@@ -172,6 +172,7 @@ export const en: Messages = {
     warning: "Warning",
     restoreFailed: "The last session could not be opened: {{message}}",
     saveFailed: "The view could not be saved: {{message}}",
+    layoutLoadFailed: "The saved layout could not be read: {{message}} View changes in this session will not be saved; the saved layout is left as it is.",
   },
   storeWarning: {
     LastChartMissing: "The last opened chart was deleted; the most recently updated chart was opened.",
