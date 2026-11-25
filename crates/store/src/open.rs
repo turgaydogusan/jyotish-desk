@@ -192,11 +192,19 @@ fn check_tzdb(
     let fresh = parse_birth(&chart.birth).and_then(|p| resolve_parsed(&p));
     match fresh {
         Ok(r) if r.utc == chart.resolved.utc => {
+            // An aynı; yeni tzdb'nin kısaltması, ofseti ve uyarıları yazılır (Plan 11 D6).
             conn.execute(
-                "UPDATE charts SET tzdb_version = ?1 WHERE id = ?2",
-                params![current, chart.id],
+                "UPDATE charts SET tzdb_version = ?1, resolved_abbrev = ?2,
+                 resolved_offset_secs = ?3, resolved_warnings_json = ?4 WHERE id = ?5",
+                params![
+                    current,
+                    r.abbrev,
+                    r.offset_secs,
+                    serde_json::to_string(&r.warnings)?,
+                    chart.id
+                ],
             )?;
-            chart.resolved.tzdb_version = current.to_owned();
+            chart.resolved = r;
         }
         other => warnings.push(StoreWarning::TzdbChanged {
             stored_version: chart.resolved.tzdb_version.clone(),
@@ -464,5 +472,24 @@ mod tests {
             let o = s.open_client(a.id, None);
             prop_assert!(o.is_ok());
         }
+    }
+
+    #[test]
+    fn silent_tzdb_refresh_rewrites_abbrev_offset_and_warnings() {
+        let mut s = store();
+        let (a, ch) = s.create_client(&new_client("A")).unwrap();
+        let fresh = ch.resolved.clone();
+        s.conn
+            .execute(
+                "UPDATE charts SET tzdb_version = '1999a', resolved_abbrev = 'OLD',
+                 resolved_offset_secs = 1, resolved_warnings_json = '[\"PreTzdbReliability\"]'
+                 WHERE id = ?1",
+                params![ch.id],
+            )
+            .unwrap();
+        let o = s.open_client(a.id, None).unwrap();
+        assert!(o.warnings.is_empty());
+        assert_eq!(o.chart.resolved, fresh);
+        assert_eq!(s.chart(ch.id).unwrap().resolved, fresh);
     }
 }

@@ -453,6 +453,23 @@ impl Store {
         self.chart(chart_id)
     }
 
+    /// tzdb farkında "Saklanan zamanı koru" (Plan 11 D5): saklanan an değişmez, kayıt güncel
+    /// tzdb ile damgalanır; sonraki açılışta `TzdbChanged` çıkmaz. Kabul yolu `update_chart`'tır.
+    pub fn keep_stored_moment(&mut self, chart_id: u32) -> Result<ChartRecord, StoreError> {
+        let now = self.now();
+        let n = self.conn.execute(
+            "UPDATE charts SET tzdb_version = ?1, updated_at = ?2 WHERE id = ?3",
+            params![atlas::tzdb_version(), now, chart_id],
+        )?;
+        if n == 0 {
+            return Err(StoreError::NotFound {
+                what: "chart",
+                id: chart_id,
+            });
+        }
+        self.chart(chart_id)
+    }
+
     /// Saklanan ayarları okur; okunamazsa genel varsayılan (`SettingsLoad::Reset`).
     pub fn calc_settings(&self, chart_id: u32) -> Result<SettingsLoad, StoreError> {
         let raw: String = self
@@ -942,5 +959,33 @@ mod tests {
             Err(StoreError::InvalidInput("panel_layout"))
         ));
         assert_eq!(s.panel_layout().unwrap(), None);
+    }
+
+    #[test]
+    fn keep_stored_moment_stamps_the_current_tzdb_and_keeps_the_moment() {
+        let mut s = store();
+        let (a, ch) = s.create_client(&new_client("A")).unwrap();
+        s.conn
+            .execute(
+                "UPDATE charts SET tzdb_version = '1999a', resolved_utc = '2000-01-01T11:00:00Z',
+                 resolved_jd_ut = 2451544.9583333335 WHERE id = ?1",
+                params![ch.id],
+            )
+            .unwrap();
+        assert_eq!(s.open_client(a.id, None).unwrap().warnings.len(), 1);
+        let kept = s.keep_stored_moment(ch.id).unwrap();
+        assert_eq!(kept.resolved.tzdb_version, atlas::tzdb_version());
+        assert_eq!(kept.resolved.utc, "2000-01-01T11:00:00Z");
+        assert_eq!(kept.resolved.jd_ut, 2_451_544.958_333_333_5);
+        let o = s.open_client(a.id, None).unwrap();
+        assert!(o.warnings.is_empty());
+        assert_eq!(o.chart.resolved.utc, "2000-01-01T11:00:00Z");
+        assert!(matches!(
+            s.keep_stored_moment(999),
+            Err(StoreError::NotFound {
+                what: "chart",
+                id: 999
+            })
+        ));
     }
 }
