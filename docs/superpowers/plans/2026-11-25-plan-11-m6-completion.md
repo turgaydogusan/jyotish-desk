@@ -6974,7 +6974,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  54 passed (54)`, `Tests  456 passed (456)`; build `✓ built`; e2e `9 passed`; görsel `6 passed`.
+Expected: `Test Files  54 passed (54)`, `Tests  461 passed (461)` (son inceleme düzeltmeleriyle; Task 15 sonunda 456); build `✓ built`; e2e `9 passed`; görsel `6 passed`.
 
 - [ ] **Step 4: Kural taramaları (`6d48791`'den bu yana)**
 
@@ -7009,7 +7009,8 @@ Gerçek uygulamada, deneme danışanlarıyla (gerçek danışan verisi kullanıl
 - [ ] Dışa ve içe aktarma pencereleri uygulama penceresine bağlı sayfa (sheet) olarak açılır; ana pencere arkada tıklanamaz.
 - [ ] 32 MB'ı aşan bir dışa aktarma (ya da Rust testindeki eşik geçici olarak düşürülerek değil, büyük deneme verisiyle) uyarı bildirimi verir; dosya yazılmıştır.
 - [ ] Değişiklik yapılmış doğum formunda Esc "Değişiklikler atılsın mı?" onayını açar; "Vazgeç" düğmesi sormadan kapatır.
-- [ ] Boş "Yeni not" alanından çıkılınca not listeden silinir; yazılı not durur.
+- [ ] Boş "Yeni not" alanından çıkılınca not listeden silinir; yazılı not durur. Yazılıp boşaltılan yeni not silinmez; boş yeni not odaktayken `⌘Tab` ile başka uygulamaya geçip dönmek notu silmez.
+- [ ] Transit anı "Şimdi" iken "Şimdi"ye yeniden basmak gösterilen saati yeniler.
 - [ ] Bütün denetim boyunca terminalde (Rust ve Vite çıktısı) danışan adı, not gövdesi, doğum verisi ya da dosya yolu görünmez.
 
 Kapı geçtiyse ilerleme notlarına `Plan 11 Task 16 elle denetim: geçti (<tarih>)` yazılır. Bu adım commit üretmez.
@@ -7021,7 +7022,7 @@ Kapı geçtiyse ilerleme notlarına `Plan 11 Task 16 elle denetim: geçti (<tari
 - Spec M6 tamamdır: ayarlar penceresi ve haritaya özel ayarlar, fark rozeti, tzdb farkını kabul ya da saklanan anı koruma, oturum geri yükleme (gidiş-dönüş testiyle), transit tablosu, halkası ve tarih seçimi, `birth_info` ve `dasha_strip` panelleri, cinsiyet alanı.
 - Plan 10'un kapsam dışı listesindeki 1, 6, 7, 9, 10 (18, 19 ile), 11, 12, 13 (Plan 11 bölümleri), 17, 20, 21, 22, 23, 24, 25, 26 maddeleri ve Plan 11'e işaretli kayıt maddeleri (palet test boşlukları, m4, m6, m8, m10, m11) kapanmıştır.
 - Şema değişmemiştir (göç 1); yeni bağımlılık yoktur; C1–C17 taramaları temizdir.
-- Kapılar: Vitest 54/456, `jyotish-desk` lib 34, `store` lib 80 (+1 ölçüm testi `#[ignore]`), `jyotish-core` lib 110, golden 8, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, e2e 9, görsel 6; elle denetim kapısı geçmiştir.
+- Kapılar: Vitest 54/461, `jyotish-desk` lib 34, `store` lib 80 (+1 ölçüm testi `#[ignore]`), `jyotish-core` lib 110, golden 8, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2, e2e 9, görsel 6; elle denetim kapısı geçmiştir.
 
 ## Bu planın kapsamadıkları
 
@@ -7089,6 +7090,7 @@ Boşluk yok; kapsam dışı maddeler yukarıda listelidir.
 | Task 13 | 54/448 | | | |
 | Task 14 | 54/452 | 33 | 79 (+1 ignored) | |
 | Task 15 | 54/456 | 34 | 80 (+1 ignored) | e2e 9, görsel 6 |
+| Son inceleme düzeltmeleri | 54/461 | 34 | 80 (+1 ignored) | `transit/store.test.tsx` +1, `ChartPanel.test.tsx` +1, `NotesPanel.test.tsx` +2, `view/persistence.test.ts` +1 |
 | Task 16 | değişmez | | | |
 
 **5. Yürütme notu.** Kod blokları `6d48791` ağacına karşı yazılmıştır ve plan yazılırken koşulmamıştır. Beklenen sayılar bu zincirden gelir: bir görevin sayısı tutmazsa önceki görevin adımı denetlenir; sayı elle düzeltilmez.
