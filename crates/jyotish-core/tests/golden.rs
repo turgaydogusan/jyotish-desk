@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use ephemeris::SwissEph;
 use jyotish_core::{
-    angular_distance, compute_chart, CalcSettings, Chart, ChartWarning, Graha, Sign, Varga,
+    angular_distance, compute_chart, CalcSettings, Chart, ChartWarning, Graha, Sign, Vara, Varga,
 };
 use serde::Deserialize;
 
@@ -21,6 +21,10 @@ const SOURCES: [&str; 2] = ["swetest", "jhora"];
 const MIN_FIXTURES: usize = 5;
 /// `d9_signs` ve `dasha` taşıyan fixture sayısı bunun altına düşerse test düşer.
 const MIN_DERIVED_FIXTURES: usize = 5;
+/// Panchang bitiş zamanları ve gün doğumu/batımı toleransı (spec §8).
+const PANCHANG_TOL_SECONDS: f64 = 60.0;
+/// `panchang` ve `sav` taşıyan fixture sayısı bunun altına düşerse test düşer.
+const MIN_PANCHANG_FIXTURES: usize = 5;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -55,6 +59,12 @@ struct Expected {
     /// İsteğe bağlı: ilk mahadashanın lordu ve teorik başlangıcı (UT JD).
     #[serde(default)]
     dasha: Option<ExpectedDasha>,
+    /// İsteğe bağlı: doğum anının panchangı (Plan 07). Zamanlar UT JD; gün doğumu yoksa null.
+    #[serde(default)]
+    panchang: Option<ExpectedPanchang>,
+    /// İsteğe bağlı: Koç'tan Balık'a sarvashtakavarga.
+    #[serde(default)]
+    sav: Option<[u8; 12]>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -62,6 +72,22 @@ struct Expected {
 struct ExpectedDasha {
     first_lord: Graha,
     first_start_jd: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedPanchang {
+    sunrise_jd: Option<f64>,
+    sunset_jd: Option<f64>,
+    vara: Vara,
+    tithi: u8,
+    tithi_ends_jd: f64,
+    nakshatra: u8,
+    nakshatra_ends_jd: f64,
+    yoga: u8,
+    yoga_ends_jd: f64,
+    karana: u8,
+    karana_ends_jd: f64,
 }
 
 fn golden_dir() -> PathBuf {
@@ -187,6 +213,98 @@ fn compare_derived(f: &Fixture, chart: &Chart) -> Vec<String> {
     errs
 }
 
+/// İki zaman (UT JD) tolerans dışındaysa, biri yoksa ya da NaN ise açıklama döner.
+fn time_mismatch(what: &str, got: Option<f64>, want: Option<f64>) -> Option<String> {
+    match (got, want) {
+        (None, None) => None,
+        (Some(g), Some(w)) => {
+            let diff = (g - w).abs() * 86_400.0;
+            if diff.is_nan() || diff > PANCHANG_TOL_SECONDS {
+                Some(format!(
+                    "{what}: got {g:.6}, want {w:.6}, diff {diff:.1} s > {PANCHANG_TOL_SECONDS} s"
+                ))
+            } else {
+                None
+            }
+        }
+        _ => Some(format!("{what}: got {got:?}, want {want:?}")),
+    }
+}
+
+/// Plan 07 beklentileri: panchang numaraları ve vara birebir, zamanlar ≤ 60 sn; SAV birebir.
+fn compare_panchang(f: &Fixture, chart: &Chart) -> Vec<String> {
+    let mut errs = Vec::new();
+    if let Some(want) = &f.expected.panchang {
+        let p = &chart.panchang;
+        errs.extend(time_mismatch("sunrise", p.sunrise_jd_ut, want.sunrise_jd));
+        errs.extend(time_mismatch("sunset", p.sunset_jd_ut, want.sunset_jd));
+        if p.vara != want.vara {
+            errs.push(format!("vara: got {:?}, want {:?}", p.vara, want.vara));
+        }
+        let elements = [
+            (
+                "tithi",
+                p.tithi.no,
+                want.tithi,
+                p.tithi.ends_jd_ut,
+                want.tithi_ends_jd,
+            ),
+            (
+                "nakshatra",
+                p.nakshatra.no,
+                want.nakshatra,
+                p.nakshatra.ends_jd_ut,
+                want.nakshatra_ends_jd,
+            ),
+            (
+                "yoga",
+                p.yoga.no,
+                want.yoga,
+                p.yoga.ends_jd_ut,
+                want.yoga_ends_jd,
+            ),
+            (
+                "karana",
+                p.karana.no,
+                want.karana,
+                p.karana.ends_jd_ut,
+                want.karana_ends_jd,
+            ),
+        ];
+        for (what, got_no, want_no, got_end, want_end) in elements {
+            if got_no != want_no {
+                errs.push(format!("{what}: got {got_no}, want {want_no}"));
+            }
+            errs.extend(time_mismatch(
+                &format!("{what} end"),
+                Some(got_end),
+                Some(want_end),
+            ));
+        }
+    }
+    if let Some(want) = &f.expected.sav {
+        if &chart.ashtakavarga.sav != want {
+            errs.push(format!(
+                "sav: got {:?}, want {want:?}",
+                chart.ashtakavarga.sav
+            ));
+        }
+    }
+    errs
+}
+
+#[test]
+fn time_tolerance_flags_out_of_range_nan_and_missing() {
+    let second = 1.0 / 86_400.0;
+    let jd = 2_451_545.0;
+    assert!(time_mismatch("t", Some(jd), Some(jd + 59.0 * second)).is_none());
+    assert!(time_mismatch("t", Some(jd), Some(jd + 61.0 * second)).is_some());
+    assert!(time_mismatch("t", Some(f64::NAN), Some(jd)).is_some());
+    assert!(time_mismatch("t", None, None).is_none());
+    assert!(time_mismatch("t", None, Some(jd)).is_some());
+    assert!(time_mismatch("t", Some(jd), None).is_some());
+}
+
 #[test]
 fn tolerance_check_flags_out_of_range_nan_and_wraps() {
     let arcsec = 1.0 / 3600.0;
@@ -209,6 +327,8 @@ fn golden_charts_match_references() {
     let mut failures = Vec::new();
     let mut derived = 0;
     let mut sample: Option<(Fixture, Chart)> = None;
+    let mut with_panchang = 0;
+    let mut panchang_sample: Option<(Fixture, Chart)> = None;
     for (path, f) in &fixtures {
         assert_eq!(
             path.file_stem().and_then(|s| s.to_str()),
@@ -237,11 +357,18 @@ fn golden_charts_match_references() {
         for e in compare(f, &chart)
             .into_iter()
             .chain(compare_derived(f, &chart))
+            .chain(compare_panchang(f, &chart))
         {
             failures.push(format!(
                 "{} [{} {}; {}]: {e}",
                 f.id, f.source, f.source_version, f.notes
             ));
+        }
+        if let (Some(p), Some(_)) = (&f.expected.panchang, &f.expected.sav) {
+            with_panchang += 1;
+            if panchang_sample.is_none() && p.sunrise_jd.is_some() {
+                panchang_sample = Some((f.clone(), chart.clone()));
+            }
         }
         if f.expected.d9_signs.is_some() && f.expected.dasha.is_some() {
             derived += 1;
@@ -280,6 +407,22 @@ fn golden_charts_match_references() {
     }
     let errs = compare_derived(&bad, &chart);
     assert_eq!(errs.len(), 3, "{errs:?}");
+    assert!(
+        with_panchang >= MIN_PANCHANG_FIXTURES,
+        "found {with_panchang} fixtures with panchang and sav, want >= {MIN_PANCHANG_FIXTURES}"
+    );
+
+    // Panchang karşılaştırıcısı da ısırır: tithi, gün doğumu ve SAV'ı boz, üç hata bekle.
+    let (mut bad, chart) = panchang_sample.expect("a fixture with panchang and a sunrise");
+    if let Some(p) = bad.expected.panchang.as_mut() {
+        p.tithi = p.tithi % 30 + 1;
+        p.sunrise_jd = p.sunrise_jd.map(|t| t + 0.01); // 864 sn
+    }
+    if let Some(s) = bad.expected.sav.as_mut() {
+        s[0] += 1;
+    }
+    let errs = compare_panchang(&bad, &chart);
+    assert_eq!(errs.len(), 3, "{errs:?}");
 }
 
 #[test]
@@ -291,4 +434,52 @@ fn out_of_file_range_date_warns_low_precision() {
     assert_eq!(old.meta.warnings, [ChartWarning::LowPrecision]);
     let j2000 = compute_chart(&mut eph, 2_451_545.0, 41.0, 29.0, &settings).expect("J2000 chart");
     assert!(j2000.meta.warnings.is_empty());
+}
+
+#[test]
+fn first_sunrise_after_the_midnight_sun_is_found() {
+    let mut eph = SwissEph::open(&ephe_dir()).expect("open ephemeris");
+    // 67.179 K, 90.14 B; 5 Temmuz 2000 07:36 UT (yerel ortalama 01:36, Çarşamba). Gece yarısı
+    // güneşinden sonraki ilk doğuş doğumdan 1.2 saat önce (yerel 00:24); bir önceki doğuş
+    // haftalar öncedir. SE'nin yüksek enlem araması başlangıçtan ~26 saat ileriye bakar.
+    let p = jyotish_core::compute_panchang(
+        &mut eph,
+        2_451_730.817,
+        67.179,
+        -90.14,
+        &CalcSettings::default(),
+    )
+    .expect("panchang");
+    let rise = p.sunrise_jd_ut.expect("sunrise");
+    assert!(
+        (rise - 2_451_730.766_847).abs() * 86_400.0 <= 60.0,
+        "{rise}"
+    );
+    assert_eq!(p.vara, Vara::Wednesday);
+}
+
+#[test]
+fn last_sunrise_before_the_polar_night_is_found() {
+    let mut eph = SwissEph::open(&ephe_dir()).expect("open ephemeris");
+    // 80.07 K, 163.64 D; 19 Ekim 1970 03:21:36 UT (yerel ortalama 14:16, Pazartesi). Kutup
+    // gecesinden hemen önce gündüz 1.4 saat sürer; doğuşlar 17 Ekim 23:33:20.5 UT ve
+    // 19 Ekim 00:06:35.2 UT, araları 24.55 saat. Gündüz SE'nin 2 saatlik örnekleri arasına
+    // sığar: ilk doğuştan başlayan arama ikinciyi görmez ve vara Pazar çıkar.
+    // target/swetest -rise -hindu -bj2440877.0 -n2 -p0 -geopos163.64,80.07,0 -head -eswe -edirdata/ephe
+    let p = jyotish_core::compute_panchang(
+        &mut eph,
+        2_440_878.64,
+        80.07,
+        163.64,
+        &CalcSettings::default(),
+    )
+    .expect("panchang");
+    let rise = p.sunrise_jd_ut.expect("sunrise");
+    assert!(
+        (rise - 2_440_878.504_574).abs() * 86_400.0 <= 60.0,
+        "{rise}"
+    );
+    let set = p.sunset_jd_ut.expect("sunset");
+    assert!((set - 2_440_878.563_773).abs() * 86_400.0 <= 60.0, "{set}");
+    assert_eq!(p.vara, Vara::Monday);
 }

@@ -2,7 +2,7 @@
   "id": "new-delhi-2000-01-01",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "J2000; swetest -sid1 (Lahiri), mean node, UT 1.1.2000 12:00; d9_signs ve dasha awk ile türetildi (Plan 06)",
+  "notes": "J2000; swetest -sid1 (Lahiri), mean node, UT 1.1.2000 12:00; d9_signs ve dasha awk ile türetildi (Plan 06); panchang swetest -rise -hindu ve ikiye bölmeyle, sav awk ile türetildi (Plan 07)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -49,6 +49,20 @@
       "Rahu": "Libra",
       "Ketu": "Aries"
     },
-    "dasha": { "first_lord": "Rahu", "first_start_jd": 2445231.575532 }
+    "dasha": { "first_lord": "Rahu", "first_start_jd": 2445231.575532 },
+    "panchang": {
+      "sunrise_jd": 2451544.574985,
+      "sunset_jd": 2451545.000560,
+      "vara": "Saturday",
+      "tithi": 26,
+      "tithi_ends_jd": 2451545.826235,
+      "nakshatra": 15,
+      "nakshatra_ends_jd": 2451545.044056,
+      "yoga": 8,
+      "yoga_ends_jd": 2451545.822425,
+      "karana": 51,
+      "karana_ends_jd": 2451545.277284
+    },
+    "sav": [ 29, 21, 23, 26, 34, 33, 30, 30, 28, 21, 32, 30 ]
   }
 }

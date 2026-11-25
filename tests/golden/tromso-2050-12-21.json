@@ -2,7 +2,7 @@
   "id": "tromso-2050-12-21",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "yüksek enlem (kutup dairesi içi); swetest -sid1 (Lahiri), mean node, UT 21.12.2050 18:15; d9_signs ve dasha awk ile türetildi (Plan 06)",
+  "notes": "yüksek enlem (kutup dairesi içi); swetest -sid1 (Lahiri), mean node, UT 21.12.2050 18:15; d9_signs ve dasha awk ile türetildi (Plan 06); panchang swetest -rise -hindu ve ikiye bölmeyle, sav awk ile türetildi (Plan 07)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -49,6 +49,20 @@
       "Rahu": "Aquarius",
       "Ketu": "Leo"
     },
-    "dasha": { "first_lord": "Saturn", "first_start_jd": 2465062.970511 }
+    "dasha": { "first_lord": "Saturn", "first_start_jd": 2465062.970511 },
+    "panchang": {
+      "sunrise_jd": null,
+      "sunset_jd": null,
+      "vara": "Wednesday",
+      "tithi": 9,
+      "tithi_ends_jd": 2470163.054546,
+      "nakshatra": 26,
+      "nakshatra_ends_jd": 2470162.511436,
+      "yoga": 18,
+      "yoga_ends_jd": 2470163.014137,
+      "karana": 17,
+      "karana_ends_jd": 2470162.594498
+    },
+    "sav": [ 26, 29, 33, 26, 33, 29, 28, 27, 22, 38, 17, 29 ]
   }
 }

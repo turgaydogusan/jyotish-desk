@@ -2,7 +2,7 @@
   "id": "london-1850-01-01",
   "source": "swetest",
   "source_version": "2.10.03",
-  "notes": "19. yüzyıl, kuzey yarıküre, batı boylamı; swetest -sid1 (Lahiri), mean node, UT 1.1.1850 6:30; d9_signs ve dasha awk ile türetildi (Plan 06)",
+  "notes": "19. yüzyıl, kuzey yarıküre, batı boylamı; swetest -sid1 (Lahiri), mean node, UT 1.1.1850 6:30; d9_signs ve dasha awk ile türetildi (Plan 06); panchang swetest -rise -hindu ve ikiye bölmeyle, sav awk ile türetildi (Plan 07)",
   "settings": {
     "schema_version": 1,
     "zodiac": "Sidereal",
@@ -49,6 +49,20 @@
       "Rahu": "Taurus",
       "Ketu": "Scorpio"
     },
-    "dasha": { "first_lord": "Mercury", "first_start_jd": 2392113.670741 }
+    "dasha": { "first_lord": "Mercury", "first_start_jd": 2392113.670741 },
+    "panchang": {
+      "sunrise_jd": 2396757.842784,
+      "sunset_jd": 2396758.162728,
+      "vara": "Monday",
+      "tithi": 19,
+      "tithi_ends_jd": 2396759.523273,
+      "nakshatra": 9,
+      "nakshatra_ends_jd": 2396759.000288,
+      "yoga": 2,
+      "yoga_ends_jd": 2396759.492441,
+      "karana": 37,
+      "karana_ends_jd": 2396759.076838
+    },
+    "sav": [ 29, 31, 23, 28, 32, 33, 31, 24, 26, 27, 29, 24 ]
   }
 }

@@ -9,6 +9,7 @@
 - Ayanamsa ≤ 1″
 - Lagna ≤ 5″
 - İlk mahadasha başlangıcı ≤ 1 gün; D9 burçları birebir
+- Panchang: tithi, nakshatra, yoga, karana numaraları ve vara birebir; bitiş zamanları, gün doğumu ve batımı ≤ 60 sn. SAV birebir.
 
 Bir fixture tolerans dışına çıkarsa tolerans gevşetilmez. Önce ayar farkı aranır:
 ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
@@ -29,7 +30,12 @@ ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
     "grahas": { "Sun": 0.0, "Moon": 0.0, "Mars": 0.0, "Mercury": 0.0, "Jupiter": 0.0,
                 "Venus": 0.0, "Saturn": 0.0, "Rahu": 0.0, "Ketu": 0.0 },
     "d9_signs": { "Lagna": "Aquarius", "Sun": "Leo", "...": "dokuz grahanın hepsi" },
-    "dasha": { "first_lord": "Rahu", "first_start_jd": 2445231.575532 }
+    "dasha": { "first_lord": "Rahu", "first_start_jd": 2445231.575532 },
+    "panchang": { "sunrise_jd": 2451544.574985, "sunset_jd": 2451545.000560, "vara": "Saturday",
+                  "tithi": 26, "tithi_ends_jd": 2451545.826235, "nakshatra": 15,
+                  "nakshatra_ends_jd": 2451545.044056, "yoga": 8, "yoga_ends_jd": 2451545.822425,
+                  "karana": 51, "karana_ends_jd": 2451545.277284 },
+    "sav": [29, 21, 23, 26, 34, 33, 30, 30, 28, 21, 32, 30]
   }
 }
 ```
@@ -43,6 +49,9 @@ ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
 - `swetest` fixture'larında bu iki alan `scripts/gen-golden-swetest.sh` içinde awk ile türetilir (Rust motorundan bağımsız aritmetik, aynı kural). Bağımsız referans değildir; kuralın kendisini JHora seti doğrular.
 - JHora'dan eklerken: D9 burçlarını Navamsa haritasından, ilk mahadasha lordunu ve başlangıç tarihini Vimshottari listesinden oku. JHora'nın dasha yılı ayarını fixture'ın `settings.dasha_year`'ıyla eşleştir; başlangıç tarihini UT JD'ye çevirip `notes`'a yerel tarihi yaz.
 - En az 5 fixture `d9_signs` ve `dasha` taşımalıdır (`MIN_DERIVED_FIXTURES`).
+- `panchang` ve `sav` isteğe bağlıdır. `panchang` doğum anının değerleridir: tithi 1–30, nakshatra 1–27, nitya yoga 1–27, karana 1–60 (yarım tithi sırası), vara İngilizce gün adı. `*_ends_jd` o andan sonraki ilk sınırdır (UT JD). `sunrise_jd` doğum yerinde doğumdan önceki son gün doğumudur (`settings.sunrise_def`; varsayılan disk merkezi, kırılmasız), `sunset_jd` ondan sonraki ilk batıştır; kutup gecesi/gündüzünde ikisi de `null` ve vara 06:00 yerel ortalama saatten bulunur. `sav` Koç'tan Balık'a 12 sayıdır, toplamı 337.
+- `swetest` fixture'larında bu iki alan betikte türetilir: gün doğumu `swetest -rise -hindu`'dan, bitişler `swetest -sid1` boylamları üzerinde ikiye bölmeyle, SAV ayrı yazılmış bir BPHS tablosuyla (awk). JHora'dan eklerken: "Panchanga" görünümünden tithi, nakshatra, yoga, karana ve bitiş saatlerini; gün doğumunu ve batımını; Ashtakavarga görünümünden SAV'ı oku. JHora'nın gün doğumu ayarını fixture'ın `sunrise_def`'iyle eşleştir.
+- En az 5 fixture `panchang` ve `sav` taşımalıdır (`MIN_PANCHANG_FIXTURES`).
 
 ## Kaynaklar
 
@@ -71,3 +80,4 @@ ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
 - [ ] Burç sınırında graha ve lagna (< 1′)
 - [ ] Nakshatra sınırında Ay (< 1′)
 - [ ] Türkiye yaz saati vakaları (1940–2016 geçişleri ve kalıcı +03)
+- [ ] Gün doğumundan önce doğum (vara önceki gün) ve kutup dairesinde kutup gecesi
