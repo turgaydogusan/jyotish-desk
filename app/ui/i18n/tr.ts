@@ -220,6 +220,7 @@ export const tr = {
     placeResults: "Bulunan yerler",
     placeCount: "{{count}} sonuç",
     titleNew: "Yeni harita",
+    titleAdd: "Harita ekle",
     titleEdit: "Haritayı düzenle",
     edit: "Düzenle",
     name: "Danışan adı",

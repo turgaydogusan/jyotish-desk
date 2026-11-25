@@ -1,17 +1,16 @@
 // Doğum verisi girişi (spec §4 "Yeni danışan/harita" ve "Düzenle"). Sağdan kayan modal
 // pencere. Form biçimi `model.ts`'de denetlenir; an Rust'ta çözülür: alanlar değiştikçe
 // 300 ms sonra `preview_moment` çağrılır (UTC, ofset, uyarılar, DST boşluğu/örtüşmesi).
-// Kayıt `create_client` (yeni) ya da `update_chart` (düzenle) ile yapılır; dönen harita açılır.
-// Açılış ve önceki haritanın bildirimleri (`boot`, `store:*`) kalkar; yeni haritanın store
-// uyarıları gösterilir.
+// Kayıt `create_client` (yeni danışan), `add_chart` (açık danışana yeni harita) ya da
+// `update_chart` (düzenle) ile yapılır; dönen harita `session.open` ile açılır (önceki haritanın
+// bildirimleri orada kalkar, yeni haritanın store uyarıları gösterilir).
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
-import type { CommandError, MomentPreview } from "../bindings";
+import type { CommandError, MomentPreview, OpenedClient } from "../bindings";
 import { errorMessage } from "../i18n/errors";
 import { useSession } from "../session/store";
 import { Dialog } from "../shell/Dialog";
-import { storeWarningNotices, useNotices } from "../shell/notices";
 import "./birth.css";
 import {
   applyPlace,
@@ -34,17 +33,24 @@ import { PlaceSearch } from "./PlaceSearch";
 export const PREVIEW_DEBOUNCE_MS = 300;
 
 export interface BirthFormProps {
-  mode: "new" | "edit";
+  /** `new`: yeni danışan; `add`: açık danışana yeni harita; `edit`: açık haritayı düzenle. */
+  mode: "new" | "add" | "edit";
   onClose(): void;
+}
+
+function initialDraft(mode: BirthFormProps["mode"], opened: OpenedClient | null): BirthDraft {
+  if (!opened || mode === "new") return emptyDraft();
+  if (mode === "edit") return draftFromOpened(opened);
+  return { ...emptyDraft(), name: opened.client.name, gender: opened.client.gender };
 }
 
 export function BirthForm({ mode, onClose }: BirthFormProps) {
   const { t, i18n } = useTranslation();
   const session = useSession();
   const id = useId();
-  const notices = useNotices();
   const editing = mode === "edit" && session.opened !== null;
-  const [draft, setDraft] = useState<BirthDraft>(() => (editing ? draftFromOpened(session.opened!) : emptyDraft()));
+  const adding = mode === "add" && session.opened !== null;
+  const [draft, setDraft] = useState<BirthDraft>(() => initialDraft(mode, session.opened));
   const [shown, setShown] = useState<FieldErrors>({});
   const [preview, setPreview] = useState<{ ok: MomentPreview } | { error: CommandError } | null>(null);
   const [formError, setFormError] = useState<CommandError | null>(null);
@@ -97,14 +103,15 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
       return;
     }
     setSaving(true);
+    const o = session.opened;
     const r =
-      editing && session.opened
-        ? await api.updateChart(session.opened.chart_record.id, toNewChart(draft, birth))
-        : await api.createClient(toNewClient(draft, birth));
+      editing && o
+        ? await api.updateChart(o.chart_record.id, toNewChart(draft, birth))
+        : adding && o
+          ? await api.addChart(o.client.id, toNewChart(draft, birth))
+          : await api.createClient(toNewClient(draft, birth));
     setSaving(false);
     if (r.status === "ok") {
-      for (const n of notices.notices) if (n.id === "boot" || n.id.startsWith("store:")) notices.dismiss(n.id);
-      for (const n of storeWarningNotices(r.data.warnings)) notices.push(n);
       session.open(r.data);
       onClose();
       return;
@@ -142,10 +149,10 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
   const ambiguous = previewError?.code === "ambiguous_local_time" || draft.fold !== null;
 
   return (
-    <Dialog title={editing ? t("birth.titleEdit") : t("birth.titleNew")} onClose={onClose} variant="sheet">
+    <Dialog title={editing ? t("birth.titleEdit") : adding ? t("birth.titleAdd") : t("birth.titleNew")} onClose={onClose} variant="sheet">
       <form className="birth-form" noValidate onSubmit={(e) => void submit(e)}>
         {field("name", t("birth.name"), (p) => (
-          <input {...p} value={draft.name} disabled={editing} data-autofocus onChange={(e) => update({ name: e.target.value }, "name")} onBlur={blur("name")} />
+          <input {...p} value={draft.name} disabled={editing || adding} data-autofocus onChange={(e) => update({ name: e.target.value }, "name")} onBlur={blur("name")} />
         ))}
         {field("label", t("birth.label"), (p) => (
           <input {...p} value={draft.label} onChange={(e) => update({ label: e.target.value }, "label")} />

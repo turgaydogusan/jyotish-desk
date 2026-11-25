@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { vi } from "vitest";
 
 vi.mock("../api", () => ({
-  api: { searchPlaces: vi.fn(), previewMoment: vi.fn(), createClient: vi.fn(), updateChart: vi.fn() },
+  api: { searchPlaces: vi.fn(), previewMoment: vi.fn(), createClient: vi.fn(), addChart: vi.fn(), updateChart: vi.fn() },
 }));
 
 import { api } from "../api";
@@ -20,7 +20,7 @@ function OpenedName() {
 }
 
 const onClose = vi.fn();
-function renderForm(mode: "new" | "edit", opened = mode === "edit" ? fixture().opened : null) {
+function renderForm(mode: "new" | "add" | "edit", opened = mode === "new" ? null : fixture().opened) {
   return renderWithStores(
     <>
       <OpenedName />
@@ -143,6 +143,24 @@ test("edit mode starts from the stored chart and saves with update_chart", async
   const { chart_record } = fixture().opened;
   expect(api.updateChart).toHaveBeenCalledWith(chart_record.id, { label: "Düzeltilmiş", kind: "Natal", birth: expect.objectContaining({ date: "2000-01-01", time: "17:30" }) });
   expect(api.createClient).not.toHaveBeenCalled();
+});
+
+test("add mode keeps the open client's name locked and saves with add_chart", async () => {
+  const added = fixture().opened;
+  added.chart_record = { ...added.chart_record, id: 9, label: "Evlilik", kind: "Event" };
+  vi.mocked(api.addChart).mockResolvedValueOnce({ status: "ok", data: added });
+  renderForm("add");
+  expect(dialog()).toHaveAccessibleName("Harita ekle");
+  expect(input("Danışan adı")).toBeDisabled();
+  expect(input("Danışan adı")).toHaveValue("Örnek Danışan");
+  expect(input("Tarih")).toHaveValue("");
+  await fillDelhi();
+  fireEvent.change(input("Harita etiketi"), { target: { value: "Evlilik" } });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Haritayı kaydet" }));
+  await wait(0);
+  expect(api.addChart).toHaveBeenCalledWith(fixture().opened.client.id, expect.objectContaining({ label: "Evlilik", birth: expect.objectContaining({ date: "2000-01-01" }) }));
+  expect(api.createClient).not.toHaveBeenCalled();
+  expect(onClose).toHaveBeenCalledOnce();
 });
 
 test("saving replaces boot and store notices with the warnings of the returned chart", async () => {

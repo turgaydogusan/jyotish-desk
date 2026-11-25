@@ -221,6 +221,7 @@ export const en: Messages = {
     placeResults: "Matching places",
     placeCount: "Results: {{count}}",
     titleNew: "New chart",
+    titleAdd: "Add chart",
     titleEdit: "Edit chart",
     edit: "Edit",
     name: "Client name",

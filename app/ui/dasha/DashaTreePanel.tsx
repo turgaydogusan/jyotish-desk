@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { DashaPeriod, Graha } from "../bindings";
-import { timeUnknown } from "../panels/ChartPanel";
+import { timeUnknown } from "../session/birth";
 import { PanelError, usePanelLoadPhase } from "../panels/states";
 import type { PanelProps } from "../panels/types";
 import { useSession } from "../session/store";

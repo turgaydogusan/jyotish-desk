@@ -221,6 +221,7 @@ export const fr: Messages = {
     placeResults: "Lieux trouvés",
     placeCount: "Résultats : {{count}}",
     titleNew: "Nouvelle carte",
+    titleAdd: "Ajouter une carte",
     titleEdit: "Modifier la carte",
     edit: "Modifier",
     name: "Nom du consultant",

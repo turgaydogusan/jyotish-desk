@@ -1,10 +1,11 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import type { OpenedClient, Varga } from "../bindings";
+import type { Varga } from "../bindings";
 import { chartDataFromChart, isVarga, VARGA_NAMES, VARGAS } from "../chart/adapter";
 import { ChartSvg } from "../chart/ChartSvg";
 import { CHART_STYLES, isChartStyle } from "../chart/types";
 import { useHighlight } from "../highlight/store";
+import { timeUnknown } from "../session/birth";
 import { useSession } from "../session/store";
 import { useLayoutStore } from "../view/store";
 import { chartLabels } from "./labels";
@@ -13,11 +14,6 @@ import type { PanelProps } from "./types";
 
 export function chartVarga(settings: Record<string, unknown>): Varga {
   return isVarga(settings.varga) ? settings.varga : "D1";
-}
-
-/** Doğum saati bilinmiyor: lagna, evler ve saate bağlı değerler gösterilmez (spec §7). */
-export function timeUnknown(opened: OpenedClient): boolean {
-  return opened.chart_record.birth.time_certainty === "Unknown";
 }
 
 /**

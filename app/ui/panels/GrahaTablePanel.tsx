@@ -7,7 +7,7 @@ import { useHighlight } from "../highlight/store";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
 import { useSession } from "../session/store";
 import { useLayoutStore } from "../view/store";
-import { timeUnknown } from "./ChartPanel";
+import { timeUnknown } from "../session/birth";
 import { formatDegree, formatSignedDegree, formatSpeed } from "./format";
 import { GRAHA_COLUMNS, grahaColumns, toggleColumn, type GrahaColumn } from "./grahaColumns";
 import { nakshatraName } from "./labels";

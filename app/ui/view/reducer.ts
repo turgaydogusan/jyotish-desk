@@ -7,7 +7,8 @@ import { parseDashaPath, type ViewModel } from "./model";
 export type ViewAction =
   | { type: "layout"; action: LayoutAction }
   | { type: "setDashaPath"; path: Graha[] }
-  | { type: "openChart"; chartId: number; dashaPath: unknown };
+  | { type: "openChart"; chartId: number; dashaPath: unknown }
+  | { type: "closeChart" };
 
 export function viewReducer(state: ViewModel, action: ViewAction): ViewModel {
   switch (action.type) {
@@ -22,5 +23,7 @@ export function viewReducer(state: ViewModel, action: ViewAction): ViewModel {
     }
     case "openChart":
       return { ...state, chartId: action.chartId, dashaPath: parseDashaPath(action.dashaPath) };
+    case "closeChart":
+      return state.chartId === null ? state : { ...state, chartId: null, dashaPath: [] };
   }
 }

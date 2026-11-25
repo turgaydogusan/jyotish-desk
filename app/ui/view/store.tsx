@@ -36,6 +36,8 @@ export interface ViewStore {
   setDashaPath(path: Graha[]): void;
   /** Yeni açılan harita: bekleyen kayıt önceki haritaya yazılır, yeni haritanın yolu yüklenir. */
   openChart(chartId: number, dashaPath: unknown): void;
+  /** Açık harita kapandı (ör. danışan silindi): bekleyen kayıt yazılır, sonraki kayıt yalnızca düzendir. */
+  closeChart(): void;
 }
 
 const ViewContext = createContext<{ view: ViewStore; layout: LayoutStore } | null>(null);
@@ -76,13 +78,14 @@ export function ViewStateProvider({
   });
 
   const dispatch = useCallback((action: ViewAction) => {
-    // Yeni harita: bekleyen kayıt önce önceki haritaya yazılır; açılan haritanın kendi durumu
-    // store'dan geldiği için yeniden yazılmaz.
-    if (action.type === "openChart") flushRef.current();
+    // Yeni ya da kapanan harita: bekleyen kayıt önce önceki haritaya yazılır; açılan haritanın
+    // kendi durumu store'dan geldiği için yeniden yazılmaz (carried rule C5).
+    const switching = action.type === "openChart" || action.type === "closeChart";
+    if (switching) flushRef.current();
     const next = viewReducer(stateRef.current, action);
     if (next === stateRef.current) return;
     stateRef.current = next;
-    if (action.type !== "openChart") {
+    if (!switching) {
       pending.current = next;
       clearTimeout(timer.current);
       timer.current = setTimeout(flushRef.current, debounceRef.current);
@@ -137,6 +140,7 @@ export function ViewStateProvider({
       viewState: toViewState(state),
       setDashaPath: (path) => dispatch({ type: "setDashaPath", path }),
       openChart: (chartId, dashaPath) => dispatch({ type: "openChart", chartId, dashaPath }),
+      closeChart: () => dispatch({ type: "closeChart" }),
     };
     return { view, layout };
   }, [state, dispatch]);

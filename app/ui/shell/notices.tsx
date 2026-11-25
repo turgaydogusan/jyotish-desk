@@ -14,6 +14,8 @@ export interface Notices {
   notices: Notice[];
   push(notice: Notice): void;
   dismiss(id: string): void;
+  /** Koşula uyan bildirimleri o anki listeden kaldırır (`await` sonrası eski liste okunmaz). */
+  dismissWhere(match: (notice: Notice) => boolean): void;
 }
 
 const NoticeContext = createContext<Notices | null>(null);
@@ -22,7 +24,8 @@ export function NoticeProvider({ initial = [], children }: { initial?: Notice[];
   const [notices, setNotices] = useState(initial);
   const push = useCallback((n: Notice) => setNotices((all) => [...all.filter((m) => m.id !== n.id), n]), []);
   const dismiss = useCallback((id: string) => setNotices((all) => all.filter((m) => m.id !== id)), []);
-  const value = useMemo(() => ({ notices, push, dismiss }), [notices, push, dismiss]);
+  const dismissWhere = useCallback((match: (n: Notice) => boolean) => setNotices((all) => all.filter((m) => !match(m))), []);
+  const value = useMemo(() => ({ notices, push, dismiss, dismissWhere }), [notices, push, dismiss, dismissWhere]);
   return <NoticeContext.Provider value={value}>{children}</NoticeContext.Provider>;
 }
 
