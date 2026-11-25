@@ -190,6 +190,33 @@ pub fn dasha_children(seed: &DashaSeed, path: &[Graha]) -> Result<Vec<DashaPerio
     Ok(periods)
 }
 
+/// `jd_ut` anını içeren dönemlerin lordları, kökten `depth` seviyeye (1 maha … 5 prana).
+/// An 120 yıllık Vimshottari döngüsünün dışındaysa yol orada biter (boş ya da kısa yol).
+/// Arayüzün "güncel dönem"i buradan gelir; arayüz tarih karşılaştırması yapmaz (C4).
+pub fn dasha_path_at(seed: &DashaSeed, jd_ut: f64, depth: u8) -> Result<Vec<Graha>, CoreError> {
+    if depth == 0 || depth > MAX_DASHA_LEVEL {
+        return Err(CoreError::InvalidDashaInput("depth"));
+    }
+    if !jd_ut.is_finite() {
+        return Err(CoreError::InvalidDashaInput("jd_ut"));
+    }
+    let mut path = Vec::with_capacity(usize::from(depth));
+    let mut periods = mahadashas(seed)?;
+    loop {
+        let Some(p) = periods
+            .iter()
+            .find(|p| p.start_jd_ut <= jd_ut && jd_ut < p.end_jd_ut)
+        else {
+            return Ok(path);
+        };
+        path.push(*p.lords.last().expect("a period has a lord"));
+        if path.len() == usize::from(depth) {
+            return Ok(path);
+        }
+        periods = dasha_children(seed, &path)?;
+    }
+}
+
 /// Haritaya giden üç seviyeli ağaç (9 + 81 + 729 dönem).
 pub fn vimshottari(seed: DashaSeed) -> Result<Dasha, CoreError> {
     let mut periods = Vec::with_capacity(9 + 81 + 729);
@@ -405,5 +432,54 @@ mod tests {
             level3,
             dasha_children(&d.seed, &[Graha::Moon, Graha::Mars]).unwrap()
         );
+    }
+
+    #[test]
+    fn dasha_path_at_follows_the_containing_periods() {
+        let seed = DashaSeed {
+            birth_jd_ut: 2_451_545.0,
+            moon_sidereal_lon: 199.470_529,
+            year_days: 365.25,
+        };
+        // Doğum anı: doğum mahadashası ve onun içindeki dönemler.
+        let at_birth = dasha_path_at(&seed, seed.birth_jd_ut, 3).unwrap();
+        assert_eq!(at_birth.len(), 3);
+        assert_eq!(at_birth[0], birth_dasha(seed.moon_sidereal_lon).0);
+        // Her seviyede seçilen dönem anı içerir.
+        let jd = seed.birth_jd_ut + 9_000.0;
+        let path = dasha_path_at(&seed, jd, 5).unwrap();
+        assert_eq!(path.len(), 5);
+        for depth in 1..=5usize {
+            let parent = &path[..depth - 1];
+            let p = dasha_children(&seed, parent)
+                .unwrap()
+                .into_iter()
+                .find(|p| p.lords == path[..depth])
+                .unwrap();
+            assert!(p.start_jd_ut <= jd && jd < p.end_jd_ut, "level {depth}");
+        }
+        // 120 yıllık döngünün dışı: yol yok.
+        assert!(dasha_path_at(&seed, seed.birth_jd_ut + 200.0 * 365.25, 3)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn dasha_path_at_rejects_bad_input() {
+        let seed = DashaSeed {
+            birth_jd_ut: 2_451_545.0,
+            moon_sidereal_lon: 10.0,
+            year_days: 365.25,
+        };
+        for depth in [0, 6] {
+            assert!(matches!(
+                dasha_path_at(&seed, 2_451_545.0, depth),
+                Err(CoreError::InvalidDashaInput("depth"))
+            ));
+        }
+        assert!(matches!(
+            dasha_path_at(&seed, f64::NAN, 3),
+            Err(CoreError::InvalidDashaInput("jd_ut"))
+        ));
     }
 }

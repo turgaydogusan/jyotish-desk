@@ -28,8 +28,9 @@ pub use ashtakavarga::{
 pub use chart::{compute_chart, Chart, ChartMeta, ChartWarning, ENGINE_VERSION};
 pub use combustion::is_combust;
 pub use dasha::{
-    birth_dasha, dasha_children, mahadashas, vimshottari, vimshottari_years, Dasha, DashaPeriod,
-    DashaSeed, CHART_DASHA_LEVELS, MAX_DASHA_LEVEL, VIMSHOTTARI_ORDER, VIMSHOTTARI_TOTAL_YEARS,
+    birth_dasha, dasha_children, dasha_path_at, mahadashas, vimshottari, vimshottari_years, Dasha,
+    DashaPeriod, DashaSeed, CHART_DASHA_LEVELS, MAX_DASHA_LEVEL, VIMSHOTTARI_ORDER,
+    VIMSHOTTARI_TOTAL_YEARS,
 };
 pub use dignity::{dignity, Dignity, Relation};
 pub use error::CoreError;

@@ -2,6 +2,7 @@ pub mod atlas_commands;
 pub mod client_commands;
 pub mod commands;
 pub mod store_commands;
+pub mod transit_commands;
 
 use std::sync::{Arc, Mutex};
 
@@ -22,6 +23,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::engine_status,
             commands::compute_chart,
             commands::compute_transits,
+            transit_commands::transits_at,
             commands::dasha_children,
             commands::print_window,
             client_commands::open_client,

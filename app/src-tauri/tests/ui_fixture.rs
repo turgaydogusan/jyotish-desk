@@ -14,6 +14,7 @@ use ephemeris::Engine;
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
+use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
 use store::{BirthData, ChartKind, NewChart, NewClient, Place, Store, TimeCertainty, TzChoice};
 
@@ -82,12 +83,23 @@ fn ui_fixture_is_up_to_date() {
     gap.tz = TzChoice::Iana("Europe/Istanbul".into());
     let gap_error = preview_moment_body(&gap).expect_err("DST gap");
 
+    // Transit: sabit saat (fikstürün saati), "şimdi".
+    let transit = transits_at_blocking(
+        &engine,
+        TransitAt::Now,
+        Timestamp::from_second(1_795_600_800).expect("timestamp"),
+        opened.calc_settings.clone(),
+        opened.chart.bhavas.clone(),
+        opened.chart.dasha.seed,
+    )
+    .expect("transit");
     let value = json!({
         "opened": opened,
         "dasha_children": { "path": path, "periods": children },
         "places": places,
         "preview": preview,
         "gap_error": gap_error,
+        "transit": transit,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")

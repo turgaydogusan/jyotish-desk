@@ -14,6 +14,8 @@ export const commands = {
 	 *  `chart.meta.settings` ve `chart.bhavas` alanlarıdır.
 	 */
 	computeTransits: (jdUt: number | null, settings: CalcSettings, natalBhavas: Bhavas, options?: InvokeOptions) => typedError<TransitSnapshot, CommandError>(__TAURI_INVOKE("compute_transits", { jdUt, settings, natalBhavas }, options)),
+	/**  Açık haritanın transitleri. `settings`, `natal_bhavas` ve `seed` açık haritadan gelir. */
+	transitsAt: (at: TransitAt, settings: CalcSettings, natalBhavas: Bhavas, seed: DashaSeed, options?: InvokeOptions) => typedError<TransitView, CommandError>(__TAURI_INVOKE("transits_at", { at, settings, natalBhavas, seed }, options)),
 	/**
 	 *  Bir dasha döneminin alt dönemleri (spec §4 `dasha_children(path)`). `seed`
 	 *  `chart.dasha.seed`'den, `path` dönemin `lords`'undan gelir. Saf hesaptır, motora gitmez.
@@ -562,6 +564,13 @@ export type Tithi = {
 	ends_jd_ut: number | null,
 };
 
+/**  Transit anı. `Local`: duvar saati (`YYYY-MM-DD`, `HH:MM`) ve IANA dilimi. */
+export type TransitAt = "Now" | ({ Local: {
+	date: string,
+	time: string,
+	tz: string,
+} }) & { Jd?: never } | ({ Jd: number | null }) & { Local?: never };
+
 export type TransitGraha = {
 	graha: Graha,
 	/**  Rasi çerçevesinde boylam (natal haritayla aynı ayarlar verilmelidir). */
@@ -584,6 +593,13 @@ export type TransitSnapshot = {
 	grahas: TransitGraha[],
 	/**  Yalnızca `LowPrecision` olabilir. */
 	warnings: ChartWarning[],
+};
+
+/**  Transit konumları, anın UTC'si (RFC 3339) ve o andaki dasa yolu. */
+export type TransitView = {
+	snapshot: TransitSnapshot,
+	utc: string,
+	dasha_path: Graha[],
 };
 
 /**  Saat dilimi seçimi (spec §5 `tz {Iana(id) | Fixed(secs) | Lmt}`). */
