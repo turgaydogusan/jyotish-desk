@@ -154,6 +154,17 @@ impl Store {
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
+    /// Danışanın tüm notları, en eski önce. Dışa aktarma içindir; `MAX_LIST` uygulanmaz.
+    pub(crate) fn all_notes(&self, client_id: u32) -> Result<Vec<Note>, StoreError> {
+        let sql = format!(
+            "SELECT {NOTE_COLUMNS} FROM client_notes WHERE client_id = ?1
+             ORDER BY created_at, id"
+        );
+        let mut stmt = self.conn.prepare_cached(&sql)?;
+        let rows = stmt.query_map(params![client_id], row_to_note)?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
     /// Haritanın etiketlerini verilen listeyle değiştirir; sıralı listeyi döndürür.
     /// Var olan etiketin yazımı korunur ("Kariyer" varken "kariyer" yeni etiket açmaz).
     pub fn set_chart_tags(
