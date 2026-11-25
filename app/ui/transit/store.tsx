@@ -62,7 +62,11 @@ export function TransitProvider({ children }: { children: ReactNode }) {
     setDemand((d) => d + 1);
     return () => setDemand((d) => d - 1);
   }, []);
-  const setAt = useCallback((next: TransitAt) => setAtState(next), []);
+  // "Şimdi" her seçildiğinde yeniden okunur: an zaten "şimdi" olsa da Rust'un saati ilerlemiştir.
+  const setAt = useCallback((next: TransitAt) => {
+    setAtState(next);
+    if (next === "Now") setNonce((n) => n + 1);
+  }, []);
   const retry = useCallback(() => setNonce((n) => n + 1), []);
 
   const mine = reply !== null && reply.chartId === chartId ? reply : null;

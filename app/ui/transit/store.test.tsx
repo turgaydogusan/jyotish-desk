@@ -73,3 +73,20 @@ test("opening another chart goes back to now", async () => {
   await waitFor(() => expect(vi.mocked(api.transitsAt).mock.calls.at(-1)?.[0]).toBe("Now"));
   expect(control.at).toBe("Now");
 });
+
+test("choosing now again while already at now asks Rust again, so a stale now can be refreshed", async () => {
+  renderWithStores(
+    <>
+      <Consumer />
+      <Control />
+    </>,
+  );
+  await waitFor(() => expect(screen.getByTestId("utc")).toHaveTextContent(fixture().transit.utc));
+  expect(api.transitsAt).toHaveBeenCalledTimes(1);
+  vi.mocked(api.transitsAt).mockResolvedValueOnce(ok({ ...fixture().transit, utc: "2030-01-01T00:00:00Z" }));
+  act(() => control.setAt("Now"));
+  await waitFor(() => expect(screen.getByTestId("utc")).toHaveTextContent("2030-01-01T00:00:00Z"));
+  expect(api.transitsAt).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(api.transitsAt).mock.calls[1][0]).toBe("Now");
+  expect(control.at).toBe("Now");
+});

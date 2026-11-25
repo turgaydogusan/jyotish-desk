@@ -88,3 +88,15 @@ test("with the ring on, D1 draws the nine transits and lists them for screen rea
   expect(ring).toHaveAccessibleDescription("Transit halkası yalnızca D1'de çizilir.");
   expect(api.transitsAt).not.toHaveBeenCalled();
 });
+
+test("the screen reader transit list says which transits are retrograde, never the nodes", async () => {
+  const transit = fixture().transit;
+  // Fikstürde Satürn, Rahu ve Ketu geri gider; düğümler retro diye okunmaz.
+  expect(transit.snapshot.grahas.filter((g) => g.retrograde).map((g) => g.graha)).toEqual(["Saturn", "Rahu", "Ketu"]);
+  vi.mocked(api.transitsAt).mockResolvedValue({ status: "ok", data: transit });
+  renderPanel({ varga: "D1", transit_ring: true });
+  const list = (await screen.findByText(/^Transit:/)).textContent ?? "";
+  const items = list.replace(/^Transit: /, "").split(", ");
+  expect(items).toHaveLength(9);
+  expect(items.filter((item) => item.endsWith(" retro"))).toEqual([expect.stringMatching(/^Satürn .*° retro$/)]);
+});

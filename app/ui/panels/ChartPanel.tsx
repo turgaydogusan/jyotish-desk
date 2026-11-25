@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Varga } from "../bindings";
 import { chartDataFromChart, isVarga, transitPlanets, VARGA_NAMES, VARGAS } from "../chart/adapter";
 import { ChartSvg, type ChartSvgProps } from "../chart/ChartSvg";
-import { CHART_STYLES, isChartStyle, type ChartData } from "../chart/types";
+import { CHART_STYLES, isChartStyle, showsRetro, type ChartData } from "../chart/types";
 import { useHighlight } from "../highlight/store";
 import { timeUnknown } from "../session/birth";
 import { useSession } from "../session/store";
@@ -109,7 +109,10 @@ function RingChart({ data, ...props }: { data: ChartData } & Omit<ChartSvgProps,
   const { t } = useTranslation();
   const { view } = useTransit();
   const transits = view ? transitPlanets(view) : [];
-  const list = transits.map((p) => `${t(`grahaName.${p.id}`)} ${t(`sign.${p.sign}`)} ${Math.floor(p.degInSign)}°`).join(", ");
+  // Çizimdeki "R" işareti `aria-hidden` etiketin içindedir: retro burada sözcükle okunur (düğümlerde yok).
+  const list = transits
+    .map((p) => `${t(`grahaName.${p.id}`)} ${t(`sign.${p.sign}`)} ${Math.floor(p.degInSign)}°${showsRetro(p.id, p.retrograde) ? ` ${t("chart.retro")}` : ""}`)
+    .join(", ");
   return (
     <>
       <ChartSvg data={{ ...data, transits }} {...props} />
