@@ -66,3 +66,24 @@
   gap: 6px;
   color: var(--text-2);
 }
+.graha-table-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.graha-table th.num {
+  text-align: right;
+}
+.column-chooser fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+}
+.column-chooser label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

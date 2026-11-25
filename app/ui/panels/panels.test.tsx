@@ -85,7 +85,7 @@ test("graha table lists body, sign, degree with minutes and the retro marker", (
   const saturn = screen.getByRole("button", { name: "Satürn" }).closest("tr")!;
   expect(saturn).toHaveTextContent("Koç");
   expect(saturn).toHaveTextContent("℞");
-  expect(screen.getAllByRole("row")).toHaveLength(10);
+  expect(screen.getAllByRole("row")).toHaveLength(11); // başlık + lagna + 9 graha
 });
 
 test("a null degree is shown as a dash", () => {
