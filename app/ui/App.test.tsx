@@ -16,6 +16,7 @@ vi.mock("./api", () => ({
     listCharts: vi.fn(async () => ({ status: "ok", data: [] })),
     searchClients: vi.fn(async () => ({ status: "ok", data: [] })),
     openClient: vi.fn(),
+    deleteClient: vi.fn(),
     listNotes: vi.fn(async () => ({ status: "ok", data: [] })),
     setChartTags: vi.fn(async (_chartId: number, tags: string[]) => ({ status: "ok", data: tags })),
   },
@@ -405,6 +406,30 @@ test("the palette opens the print preview; leaving it from the keyboard moves fo
   fireEvent.click(back);
   expect(document.activeElement).toBe(document.getElementById("shell-main"));
   expect(screen.getByRole("button", { name: "Baskı önizleme" })).toHaveAttribute("aria-keyshortcuts", "Meta+P");
+});
+
+test("a chart that closes behind the preview ends the print request: the next chart opens on the desk", async () => {
+  let finishDelete!: (r: { status: "ok"; data: null }) => void;
+  vi.mocked(api.deleteClient).mockReturnValueOnce(new Promise((resolve) => (finishDelete = resolve)));
+  vi.mocked(api.openClient).mockResolvedValueOnce({ status: "ok", data: fixture().opened });
+  vi.mocked(api.searchClients).mockResolvedValueOnce({ status: "ok", data: [{ client: fixture().opened.client, matched: "Name", snippet: null }] });
+  renderApp();
+  fireEvent.click(screen.getByRole("button", { name: "Danışanı sil…" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Danışan silinsin mi?" })).getByRole("button", { name: "Danışanı sil" }));
+  // Silme sürerken önizleme açılır; silme bitince harita arkasından gider.
+  fireEvent.keyDown(window, { key: "p", metaKey: true });
+  expect(printToolbar()).toBeInTheDocument();
+  finishDelete({ status: "ok", data: null });
+  expect(await screen.findByRole("region", { name: "Açık harita yok" })).toBeInTheDocument();
+  // Önizleme ayrılırken odak `body`'de bırakılmaz (ayrılma temizliği commit'ten sonra koşar).
+  await waitFor(() => expect(document.activeElement).toBe(document.getElementById("shell-main")));
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "örnek" } });
+  await within(palette).findByRole("option", { name: /Örnek Danışan/ }, { timeout: 3000 });
+  fireEvent.keyDown(within(palette).getByRole("combobox"), { key: "Enter" });
+  expect(await screen.findByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "Baskı seçenekleri" })).toBeNull();
 });
 
 test("the sidebar's closed state is remembered at the next start", () => {

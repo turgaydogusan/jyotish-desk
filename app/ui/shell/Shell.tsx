@@ -42,6 +42,11 @@ export function Shell() {
   const { opened } = session;
   // Baskı önizlemesi yalnızca açık haritayla anlamlıdır; harita kapanırsa pano geri gelir.
   const printView = printRequested && opened !== null;
+  // Harita önizlemenin ardında giderse (silme önizleme açılırken sürüyorduysa) istek de biter:
+  // sonra açılan harita panoda açılır, önizlemede değil.
+  useEffect(() => {
+    if (opened === null) setPrintRequested(false);
+  }, [opened]);
   const togglePrint = () => {
     setPrintError(null);
     setPrintRequested(!printView);
