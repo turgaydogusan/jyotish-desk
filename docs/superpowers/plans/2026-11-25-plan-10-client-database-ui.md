@@ -7039,6 +7039,8 @@ Bütün kapılar temiz ağaçta. Kod yazılmaz; bir adım beklenen çıktıyı v
 
 **Interfaces:** —
 
+**Son inceleme düzeltmesi (ayrı commit, Step 5'ten önce; ardından Step 3 ve Step 4 yeniden koşulur):** Bütün dalın son incelemesinin görevler arası iki bulgusu test-önce düzeltilir; yalnızca arayüz değişir (`birth/BirthForm.tsx`, `shell/Shell.tsx` ve testleri), Rust, IPC, i18n ve e2e dosyaları değişmez. (1) Doğum formu açıldığı andaki haritaya ve danışana yazar (`useState(() => session.opened)`): form açıkken geç gelen bir `open_client` yanıtı (danışana tıklayıp ya da paletten seçip yanıt gelmeden `⌘E` ya da "Harita ekle") açık haritayı değiştirdiğinde `update_chart` başka haritanın üzerine, `add_chart` başka danışana yazıyordu. (2) Kenar çubuğu odak içindeyken gizlenirse (`⌘\`, palet komutu, üst çubuk düğmesi) odak önce "Danışanlar" düğmesine geçer: odak `body`'ye düşmez (elle denetim madde 6) ve etiket kutusuna yazılıp henüz kaydedilmemiş metin odak çıkışıyla kaydedilir (kaldırılan öğe odak çıkışı olayı almaz; C16 `⌘\`'ı yazı alanından ulaşılır yaptı). Expected: `Test Files  42 passed (42)`, `Tests  361 passed (361)` (+3: `birth/BirthForm.test.tsx` +2, `App.test.tsx` +1); `build` `✓ built`; e2e `6 passed`; görsel `6 passed`. Düzeltmeden önce üç test kendi savlarında düşer (`update_chart` 20 numaralı haritayla, `add_chart` 2 numaralı danışanla çağrılır; `set_chart_tags` hiç çağrılmaz).
+
 - [ ] **Step 1: Rust kapıları**
 
 ```bash
@@ -7068,7 +7070,7 @@ pnpm --dir app e2e
 pnpm --dir app e2e:visual
 rm -rf app/test-results
 ```
-Expected: `Test Files  42 passed (42)`, `Tests  358 passed (358)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
+Expected: `Test Files  42 passed (42)`, `Tests  361 passed (361)`; `build` `✓ built`; e2e `6 passed`; görsel `6 passed` (yerel).
 
 - [ ] **Step 4: Kurallar**
 
@@ -7078,13 +7080,14 @@ git log --format=%B 0424a42..HEAD | grep -inE 'k(a|ā|aa)la|\bcala\b'
 git diff --name-only 0424a42..HEAD | grep -iE 'k(a|ā|aa)la|\bcala\b'
 git ls-files | grep '^\.superpowers/'
 git log --format=%B 0424a42..HEAD | grep -c 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'
+git rev-list --count 0424a42..HEAD
 grep -rn "console\." app/ui --include='*.ts' --include='*.tsx' | grep -v "\.test\.\|no-console"
 grep -n '"export_json"\|"export_csv"\|"import_json"\|"import_jhd"\|path: string' app/ui/bindings.ts
 grep -rn '"dialog:\|"fs:' app/src-tauri/capabilities
 grep -rn 'tauri_plugin_fs' app/src-tauri/src
 grep -rnE '\b(alert|confirm|prompt)\(' app/ui --include='*.ts' --include='*.tsx' | grep -v '\.test\.'
 ```
-Expected: ilk dört komut çıktısız; trailer sayısı `11`; `console.` yalnızca Plan 04'ün izinli tema/dil uyarılarında (izin listesi değişmedi, `no-console.test.ts` yeşil); `bindings.ts` `grep`'i çıktısız (yol alan komut yok, JHD yok); son üç `grep` çıktısız (C2′: yetenek dosyasında `dialog:`/`fs:` izni yok, `tauri_plugin_fs` başlatılmıyor; C15: `alert`/`confirm`/`prompt` yok).
+Expected: ilk dört komut çıktısız; trailer sayısı commit sayısına (`git rev-list --count`) eşit (inceleme düzeltmeleri ve plan kayıtları ayrı commit'lerdir); `console.` yalnızca Plan 04'ün izinli tema/dil uyarılarında (izin listesi değişmedi, `no-console.test.ts` yeşil); `bindings.ts` `grep`'i çıktısız (yol alan komut yok, JHD yok); son üç `grep` çıktısız (C2′: yetenek dosyasında `dialog:`/`fs:` izni yok, `tauri_plugin_fs` başlatılmıyor; C15: `alert`/`confirm`/`prompt` yok).
 
 - [ ] **Step 5: Elle denetim: M5 duman testi ile tek kapı (macOS, `pnpm --dir app tauri dev`)**
 
@@ -7159,6 +7162,7 @@ Expected: M1–M7 ve 1–12 beklendiği gibi ve her sonuç `progress.md`'ye yaz�
 23. **Küçükler:** içe aktarma dosyasının başında UTF-8 BOM; içe aktarmadan gelen virgüllü etiketin etiket kutusunda bölünmesi; etiket süzgecinin artık olmayan etiketi tutması; `list_tags` hatalarının yok sayılması; "Yeni not"un geride bıraktığı boş notlar; yerel pencerenin `set_parent` ile uygulama penceresine bağlanması; `storePersistence` kayıt pompasının çevresinde `try/finally`.
 24. **Task 10 incelemesinden ertelenenler:** içe aktarma dosyası UTF-8 değilse `file_io` yerine `import_format` ve `file_io.detail`'in (`ErrorKind` metni, İngilizce) arayüz dilinde gösterilmesi; `ImportReport.warnings` sayısının sınırı (bugün yalnızca 32 MiB dosya sınırıyla sınırlı); `api.test.ts`'in yol denetiminin `bindings.ts`'teki her dize bağımsız değişkenini adından bağımsız bulması; `rename`'den sonra üst klasörün `fsync`'i (yalnızca dayanıklılık). Plan 11, dışa aktarma biçim belgesiyle (madde 13) birlikte.
 25. **Task 11 incelemesinden ertelenenler:** e2e IPC taklidi `limit` bağımsız değişkenini yok sayar ve etiket komutları (`list_tags`, `list_clients_by_tag`) sabit boş liste döndürür; etiketli ya da sınırlı liste akışını sınayan ilk e2e testiyle birlikte gerçekçi hale getirilir. Plan 11, M6-9 (madde 11) ile.
+26. **Son incelemeden ertelenenler:** notlar paneli listeyi yalnızca danışan değişince okur; açık danışana not ekleyen bir içe aktarmadan sonra yeni notlar danışan yeniden açılana dek görünmez (liste `Session.revision` ile yeniden okunur, bekleyen kayıtlar bittikten sonra). Açık haritanın silinmesi sürerken başka danışana geçilirse silme bitince ilk danışan yeniden açılır (`OpenClient.deleteChart` silme başlarkenki açık haritayı okur). Etiket kutusunun Enter'ı ve `NoteEditor`'ın "Sil"i: Enter'da 229 kodu denetimi, silme sürerken ikinci silmenin yok sayılması. Yerel dosya penceresi açıkken kenar çubuğu kapatılıp açılırsa "meşgul" durumu sıfırlanır ve ikinci pencere açılabilir. `⌘⇧N` not kutusundayken paneli kapatınca odak `body`'ye düşer (madde 19 ile). `.button-danger` `clients/clients.css`'ten `shell/shell.css`'e taşınır. Plan 11, M6-7 geçişi ve notlar paneline dokunan görev.
 
 ---
 
@@ -7217,7 +7221,7 @@ Belirsiz adım yok; her kod adımı tam dosya içeriğini ya da `git apply` ile 
 | 10 düzeltme | 42 | 358 | T10 incelemesi kararı: "Notları dahil et" her açılışta kapalı (+1); `jyotish-desk` lib 24 (+5: geçici dosya `create_new` ve benzersiz ad, `0600`, sıradan olmayan dosyanın reddi) |
 | 11 | 42 | 358 | + Playwright e2e 6 (+2), görsel 6 (yerel, temeller değişmedi) |
 | 11 düzeltme | 42 | 358 | T11 incelemesi kararı: görsel testte tuştan önce başlık beklenir, spec §8 testinde `form`/`alertdialog`/yerel pencere savları, taklitte `delete_note` bilinmeyen kimlikte hata; e2e 6, görsel 6 (sayı değişmez) |
-| 12 | 42 | 358 | doğrulama |
+| 12 | 42 | 361 | doğrulama; son inceleme düzeltmesi (+3): doğum formunun hedefi açılışta sabitlenir, kenar çubuğu gizlenirken odak "Danışanlar" düğmesine geçer |
 
 ### Doğrulama
 
