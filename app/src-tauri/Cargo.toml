@@ -32,8 +32,10 @@ tauri-plugin-dialog = "=2.8.4"
 # Yalnızca Rust'tan kullanılır (`UpdaterExt`); eklentinin IPC komutları yetenek dosyasında izinli
 # değildir. TLS işletim sisteminindir (`native-tls`: macOS'ta Security.framework); varsayılan
 # `rustls-tls` özelliği `ring` ve CDLA lisanslı kök sertifika paketini getirir. `zip`: macOS
-# paketi `.app.tar.gz`'dir. Apache-2.0 OR MIT.
-tauri-plugin-updater = { version = "=2.14.1", default-features = false, features = ["native-tls", "zip"] }
+# paketi `.app.tar.gz`'dir. `system-proxy` (eklentinin varsayılanı): macOS'un Ağ ayarlarındaki
+# vekil sunucu kullanılır; onsuz, vekil arkasındaki kullanıcıda denetim "ağa ulaşılamadı" der.
+# Yalnızca `system-configuration` bağlamalarını getirir (rustls ve ring gelmez). Apache-2.0 OR MIT.
+tauri-plugin-updater = { version = "=2.14.1", default-features = false, features = ["native-tls", "system-proxy", "zip"] }
 
 [dev-dependencies]
 tempfile = "3"
