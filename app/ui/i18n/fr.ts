@@ -204,6 +204,8 @@ export const fr: Messages = {
     close: "Fermer",
     keys: "Touches",
     action: "Action",
+    palette: "Rechercher clients, dispositions et commandes",
+    sidebar: "Afficher ou masquer la barre des clients",
     newChart: "Nouvelle carte",
     editChart: "Modifier la carte ouverte",
     selectLayout: "Passer à la disposition de ce rang",

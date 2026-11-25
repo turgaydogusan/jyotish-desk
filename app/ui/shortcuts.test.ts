@@ -13,6 +13,9 @@ test("global commands", () => {
   expect(key({ key: "N", metaKey: true, shiftKey: true })).toEqual({ id: "toggleNotes" });
   expect(key({ key: "n", metaKey: true })).toEqual({ id: "newChart" });
   expect(key({ key: "e", metaKey: true })).toEqual({ id: "editChart" });
+  expect(key({ key: "k", metaKey: true })).toEqual({ id: "palette" });
+  expect(key({ key: "\\", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });
+  expect(key({ key: ",", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });
   expect(key({ key: "?", shiftKey: true })).toEqual({ id: "help" });
 });
 
@@ -29,6 +32,22 @@ test("ignored: Ctrl/Alt, digit 0, repeat, composition, editable fields and open 
   expect(key({ key: "n", metaKey: true })).toBeNull();
   modal.remove();
   expect(key({ key: "n", metaKey: true })).toEqual({ id: "newChart" });
+});
+
+test("Cmd shortcuts and ? work from a select, checkbox or radio, and Cmd shortcuts also work from text entry, where only ? is ignored", () => {
+  const select = document.createElement("select");
+  const checkbox = Object.assign(document.createElement("input"), { type: "checkbox" });
+  const radio = Object.assign(document.createElement("input"), { type: "radio" });
+  for (const target of [select, checkbox, radio]) {
+    expect(key({ key: "2", code: "Digit2", metaKey: true }, target)).toEqual({ id: "selectLayout", index: 1 });
+    expect(key({ key: "k", metaKey: true }, target)).toEqual({ id: "palette" });
+    expect(key({ key: "?", shiftKey: true }, target)).toEqual({ id: "help" });
+  }
+  for (const target of [document.createElement("input"), document.createElement("textarea")]) {
+    expect(key({ key: "k", metaKey: true }, target)).toEqual({ id: "palette" });
+    expect(key({ key: "N", metaKey: true, shiftKey: true }, target)).toEqual({ id: "toggleNotes" });
+    expect(key({ key: "?", shiftKey: true }, target)).toBeNull();
+  }
 });
 
 test("every listed shortcut has a description", () => {

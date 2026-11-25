@@ -204,6 +204,8 @@ export const en: Messages = {
     close: "Close",
     keys: "Keys",
     action: "Action",
+    palette: "Search clients, layouts and commands",
+    sidebar: "Show or hide the client sidebar",
     newChart: "New chart",
     editChart: "Edit the open chart",
     selectLayout: "Switch to the layout at that position",

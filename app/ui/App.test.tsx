@@ -135,7 +135,7 @@ test("Cmd+Shift+N toggles the notes panel in the active layout", () => {
   expect(notes).toHaveAttribute("data-w", "4");
 });
 
-test("Cmd+Shift+N is ignored from editable fields, on key repeat, during composition and in print view", () => {
+test("Cmd+Shift+N works from a text field and is ignored on key repeat, during composition and in print view", () => {
   renderApp();
   const notes = () => screen.queryByRole("region", { name: "Notlar" });
   fireEvent.click(screen.getByRole("button", { name: "Düzen işlemleri" }));
@@ -143,8 +143,8 @@ test("Cmd+Shift+N is ignored from editable fields, on key repeat, during composi
   const input = screen.getByRole("textbox", { name: "Düzen adı" });
   input.focus();
   fireEvent.keyDown(input, { key: "N", metaKey: true, shiftKey: true });
-  expect(notes()).toBeInTheDocument();
-  fireEvent.keyDown(screen.getByRole("combobox", { name: "Tema" }), { key: "N", metaKey: true, shiftKey: true });
+  expect(notes()).toBeNull();
+  fireEvent.keyDown(input, { key: "N", metaKey: true, shiftKey: true });
   expect(notes()).toBeInTheDocument();
   fireEvent.keyDown(window, { key: "N", metaKey: true, shiftKey: true, repeat: true });
   expect(notes()).toBeInTheDocument();
@@ -157,6 +157,14 @@ test("Cmd+Shift+N is ignored from editable fields, on key repeat, during composi
   expect(ev.defaultPrevented).toBe(false);
   fireEvent.click(screen.getByRole("button", { name: "Panoya dön" }));
   expect(notes()).toBeInTheDocument();
+});
+
+test("Cmd+Shift+N still works after a choice in a select (M6-2)", () => {
+  renderApp();
+  const theme = screen.getByRole("combobox", { name: "Tema" });
+  theme.focus();
+  fireEvent.keyDown(theme, { key: "N", metaKey: true, shiftKey: true });
+  expect(screen.queryByRole("region", { name: "Notlar" })).toBeNull();
 });
 
 test("theme menu sets data-theme and remembers the choice", () => {

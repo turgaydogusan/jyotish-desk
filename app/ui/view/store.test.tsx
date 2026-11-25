@@ -207,7 +207,7 @@ test("Cmd+1…9 selects layouts by order", () => {
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.interview);
 });
 
-test("Cmd+digit uses the physical key (AZERTY) and ignores out-of-range, Ctrl, Alt, 0, repeat, IME and inputs", () => {
+test("Cmd+digit uses the physical key (AZERTY), works from a text field and ignores out-of-range, Ctrl, Alt, 0, repeat and IME", () => {
   setup();
   fireEvent.keyDown(window, { key: "&", code: "Digit3", metaKey: true });
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
@@ -223,8 +223,9 @@ test("Cmd+digit uses the physical key (AZERTY) and ignores out-of-range, Ctrl, A
     fireEvent.keyDown(window, init);
     expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.research);
   }
+  // ⌘ kısayolları yazı alanında da çalışır (Plan 10 incelemesi MF1).
   fireEvent.keyDown(screen.getByLabelText("field"), { key: "3", code: "Digit3", metaKey: true });
-  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.research);
+  expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
 });
 
 test("Cmd+9 with 3 layouts keeps the selection and does not preventDefault", () => {

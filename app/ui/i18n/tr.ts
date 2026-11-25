@@ -203,6 +203,8 @@ export const tr = {
     close: "Kapat",
     keys: "Tuşlar",
     action: "İşlem",
+    palette: "Danışan, düzen ve komut ara",
+    sidebar: "Danışan kenar çubuğunu aç/kapat",
     newChart: "Yeni harita",
     editChart: "Açık haritayı düzenle",
     selectLayout: "Sıradaki düzene geç",
