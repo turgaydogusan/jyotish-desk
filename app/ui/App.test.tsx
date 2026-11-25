@@ -99,7 +99,7 @@ test("a restore failure and store warnings are shown in the notice bar and can b
   const statuses = within(screen.getByRole("region", { name: "Bildirimler" })).getAllByRole("status");
   expect(statuses.map((s) => s.textContent)).toEqual([
     "UyarıSon açılan harita silinmiş; en son güncellenen harita açıldı.Kapat",
-    "UyarıSaat dilimi verisi değişti (2025a → 2026a); saklanan an kullanılıyor.Kapat",
+    "UyarıSaat dilimi veritabanı değişti (2025a → 2026a) ve bu haritanın anını değiştiriyor (yeni UTC: —). Saklanan an kullanılıyor.Yeni zamanı kabul etSaklanan zamanı koruKapat",
   ]);
 });
 
@@ -306,4 +306,9 @@ test("? opens the shortcut help as a modal that traps focus, blocks shortcuts an
   fireEvent.keyDown(close, { key: "Escape" });
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(document.activeElement).toBe(opener);
+});
+
+test("preference warnings from boot are shown in the notice bar", () => {
+  renderApp({ opened: null, prefs: { ...fixture().prefs, warnings: [{ TooNew: { found: 2 } }] } });
+  expect(screen.getByText(/Tercihler daha yeni bir uygulama sürümüyle kaydedilmiş \(sürüm 2\)/)).toBeInTheDocument();
 });

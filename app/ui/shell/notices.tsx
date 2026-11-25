@@ -5,10 +5,18 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { useTranslation } from "react-i18next";
 import type { CommandError, StoreWarning } from "../bindings";
 import { errorMessage } from "../i18n/errors";
+import { TzdbActions } from "./TzdbActions";
 
 export type Notice =
   | { id: string; type: "error"; messageKey: string; error: CommandError }
-  | { id: string; type: "warning" | "info"; messageKey: string; params: Record<string, string> };
+  | {
+      id: string;
+      type: "warning" | "info";
+      messageKey: string;
+      params: Record<string, string>;
+      /** Bildirimle gelen kararın eylemleri; bileşen oturumdan okur (veri, işlev değil). */
+      action?: "tzdb";
+    };
 
 export interface Notices {
   notices: Notice[];
@@ -44,7 +52,8 @@ export function storeWarningNotices(warnings: readonly StoreWarning[]): Notice[]
       id: "store:TzdbChanged",
       type: "warning",
       messageKey: "storeWarning.TzdbChanged",
-      params: { stored: w.TzdbChanged.stored_version, current: w.TzdbChanged.current_version },
+      params: { stored: w.TzdbChanged.stored_version, current: w.TzdbChanged.current_version, utc: w.TzdbChanged.current_utc ?? "—" },
+      action: "tzdb",
     };
   });
 }
@@ -61,6 +70,7 @@ export function NoticeBar() {
           <span className="notice-text">
             {n.type === "error" ? t(n.messageKey, { message: errorMessage(t, i18n, n.error) }) : t(n.messageKey, n.params)}
           </span>
+          {n.type !== "error" && n.action === "tzdb" && <TzdbActions />}
           <button type="button" onClick={() => dismiss(n.id)}>
             {t("notice.dismiss")}
           </button>

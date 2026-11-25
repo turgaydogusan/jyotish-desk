@@ -174,6 +174,7 @@ export const fr: Messages = {
   },
   atlasReason: { missing: "fichier d’atlas absent", schema: "fichier d’atlas illisible", io: "fichier d’atlas inaccessible" },
   notice: {
+    tzdbFailed: "La décision de fuseau n’a pas pu être enregistrée : {{message}}",
     settingsSaveFailed: "Les réglages n’ont pas pu être enregistrés : {{message}}",
     prefsLoadFailed: "Les préférences n’ont pas pu être lues ; les valeurs intégrées sont utilisées : {{message}}",
     region: "Notifications",
@@ -192,10 +193,17 @@ export const fr: Messages = {
     exportFailed: "Échec de l’export : {{message}}",
     importFailed: "Échec de l’import ; rien n’a été ajouté : {{message}}",
   },
+  settingsBadge: { label: "Réglages différents", hint: "Les réglages de cette carte diffèrent du défaut : {{fields}}" },
+  tzdb: { accept: "Accepter la nouvelle heure", keep: "Garder l’heure enregistrée" },
+  prefsWarning: {
+    Unreadable: "Les préférences n’ont pas pu être lues ; les valeurs intégrées sont utilisées.",
+    CalcSettingsReset: "Les réglages par défaut des nouvelles cartes n’ont pas pu être lus ; la valeur intégrée est utilisée.",
+    TooNew: "Les préférences ont été enregistrées par une version plus récente de l’application (version {{found}}) ; les valeurs intégrées sont utilisées et l’enregistrement est conservé.",
+  },
   storeWarning: {
     LastChartMissing: "La dernière carte ouverte a été supprimée ; la plus récemment modifiée a été ouverte.",
     CalcSettingsReset: "Les réglages de calcul de cette carte sont illisibles ; les réglages par défaut sont utilisés.",
-    TzdbChanged: "Les données de fuseau ont changé ({{stored}} → {{current}}) ; l’instant enregistré est utilisé.",
+    TzdbChanged: "La base des fuseaux a changé ({{stored}} → {{current}}) et déplace le moment de cette carte (nouvel UTC : {{utc}}). Le moment enregistré est utilisé.",
   },
   chartStyle: {
     north: "Nord",

@@ -9,13 +9,21 @@ import { initialViewModel } from "./view/model";
 import { storePersistence, type ViewPersistence } from "./view/persistence";
 import { ViewStateProvider } from "./view/store";
 
+/** Tercih okuma uyarıları ve hatası (Plan 11 Task 1). */
+export function prefsNotices(boot: Boot): Notice[] {
+  if (boot.prefsError) return [{ id: "prefs", type: "error", messageKey: "notice.prefsLoadFailed", error: boot.prefsError }];
+  return (boot.prefs?.warnings ?? []).map((w): Notice => {
+    if (w === "Unreadable") return { id: "prefs:Unreadable", type: "warning", messageKey: "prefsWarning.Unreadable", params: {} };
+    if ("CalcSettingsReset" in w) return { id: "prefs:CalcSettingsReset", type: "warning", messageKey: "prefsWarning.CalcSettingsReset", params: {} };
+    return { id: "prefs:TooNew", type: "warning", messageKey: "prefsWarning.TooNew", params: { found: String(w.TooNew.found) } };
+  });
+}
+
 function bootNotices(boot: Boot): Notice[] {
-  const layout: Notice[] = [
-    ...(boot.layoutError ? [{ id: "layout", type: "error", messageKey: "notice.layoutLoadFailed", error: boot.layoutError } as Notice] : []),
-    ...(boot.prefsError ? [{ id: "prefs", type: "error", messageKey: "notice.prefsLoadFailed", error: boot.prefsError } as Notice] : []),
-  ];
-  if (boot.error) return [...layout, { id: "boot", type: "error", messageKey: "notice.restoreFailed", error: boot.error }];
-  return [...layout, ...(boot.opened ? storeWarningNotices(boot.opened.warnings) : [])];
+  const layout: Notice[] = boot.layoutError ? [{ id: "layout", type: "error", messageKey: "notice.layoutLoadFailed", error: boot.layoutError }] : [];
+  const prefs = prefsNotices(boot);
+  if (boot.error) return [...layout, ...prefs, { id: "boot", type: "error", messageKey: "notice.restoreFailed", error: boot.error }];
+  return [...layout, ...prefs, ...(boot.opened ? storeWarningNotices(boot.opened.warnings) : [])];
 }
 
 /**

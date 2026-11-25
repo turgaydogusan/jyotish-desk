@@ -173,6 +173,7 @@ export const tr = {
   },
   atlasReason: { missing: "atlas dosyası yok", schema: "atlas dosyası okunamıyor", io: "atlas dosyasına erişilemiyor" },
   notice: {
+    tzdbFailed: "Saat dilimi kararı kaydedilemedi: {{message}}",
     settingsSaveFailed: "Ayarlar kaydedilemedi: {{message}}",
     prefsLoadFailed: "Tercihler okunamadı; yerleşik varsayılanlar kullanılıyor: {{message}}",
     region: "Bildirimler",
@@ -191,10 +192,17 @@ export const tr = {
     exportFailed: "Dışa aktarılamadı: {{message}}",
     importFailed: "İçe aktarılamadı; hiçbir kayıt eklenmedi: {{message}}",
   },
+  settingsBadge: { label: "Ayar farkı", hint: "Bu haritanın ayarı varsayılandan farklı: {{fields}}" },
+  tzdb: { accept: "Yeni zamanı kabul et", keep: "Saklanan zamanı koru" },
+  prefsWarning: {
+    Unreadable: "Tercihler okunamadı; yerleşik varsayılanlar kullanılıyor.",
+    CalcSettingsReset: "Yeni haritaların varsayılan ayarı okunamadı; yerleşik varsayılan kullanılıyor.",
+    TooNew: "Tercihler daha yeni bir uygulama sürümüyle kaydedilmiş (sürüm {{found}}); yerleşik varsayılanlar kullanılıyor ve kayıt korunuyor.",
+  },
   storeWarning: {
     LastChartMissing: "Son açılan harita silinmiş; en son güncellenen harita açıldı.",
     CalcSettingsReset: "Bu haritanın hesap ayarı okunamadı; varsayılan ayar kullanılıyor.",
-    TzdbChanged: "Saat dilimi verisi değişti ({{stored}} → {{current}}); saklanan an kullanılıyor.",
+    TzdbChanged: "Saat dilimi veritabanı değişti ({{stored}} → {{current}}) ve bu haritanın anını değiştiriyor (yeni UTC: {{utc}}). Saklanan an kullanılıyor.",
   },
   chartStyle: {
     north: "Kuzey",

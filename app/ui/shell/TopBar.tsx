@@ -31,7 +31,7 @@ export function TopBar({ themePref, onThemeChange, printView, onTogglePrint, onH
           {t("clients.toggle")}
         </button>
       )}
-      <ChartTitle />
+      <ChartTitle onSettings={onSettings} />
       <div className="topbar-actions">
         <button type="button" aria-keyshortcuts="Meta+N" onClick={onNewChart}>
           {t("empty.action")}

@@ -174,6 +174,7 @@ export const en: Messages = {
   },
   atlasReason: { missing: "the atlas file is missing", schema: "the atlas file cannot be read", io: "the atlas file cannot be accessed" },
   notice: {
+    tzdbFailed: "The time zone decision could not be saved: {{message}}",
     settingsSaveFailed: "Settings could not be saved: {{message}}",
     prefsLoadFailed: "Preferences could not be read; built-in defaults are in use: {{message}}",
     region: "Notifications",
@@ -192,10 +193,17 @@ export const en: Messages = {
     exportFailed: "Export failed: {{message}}",
     importFailed: "Import failed; nothing was added: {{message}}",
   },
+  settingsBadge: { label: "Settings differ", hint: "This chart's settings differ from the default: {{fields}}" },
+  tzdb: { accept: "Accept the new time", keep: "Keep the stored time" },
+  prefsWarning: {
+    Unreadable: "Preferences could not be read; built-in defaults are in use.",
+    CalcSettingsReset: "The default settings for new charts could not be read; the built-in default is in use.",
+    TooNew: "Preferences were saved by a newer version of the app (version {{found}}); built-in defaults are in use and the saved preferences are kept.",
+  },
   storeWarning: {
     LastChartMissing: "The last opened chart was deleted; the most recently updated chart was opened.",
     CalcSettingsReset: "This chart's calculation settings could not be read; defaults are used.",
-    TzdbChanged: "Time zone data changed ({{stored}} → {{current}}); the stored moment is used.",
+    TzdbChanged: "The time zone database changed ({{stored}} → {{current}}) and moves this chart's moment (new UTC: {{utc}}). The stored moment is in use.",
   },
   chartStyle: {
     north: "North",
