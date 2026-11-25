@@ -38,12 +38,12 @@ export function modalOpen(): boolean {
 }
 
 /**
- * Klavye olayı → genel komut. Tuş tekrarında, IME bileşiminde ve modal açıkken `null`;
+ * Klavye olayı → genel komut. Tuş tekrarında, IME bileşiminde (WebKit'in 229 kodu dahil) ve modal açıkken `null`;
  * ⌘ kısayolları yazı alanında da çalışır, değiştiricisiz `?` yazı alanında yazıdır. Rakamlar ve ters bölü fiziksel tuştan (`code`) okunur: AZERTY'de `key`
  * rakam değildir, Türkçe Q klavyede ters bölü tek tuşla yazılmaz.
  */
 export function matchShortcut(e: KeyboardEvent): Command | null {
-  if (e.repeat || e.isComposing || modalOpen()) return null;
+  if (e.repeat || e.isComposing || e.keyCode === 229 || modalOpen()) return null;
   if (e.ctrlKey || e.altKey) return null;
   if (e.metaKey) {
     if (e.shiftKey) return e.key.toLowerCase() === "n" ? { id: "toggleNotes" } : null;

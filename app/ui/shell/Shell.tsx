@@ -93,8 +93,9 @@ export function Shell() {
         if (item.command === "newChart" || item.command === "addChart" || item.command === "editChart") {
           return setForm(item.command === "newChart" ? "new" : item.command === "addChart" ? "add" : "edit");
         }
-        if (item.command === "toggleNotes") return toggleNotes();
-        if (item.command === "sidebar") return setSidebar((v) => !v);
+        // Kısayollarındaki gibi: baskı görünümünde (pano ve kenar çubuğu yokken) yok sayılır.
+        if (item.command === "toggleNotes") return printView ? undefined : toggleNotes();
+        if (item.command === "sidebar") return printView ? undefined : setSidebar((v) => !v);
         return setHelp(true);
     }
   };

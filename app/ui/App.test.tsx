@@ -160,8 +160,17 @@ test("Cmd+Shift+N works from a text field and is ignored on key repeat, during c
   const ev = new KeyboardEvent("keydown", { key: "N", metaKey: true, shiftKey: true, cancelable: true });
   window.dispatchEvent(ev);
   expect(ev.defaultPrevented).toBe(false);
+  // Paletin aynı komutları da baskı görünümünde yok sayılır.
+  for (const text of ["notlar panelini", "kenar çubuğunu"]) {
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    const box = within(screen.getByRole("dialog", { name: "Komut paleti" })).getByRole("combobox");
+    fireEvent.change(box, { target: { value: text } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  }
   fireEvent.click(screen.getByRole("button", { name: "Panoya dön" }));
   expect(notes()).toBeInTheDocument();
+  expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
 });
 
 test("Cmd+Shift+N still works after a choice in a select (M6-2)", () => {

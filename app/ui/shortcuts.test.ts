@@ -25,6 +25,7 @@ test("ignored: Ctrl/Alt, digit 0, repeat, composition, editable fields and open 
   expect(key({ key: "0", code: "Digit0", metaKey: true })).toBeNull();
   expect(key({ key: "n", metaKey: true, repeat: true })).toBeNull();
   expect(key({ key: "?", isComposing: true })).toBeNull();
+  expect(key({ key: "k", metaKey: true, keyCode: 229 })).toBeNull();
   expect(key({ key: "?" }, document.createElement("input"))).toBeNull();
   const modal = document.createElement("div");
   modal.setAttribute("aria-modal", "true");

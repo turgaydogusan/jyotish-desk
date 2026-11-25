@@ -117,3 +117,46 @@ test("nothing matching shows the empty text and Enter does nothing", async () =>
   expect(onRun).not.toHaveBeenCalled();
   expect(box()).not.toHaveAttribute("aria-activedescendant");
 });
+
+test("Enter that commits IME text does not run the active item", async () => {
+  renderPalette();
+  await waitFor(() => expect(options()[1]).toHaveTextContent("Ayşe Yılmaz"));
+  // WKWebView bileşimi bitiren Enter'ı `isComposing` olmadan, 229 koduyla da bildirir.
+  for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+    fireEvent.keyDown(box(), { key: "ArrowDown", ...composing });
+    fireEvent.keyDown(box(), { key: "Enter", ...composing });
+  }
+  expect(options()[0]).toHaveAttribute("aria-selected", "true");
+  expect(onClose).not.toHaveBeenCalled();
+  expect(onRun).not.toHaveBeenCalled();
+});
+
+test("a failed client search is shown instead of the empty text and clears on the next answer", async () => {
+  vi.mocked(api.searchClients).mockResolvedValueOnce({ status: "error", error: { code: "db_failed", params: {} } });
+  vi.mocked(api.searchClients).mockResolvedValueOnce(ok([]));
+  renderPalette();
+  fireEvent.change(box(), { target: { value: "zzzz" } });
+  expect(await screen.findByRole("alert")).toHaveTextContent(/^Liste okunamadı: /);
+  expect(screen.queryByText("Eşleşen öğe yok.")).toBeNull();
+  fireEvent.change(box(), { target: { value: "zzzy" } });
+  expect(await screen.findByText("Eşleşen öğe yok.")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("clients found for the previous text are not offered while the next search is pending", async () => {
+  vi.mocked(api.searchClients).mockResolvedValueOnce(ok([{ client: client(2, "Ayşe Yılmaz"), matched: "Name", snippet: null }]));
+  let answer: (r: ReturnType<typeof ok<never[]>>) => void = () => {};
+  vi.mocked(api.searchClients).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+  renderPalette();
+  fireEvent.change(box(), { target: { value: "ayşe" } });
+  await waitFor(() => expect(options()[0]).toHaveTextContent("Ayşe Yılmaz"));
+  fireEvent.change(box(), { target: { value: "ayşez" } });
+  expect(screen.queryByRole("option")).toBeNull();
+  // Yanıt gelmeden "eşleşen yok" denmez ve Enter eski danışanı açmaz.
+  expect(screen.queryByText("Eşleşen öğe yok.")).toBeNull();
+  fireEvent.keyDown(box(), { key: "Enter" });
+  expect(onRun).not.toHaveBeenCalled();
+  await waitFor(() => expect(api.searchClients).toHaveBeenCalledTimes(2));
+  await act(async () => answer(ok([])));
+  expect(screen.getByText("Eşleşen öğe yok.")).toBeInTheDocument();
+});

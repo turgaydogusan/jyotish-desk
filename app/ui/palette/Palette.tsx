@@ -2,12 +2,15 @@
 // düzen ve komut tek arama kutusunda. WAI-ARIA combobox + listbox; ↑/↓ etkin öğeyi taşır,
 // Enter çalıştırır, Esc kapatır. Danışanda `Cmd+Enter` danışanı açar ve kenar çubuğunu
 // gösterir (sekme yoktur, UI spec §4). Danışan araması `search_clients` iledir; eski yanıt
-// yok sayılır. Seçimden haritaya form ya da onay penceresi çıkmaz (spec §8).
+// yok sayılır ve önceki metnin danışanları yeni yanıt gelene dek sunulmaz (Enter eşleşmeyen
+// danışanı açmaz). Arama hatası listenin altında gösterilir; "eşleşen yok" denmez.
+// Seçimden haritaya form ya da onay penceresi çıkmaz (spec §8).
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
-import type { ChartRecord, SearchHit } from "../bindings";
+import type { ChartRecord, CommandError, SearchHit } from "../bindings";
 import { VARGA_NAMES, VARGAS } from "../chart/adapter";
+import { errorMessage } from "../i18n/errors";
 import { useSession } from "../session/store";
 import { Dialog } from "../shell/Dialog";
 import { layoutLabel } from "../shell/LayoutPicker";
@@ -19,6 +22,14 @@ export const PALETTE_SEARCH_DEBOUNCE_MS = 120;
 /** Boş sorguda gösterilen son açılan danışan sayısı; aramada en çok danışan. */
 export const PALETTE_RECENT = 5;
 export const PALETTE_CLIENTS = 8;
+
+/** Bir danışan sorgusunun yanıtı; `q` yanıtın ait olduğu (kırpılmış) arama metnidir. */
+interface ClientAnswer {
+  q: string;
+  hits: SearchHit[];
+  error: CommandError | null;
+}
+const NO_HITS: SearchHit[] = [];
 
 export interface PaletteProps {
   onClose(): void;
@@ -32,7 +43,7 @@ export function Palette({ onClose, onRun }: PaletteProps) {
   const layout = useLayoutStore();
   const id = useId();
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [answer, setAnswer] = useState<ClientAnswer | null>(null);
   const [charts, setCharts] = useState<ChartRecord[]>([]);
   const [active, setActive] = useState(0);
   const seq = useRef(0);
@@ -50,23 +61,29 @@ export function Palette({ onClose, onRun }: PaletteProps) {
     };
   }, [opened, revision]);
 
+  const q = query.trim();
   useEffect(() => {
     const mine = ++seq.current;
-    const q = query.trim();
+    const ok = (hits: SearchHit[]) => ({ hits, error: null });
+    const failed = (error: CommandError) => ({ hits: NO_HITS, error });
     const timer = setTimeout(
       () => {
         const call =
           q === ""
-            ? api.listClients(PALETTE_RECENT).then((r) => (r.status === "ok" ? r.data.map((client): SearchHit => ({ client, matched: "Name", snippet: null })) : []))
-            : api.searchClients(q, PALETTE_CLIENTS).then((r) => (r.status === "ok" ? r.data : []));
-        void call.then((data) => {
-          if (mine === seq.current) setHits(data);
+            ? api.listClients(PALETTE_RECENT).then((r) => (r.status === "ok" ? ok(r.data.map((client): SearchHit => ({ client, matched: "Name", snippet: null }))) : failed(r.error)))
+            : api.searchClients(q, PALETTE_CLIENTS).then((r) => (r.status === "ok" ? ok(r.data) : failed(r.error)));
+        void call.then((a) => {
+          if (mine === seq.current) setAnswer({ q, ...a });
         });
       },
       q === "" ? 0 : PALETTE_SEARCH_DEBOUNCE_MS,
     );
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, q]);
+  // Yanıt yalnızca yazılı metne aitse kullanılır: beklerken eski danışanlar listede durmaz.
+  const settled = answer !== null && answer.q === q;
+  const hits = settled ? answer.hits : NO_HITS;
+  const searchError = settled ? answer.error : null;
 
   const hasChartPanel = layout.active.panels.some((p) => p.kind === "chart");
   const items = useMemo(() => {
@@ -112,7 +129,8 @@ export function Palette({ onClose, onRun }: PaletteProps) {
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.nativeEvent.isComposing) return;
+    // IME bileşimini bitiren Enter öğeyi çalıştırmaz (WebKit bunu 229 koduyla da bildirir).
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       if (items.length === 0) return;
@@ -167,7 +185,12 @@ export function Palette({ onClose, onRun }: PaletteProps) {
             </li>
           ))}
         </ul>
-        {items.length === 0 && <p className="palette-empty">{t("palette.empty")}</p>}
+        {searchError && (
+          <p className="palette-error" role="alert">
+            {t("clients.loadFailed", { message: errorMessage(t, i18n, searchError) })}
+          </p>
+        )}
+        {settled && !searchError && items.length === 0 && <p className="palette-empty">{t("palette.empty")}</p>}
         <p className="visually-hidden" role="status">
           {t("palette.count", { n: items.length })}
         </p>
