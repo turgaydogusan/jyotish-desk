@@ -55,6 +55,24 @@
   }
 }
 
+/* Kâğıt: baskı önizlemesi ekranda da baskı paletini kullanır (koyu temada da). Değerler
+   yukarıdaki @media print bloğuyla aynıdır; tokens.test.ts ikisini karşılaştırır. */
+.paper {
+  color-scheme: light;
+  --bg: #FFFFFF;
+  --panel: #FFFFFF;
+  --line: #534AB7;
+  --ink: #534AB7;
+  --ink-strong: #534AB7;
+  --select: #FFFFFF;
+  --text: #2C2C2A;
+  --text-2: #2C2C2A;
+  --warn: #2C2C2A;
+  --danger: #2C2C2A;
+  color: var(--text);
+  background: var(--panel);
+}
+
 html {
   font-family: var(--font-ui);
   font-size: var(--fs-body);

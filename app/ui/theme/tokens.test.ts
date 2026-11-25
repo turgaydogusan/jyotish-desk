@@ -69,6 +69,12 @@ test("print forces the light palette with only ink and text", () => {
   expect(print["--text"]).toBe(LIGHT["--text"]);
 });
 
+test("the paper class carries the print palette to the screen preview", () => {
+  const paper = colorTokens(".paper {");
+  expect(Object.keys(paper)).toHaveLength(10);
+  expect(paper).toEqual(colorTokens("@media print"));
+});
+
 test("typography: system font, two weights, four sizes, tabular numbers, 2px ink focus ring", () => {
   expect(css).toContain("-apple-system");
   expect(css).toMatch(/--fw-regular:\s*400;/);
