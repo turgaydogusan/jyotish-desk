@@ -93,9 +93,6 @@
   padding: 8px;
   background: var(--bg);
 }
-.print-view-actions {
-  margin-bottom: 8px;
-}
 .topbar-client {
   margin: 0;
   font-size: var(--fs-client);
@@ -241,20 +238,6 @@ kbd {
 }
 .button-danger {
   border: 1px solid var(--danger);
-}
-
-/* Baskı (Plan 12): kabuk esnek kutu olmaktan çıkar, çünkü sayfa kesmeleri blok akışında
-   güvenilirdir; dolgu ve zemin kâğıda taşınmaz. Kural bu dosyadadır: aynı seçicilerin
-   ekran kuralları da buradadır ve sonra gelen kazanır. */
-@media print {
-  .shell,
-  .shell-body,
-  .shell-main {
-    display: block;
-    min-height: 0;
-    padding: 0;
-    background: var(--panel);
-  }
 }
 
 /* Baskı (Plan 12): kabuk esnek kutu olmaktan çıkar, çünkü sayfa kesmeleri blok akışında
