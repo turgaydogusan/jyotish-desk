@@ -19,6 +19,9 @@ vi.mock("./api", () => ({
     deleteClient: vi.fn(),
     listNotes: vi.fn(async () => ({ status: "ok", data: [] })),
     setChartTags: vi.fn(async (_chartId: number, tags: string[]) => ({ status: "ok", data: tags })),
+    appInfo: vi.fn(async () => ({ status: "ok", data: { version: "0.9.0", updaterConfigured: true } })),
+    checkForUpdate: vi.fn(async () => ({ status: "ok", data: { version: "0.9.1", notes: null, published: null } })),
+    installUpdate: vi.fn(),
   },
 }));
 
@@ -27,6 +30,7 @@ import { App } from "./App";
 import type { Boot } from "./boot";
 import { fixture, unknownTimeOpened } from "./test/fixture";
 import { THEME_STORAGE_KEY } from "./theme/theme";
+import { UPDATE_STORAGE_KEY } from "./update/pref";
 import { memoryPersistence } from "./view/persistence";
 
 /** `store: true` gerçek store kalıcılığını (taklit `api`) kullanır; varsayılan bellek içi. */
@@ -442,4 +446,42 @@ test("the sidebar's closed state is remembered at the next start", () => {
   expect(screen.getByRole("button", { name: "Danışanlar" })).toHaveAttribute("aria-expanded", "false");
   fireEvent.keyDown(window, { key: "\\", code: "Backslash", metaKey: true });
   expect(screen.getByRole("complementary", { name: "Danışanlar" })).toBeInTheDocument();
+});
+
+test("the app never checks for updates at startup unless the user turned that on", async () => {
+  renderApp();
+  await screen.findByRole("heading", { level: 1 });
+  expect(api.checkForUpdate).not.toHaveBeenCalled();
+  expect(api.appInfo).not.toHaveBeenCalled();
+});
+
+test("with the startup check turned on a new version is announced once in the notice bar", async () => {
+  localStorage.setItem(UPDATE_STORAGE_KEY, "auto");
+  vi.mocked(api.checkForUpdate).mockClear();
+  renderApp();
+  expect(await screen.findByText("Yeni sürüm var: 0.9.1. Kurmak için Hakkında penceresini açın.")).toBeInTheDocument();
+  expect(api.checkForUpdate).toHaveBeenCalledTimes(1);
+  expect(api.installUpdate).not.toHaveBeenCalled();
+});
+
+test("About opens from the top bar as a modal and returns focus to its button", async () => {
+  renderApp();
+  const opener = screen.getByRole("button", { name: "Hakkında" });
+  opener.focus();
+  fireEvent.click(opener);
+  const dialog = screen.getByRole("dialog", { name: "Jyotish Desk hakkında" });
+  expect(await within(dialog).findByText("Sürüm 0.9.0")).toBeInTheDocument();
+  expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Şimdi denetle" }));
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(opener);
+});
+
+test("the palette opens About too", async () => {
+  renderApp();
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "hakkında" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /Hakkında ve güncellemeler/ }));
+  expect(await screen.findByRole("dialog", { name: "Jyotish Desk hakkında" })).toBeInTheDocument();
 });

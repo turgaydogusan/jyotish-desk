@@ -1,0 +1,45 @@
+.about {
+  display: grid;
+  gap: 10px;
+  min-width: 420px;
+  max-width: 520px;
+}
+
+.about p {
+  margin: 0;
+}
+
+.about-version {
+  font-weight: var(--fw-medium);
+}
+
+.about-source {
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.about-hint,
+.about-status {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.about-updates {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+}
+
+.about-notes {
+  max-height: 10rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  border-left: 2px solid var(--ink);
+  padding-left: 8px;
+}
+
+.about button[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: default;
+}

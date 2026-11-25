@@ -1,4 +1,6 @@
+import { AboutDialog } from "../about/AboutDialog";
 import { SettingsDialog } from "../settings/SettingsDialog";
+import { startupUpdateCheck } from "../update/startup";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { CommandError } from "../bindings";
@@ -29,6 +31,7 @@ export function Shell() {
   const [printError, setPrintError] = useState<CommandError | null>(null);
   const [help, setHelp] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [about, setAbout] = useState(false);
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
   const [sidebar, setSidebar] = useState(() => loadSidebarOpen());
   // Açık/kapalı durumu bir sonraki açılışta da geçerlidir (Plan 12 D11).
@@ -58,6 +61,14 @@ export function Shell() {
     if (r.status === "error") setPrintError(r.error);
   };
   const { push } = useNotices();
+  // Açılışta güncelleme denetimi yalnızca kullanıcı tercihi açtıysa yapılır (Plan 13 D1) ve
+  // bir kez: StrictMode'un ikinci effect koşusu yeni istek göndermez.
+  const updateChecked = useRef(false);
+  useEffect(() => {
+    if (updateChecked.current) return;
+    updateChecked.current = true;
+    void startupUpdateCheck(push);
+  }, [push]);
   const measureRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(measureRef);
 
@@ -143,6 +154,7 @@ export function Shell() {
           return toggleNotes();
         }
         if (item.command === "sidebar") return printView ? undefined : toggleSidebar();
+        if (item.command === "about") return setAbout(true);
         return setHelp(true);
     }
   };
@@ -161,6 +173,7 @@ export function Shell() {
         onToggleSidebar={toggleSidebar}
         onPalette={() => setPalette(true)}
         onSettings={() => setSettings(true)}
+        onAbout={() => setAbout(true)}
       />
       <NoticeBar />
       <div className="shell-body">
@@ -172,6 +185,7 @@ export function Shell() {
       {help && <HelpDialog onClose={() => setHelp(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onRun={runPalette} />}
       {settings && <SettingsDialog onClose={() => setSettings(false)} />}
+      {about && <AboutDialog onClose={() => setAbout(false)} />}
       {form && <BirthForm mode={form} onClose={() => setForm(null)} />}
     </div>
   );
