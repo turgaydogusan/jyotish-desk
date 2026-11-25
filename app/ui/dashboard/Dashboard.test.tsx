@@ -1,7 +1,11 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
-vi.mock("../api", () => ({ api: { dashaChildren: vi.fn(), listNotes: vi.fn(async () => ({ status: "ok", data: [] })) } }));
+vi.mock("../api", () => ({ api: {
+    dashaChildren: vi.fn(),
+    transitsAt: vi.fn(async () => ({ status: "ok", data: (await import("../test/fixture")).fixture().transit })), listNotes: vi.fn(async () => ({ status: "ok", data: [] })),
+  },
+}));
 
 import { api } from "../api";
 import { fixture } from "../test/fixture";

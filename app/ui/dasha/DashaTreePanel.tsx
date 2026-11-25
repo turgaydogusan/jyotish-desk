@@ -45,11 +45,14 @@ export function DashaTreePanel(_: PanelProps) {
   const offset = opened.chart_record.resolved.offset_secs;
 
   // Yüklenen liste de `childrenOf` süzgecinden geçer: yalnızca bu yolun bir alt seviyesi
-  // kabul edilir (yanlış bir yanıt ağacı sonsuz döngüye sokamaz).
+  // kabul edilir (yanlış bir yanıt ağacı sonsuz döngüye sokamaz). Boş yanıt hatadır (M6-6):
+  // her dönemin dokuz alt dönemi vardır, boş liste sessizce boş dal olarak gösterilmez.
   const childList = (path: readonly Graha[]): DashaPeriod[] | LazyEntry | undefined => {
     if (path.length < PRELOADED_LEVEL) return childrenOf(periods, path);
     const entry = lazy.entries[pathKey(path)];
-    return entry?.status === "ok" ? { status: "ok", periods: childrenOf(entry.periods, path) } : entry;
+    if (entry?.status !== "ok") return entry;
+    const kids = childrenOf(entry.periods, path);
+    return kids.length > 0 ? { status: "ok", periods: kids } : { status: "error", error: { code: "dasha_empty", params: {} } };
   };
 
   /** Yüklenmiş alt dönemler; yükleniyorsa ya da hatalıysa `null`. */

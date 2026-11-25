@@ -84,6 +84,7 @@ export const en: Messages = {
     approx: "approximate",
   },
   errors: {
+    dasha_empty: "The sub-periods of this period could not be loaded.",
     ipc: "Could not reach the application core.",
     calc: "The calculation could not finish ({{detail}}).",
     engine_stopped: "The calculation engine stopped. If this persists, restart the application.",
@@ -226,6 +227,13 @@ export const en: Messages = {
   },
   dasha: {
     approx: "Birth time unknown: dasha dates are approximate (≈).",
+    strip: {
+      level: "Level",
+      levels: { maha: "Mahadasha", antar: "Antardasha", pratyantar: "Pratyantardasha" },
+      label: "Dasha strip: {{level}}",
+      current: "at the transit moment",
+      outside: "The transit moment is outside the Vimshottari cycle.",
+    },
   },
   shortcuts: {
     title: "Keyboard shortcuts",

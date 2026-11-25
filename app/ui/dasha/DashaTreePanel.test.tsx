@@ -217,3 +217,14 @@ test("without an open chart the panel says so", () => {
   renderWithStores(<DashaTreePanel panel={panel} />, { opened: null });
   expect(screen.getByText("Açık harita yok.")).toBeInTheDocument();
 });
+
+test("an empty lazily loaded level is an error with a retry, not a silent empty list (M6-6)", async () => {
+  vi.mocked(api.dashaChildren).mockResolvedValueOnce({ status: "ok", data: [] });
+  const opened = fixture().opened;
+  opened.view_state.dasha_expanded_path = fixture().dasha_children.path;
+  renderWithStores(<DashaTreePanel panel={panel} />, { opened });
+  expect(await screen.findByText("Bu dönemin alt dönemleri alınamadı.")).toBeInTheDocument();
+  vi.mocked(api.dashaChildren).mockResolvedValueOnce({ status: "ok", data: fixture().dasha_children.periods });
+  fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
+  await waitFor(() => expect(screen.queryByText("Bu dönemin alt dönemleri alınamadı.")).toBeNull());
+});

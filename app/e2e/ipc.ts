@@ -72,6 +72,7 @@ export async function mockIpc(page: Page, { session }: IpcOptions) {
         preview_moment: () => fixture.preview,
         dasha_children: (args) =>
           JSON.stringify(args.path) === JSON.stringify(fixture.dasha_children.path) ? fixture.dasha_children.periods : [],
+        transits_at: () => fixture.transit,
         print_window: () => null,
       };
       Object.assign(window, {

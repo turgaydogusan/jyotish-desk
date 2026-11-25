@@ -83,6 +83,7 @@ export const tr = {
     approx: "yaklaşık",
   },
   errors: {
+    dasha_empty: "Bu dönemin alt dönemleri alınamadı.",
     ipc: "Uygulama çekirdeğine ulaşılamadı.",
     calc: "Hesap tamamlanamadı ({{detail}}).",
     engine_stopped: "Hesap motoru durdu. Sorun sürerse uygulamayı yeniden başlatın.",
@@ -225,6 +226,13 @@ export const tr = {
   },
   dasha: {
     approx: "Doğum saati bilinmiyor: dasa tarihleri yaklaşıktır (≈).",
+    strip: {
+      level: "Seviye",
+      levels: { maha: "Mahadasa", antar: "Antardasa", pratyantar: "Pratyantardasa" },
+      label: "Dasa şeridi: {{level}}",
+      current: "transit anında",
+      outside: "Transit anı Vimshottari döngüsünün dışında.",
+    },
   },
   shortcuts: {
     title: "Klavye kısayolları",

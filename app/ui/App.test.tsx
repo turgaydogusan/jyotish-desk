@@ -3,6 +3,7 @@ import { vi } from "vitest";
 
 vi.mock("./api", () => ({
   api: {
+    transitsAt: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().transit })),
     printWindow: vi.fn(async () => ({ status: "ok", data: null })),
     previewMoment: vi.fn(async () => ({ status: "error", error: { code: "invalid_input", params: { field: "birth.date" } } })),
     searchPlaces: vi.fn(async () => ({ status: "ok", data: [] })),

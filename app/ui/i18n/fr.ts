@@ -84,6 +84,7 @@ export const fr: Messages = {
     approx: "approximatif",
   },
   errors: {
+    dasha_empty: "Les sous-périodes de cette période n’ont pas pu être chargées.",
     ipc: "Impossible de joindre le cœur de l’application.",
     calc: "Le calcul n’a pas pu aboutir ({{detail}}).",
     engine_stopped: "Le moteur de calcul s’est arrêté. Si le problème persiste, redémarrez l’application.",
@@ -226,6 +227,13 @@ export const fr: Messages = {
   },
   dasha: {
     approx: "Heure de naissance inconnue : les dates de dasha sont approximatives (≈).",
+    strip: {
+      level: "Niveau",
+      levels: { maha: "Mahadasha", antar: "Antardasha", pratyantar: "Pratyantardasha" },
+      label: "Bande des dashas : {{level}}",
+      current: "au moment du transit",
+      outside: "Le moment du transit est hors du cycle Vimshottari.",
+    },
   },
   shortcuts: {
     title: "Raccourcis clavier",
