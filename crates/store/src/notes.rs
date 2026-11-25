@@ -67,11 +67,12 @@ pub(crate) fn tag_key(tag: &str) -> String {
 }
 
 /// Etiket listesini NFC'ye çevirir, kırpar, boşları atar, büyük/küçük harf duyarsız
-/// (`tag_key`) tekilleştirir (ilk yazım korunur).
+/// (`tag_key`) tekilleştirir (ilk yazım korunur). Etiket virgül içeremez: arayüz etiketleri
+/// virgülle ayırır, içe aktarmadan gelen virgüllü etiket burada bölünür (D14).
 pub fn normalize_tags(tags: &[String]) -> Result<Vec<String>, StoreError> {
     let mut out: Vec<String> = Vec::new();
     let mut keys: Vec<String> = Vec::new();
-    for t in tags {
+    for t in tags.iter().flat_map(|t| t.split(',')) {
         let t = nfc(t.trim());
         let key = tag_key(&t);
         if key.is_empty() {
@@ -400,5 +401,12 @@ mod tests {
             normalize_tags(&[long]).unwrap()[0].chars().count(),
             MAX_TAG_CHARS
         );
+    }
+
+    #[test]
+    fn a_comma_inside_a_tag_splits_it() {
+        let tags =
+            normalize_tags(&["Kariyer, aile".into(), "kariyer".into(), " , ".into()]).unwrap();
+        assert_eq!(tags, ["Kariyer", "aile"]);
     }
 }

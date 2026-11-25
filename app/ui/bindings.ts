@@ -56,11 +56,11 @@ export const commands = {
 	savePanelLayout: (layout: PanelLayout | null, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("save_panel_layout", { layout }, options)),
 	/**
 	 *  Bütün danışanlar JSON'a. Pencere Rust'ta açılır; arayüz yol vermez. Dönüş: kaydedilen
-	 *  dosyanın adı, vazgeçilirse `None`. Notlar yalnızca `include_notes` ile (spec §5).
+	 *  dosyanın adı ve boyutu (`ExportResult`), vazgeçilirse `None`. Notlar yalnızca `include_notes` ile (spec §5).
 	 */
-	exportClientsJson: (includeNotes: boolean, options?: InvokeOptions) => typedError<string | null, CommandError>(__TAURI_INVOKE("export_clients_json", { includeNotes }, options)),
+	exportClientsJson: (includeNotes: boolean, options?: InvokeOptions) => typedError<ExportResult | null, CommandError>(__TAURI_INVOKE("export_clients_json", { includeNotes }, options)),
 	/**  Bütün haritalar CSV'ye (yalnızca dışa aktarma; notlar CSV'de yoktur). */
-	exportClientsCsv: (options?: InvokeOptions) => typedError<string | null, CommandError>(__TAURI_INVOKE("export_clients_csv", undefined, options)),
+	exportClientsCsv: (options?: InvokeOptions) => typedError<ExportResult | null, CommandError>(__TAURI_INVOKE("export_clients_csv", undefined, options)),
 	/**  JSON içe aktarma (hepsi ya da hiçbiri). Vazgeçilirse `None`. */
 	importClientsJson: (options?: InvokeOptions) => typedError<ImportResult | null, CommandError>(__TAURI_INVOKE("import_clients_json", undefined, options)),
 	searchPlaces: (query: string, limit: number, options?: InvokeOptions) => typedError<PlaceHit[], CommandError>(__TAURI_INVOKE("search_places", { query, limit }, options)),
@@ -261,6 +261,17 @@ export type EngineStatus = {
 	seVersion: string,
 };
 
+/**
+ *  Dışa aktarılan dosyanın adı ve boyutu; içe aktarma sınırını aşan dosya bu uygulamaya geri
+ *  yüklenemez (D15: dışa aktarma engellenmez, arayüz uyarır).
+ */
+export type ExportResult = {
+	file: string,
+	/**  `u32::MAX`'ta doyar (4 GiB). */
+	bytes: number,
+	over_import_limit: boolean,
+};
+
 export type FoldChoice = "Earlier" | "Later";
 
 export type Gender = "Male" | "Female" | "Other";
@@ -307,6 +318,11 @@ export type ImportReport = {
 	/**  Zaten var olan (UUID ya da JHD eşleşmesi) ve atlanan kayıtlar. */
 	skipped: number,
 	warnings: ImportWarning[],
+	/**
+	 *  Bütün uyarıların sayısı; `warnings` ilk `MAX_IMPORT_WARNINGS` tanesidir. `serde(default)`
+	 *  yoktur: IPC tiplerinde faz farkı yaratan öznitelik kullanılmaz (`specta_builder`, D21).
+	 */
+	warnings_total: number,
 };
 
 /**  Seçilen dosyanın adı ve içe aktarma özeti. */

@@ -128,6 +128,15 @@ export const tr = {
     import_format: "Dosya bir Jyotish Desk dışa aktarımı değil ya da bozuk ({{detail}}).",
     import_version: "Dosya bu sürümden yeni (sürüm {{found}}, desteklenen {{supported}}). Uygulamayı güncelleyin.",
     import_record: "Dosyadaki bir kayıt geçersiz ({{item}}: {{field}}).",
+    fileIoDetail: {
+      not_found: "dosya ya da klasör yok",
+      permission_denied: "izin yok",
+      already_exists: "dosya zaten var",
+      invalid_input: "sıradan bir dosya değil",
+      invalid_data: "dosya içeriği okunamadı",
+      storage_full: "disk dolu",
+      other: "beklenmeyen bir dosya hatası",
+    },
   },
   layout: {
     picker: "Düzen",
@@ -438,6 +447,7 @@ export const tr = {
     includeNotesHint: "Notlar hassas veridir; dosyayı kiminle paylaştığınıza dikkat edin.",
     chooseFile: "Dosya seç ve kaydet…",
     exported: "“{{file}}” kaydedildi.",
+    exportedOverLimit: "“{{file}}” kaydedildi ({{mb}} MB). Dosya içe aktarma sınırını (32 MB) aşıyor; bu uygulamaya olduğu gibi geri yüklenemez.",
     imported: "“{{file}}” içe aktarıldı: {{clients}} danışan, {{charts}} harita, {{notes}} not eklendi; {{skipped}} kayıt zaten vardı.",
     importedWithWarnings: "“{{file}}” içe aktarıldı: {{clients}} danışan, {{charts}} harita, {{notes}} not eklendi; {{skipped}} kayıt zaten vardı. {{warnings}} haritanın hesap ayarı okunamadı, varsayılan ayar yazıldı.",
   },

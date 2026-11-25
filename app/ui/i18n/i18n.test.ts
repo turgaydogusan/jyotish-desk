@@ -1,4 +1,5 @@
 import { en } from "./en";
+import { errorMessage } from "./errors";
 import { fr } from "./fr";
 import { currentLanguage, i18n, LANGUAGE_STORAGE_KEY, loadLanguage, setLanguage } from "./index";
 import { tr } from "./tr";
@@ -91,4 +92,15 @@ test("warning badges and hints cover every moment and chart warning", () => {
 
 test("atlas reasons are localized in every language", () => {
   for (const lang of [tr, en, fr]) expect(Object.keys(lang.atlasReason).sort()).toEqual(["io", "missing", "schema"]);
+});
+
+test("file error details are localized in every language", () => {
+  const codes = ["already_exists", "invalid_data", "invalid_input", "not_found", "other", "permission_denied", "storage_full"];
+  for (const lang of [tr, en, fr]) expect(Object.keys(lang.errors.fileIoDetail).sort()).toEqual(codes);
+});
+
+test("a file error shows its detail in the UI language and an unknown detail as it came", () => {
+  const t = i18n.getFixedT("tr");
+  expect(errorMessage(t, i18n, { code: "file_io", params: { file: "a.csv", detail: "permission_denied" } })).toBe("Dosya okunamadı ya da yazılamadı (a.csv: izin yok).");
+  expect(errorMessage(t, i18n, { code: "file_io", params: { file: "a.csv", detail: "weird" } })).toBe("Dosya okunamadı ya da yazılamadı (a.csv: weird).");
 });

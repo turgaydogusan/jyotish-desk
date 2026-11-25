@@ -78,6 +78,8 @@ test("catches thrown errors into an ipc error", async () => {
 
 test("every wrapper forwards its arguments to the command of the same name", async () => {
   const calls: [keyof typeof api, unknown[]][] = [
+    ["engineStatus", []],
+    ["printWindow", []],
     ["restoreSession", []],
     ["openClient", [2, null]],
     ["createClient", [{ name: "A" }]],
@@ -118,6 +120,8 @@ test("every wrapper forwards its arguments to the command of the same name", asy
     expect(await call(...args)).toEqual({ status: "ok", data: name });
     expect(command).toHaveBeenCalledWith(...args);
   }
+  // Tablo her sarmalayıcıyı kapsar: yeni bir sarmalayıcı burada da yazılmadan geçmez.
+  expect(calls.map(([name]) => name).sort()).toEqual(Object.keys(api).sort());
 });
 
 test("no command takes a file path from the UI and JHD import is not reachable (Plan 08 deferred items 1 and 3)", () => {
@@ -129,4 +133,18 @@ test("no command takes a file path from the UI and JHD import is not reachable (
   for (const name of ["importJson", "importJhd", "exportJson", "exportCsv"]) {
     expect(Object.keys(api)).not.toContain(name);
   }
+});
+
+test("every string argument of a command is a known, non-path one (found by type, not by name)", () => {
+  const block = bindingsSource.slice(bindingsSource.indexOf("export const commands = {"));
+  const found: string[] = [];
+  for (const m of block.matchAll(/^\s+(\w+): \(([^)]*)\) =>/gm)) {
+    for (const p of m[2].split(",")) {
+      const arg = /^\s*(\w+)\??: (string(?:\[\])?)(?: \| null)?\s*$/.exec(p);
+      if (arg) found.push(`${m[1]}.${arg[1]}`);
+    }
+  }
+  expect(found.sort()).toEqual(
+    ["addNote.body", "listClientsByTag.tag", "searchClients.query", "searchPlaces.query", "setChartTags.tags", "updateClient.name", "updateNote.body"].sort(),
+  );
 });

@@ -343,4 +343,25 @@ mod tests {
         assert!(ids(&s, "").is_empty());
         assert_eq!(s.clients_with_tag("kariyer", 1).unwrap().len(), 1);
     }
+
+    /// Plan 08 Task 7 ölçümü: 200 danışan, her biri iki etiketli bir haritayla; etiketle arama.
+    /// `cargo test -p store --release -- --ignored search_of_two_hundred_clients --nocapture`
+    #[test]
+    #[ignore]
+    fn search_of_two_hundred_clients_stays_within_budget() {
+        let mut s = store();
+        for i in 0..200 {
+            let (_, ch) = s
+                .create_client(&new_client(&format!("Danışan {i}")))
+                .unwrap();
+            s.set_chart_tags(ch.id, &["kariyer".into(), format!("grup {}", i % 7)])
+                .unwrap();
+        }
+        let start = std::time::Instant::now();
+        let hits = s.search_clients("kariyer", 200).unwrap();
+        let took = start.elapsed();
+        println!("search_clients(200 hits): {took:?}");
+        assert_eq!(hits.len(), 200);
+        assert!(took < std::time::Duration::from_millis(50), "{took:?}");
+    }
 }

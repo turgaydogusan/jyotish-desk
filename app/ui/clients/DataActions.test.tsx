@@ -16,7 +16,7 @@ import { renderWithStores } from "../test/render";
 import { DataActions, resetExchangeBusy } from "./DataActions";
 
 const ok = <T,>(data: T) => ({ status: "ok" as const, data });
-const report = { clients_added: 2, charts_added: 3, notes_added: 0, skipped: 1, warnings: [] };
+const report = { clients_added: 2, charts_added: 3, notes_added: 0, skipped: 1, warnings: [], warnings_total: 0 };
 
 function Revision() {
   return <output aria-label="sürüm">{useSession().revision}</output>;
@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 test("JSON export asks about notes first, unchecked by default, and reports the saved file name", async () => {
-  vi.mocked(api.exportClientsJson).mockResolvedValue(ok("danisanlar.json"));
+  vi.mocked(api.exportClientsJson).mockResolvedValue(ok({ file: "danisanlar.json", bytes: 1_000, over_import_limit: false }));
   renderData();
   fireEvent.click(within(section()).getByRole("button", { name: "JSON olarak dışa aktar…" }));
   const dialog = screen.getByRole("dialog", { name: "JSON olarak dışa aktar" });
@@ -66,7 +66,7 @@ test("checking Include notes exports with notes; cancelling the file dialog says
 });
 
 test("Include notes is off again each time the export dialog opens", async () => {
-  vi.mocked(api.exportClientsJson).mockResolvedValue(ok("danisanlar.json"));
+  vi.mocked(api.exportClientsJson).mockResolvedValue(ok({ file: "danisanlar.json", bytes: 1_000, over_import_limit: false }));
   renderData();
   const open = () => {
     fireEvent.click(within(section()).getByRole("button", { name: "JSON olarak dışa aktar…" }));
@@ -90,10 +90,10 @@ test("Include notes is off again each time the export dialog opens", async () =>
 });
 
 test("CSV export errors are shown with the file name only", async () => {
-  vi.mocked(api.exportClientsCsv).mockResolvedValue({ status: "error", error: { code: "file_io", params: { file: "haritalar.csv", detail: "permission denied" } } });
+  vi.mocked(api.exportClientsCsv).mockResolvedValue({ status: "error", error: { code: "file_io", params: { file: "haritalar.csv", detail: "permission_denied" } } });
   renderData();
   fireEvent.click(within(section()).getByRole("button", { name: "CSV olarak dışa aktar…" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Dışa aktarılamadı: Dosya okunamadı ya da yazılamadı (haritalar.csv: permission denied).");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Dışa aktarılamadı: Dosya okunamadı ya da yazılamadı (haritalar.csv: izin yok).");
 });
 
 test("an import reports what was added and refreshes the lists", async () => {
@@ -109,7 +109,7 @@ test("an import reports what was added and refreshes the lists", async () => {
 
 test("an import with reset settings is a warning; a refused import adds nothing and says so", async () => {
   vi.mocked(api.importClientsJson)
-    .mockResolvedValueOnce(ok({ file: "eski.json", report: { ...report, warnings: [{ item: "u", code: "CalcSettingsReset" as const }] } }))
+    .mockResolvedValueOnce(ok({ file: "eski.json", report: { ...report, warnings: [{ item: "u", code: "CalcSettingsReset" as const }], warnings_total: 1 } }))
     .mockResolvedValueOnce({ status: "error", error: { code: "import_too_large", params: { file: "dev.json", max_mb: "32" } } });
   renderData();
   const button = within(section()).getByRole("button", { name: "JSON içe aktar…" });
@@ -154,4 +154,13 @@ test("busy survives closing and reopening the sidebar while a file dialog is ope
   expect(api.importClientsJson).toHaveBeenCalledOnce();
   release();
   await waitFor(() => expect(again).not.toHaveAttribute("aria-disabled"));
+});
+
+test("an export bigger than the import limit is saved and says it cannot be imported again", async () => {
+  vi.mocked(api.exportClientsCsv).mockResolvedValue(ok({ file: "büyük.csv", bytes: 40 * 1024 * 1024, over_import_limit: true }));
+  renderData();
+  fireEvent.click(within(section()).getByRole("button", { name: "CSV olarak dışa aktar…" }));
+  const notice = await screen.findByText(/büyük\.csv/);
+  expect(notice).toHaveTextContent("“büyük.csv” kaydedildi (40 MB). Dosya içe aktarma sınırını (32 MB) aşıyor; bu uygulamaya olduğu gibi geri yüklenemez.");
+  expect(notice.closest('[role="status"]')).toHaveClass("notice--warning");
 });

@@ -25,7 +25,7 @@ pub use db::{Clock, Store};
 pub use error::StoreError;
 pub use exchange::{
     ExportOptions, ImportReport, ImportWarning, ImportWarningCode, EXPORT_FORMAT,
-    EXPORT_SCHEMA_VERSION,
+    EXPORT_SCHEMA_VERSION, MAX_IMPORT_WARNINGS,
 };
 pub use jhd::{parse_jhd, JhdChart, JhdImport};
 pub use model::{

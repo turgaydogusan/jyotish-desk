@@ -90,6 +90,9 @@ pub struct ImportWarning {
     pub code: ImportWarningCode,
 }
 
+/// `ImportReport.warnings`'te tutulan en çok öğe; `warnings_total` gerçek sayıdır.
+pub const MAX_IMPORT_WARNINGS: usize = 100;
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct ImportReport {
@@ -99,6 +102,19 @@ pub struct ImportReport {
     /// Zaten var olan (UUID ya da JHD eşleşmesi) ve atlanan kayıtlar.
     pub skipped: u32,
     pub warnings: Vec<ImportWarning>,
+    /// Bütün uyarıların sayısı; `warnings` ilk `MAX_IMPORT_WARNINGS` tanesidir. `serde(default)`
+    /// yoktur: IPC tiplerinde faz farkı yaratan öznitelik kullanılmaz (`specta_builder`, D21).
+    pub warnings_total: u32,
+}
+
+impl ImportReport {
+    /// Uyarıyı sayar; liste `MAX_IMPORT_WARNINGS`'e ulaştıysa öğeyi eklemez.
+    pub fn warn(&mut self, w: ImportWarning) {
+        self.warnings_total = self.warnings_total.saturating_add(1);
+        if self.warnings.len() < MAX_IMPORT_WARNINGS {
+            self.warnings.push(w);
+        }
+    }
 }
 
 fn id_by_uuid(conn: &Connection, table: &str, uuid: &str) -> Result<Option<u32>, StoreError> {
@@ -317,7 +333,7 @@ impl Store {
                     import_resolved(&parsed, &ch.resolved).ok_or_else(|| record("resolved"))?;
                 let settings = match load_calc_value(ch.calc_settings.clone(), &defaults) {
                     SettingsLoad::Reset { settings, .. } => {
-                        report.warnings.push(ImportWarning {
+                        report.warn(ImportWarning {
                             item: chart_uuid.clone(),
                             code: ImportWarningCode::CalcSettingsReset,
                         });
@@ -472,7 +488,8 @@ mod tests {
                 charts_added: 1,
                 notes_added: 1,
                 skipped: 0,
-                warnings: vec![]
+                warnings: vec![],
+                warnings_total: 0,
             }
         );
         let a = src.client(cid).unwrap();
@@ -656,5 +673,19 @@ mod tests {
             (again.clients_added, again.charts_added, again.skipped),
             (0, 0, 2)
         );
+    }
+
+    #[test]
+    fn import_warnings_are_capped_but_counted() {
+        let mut report = ImportReport::default();
+        for i in 0..(MAX_IMPORT_WARNINGS + 50) {
+            report.warn(ImportWarning {
+                item: format!("u{i}"),
+                code: ImportWarningCode::CalcSettingsReset,
+            });
+        }
+        assert_eq!(report.warnings.len(), MAX_IMPORT_WARNINGS);
+        assert_eq!(report.warnings_total as usize, MAX_IMPORT_WARNINGS + 50);
+        assert_eq!(report.warnings[0].item, "u0");
     }
 }

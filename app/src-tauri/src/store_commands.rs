@@ -13,7 +13,7 @@ use store::{
     AppPrefs, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note, PanelLayout,
     PrefsLoad, SearchHit, Store, TagCount,
 };
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, State, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::client_commands::{blocking, lock, with_store, StoreState};
@@ -33,6 +33,7 @@ pub struct JhdImportResult {
 }
 
 /// İçe aktarılan JSON dosyasının sınırı; dosya okunmadan önce boyutuyla denetlenir.
+// Değişirse data.exportedOverLimit metinleri de değişir.
 pub const MAX_IMPORT_BYTES: u64 = 32 * 1024 * 1024;
 
 /// Hata parametrelerinde yalnızca dosya adı bulunur: tam yol kullanıcı adını taşır.
@@ -45,8 +46,25 @@ fn base_name(path: &Path) -> String {
 fn io_error(path: &Path, e: std::io::Error) -> CommandError {
     CommandError::new(
         "file_io",
-        &[("file", base_name(path)), ("detail", e.kind().to_string())],
+        &[
+            ("file", base_name(path)),
+            ("detail", io_detail(e.kind()).to_owned()),
+        ],
     )
+}
+
+/// `ErrorKind` → kararlı kod (D16). Metin İngilizcedir ve sürümler arasında değişebilir; arayüz
+/// kodu kendi dilinde gösterir (`errors.fileIoDetail`).
+fn io_detail(kind: ErrorKind) -> &'static str {
+    match kind {
+        ErrorKind::NotFound => "not_found",
+        ErrorKind::PermissionDenied => "permission_denied",
+        ErrorKind::AlreadyExists => "already_exists",
+        ErrorKind::InvalidInput => "invalid_input",
+        ErrorKind::InvalidData => "invalid_data",
+        ErrorKind::StorageFull => "storage_full",
+        _ => "other",
+    }
 }
 
 /// Geçici dosya adı için denenen ad sayısı (ad doluysa sıradaki denenir).
@@ -100,12 +118,32 @@ fn write_atomic_with(path: &Path, text: &str, seq: &AtomicU32) -> Result<(), Com
     written.map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
         io_error(path, e)
-    })
+    })?;
+    sync_parent(path);
+    Ok(())
+}
+
+/// Taşımanın kendisi de diske yazılsın (Unix: klasör girdisi). Yalnızca dayanıklılıktır: dosya
+/// zaten yerindedir, hata yok sayılır.
+fn sync_parent(path: &Path) {
+    // Öznitelik `if` ifadesine doğrudan yazılamaz (derlenmez); blok sarılır.
+    #[cfg(unix)]
+    {
+        let dir = path.parent().filter(|d| !d.as_os_str().is_empty());
+        if let Some(Ok(d)) = dir.map(File::open) {
+            let _ = d.sync_all();
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
 }
 
 /// `MAX_IMPORT_BYTES`'tan büyük dosya okunmaz (okurken büyüyen dosya da reddedilir). Sıradan
 /// dosya olmayan yol (klasör, adlandırılmış boru, aygıt) açılmadan reddedilir: boru boyut
-/// denetiminden 0 ile geçer ve açılması yazan biri gelene dek bekler.
+/// denetiminden 0 ile geçer ve açılması yazan biri gelene dek bekler. UTF-8 olmayan dosya
+/// `import_format` (detail `utf8`) olur; baştaki BOM atılır.
 pub fn read_bounded(path: &Path) -> Result<String, CommandError> {
     let too_large = || {
         CommandError::new(
@@ -123,14 +161,17 @@ pub fn read_bounded(path: &Path) -> Result<String, CommandError> {
     if meta.len() > MAX_IMPORT_BYTES {
         return Err(too_large());
     }
-    let mut text = String::new();
+    let mut bytes = Vec::new();
     File::open(path)
-        .and_then(|f| f.take(MAX_IMPORT_BYTES + 1).read_to_string(&mut text))
+        .and_then(|f| f.take(MAX_IMPORT_BYTES + 1).read_to_end(&mut bytes))
         .map_err(|e| io_error(path, e))?;
-    if text.len() as u64 > MAX_IMPORT_BYTES {
+    if bytes.len() as u64 > MAX_IMPORT_BYTES {
         return Err(too_large());
     }
-    Ok(text)
+    // Başındaki UTF-8 BOM (bazı düzenleyiciler ekler) atılır; UTF-8 olmayan dosya biçim hatasıdır.
+    let body = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    String::from_utf8(body.to_vec())
+        .map_err(|_| CommandError::new("import_format", &[("detail", "utf8".to_owned())]))
 }
 
 pub fn import_jhd_files_blocking(
@@ -165,14 +206,34 @@ pub fn export_json_file_blocking(
     store: &Mutex<Store>,
     path: &Path,
     options: &ExportOptions,
-) -> Result<(), CommandError> {
+) -> Result<usize, CommandError> {
     let text = lock(store)?.export_json(options)?;
-    write_atomic(path, &text)
+    write_atomic(path, &text)?;
+    Ok(text.len())
 }
 
-pub fn export_csv_file_blocking(store: &Mutex<Store>, path: &Path) -> Result<(), CommandError> {
+pub fn export_csv_file_blocking(store: &Mutex<Store>, path: &Path) -> Result<usize, CommandError> {
     let text = lock(store)?.export_csv()?;
-    write_atomic(path, &text)
+    write_atomic(path, &text)?;
+    Ok(text.len())
+}
+
+/// Dışa aktarılan dosyanın adı ve boyutu; içe aktarma sınırını aşan dosya bu uygulamaya geri
+/// yüklenemez (D15: dışa aktarma engellenmez, arayüz uyarır).
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct ExportResult {
+    pub file: String,
+    /// `u32::MAX`'ta doyar (4 GiB).
+    pub bytes: u32,
+    pub over_import_limit: bool,
+}
+
+fn export_result(path: &Path, bytes: usize) -> ExportResult {
+    ExportResult {
+        file: base_name(path),
+        bytes: u32::try_from(bytes).unwrap_or(u32::MAX),
+        over_import_limit: bytes as u64 > MAX_IMPORT_BYTES,
+    }
 }
 
 pub fn import_json_file_blocking(
@@ -198,9 +259,10 @@ fn chosen(path: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
     .transpose()
 }
 
-/// Kaydetme penceresi. `None`: kullanıcı vazgeçti.
+/// Kaydetme penceresi; uygulama penceresine bağlıdır (`set_parent`). `None`: kullanıcı vazgeçti.
 fn save_dialog(
     app: &AppHandle,
+    window: &WebviewWindow,
     filter: &str,
     ext: &str,
     name: &str,
@@ -208,6 +270,7 @@ fn save_dialog(
     chosen(
         app.dialog()
             .file()
+            .set_parent(window)
             .add_filter(filter, &[ext])
             .set_file_name(name)
             .blocking_save_file(),
@@ -367,25 +430,26 @@ pub async fn save_panel_layout(
 }
 
 /// Bütün danışanlar JSON'a. Pencere Rust'ta açılır; arayüz yol vermez. Dönüş: kaydedilen
-/// dosyanın adı, vazgeçilirse `None`. Notlar yalnızca `include_notes` ile (spec §5).
+/// dosyanın adı ve boyutu (`ExportResult`), vazgeçilirse `None`. Notlar yalnızca `include_notes` ile (spec §5).
 #[tauri::command]
 #[specta::specta]
 pub async fn export_clients_json(
     app: AppHandle,
+    window: WebviewWindow,
     store: State<'_, StoreState>,
     include_notes: bool,
-) -> Result<Option<String>, CommandError> {
+) -> Result<Option<ExportResult>, CommandError> {
     let store = Arc::clone(&store);
     blocking(move || {
-        let Some(path) = save_dialog(&app, "JSON", "json", EXPORT_JSON_NAME)? else {
+        let Some(path) = save_dialog(&app, &window, "JSON", "json", EXPORT_JSON_NAME)? else {
             return Ok(None);
         };
         let options = ExportOptions {
             include_notes,
             client_ids: None,
         };
-        export_json_file_blocking(&store, &path, &options)?;
-        Ok(Some(base_name(&path)))
+        let bytes = export_json_file_blocking(&store, &path, &options)?;
+        Ok(Some(export_result(&path, bytes)))
     })
     .await
 }
@@ -395,15 +459,16 @@ pub async fn export_clients_json(
 #[specta::specta]
 pub async fn export_clients_csv(
     app: AppHandle,
+    window: WebviewWindow,
     store: State<'_, StoreState>,
-) -> Result<Option<String>, CommandError> {
+) -> Result<Option<ExportResult>, CommandError> {
     let store = Arc::clone(&store);
     blocking(move || {
-        let Some(path) = save_dialog(&app, "CSV", "csv", EXPORT_CSV_NAME)? else {
+        let Some(path) = save_dialog(&app, &window, "CSV", "csv", EXPORT_CSV_NAME)? else {
             return Ok(None);
         };
-        export_csv_file_blocking(&store, &path)?;
-        Ok(Some(base_name(&path)))
+        let bytes = export_csv_file_blocking(&store, &path)?;
+        Ok(Some(export_result(&path, bytes)))
     })
     .await
 }
@@ -413,6 +478,7 @@ pub async fn export_clients_csv(
 #[specta::specta]
 pub async fn import_clients_json(
     app: AppHandle,
+    window: WebviewWindow,
     store: State<'_, StoreState>,
 ) -> Result<Option<ImportResult>, CommandError> {
     let store = Arc::clone(&store);
@@ -420,6 +486,7 @@ pub async fn import_clients_json(
         let picked = app
             .dialog()
             .file()
+            .set_parent(&window)
             .add_filter("JSON", &["json"])
             .blocking_pick_file();
         let Some(path) = chosen(picked)? else {
@@ -678,5 +745,80 @@ mod tests {
         assert_eq!(e.params["file"], "big.json");
         assert_eq!(e.params["max_mb"], "32");
         assert!(lock(&store).unwrap().list_clients(10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn an_import_that_is_not_utf8_is_a_format_error_and_a_bom_is_skipped() {
+        let dir = tempfile::tempdir().unwrap();
+        let latin = dir.path().join("eski.json");
+        std::fs::write(&latin, b"{\"name\": \"Ay\xfee\"}").unwrap();
+        let e = read_bounded(&latin).unwrap_err();
+        assert_eq!(
+            (e.code.as_str(), e.params["detail"].as_str()),
+            ("import_format", "utf8")
+        );
+        let bom = dir.path().join("bom.json");
+        std::fs::write(&bom, "\u{feff}{\"a\":1}").unwrap();
+        assert_eq!(read_bounded(&bom).unwrap(), "{\"a\":1}");
+    }
+
+    #[test]
+    fn an_exported_backup_with_a_bom_imports() {
+        let src = populated();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("yedek.json");
+        let text = lock(&src)
+            .unwrap()
+            .export_json(&ExportOptions::default())
+            .unwrap();
+        std::fs::write(&path, format!("\u{feff}{text}")).unwrap();
+        let dst = Mutex::new(Store::open_in_memory().unwrap());
+        let report = import_json_file_blocking(&dst, &path).unwrap();
+        assert_eq!(report.clients_added, 1);
+    }
+
+    #[test]
+    fn file_errors_carry_a_stable_detail_code() {
+        let e = io_error(Path::new("/x/a.json"), ErrorKind::PermissionDenied.into());
+        assert_eq!(e.params["detail"], "permission_denied");
+        let codes: Vec<_> = [
+            ErrorKind::NotFound,
+            ErrorKind::AlreadyExists,
+            ErrorKind::InvalidInput,
+            ErrorKind::InvalidData,
+            ErrorKind::StorageFull,
+            ErrorKind::Interrupted,
+        ]
+        .into_iter()
+        .map(io_detail)
+        .collect();
+        assert_eq!(
+            codes,
+            [
+                "not_found",
+                "already_exists",
+                "invalid_input",
+                "invalid_data",
+                "storage_full",
+                "other"
+            ]
+        );
+    }
+
+    #[test]
+    fn an_export_reports_its_size_and_whether_it_can_be_imported_again() {
+        let r = export_result(Path::new("/x/yedek.json"), 1_000);
+        assert_eq!(
+            (r.file.as_str(), r.bytes, r.over_import_limit),
+            ("yedek.json", 1_000, false)
+        );
+        let big = export_result(Path::new("/x/büyük.json"), MAX_IMPORT_BYTES as usize + 1);
+        assert!(big.over_import_limit);
+        assert_eq!(big.bytes as u64, MAX_IMPORT_BYTES + 1);
+        let store = populated();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("a.json");
+        let n = export_json_file_blocking(&store, &path, &ExportOptions::default()).unwrap();
+        assert_eq!(n as u64, std::fs::metadata(&path).unwrap().len());
     }
 }

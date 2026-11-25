@@ -5,6 +5,7 @@
 import { useId, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
+import type { ExportResult } from "../bindings";
 import { useSession } from "../session/store";
 import { Dialog } from "../shell/Dialog";
 import { useNotices } from "../shell/notices";
@@ -54,7 +55,12 @@ export function DataActions() {
     setAsking(true);
   };
 
-  const exported = (file: string | null) => file !== null && push({ id: "exchange", type: "info", messageKey: "data.exported", params: { file } });
+  /** İçe aktarma sınırı (Rust `MAX_IMPORT_BYTES`); uyarı metni bu sayıyı taşır. */
+  const exported = (r: ExportResult | null) => {
+    if (r === null) return;
+    if (!r.over_import_limit) return push({ id: "exchange", type: "info", messageKey: "data.exported", params: { file: r.file } });
+    push({ id: "exchange", type: "warning", messageKey: "data.exportedOverLimit", params: { file: r.file, mb: String(Math.ceil(r.bytes / (1024 * 1024))) } });
+  };
 
   const exportJson = () =>
     run(async () => {
@@ -79,15 +85,15 @@ export function DataActions() {
       const { file, report } = r.data;
       push({
         id: "exchange",
-        type: report.warnings.length > 0 ? "warning" : "info",
-        messageKey: report.warnings.length > 0 ? "data.importedWithWarnings" : "data.imported",
+        type: report.warnings_total > 0 ? "warning" : "info",
+        messageKey: report.warnings_total > 0 ? "data.importedWithWarnings" : "data.imported",
         params: {
           file,
           clients: String(report.clients_added),
           charts: String(report.charts_added),
           notes: String(report.notes_added),
           skipped: String(report.skipped),
-          warnings: String(report.warnings.length),
+          warnings: String(report.warnings_total),
         },
       });
       session.touch();

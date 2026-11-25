@@ -78,8 +78,8 @@ LICENSE, NOTICE
 **Danışan açma:**
 - Kayıtlı bir danışan seçilince tek IPC çağrısı yapılır: `open_client(client_id)`. Dönüş: `{client, birth, calc_settings, view_state, chart, recent_notes}`.
 - Seçimden çizilmiş haritaya ≤ 200 ms. Rust tarafında ≤ 50 ms. Yükleme göstergesi yok; form ya da onay penceresi çıkmaz.
-- `Cmd+K` danışan arama paleti: isim, etiket ve not araması. `Enter` haritayı açar, `Cmd+Enter` yeni sekmede açar.
-- Açık danışanlar sekmelerde durur, her sekme kendi `ViewState`'ini korur. Uygulama kapanıp açılınca oturum geri yüklenir.
+- `Cmd+K` danışan arama paleti: isim, etiket ve not araması. `Enter` haritayı açar, `Cmd+Enter` danışanı açar ve kenar çubuğunu gösterir (sekme yoktur; UI spec §4).
+- Tek harita açıktır (UI spec §4 "Sekme yoktur"); her harita kendi `ViewState`'ini saklar. Uygulama kapanıp açılınca son harita ve düzen geri yüklenir.
 - Notlar paneli haritanın yanında sürekli açılabilir (`Cmd+Shift+N`). Notlar tarih damgalıdır ve otomatik kaydedilir.
 - "Kaydet" düğmesi yok. Görünüm ve ayar değişiklikleri yaklaşık 500 ms debounce ile kaydedilir. Doğum verisi yalnızca açık bir "Düzenle" kipinde değiştirilir.
 
@@ -136,6 +136,7 @@ FTS5: clients.name, client_notes.body
 - Sürümlü JSON (`schema_version`): içe ve dışa aktarma. `calc_settings` ve `view_state` içerir. Notlar yalnızca "notları dahil et" kutusu işaretlenirse eklenir; kutu varsayılan olarak kapalıdır, çünkü notlar hassas veridir.
 - CSV: yalnızca dışa aktarma.
 - JHD (Jagannatha Hora): yalnızca içe aktarma. İçe alınan haritalar o anki genel varsayılanların kopyasını alır. İşaret konvansiyonları gerçek dosyalarla doğrulanacak.
+- Sınırlar: içe aktarılan JSON en çok 32 MiB (okunmadan önce denetlenir); not gövdesi en çok 64 KiB (65 536 bayt UTF-8, arayüzde 16 384 karakter). Dışa aktarma sınırlanmaz; dosya içe aktarma sınırını aşarsa kullanıcı uyarılır. Biçimin ayrıntısı: `docs/export-format.md`.
 
 ## 6. Varsayılanlar
 

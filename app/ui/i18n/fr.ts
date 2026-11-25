@@ -129,6 +129,15 @@ export const fr: Messages = {
     import_format: "Le fichier n’est pas un export Jyotish Desk ou il est endommagé ({{detail}}).",
     import_version: "Le fichier est plus récent que cette version (version {{found}}, prise en charge {{supported}}). Mettez l’application à jour.",
     import_record: "Un enregistrement du fichier est invalide ({{item}} : {{field}}).",
+    fileIoDetail: {
+      not_found: "fichier ou dossier introuvable",
+      permission_denied: "permission refusée",
+      already_exists: "le fichier existe déjà",
+      invalid_input: "pas un fichier ordinaire",
+      invalid_data: "contenu du fichier illisible",
+      storage_full: "disque plein",
+      other: "erreur de fichier inattendue",
+    },
   },
   layout: {
     picker: "Disposition",
@@ -439,6 +448,7 @@ export const fr: Messages = {
     includeNotesHint: "Les notes sont sensibles ; faites attention à qui vous partagez le fichier.",
     chooseFile: "Choisir le fichier et enregistrer…",
     exported: "« {{file}} » enregistré.",
+    exportedOverLimit: "« {{file}} » enregistré ({{mb}} Mo). Le fichier dépasse la limite d’importation (32 Mo) ; il ne peut pas être restauré tel quel dans cette application.",
     imported: "« {{file}} » importé : {{clients}} clients, {{charts}} cartes, {{notes}} notes ajoutés ; {{skipped}} enregistrements existaient déjà.",
     importedWithWarnings: "« {{file}} » importé : {{clients}} clients, {{charts}} cartes, {{notes}} notes ajoutés ; {{skipped}} enregistrements existaient déjà. Les réglages de calcul de {{warnings}} cartes étaient illisibles ; les valeurs par défaut ont été écrites.",
   },

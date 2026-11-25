@@ -129,6 +129,15 @@ export const en: Messages = {
     import_format: "The file is not a Jyotish Desk export or is damaged ({{detail}}).",
     import_version: "The file is newer than this version (version {{found}}, supported {{supported}}). Update the app.",
     import_record: "A record in the file is invalid ({{item}}: {{field}}).",
+    fileIoDetail: {
+      not_found: "no such file or folder",
+      permission_denied: "permission denied",
+      already_exists: "the file already exists",
+      invalid_input: "not a regular file",
+      invalid_data: "the file content could not be read",
+      storage_full: "the disk is full",
+      other: "an unexpected file error",
+    },
   },
   layout: {
     picker: "Layout",
@@ -439,6 +448,7 @@ export const en: Messages = {
     includeNotesHint: "Notes are sensitive; be careful who you share the file with.",
     chooseFile: "Choose file and save…",
     exported: "“{{file}}” saved.",
+    exportedOverLimit: "“{{file}}” saved ({{mb}} MB). The file is over the import limit (32 MB); it cannot be restored into this app as it is.",
     imported: "“{{file}}” imported: {{clients}} clients, {{charts}} charts, {{notes}} notes added; {{skipped}} records were already there.",
     importedWithWarnings: "“{{file}}” imported: {{clients}} clients, {{charts}} charts, {{notes}} notes added; {{skipped}} records were already there. The calculation settings of {{warnings}} charts could not be read and the defaults were written.",
   },

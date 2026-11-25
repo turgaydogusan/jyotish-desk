@@ -18,5 +18,9 @@ export function errorMessage(t: TFunction, i18n: I18n, error: CommandError): str
     const reason = String(error.params.reason ?? "missing");
     params.reason = i18n.exists(`atlasReason.${reason}`) ? t(`atlasReason.${reason}`) : reason;
   }
+  if (error.code === "file_io") {
+    const detail = String(error.params.detail ?? "other");
+    params.detail = i18n.exists(`errors.fileIoDetail.${detail}`) ? t(`errors.fileIoDetail.${detail}`) : detail;
+  }
   return t(key, params);
 }

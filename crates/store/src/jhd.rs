@@ -292,12 +292,12 @@ impl Store {
                 Ok(_) => {
                     out.report.clients_added += 1;
                     out.report.charts_added += 1;
-                    out.report
-                        .warnings
-                        .extend(parsed.warnings.iter().map(|&code| ImportWarning {
+                    for &code in &parsed.warnings {
+                        out.report.warn(ImportWarning {
                             item: file_name.clone(),
                             code,
-                        }));
+                        });
+                    }
                 }
                 Err(e) if is_input_error(&e) => out.failed.push((file_name.clone(), e)),
                 Err(e) => return Err(e),
