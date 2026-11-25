@@ -3,6 +3,7 @@ import { DashaStripPanel } from "../dasha/DashaStripPanel";
 import { DashaTreePanel } from "../dasha/DashaTreePanel";
 import { isKnownPanelKind, type KnownPanelKind } from "../layout/model";
 import { NotesPanel } from "../notes/NotesPanel";
+import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
@@ -16,7 +17,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   dasha_strip: { titleKey: "panel.dasha_strip", component: DashaStripPanel },
   transit_table: { titleKey: "panel.transit_table", component: TransitTablePanel },
   notes: { titleKey: "panel.notes", component: NotesPanel },
-  birth_info: { titleKey: "panel.birth_info", component: UnavailablePanel },
+  birth_info: { titleKey: "panel.birth_info", component: BirthInfoPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

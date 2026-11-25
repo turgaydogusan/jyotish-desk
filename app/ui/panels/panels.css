@@ -87,3 +87,28 @@
   align-items: center;
   gap: 4px;
 }
+.birth-info-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+.birth-info-row {
+  display: contents;
+}
+.birth-info-row dt {
+  color: var(--text-2);
+}
+.birth-info-row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.birth-info-heading {
+  margin: 12px 0 4px;
+  font-size: inherit;
+  font-weight: 500;
+}
+.birth-info-warnings {
+  margin: 0;
+  padding-left: 16px;
+}
