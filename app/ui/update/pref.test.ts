@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { loadAutoCheck, saveAutoCheck, UPDATE_STORAGE_KEY } from "./pref";
 
 test("the update check is off until the user turns it on", () => {
@@ -25,4 +26,16 @@ test("an unknown stored value and a storage that throws both mean off", () => {
   } as unknown as Storage;
   expect(loadAutoCheck(broken)).toBe(false);
   expect(saveAutoCheck(true, broken)).toBe(false);
+});
+
+test("a localStorage getter that throws fails closed", () => {
+  const spy = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    throw new Error("denied");
+  });
+  try {
+    expect(loadAutoCheck()).toBe(false);
+    expect(saveAutoCheck(true)).toBe(false);
+  } finally {
+    spy.mockRestore();
+  }
 });

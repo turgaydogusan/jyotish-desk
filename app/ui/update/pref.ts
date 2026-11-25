@@ -3,18 +3,18 @@
 // değer kapalı sayılır: onay kaydı yitirilirse uygulama ağa bağlanmaz. Danışan verisi içermez.
 export const UPDATE_STORAGE_KEY = "jyotish-desk.updates.v1";
 
-export function loadAutoCheck(storage: Storage = window.localStorage): boolean {
+export function loadAutoCheck(storage?: Storage): boolean {
   try {
-    return storage.getItem(UPDATE_STORAGE_KEY) === "auto";
+    return (storage ?? window.localStorage).getItem(UPDATE_STORAGE_KEY) === "auto";
   } catch {
     return false;
   }
 }
 
 /** Tercihi yazar; yazılamadıysa `false` döner (çağıran tercihi açık saymaz). Hata loglanmaz (C1). */
-export function saveAutoCheck(on: boolean, storage: Storage = window.localStorage): boolean {
+export function saveAutoCheck(on: boolean, storage?: Storage): boolean {
   try {
-    storage.setItem(UPDATE_STORAGE_KEY, on ? "auto" : "off");
+    (storage ?? window.localStorage).setItem(UPDATE_STORAGE_KEY, on ? "auto" : "off");
     return true;
   } catch {
     return false;

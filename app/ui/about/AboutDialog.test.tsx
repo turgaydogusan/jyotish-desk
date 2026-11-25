@@ -125,3 +125,20 @@ test("a failed check and a failed install are shown in the UI language and can b
   // Kur düğmesi durur: kullanıcı yeniden deneyebilir.
   await waitFor(() => expect(about.getByRole("button", { name: "0.9.1 sürümünü indir ve kur" })).not.toHaveAttribute("aria-disabled"));
 });
+
+test("an unconfigured build keeps focus on the Close button, never on body", async () => {
+  const about = await open(false);
+  expect(about.getByText(/güncelleme denetimi yok/)).toBeInTheDocument();
+  await waitFor(() => expect(document.activeElement).toBe(about.getByRole("button", { name: "Kapat" })));
+  expect(document.activeElement).not.toBe(document.body);
+});
+
+test("while the app info is pending no update control is offered", async () => {
+  vi.mocked(api.appInfo).mockReturnValue(new Promise(() => {}));
+  render(<AboutDialog onClose={() => {}} />);
+  const dialog = within(screen.getByRole("dialog", { name: "Jyotish Desk hakkında" }));
+  expect(dialog.queryByRole("checkbox")).toBeNull();
+  expect(dialog.queryByRole("button", { name: "Şimdi denetle" })).toBeNull();
+  expect(dialog.queryByText(/güncelleme denetimi yok/)).toBeNull();
+  expect(document.activeElement).toBe(dialog.getByRole("button", { name: "Kapat" }));
+});

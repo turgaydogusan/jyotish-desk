@@ -471,7 +471,7 @@ test("About opens from the top bar as a modal and returns focus to its button", 
   fireEvent.click(opener);
   const dialog = screen.getByRole("dialog", { name: "Jyotish Desk hakkında" });
   expect(await within(dialog).findByText("Sürüm 0.9.0")).toBeInTheDocument();
-  expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Şimdi denetle" }));
+  expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Kapat" }));
   fireEvent.keyDown(document, { key: "Escape" });
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(document.activeElement).toBe(opener);

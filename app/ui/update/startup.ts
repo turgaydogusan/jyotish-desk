@@ -6,7 +6,7 @@ import { api } from "../api";
 import type { Notice } from "../shell/notices";
 import { loadAutoCheck } from "./pref";
 
-export async function startupUpdateCheck(push: (notice: Notice) => void, storage: Storage = window.localStorage): Promise<void> {
+export async function startupUpdateCheck(push: (notice: Notice) => void, storage?: Storage): Promise<void> {
   if (!loadAutoCheck(storage)) return;
   const r = await api.checkForUpdate();
   if (r.status === "ok" && r.data !== null) {

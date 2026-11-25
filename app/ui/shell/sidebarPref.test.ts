@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { loadSidebarOpen, saveSidebarOpen, SIDEBAR_STORAGE_KEY } from "./sidebarPref";
 
 test("the sidebar is open unless it was stored closed", () => {
@@ -22,4 +23,16 @@ test("a storage that throws leaves the sidebar open and does not break saving", 
   } as unknown as Storage;
   expect(loadSidebarOpen(broken)).toBe(true);
   expect(() => saveSidebarOpen(false, broken)).not.toThrow();
+});
+
+test("a localStorage getter that throws leaves the sidebar open and does not break saving", () => {
+  const spy = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    throw new Error("denied");
+  });
+  try {
+    expect(loadSidebarOpen()).toBe(true);
+    expect(() => saveSidebarOpen(false)).not.toThrow();
+  } finally {
+    spy.mockRestore();
+  }
 });

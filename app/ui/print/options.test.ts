@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { defaultPrintOptions, loadPrintOptions, parsePrintOptions, PRINT_STORAGE_KEY, savePrintOptions, togglePage } from "./options";
 
 beforeEach(() => localStorage.clear());
@@ -40,4 +41,16 @@ test("a storage that throws neither breaks loading nor saving", () => {
   } as unknown as Storage;
   expect(loadPrintOptions(broken)).toEqual(defaultPrintOptions());
   expect(() => savePrintOptions(defaultPrintOptions(), broken)).not.toThrow();
+});
+
+test("a localStorage getter that throws gives the defaults and does not break saving", () => {
+  const spy = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    throw new Error("denied");
+  });
+  try {
+    expect(loadPrintOptions()).toEqual(defaultPrintOptions());
+    expect(() => savePrintOptions(defaultPrintOptions())).not.toThrow();
+  } finally {
+    spy.mockRestore();
+  }
 });

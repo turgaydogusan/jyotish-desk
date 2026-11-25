@@ -40,18 +40,18 @@ export function togglePage(pages: readonly PrintPageId[], page: PrintPageId): Pr
   return PRINT_PAGES.filter((p) => p === page || pages.includes(p));
 }
 
-export function loadPrintOptions(storage: Storage = window.localStorage): PrintOptions {
+export function loadPrintOptions(storage?: Storage): PrintOptions {
   try {
-    return parsePrintOptions(JSON.parse(storage.getItem(PRINT_STORAGE_KEY) ?? "null"));
+    return parsePrintOptions(JSON.parse((storage ?? window.localStorage).getItem(PRINT_STORAGE_KEY) ?? "null"));
   } catch {
     return defaultPrintOptions();
   }
 }
 
 /** Yazılamazsa (depolama kapalı ya da dolu) seçenek yalnızca bu oturumda geçerli olur. */
-export function savePrintOptions(options: PrintOptions, storage: Storage = window.localStorage): void {
+export function savePrintOptions(options: PrintOptions, storage?: Storage): void {
   try {
-    storage.setItem(PRINT_STORAGE_KEY, JSON.stringify(options));
+    (storage ?? window.localStorage).setItem(PRINT_STORAGE_KEY, JSON.stringify(options));
   } catch {
     // Tercih kaybı zararsızdır ve loglanmaz (C1: log izin listesi büyümez).
   }

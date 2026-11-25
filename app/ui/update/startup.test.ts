@@ -35,3 +35,16 @@ test("an up-to-date app and a failed check are both silent", async () => {
   await startupUpdateCheck(push);
   expect(push).not.toHaveBeenCalled();
 });
+
+test("a localStorage getter that throws means no check and no network", async () => {
+  const spy = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    throw new Error("denied");
+  });
+  try {
+    const push = vi.fn();
+    await expect(startupUpdateCheck(push)).resolves.toBeUndefined();
+    expect(push).not.toHaveBeenCalled();
+  } finally {
+    spy.mockRestore();
+  }
+});

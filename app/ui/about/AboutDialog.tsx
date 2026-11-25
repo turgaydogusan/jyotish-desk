@@ -107,9 +107,9 @@ export function AboutDialog({ onClose }: { onClose(): void }) {
         <p className="about-hint">{t("about.geonames")}</p>
         <fieldset className="about-updates">
           <legend>{t("update.title")}</legend>
-          {info !== null && !info.updaterConfigured ? (
-            <p className="about-hint">{t("update.unconfigured")}</p>
-          ) : (
+          {/* Bilgi gelene dek ne denetim ne "yok" metni gösterilir; odak her zaman "Kapat"ta kalır. */}
+          {info !== null && !info.updaterConfigured && <p className="about-hint">{t("update.unconfigured")}</p>}
+          {info?.updaterConfigured === true && (
             <>
               <label>
                 <input type="checkbox" checked={auto} aria-describedby={`${id}-privacy`} onChange={(e) => changeAuto(e.target.checked)} /> {t("update.auto")}
@@ -123,7 +123,7 @@ export function AboutDialog({ onClose }: { onClose(): void }) {
                 </p>
               )}
               <div className="dialog-actions">
-                <button type="button" data-autofocus aria-disabled={busy || undefined} aria-describedby={busy ? `${id}-status` : undefined} onClick={() => void check()}>
+                <button type="button" aria-disabled={busy || undefined} aria-describedby={busy ? `${id}-status` : undefined} onClick={() => void check()}>
                   {t("update.check")}
                 </button>
                 {update && (
