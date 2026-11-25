@@ -20,7 +20,7 @@ test("default columns and a lagna row, values straight from the chart", () => {
   expect([...lagna.querySelectorAll("td")].map((c) => c.textContent)).toEqual(["İki", "16°20′", "Ardra", "3", "", "", "", "1"]);
   const moon = row("Ay");
   expect([...moon.querySelectorAll("td")].map((c) => c.textContent)).toEqual(["Ter", "19°28′", "Swati", "4", "", "", "Dost", "5"]);
-  expect(row("Satürn")).toHaveTextContent("℞retro");
+  expect(row("Satürn")).toHaveTextContent("Rretro");
   expect(row("Satürn")).toHaveTextContent("Düşük");
   expect(row("Rahu").querySelectorAll("td")[6]).toHaveTextContent("—");
 });

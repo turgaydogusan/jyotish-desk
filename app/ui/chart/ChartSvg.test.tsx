@@ -69,14 +69,14 @@ test("circle renders the sign number in all 12 houses", () => {
   }
 });
 
-test("markers: retro ℞, combust c, vargottama underline — no colour coding", () => {
+test("markers: retro R, combust c, vargottama underline — no colour coding", () => {
   render(<ChartSvg data={data} style="north" labels={labels} />);
   const mercury = screen.getByRole("button", { name: "Me, Le 20°, retrograde, combust" });
-  expect(mercury).toHaveTextContent("Me℞c");
+  expect(mercury).toHaveTextContent("MeRc");
   const moon = screen.getByRole("button", { name: "Mo, Le 3°, vargottama" });
   expect(moon.querySelector("text")).toHaveAttribute("text-decoration", "underline");
   expect(screen.getByRole("button", { name: "Su, Le 12°" }).querySelector("text")).not.toHaveAttribute("text-decoration");
-  for (const b of screen.getAllByRole("button")) expect(b.getAttribute("aria-label")).not.toMatch(/℞/);
+  for (const b of screen.getAllByRole("button")) expect(b.getAttribute("aria-label")).not.toMatch(/[a-z]R/);
   for (const el of document.querySelectorAll("svg *")) {
     expect(el.getAttribute("fill") ?? "").not.toMatch(/#|rgb/);
     expect(el.getAttribute("stroke") ?? "").not.toMatch(/#|rgb/);

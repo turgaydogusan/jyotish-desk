@@ -114,13 +114,13 @@ test("circle: every house has a sign anchor inside the outer ring", () => {
 });
 
 test("label width estimate grows with character count and font size", () => {
-  expect(estimateLabelWidth("Ra℞", LABEL_FONT)).toBeGreaterThan(estimateLabelWidth("Ra", LABEL_FONT));
-  expect(estimateLabelWidth("Me℞c", LABEL_FONT)).toBeCloseTo((4 / 3) * estimateLabelWidth("Ra℞", LABEL_FONT) - (1 / 3) * estimateLabelWidth("", LABEL_FONT), 6);
-  expect(estimateLabelWidth("Me℞c", 2)).toBeLessThan(estimateLabelWidth("Me℞c", 4));
+  expect(estimateLabelWidth("RaR", LABEL_FONT)).toBeGreaterThan(estimateLabelWidth("Ra", LABEL_FONT));
+  expect(estimateLabelWidth("MeRc", LABEL_FONT)).toBeCloseTo((4 / 3) * estimateLabelWidth("RaR", LABEL_FONT) - (1 / 3) * estimateLabelWidth("", LABEL_FONT), 6);
+  expect(estimateLabelWidth("MeRc", 2)).toBeLessThan(estimateLabelWidth("MeRc", 4));
 });
 
 // Beş gezegen, hepsi retro ve yanık: en uzun gerçekçi etiketler.
-const CROWD = ["Ra℞c", "Me℞c", "Ma℞c", "Ju℞c", "Sa℞c"];
+const CROWD = ["RaRc", "MeRc", "MaRc", "JuRc", "SaRc"];
 
 type Box = { x: number; y: number; width: number; height: number };
 const corners = (b: Box): Point[] => [

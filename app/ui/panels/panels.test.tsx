@@ -88,7 +88,7 @@ test("graha table lists body, sign, degree with minutes and the retro marker", (
   expect(sun).toHaveTextContent("16°30′");
   const saturn = screen.getByRole("button", { name: "Satürn" }).closest("tr")!;
   expect(saturn).toHaveTextContent("Koç");
-  expect(saturn).toHaveTextContent("℞");
+  expect(saturn).toHaveTextContent("R");
   expect(screen.getAllByRole("row")).toHaveLength(11); // başlık + lagna + 9 graha
 });
 

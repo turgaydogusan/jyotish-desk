@@ -1,12 +1,12 @@
 // Kuzey Hint, Güney Hint ve daire haritası. Yalnızca belirteç sınıfları kullanılır;
-// gezegenlere renk verilmez. Retro "℞", yanma "c", vargottama altı çizili (spec §2.3).
+// gezegenlere renk verilmez. Retro "R", yanma "c", vargottama altı çizili (spec §2.3).
 // svg `role="group"`dur: `img` alt öğeleri sunumsal yapar ve ev/gezegen düğmelerini
 // ekran okuyucudan gizlerdi (spec §6).
 import { useMemo, type KeyboardEvent } from "react";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
 import "./chart.css";
 import { chartCells, layoutLabels, pathOf, VIEWBOX, type ChartCell, type LabelLayout } from "./geometry";
-import type { ChartData, ChartLabels, ChartPlanet, ChartStyle } from "./types";
+import { RETRO_MARK, type ChartData, type ChartLabels, type ChartPlanet, type ChartStyle } from "./types";
 
 export interface ChartSvgProps {
   data: ChartData;
@@ -30,7 +30,7 @@ function drawable(p: ChartPlanet): boolean {
 }
 
 function labelText(p: ChartPlanet, graha: ChartLabels["graha"]): string {
-  return `${graha[p.id]}${p.retrograde ? "℞" : ""}${p.combust ? "c" : ""}`;
+  return `${graha[p.id]}${p.retrograde ? RETRO_MARK : ""}${p.combust ? "c" : ""}`;
 }
 
 /** Erişilebilir ad sözcüklerden kurulur, glif okunmaz: "Ma, Sc 19°, retro, vargottama". */
@@ -164,7 +164,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
                 textDecoration={p.vargottama ? "underline" : undefined}
               >
                 <tspan>{labels.graha[p.id]}</tspan>
-                {p.retrograde && <tspan>℞</tspan>}
+                {p.retrograde && <tspan>{RETRO_MARK}</tspan>}
                 {p.combust && <tspan>c</tspan>}
               </text>
             </g>

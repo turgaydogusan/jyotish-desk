@@ -45,10 +45,13 @@ export interface ChartLabels {
   lagna: string;
   /** Ev hücresinin erişilebilir adı. */
   house: (house: number, sign: string) => string;
-  /** Erişilebilir adda `℞` yerine okunan sözcük (örn. "retro"). */
+  /** Erişilebilir adda retro işareti yerine okunan sözcük (örn. "retro"). */
   retro: string;
   /** Erişilebilir adda `c` yerine okunan sözcük (örn. "yanık"). */
   combust: string;
   /** Erişilebilir adda alt çizgi yerine okunan sözcük (örn. "vargottama"). */
   vargottama: string;
 }
+
+/** Retro işareti: harita etiketinde ve gezegen tablosunda düz "R" (spec §2.3). */
+export const RETRO_MARK = "R";

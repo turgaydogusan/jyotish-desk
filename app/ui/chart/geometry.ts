@@ -153,11 +153,11 @@ export function chartCells(style: ChartStyle, asc: number): ChartCell[] {
 // ---------------------------------------------------------------------------
 // Etiket yerleşimi
 //
-// Genişlik tahmini: etiketler sistem fontuyla (SF Pro) çizilir. Kısaltma harfleri ve "℞"
+// Genişlik tahmini: etiketler sistem fontuyla (SF Pro) çizilir. Kısaltma harfleri ve retro "R"
 // için ortalama glif genişliği 0.7 em alınır (geniş "M" ≈ 0.85 em, "a/e" ≈ 0.55 em; iki
 // harfli kısaltmada ortalama ≤ 0.7 em). Kutunun her yanına 0.15 em pay eklenir:
 //   genişlik = fontSize × (0.7 × karakterSayısı + 0.3),   yükseklik = fontSize × 1.2
-// Karakter sayısı kod noktasıyla sayılır ("Me℞c" = 4). Birimler viewBox birimidir.
+// Karakter sayısı kod noktasıyla sayılır ("MeRc" = 4). Birimler viewBox birimidir.
 // ---------------------------------------------------------------------------
 
 /** Gezegen etiketinin olağan yazı boyutu (viewBox birimi). */

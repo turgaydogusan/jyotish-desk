@@ -128,7 +128,7 @@ test("Cmd+2 switches to the research layout with the graha table", () => {
   fireEvent.keyDown(window, { key: "2", code: "Digit2", metaKey: true });
   expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Araştırma");
   const table = screen.getByRole("region", { name: "Graha tablosu" });
-  expect(within(table).getByRole("button", { name: "Satürn" }).closest("tr")).toHaveTextContent("℞");
+  expect(within(table).getByRole("button", { name: "Satürn" }).closest("tr")).toHaveTextContent("R");
 });
 
 test("Cmd+Shift+N toggles the notes panel in the active layout", () => {
