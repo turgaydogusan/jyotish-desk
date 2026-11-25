@@ -143,6 +143,31 @@ test("Cmd+Shift+N toggles the notes panel in the active layout", () => {
   expect(notes).toHaveAttribute("data-w", "4");
 });
 
+test("closing the notes panel from inside it moves focus to main, by shortcut and from the palette", async () => {
+  renderApp();
+  const main = screen.getByRole("main");
+  const add = () => within(screen.getByRole("region", { name: "Notlar" })).getByRole("button", { name: "Yeni not" });
+  const focusAdd = async () => {
+    await waitFor(() => expect(add()).toBeEnabled());
+    add().focus();
+    expect(add()).toHaveFocus();
+  };
+  await focusAdd();
+  toggleNotes();
+  expect(screen.queryByRole("region", { name: "Notlar" })).toBeNull();
+  expect(document.activeElement).toBe(main);
+
+  toggleNotes();
+  await focusAdd();
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "notlar" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /Notlar panelini aç\/kapat/ }));
+  expect(screen.queryByRole("region", { name: "Notlar" })).toBeNull();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(main);
+});
+
 test("Cmd+Shift+N works from a text field and is ignored on key repeat, during composition and in print view", () => {
   renderApp();
   const notes = () => screen.queryByRole("region", { name: "Notlar" });

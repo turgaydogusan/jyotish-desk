@@ -1,5 +1,6 @@
 // Düzen seçici ve işlemler menüsü: farklı kaydet, yeniden adlandır, kopyala, sil, sıfırla.
-// `MAX_LAYOUTS` düzende "farklı kaydet" ve "kopyala" devre dışıdır (ipucu sınırı söyler).
+// `MAX_LAYOUTS` düzende "farklı kaydet" ve "kopyala" devre dışıdır. Devre dışı öğe soluk görünür,
+// odaklanır ve nedeni menünün altında yazar (`aria-describedby` ile öğeye bağlıdır).
 // Ad girişi ve silme onayı satır içinde açılır (WKWebView'da window.prompt'a güvenilmez).
 // Menü ARIA menü düzenini izler: açılınca ilk etkin öğe odaklanır, oklar/Home/End gezdirir,
 // Esc kapatır (preventDefault: vurgu sabitlemesi korunur), Tab ve dış tıklama kapatır.
@@ -56,9 +57,8 @@ export function LayoutPicker() {
     name.trim() === "" ? "nameEmpty" : isTaken(name, mode === "rename" ? target.id : undefined) ? "nameTaken" : null;
 
   const focusTrigger = () => triggerRef.current?.focus();
-  // Devre dışı öğeler de odaklanır (WAI-ARIA menü deseni); nedenleri `aria-describedby`'dadır.
-  // Gerçekten `disabled` olan öğe (kullanıcı düzeninde "Varsayılana döndür") odak alamaz; gezintiye girmez (D22).
-  const menuItems = () => [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])];
+  // Devre dışı öğeler de odaklanır (WAI-ARIA menü deseni); hiçbiri yerel `disabled` değildir (D22).
+  const menuItems = () => [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])];
 
   const openMenu = (focus: "first" | "last") => {
     setFocusOnOpen(focus);
@@ -188,7 +188,6 @@ export function LayoutPicker() {
         {t("layout.actions")}
       </button>
       {menuOpen && (
-        <>
         <ul
           ref={menuRef}
           id={menuId}
@@ -250,20 +249,22 @@ export function LayoutPicker() {
               type="button"
               role="menuitem"
               tabIndex={-1}
-              disabled={!active.builtin}
-              onClick={() => runItem(() => store.resetBuiltin(active.id))}
+              aria-disabled={!active.builtin || undefined}
+              aria-describedby={!active.builtin ? `${hintId}-user` : undefined}
+              onClick={unless(!active.builtin, () => runItem(() => store.resetBuiltin(active.id)))}
             >
               {t("layout.reset")}
             </button>
           </li>
+          {atCap && (
+            <li role="none" id={`${hintId}-cap`} className="layout-menu-hint">
+              {t("layout.limit", { max: MAX_LAYOUTS })}
+            </li>
+          )}
+          <li role="none" id={`${hintId}-${active.builtin ? "builtin" : "user"}`} className="layout-menu-hint">
+            {t(active.builtin ? "layout.builtinLocked" : "layout.resetBuiltinOnly")}
+          </li>
         </ul>
-        <p id={`${hintId}-cap`} className="visually-hidden">
-          {t("layout.limit", { max: MAX_LAYOUTS })}
-        </p>
-        <p id={`${hintId}-builtin`} className="visually-hidden">
-          {t("layout.builtinLocked")}
-        </p>
-        </>
       )}
       {(mode === "saveAs" || mode === "rename") && (
         <form className="layout-inline" onSubmit={submitName} onKeyDown={onInlineKey}>

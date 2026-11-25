@@ -148,6 +148,7 @@ export const en: Messages = {
     copyNameN: "{{name}} copy {{n}}",
     limit: "At most {{max}} layouts can be saved.",
     builtinLocked: "Built-in layouts cannot be renamed or deleted.",
+    resetBuiltinOnly: "Only built-in layouts can be reset to default.",
     nameEmpty: "Enter a name.",
     nameTaken: "Another layout already uses this name.",
     confirmDelete: "Delete the “{{name}}” layout? This cannot be undone.",

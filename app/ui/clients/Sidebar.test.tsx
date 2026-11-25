@@ -250,6 +250,54 @@ test("the client list is one tab stop; arrows, Home and End move between clients
   expect(document.activeElement).toBe(buttons[0]);
 });
 
+test("a list refresh keeps the tab stop and focus on the row being arrowed through", async () => {
+  const three = [opened().client, ayse, client(3, "Can Demir")];
+  vi.mocked(api.listClients).mockImplementation(async () => ok(three.map((c) => ({ ...c }))));
+  function Touch() {
+    const { touch } = useSession();
+    return (
+      <button type="button" onClick={touch}>
+        yenile
+      </button>
+    );
+  }
+  renderWithStores(
+    <>
+      <Touch />
+      <Sidebar onAddChart={onAddChart} />
+    </>,
+  );
+  const rows = () => within(list()).getAllByRole("button");
+  const first = (await within(list()).findAllByRole("button"))[0];
+  first.focus();
+  fireEvent.keyDown(first, { key: "End" });
+  expect(rows().map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+  const calls = vi.mocked(api.listClients).mock.calls.length;
+  fireEvent.click(screen.getByRole("button", { name: "yenile" }));
+  await waitFor(() => expect(vi.mocked(api.listClients).mock.calls.length).toBeGreaterThan(calls));
+  await act(async () => {});
+  expect(rows().map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+  expect(document.activeElement).toBe(rows()[2]);
+  // Odaktaki danışan listeden çıkarsa durak açık danışana döner.
+  three.pop();
+  fireEvent.click(screen.getByRole("button", { name: "yenile" }));
+  await waitFor(() => expect(rows()).toHaveLength(2));
+  expect(rows().map((b) => b.tabIndex)).toEqual([0, -1]);
+});
+
+test("arrow keys with a modifier are left to the system", async () => {
+  vi.mocked(api.listClients).mockResolvedValue(ok([opened().client, ayse, client(3, "Can Demir")]));
+  renderSidebar();
+  const buttons = await within(list()).findAllByRole("button");
+  buttons[0].focus();
+  for (const mod of [{ metaKey: true }, { ctrlKey: true }, { altKey: true }]) {
+    expect(fireEvent.keyDown(buttons[0], { key: "ArrowDown", ...mod })).toBe(true);
+  }
+  expect(fireEvent.keyDown(buttons[0], { key: "End", shiftKey: true })).toBe(true);
+  expect(document.activeElement).toBe(buttons[0]);
+  expect(buttons.map((b) => b.tabIndex)).toEqual([0, -1, -1]);
+});
+
 test("after deleting a chart focus goes to the client heading, after deleting the client to the search box", async () => {
   const charts = [chart(1, ""), chart(5, "Düzeltilmiş", "2000-01-02")];
   vi.mocked(api.listCharts).mockResolvedValueOnce(ok(charts)).mockResolvedValue(ok([charts[0]]));

@@ -36,8 +36,9 @@ export function ClientList() {
   const [error, setError] = useState<CommandError | null>(null);
   const [retry, setRetry] = useState(0);
   const seq = useRef(0);
-  // Liste tek sekme durağıdır: ↑/↓/Home/End satırlarda gezer (roving tabindex).
-  const [focusIndex, setFocusIndex] = useState(0);
+  // Liste tek sekme durağıdır: ↑/↓/Home/End satırlarda gezer (roving tabindex). Durak danışana
+  // bağlıdır, sıraya değil: liste yeniden okununca gezilen satırda kalır.
+  const [focusId, setFocusId] = useState<number | null>(null);
   const rowsRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
@@ -75,21 +76,22 @@ export function ClientList() {
   const heading = query.trim() !== "" ? t("clients.results") : tag !== "" ? t("clients.tagged", { tag }) : t("clients.recent");
   const openId = session.opened?.client.id;
 
-  // Liste değişince sekme durağı açık danışana, yoksa ilk satıra gider.
-  useEffect(() => {
-    if (!rows) return;
-    const i = rows.findIndex((r) => r.client.id === openId);
-    setFocusIndex(i >= 0 ? i : 0);
-  }, [rows, openId]);
+  // Açık danışan değişince sekme durağı ona döner. Gezilen danışan listede yoksa durak açık
+  // danışandadır, o da yoksa ilk satırdadır.
+  useEffect(() => setFocusId(null), [openId]);
+  const indexOf = (clientId: number | null | undefined) => (rows ? rows.findIndex((r) => r.client.id === clientId) : -1);
+  const focusIndex = Math.max(indexOf(focusId) >= 0 ? indexOf(focusId) : indexOf(openId), 0);
 
   const onRowsKey = (e: KeyboardEvent<HTMLUListElement>) => {
     if (!rows || rows.length === 0) return;
+    // Değiştirici tuşlu oklar (⌘↑, ⌥↓, ⇧Home…) sisteme ve tarayıcıya bırakılır.
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
     const last = rows.length - 1;
     const next =
       e.key === "ArrowDown" ? Math.min(focusIndex + 1, last) : e.key === "ArrowUp" ? Math.max(focusIndex - 1, 0) : e.key === "Home" ? 0 : e.key === "End" ? last : null;
     if (next === null) return;
     e.preventDefault();
-    setFocusIndex(next);
+    setFocusId(rows[next].client.id);
     rowsRef.current?.querySelectorAll<HTMLButtonElement>("button.client-row")[next]?.focus();
   };
 
@@ -150,7 +152,7 @@ export function ClientList() {
                 className="client-row"
                 tabIndex={i === focusIndex ? 0 : -1}
                 aria-current={client.id === openId ? "true" : undefined}
-                onFocus={() => setFocusIndex(i)}
+                onFocus={() => setFocusId(client.id)}
                 onClick={() => void choose(client)}
               >
                 <span className="client-name">{client.name}</span>

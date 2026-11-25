@@ -1,5 +1,5 @@
 // Modal pencere (WAI-ARIA dialog): açılınca ilk alana odaklanır, Tab içeride döner, Esc
-// kapatır, kapanınca odak açan öğeye döner.
+// kapatır, kapanınca odak açan öğeye, o kaldırıldıysa ana bölgeye döner.
 // İç içe açılan pencerelerde Esc ve Tab'ı yalnızca en son açılan işler. `variant="sheet"` sağdan kayan paneldir
 // (doğum formu); arka plan tıklamayla kapanmaz (yarım form kaybolmasın).
 import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
@@ -21,7 +21,11 @@ export function Dialog({ title, onClose, variant = "center", children }: DialogP
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const first = ref.current?.querySelector<HTMLElement>("[data-autofocus]:not([disabled])") ?? ref.current?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? ref.current)?.focus();
-    return () => previous?.focus();
+    return () => {
+      previous?.focus();
+      // Açan öğe bu arada kaldırıldıysa (paletten kapatılan notlar paneli) odak `body`'ye düşmez.
+      if (document.activeElement === document.body) document.querySelector<HTMLElement>("main[tabindex]")?.focus();
+    };
   }, []);
 
   // Tuşlar belge düzeyinde dinlenir: odak pencereden çıksa da (odaktaki düğme kaybolur ya da

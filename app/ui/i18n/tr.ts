@@ -147,6 +147,7 @@ export const tr = {
     copyNameN: "{{name}} kopyası {{n}}",
     limit: "En çok {{max}} düzen kaydedilebilir.",
     builtinLocked: "Hazır düzenler yeniden adlandırılamaz ve silinemez.",
+    resetBuiltinOnly: "Yalnızca hazır düzenler varsayılana döndürülür.",
     nameEmpty: "Bir ad yazın.",
     nameTaken: "Bu ad başka bir düzende kullanılıyor.",
     confirmDelete: "“{{name}}” düzeni silinsin mi? Bu işlem geri alınamaz.",

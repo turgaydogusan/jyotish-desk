@@ -60,6 +60,16 @@
   width: 100%;
   text-align: left;
 }
+.layout-menu [aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: default;
+}
+.layout-menu-hint {
+  max-width: 240px;
+  padding: 4px 6px 2px;
+  color: var(--text-2);
+  font-size: var(--fs-table);
+}
 .layout-inline {
   display: flex;
   align-items: center;

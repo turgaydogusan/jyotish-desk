@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { BUILTIN_LAYOUT_IDS, MAX_LAYOUTS } from "../layout/model";
 import { HighlightProvider, useHighlight } from "../highlight/store";
 import { initialViewModel } from "../view/model";
@@ -134,6 +135,32 @@ test("save as and duplicate are disabled at the layout limit", () => {
   expect(item("Kopyala")).toHaveAccessibleDescription(`En çok ${MAX_LAYOUTS} düzen kaydedilebilir.`);
   fireEvent.click(item("Kopyala"));
   expect(options()).toHaveLength(MAX_LAYOUTS);
+});
+
+test("a disabled item's reason is visible in the menu and disabled items are dimmed", () => {
+  setup();
+  menu();
+  const reason = within(screen.getByRole("menu")).getByText("Hazır düzenler yeniden adlandırılamaz ve silinemez.");
+  expect(reason).not.toHaveClass("visually-hidden");
+  expect(reason.closest("li")).toHaveAttribute("role", "none");
+  expect(within(screen.getByRole("menu")).queryByText(/En çok/)).toBeNull();
+  const css = readFileSync("ui/shell/shell.css", "utf8");
+  expect(css).toMatch(/\.layout-menu \[aria-disabled="true"\]\s*\{[^}]*opacity:\s*0\.6;[^}]*cursor:\s*default;/);
+});
+
+test("reset on a user layout is aria-disabled with a visible reason, reachable by arrows and does nothing", () => {
+  setup();
+  saveAsNamed("Sabah");
+  menu();
+  const reset = item("Varsayılana döndür");
+  expect(reset).toBeEnabled();
+  expect(reset).toHaveAttribute("aria-disabled", "true");
+  expect(reset).toHaveAccessibleDescription("Yalnızca hazır düzenler varsayılana döndürülür.");
+  expect(within(screen.getByRole("menu")).getByText("Yalnızca hazır düzenler varsayılana döndürülür.")).not.toHaveClass("visually-hidden");
+  fireEvent.keyDown(screen.getByRole("menu"), { key: "End" });
+  expect(reset).toHaveFocus();
+  fireEvent.click(reset);
+  expect(screen.getByRole("menu")).toBeInTheDocument();
 });
 
 describe("actions menu keyboard", () => {
