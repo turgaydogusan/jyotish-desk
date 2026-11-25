@@ -119,3 +119,13 @@ test("newId yields distinct prefixed ids", () => {
   expect(a).toMatch(/^user:/);
   expect(a).not.toBe(b);
 });
+
+test("setPanelSettings merges into one panel of the active layout and keeps unknown keys", () => {
+  const state = defaultLayoutState();
+  const panel = activeLayout(state).panels.find((p) => p.kind === "chart")!;
+  const withExtra = layoutReducer(state, { type: "setPanelSettings", panelId: panel.id, patch: { future: 1 } });
+  const next = layoutReducer(withExtra, { type: "setPanelSettings", panelId: panel.id, patch: { varga: "D10" } });
+  const updated = activeLayout(next).panels.find((p) => p.id === panel.id)!;
+  expect(updated.settings).toEqual({ ...panel.settings, future: 1, varga: "D10" });
+  expect(layoutReducer(next, { type: "setPanelSettings", panelId: "missing", patch: { varga: "D2" } })).toEqual(next);
+});

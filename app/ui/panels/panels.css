@@ -59,3 +59,10 @@
 .panel-error p {
   margin: 0 0 8px;
 }
+.chart-panel-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-2);
+}

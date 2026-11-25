@@ -43,6 +43,9 @@ function planetName(p: ChartPlanet, labels: ChartLabels): string {
 }
 
 export function ChartSvg({ data, style, labels, highlight = null, pressed = highlight, onHover, onPin }: ChartSvgProps) {
+  // Saat bilinmiyorsa lagna yoktur: 1. ev Koç çizilir, lagna işareti ve dolgusu çizilmez,
+  // evler yalnızca burç adıyla anılır (ev numarası anlamsızdır).
+  const hasLagna = data.ascSign !== null;
   const asc = data.ascSign ?? 0;
   const cells = useMemo(() => chartCells(style, asc), [style, asc]);
   // Yerleşim yalnızca kısaltmalara ve lagna işaretine bağlıdır; `labels` nesnesi her
@@ -58,11 +61,11 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
     return cells.map((cell) => {
       const planets = bySign.get(cell.sign) ?? [];
       const texts = planets.map((p) => labelText(p, graha));
-      const layout: LabelLayout = layoutLabels(cell, texts, cell.lagnaAnchor ? lagna : "");
+      const layout: LabelLayout = layoutLabels(cell, texts, hasLagna && cell.lagnaAnchor ? lagna : "");
       return { cell, planets, layout };
     });
     // textKey, graha ve lagna'yı kapsar.
-  }, [cells, data.planets, textKey]);
+  }, [cells, data.planets, textKey, hasLagna]);
 
   const activate = (target: HighlightTarget) => (e: KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -85,7 +88,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
         const on = cellHighlighted(cell, highlight);
         const isPressed = cellHighlighted(cell, pressed);
         const classes = ["chart-cell"];
-        if (cell.house === 1) classes.push("chart-cell--lagna");
+        if (hasLagna && cell.house === 1) classes.push("chart-cell--lagna");
         if (on) classes.push("chart-cell--highlight");
         return (
           <g
@@ -96,7 +99,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
             role="button"
             tabIndex={0}
             aria-pressed={isPressed}
-            aria-label={labels.house(cell.house, labels.signs[cell.sign])}
+            aria-label={hasLagna ? labels.house(cell.house, labels.signs[cell.sign]) : labels.signs[cell.sign]}
             onMouseEnter={() => onHover?.(house)}
             onMouseLeave={() => onHover?.(null)}
             onFocus={() => onHover?.(house)}
@@ -110,7 +113,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
                 {cell.sign + 1}
               </text>
             )}
-            {cell.lagnaAnchor && (
+            {hasLagna && cell.lagnaAnchor && (
               <text className="chart-sign" x={cell.lagnaAnchor.x} y={cell.lagnaAnchor.y} textAnchor="middle" dominantBaseline="central">
                 {labels.lagna}
               </text>

@@ -39,6 +39,10 @@ export const tr = {
       Natal: "Doğum haritası",
       Event: "Olay haritası",
     },
+    varga: "Varga",
+    style: "Biçim",
+    timeUnknown: "Doğum saati bilinmiyor: lagna ve evler gösterilmiyor, 1. ev Koç. Ay, nakshatra ve dasa yaklaşıktır (≈).",
+    timeUnknownVarga: "Bölüm haritasındaki yerleşimler doğum saatine bağlıdır ve yaklaşıktır.",
   },
   panel: {
     chart: "Harita",
@@ -154,6 +158,11 @@ export const tr = {
     LastChartMissing: "Son açılan harita silinmiş; en son güncellenen harita açıldı.",
     CalcSettingsReset: "Bu haritanın hesap ayarı okunamadı; varsayılan ayar kullanılıyor.",
     TzdbChanged: "Saat dilimi verisi değişti ({{stored}} → {{current}}); saklanan an kullanılıyor.",
+  },
+  chartStyle: {
+    north: "Kuzey",
+    south: "Güney",
+    circle: "Daire",
   },
 };
 

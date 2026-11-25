@@ -11,7 +11,8 @@ export type LayoutAction =
   | { type: "delete"; id: string }
   | { type: "resetBuiltin"; id: string }
   | { type: "updatePanels"; panels: Panel[] }
-  | { type: "toggleNotes"; panelId: string };
+  | { type: "toggleNotes"; panelId: string }
+  | { type: "setPanelSettings"; panelId: string; patch: Record<string, unknown> };
 
 /** Notlar paneli düzende yoksa sağa 4 sütun genişliğinde eklenir (spec §3.2). */
 export const NOTES_PANEL = { x: 8, y: 0, w: 4, h: 8 } as const;
@@ -83,6 +84,13 @@ export function layoutReducer(state: LayoutState, action: LayoutAction): LayoutS
     }
     case "updatePanels":
       return mapLayout(state, state.active_layout_id, (l) => ({ ...l, panels: normalizePanels(action.panels) }));
+    case "setPanelSettings":
+      // Yalnızca verilen anahtarlar değişir; bilinmeyen ayarlar korunur (spec §3.3).
+      return mapLayout(state, state.active_layout_id, (l) =>
+        l.panels.some((p) => p.id === action.panelId)
+          ? { ...l, panels: l.panels.map((p) => (p.id === action.panelId ? { ...p, settings: { ...p.settings, ...action.patch } } : p)) }
+          : l,
+      );
     case "toggleNotes":
       return mapLayout(state, state.active_layout_id, (l) => {
         if (l.panels.some((p) => p.kind === "notes")) {

@@ -40,6 +40,10 @@ export const en: Messages = {
       Natal: "Natal chart",
       Event: "Event chart",
     },
+    varga: "Varga",
+    style: "Style",
+    timeUnknown: "Birth time unknown: lagna and houses are hidden, house 1 = Aries. Moon, nakshatra and dasha are approximate (≈).",
+    timeUnknownVarga: "Divisional placements depend on the birth time and are approximate.",
   },
   panel: {
     chart: "Chart",
@@ -155,5 +159,10 @@ export const en: Messages = {
     LastChartMissing: "The last opened chart was deleted; the most recently updated chart was opened.",
     CalcSettingsReset: "This chart's calculation settings could not be read; defaults are used.",
     TzdbChanged: "Time zone data changed ({{stored}} → {{current}}); the stored moment is used.",
+  },
+  chartStyle: {
+    north: "North",
+    south: "South",
+    circle: "Circle",
   },
 };

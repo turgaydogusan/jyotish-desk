@@ -40,6 +40,10 @@ export const fr: Messages = {
       Natal: "Carte natale",
       Event: "Carte d’événement",
     },
+    varga: "Varga",
+    style: "Style",
+    timeUnknown: "Heure de naissance inconnue : lagna et maisons masqués, maison 1 = Bélier. Lune, nakshatra et dasha sont approximatifs (≈).",
+    timeUnknownVarga: "Les positions dans les cartes divisionnaires dépendent de l’heure de naissance et sont approximatives.",
   },
   panel: {
     chart: "Carte",
@@ -155,5 +159,10 @@ export const fr: Messages = {
     LastChartMissing: "La dernière carte ouverte a été supprimée ; la plus récemment modifiée a été ouverte.",
     CalcSettingsReset: "Les réglages de calcul de cette carte sont illisibles ; les réglages par défaut sont utilisés.",
     TzdbChanged: "Les données de fuseau ont changé ({{stored}} → {{current}}) ; l’instant enregistré est utilisé.",
+  },
+  chartStyle: {
+    north: "Nord",
+    south: "Sud",
+    circle: "Cercle",
   },
 };

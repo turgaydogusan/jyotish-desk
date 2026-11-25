@@ -237,3 +237,12 @@ test("chart text uses tokens, --ink-strong signs and tabular numerals; highlight
   expect(rule(".chart-cell--lagna.chart-cell--highlight")).toMatch(/stroke-width/);
   expect(rule(".chart-planet--highlight .chart-planet-bg")).toMatch(/stroke: var\(--ink\)/);
 });
+
+test.each(STYLES)("%s without a lagna draws no lagna marker or fill and names houses by sign", (style) => {
+  const { container } = render(<ChartSvg data={{ ...data, ascSign: null }} style={style} labels={labels} />);
+  expect(container.querySelector(".chart-cell--lagna")).toBeNull();
+  expect([...container.querySelectorAll("text.chart-sign")].map((t) => t.textContent)).not.toContain("As");
+  expect(screen.queryByRole("button", { name: /^House / })).toBeNull();
+  expect(container.querySelector('[data-house="1"]')).toHaveAttribute("data-sign", "0");
+  expect(container.querySelector('[data-house="1"]')).toHaveAttribute("aria-label", "Ar");
+});

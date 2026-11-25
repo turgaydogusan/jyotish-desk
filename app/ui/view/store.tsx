@@ -25,6 +25,8 @@ export interface LayoutStore {
   resetBuiltin(id: string): void;
   updatePanels(panels: Panel[]): void;
   toggleNotes(): void;
+  /** Etkin düzendeki bir panelin ayarlarına `patch`'i ekler (varga, biçim, sütunlar). */
+  setPanelSettings(panelId: string, patch: Record<string, unknown>): void;
 }
 
 export interface ViewStore {
@@ -132,6 +134,7 @@ export function ViewStateProvider({
       resetBuiltin: (id) => layoutDispatch({ type: "resetBuiltin", id }),
       updatePanels: (panels) => layoutDispatch({ type: "updatePanels", panels }),
       toggleNotes: () => layoutDispatch({ type: "toggleNotes", panelId: newId("notes") }),
+      setPanelSettings: (panelId, patch) => layoutDispatch({ type: "setPanelSettings", panelId, patch }),
     };
     const view: ViewStore = {
       model: state,
