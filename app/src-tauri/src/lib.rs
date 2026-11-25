@@ -1,3 +1,4 @@
+pub mod atlas_commands;
 pub mod client_commands;
 pub mod commands;
 pub mod store_commands;
@@ -49,6 +50,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store_commands::export_csv,
             store_commands::import_json,
             store_commands::import_jhd,
+            atlas_commands::search_places,
+            atlas_commands::preview_moment,
         ])
 }
 
@@ -70,6 +73,12 @@ pub fn run() {
             let db = store::Store::open(&data_dir.join(client_commands::DB_FILE_NAME))?;
             let state: client_commands::StoreState = Arc::new(Mutex::new(db));
             app.manage(state);
+            // Atlas ölümcül değildir: açılamazsa yer araması `atlas_unavailable` döner, elle
+            // koordinat girişi çalışır.
+            let atlas_path = app
+                .path()
+                .resolve(atlas_commands::ATLAS_RESOURCE, BaseDirectory::Resource)?;
+            app.manage(Arc::new(atlas_commands::AtlasState::open(&atlas_path)));
             Ok(())
         })
         .run(tauri::generate_context!())

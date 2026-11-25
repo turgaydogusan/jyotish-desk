@@ -55,6 +55,8 @@ export const commands = {
 	exportCsv: (path: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("export_csv", { path }, options)),
 	importJson: (path: string, options?: InvokeOptions) => typedError<ImportReport, CommandError>(__TAURI_INVOKE("import_json", { path }, options)),
 	importJhd: (paths: string[], options?: InvokeOptions) => typedError<JhdImportResult, CommandError>(__TAURI_INVOKE("import_jhd", { paths }, options)),
+	searchPlaces: (query: string, limit: number, options?: InvokeOptions) => typedError<PlaceHit[], CommandError>(__TAURI_INVOKE("search_places", { query, limit }, options)),
+	previewMoment: (birth: BirthData, options?: InvokeOptions) => typedError<MomentPreview, CommandError>(__TAURI_INVOKE("preview_moment", { birth }, options)),
 };
 
 /* Types */
@@ -366,6 +368,12 @@ export type Layout = {
 	panels: Panel[],
 };
 
+/**  Kaydetmeden çözülmüş an: kanonik doğum verisi ve `ResolvedRecord`. */
+export type MomentPreview = {
+	birth: BirthData,
+	resolved: ResolvedRecord,
+};
+
 /**  Çözüm uyarıları (atlas `MomentWarning`'in IPC karşılığı; UI spec §5 rozetleri). */
 export type MomentWarning = "TimeUnknownNoon" | "LmtFromLongitude" | "PreTzdbReliability";
 
@@ -474,6 +482,18 @@ export type Place = {
 	lat: number | null,
 	lon: number | null,
 	geoname_id: number | null,
+};
+
+/**  Arama sonucu: formun dolduracağı alanlar. */
+export type PlaceHit = {
+	geoname_id: number,
+	name: string,
+	admin1: string,
+	country: string,
+	lat: number | null,
+	lon: number | null,
+	/**  IANA kimliği; form saat dilimini buradan önerir. */
+	timezone: string,
 };
 
 export type PlanetRow = {
