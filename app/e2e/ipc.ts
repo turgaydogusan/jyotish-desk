@@ -53,7 +53,9 @@ export async function mockIpc(page: Page, { session }: IpcOptions) {
           return n;
         },
         delete_note: (args) => {
-          notes.splice(notes.findIndex((x) => x.id === args.noteId), 1);
+          const at = notes.findIndex((x) => x.id === args.noteId);
+          if (at < 0) throw { code: "ipc", params: { detail: `no note ${String(args.noteId)}` } };
+          notes.splice(at, 1);
           return null;
         },
         restore_session: () => (session ? fixture.opened : null),

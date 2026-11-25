@@ -73,6 +73,12 @@ test("dasha tree by keyboard loads level 4 on demand", async ({ page }) => {
 
 test("spec §8: Cmd+K, a name and Enter open that client's chart with no form or confirmation", async ({ page }) => {
   await mockIpc(page, { session: true });
+  // Yerel pencere (confirm, alert, prompt) açılırsa kaydedilir ve test sonunda düşer.
+  const nativeDialogs: string[] = [];
+  page.on("dialog", (d) => {
+    nativeDialogs.push(d.type());
+    void d.dismiss();
+  });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
   await page.keyboard.press("Meta+KeyK");
@@ -84,6 +90,10 @@ test("spec §8: Cmd+K, a name and Enter open that client's chart with no form or
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: "Ayşe Yılmaz" })).toBeVisible();
   await expect(page.getByRole("group", { name: "D1 haritası" })).toBeVisible();
+  // Harita açıkken ne form ne onay penceresi vardır (spec §8).
+  await expect(page.locator("form")).toHaveCount(0);
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  expect(nativeDialogs).toEqual([]);
   expect(await ipcCalls(page, "open_client")).toEqual([{ clientId: 2, chartId: null }]);
 });
 

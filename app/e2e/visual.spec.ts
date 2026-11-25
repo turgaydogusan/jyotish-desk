@@ -10,6 +10,8 @@ for (const theme of ["light", "dark"] as const) {
       await mockIpc(page, { session: true });
       await page.addInitScript((t) => localStorage.setItem("jyotish-desk.theme.v1", t), theme);
       await page.goto("/");
+      // Kısayol dinleyicisi masa çizilince bağlanır; başlık görünmeden basılan tuş kaybolur.
+      await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
       // Kenar çubuğu kapalı: temel görüntüler haritanın kendisidir, pano genişliğine bağlı değil.
       await page.keyboard.press("Meta+Backslash");
       await expect(page.getByRole("complementary", { name: "Danışanlar" })).toHaveCount(0);
