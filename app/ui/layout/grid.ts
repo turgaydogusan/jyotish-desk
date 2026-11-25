@@ -99,7 +99,7 @@ export function movePanel(panels: readonly Panel[], id: string, x: number, y: nu
 export function resizePanel(panels: readonly Panel[], id: string, w: number, h: number, columns: number = GRID_COLUMNS): Panel[] {
   const p = panels.find((q) => q.id === id);
   if (!p) return [...panels];
-  // Sağ kenar ızgaradan taşmasın: genişlik önce kalan sütunlarla sınırlanır.
+  // Sağ kenar ızgaradan taşmasın: genişlik önce boş sütunlarla sınırlanır.
   const resized = clampPanel({ ...p, w: Math.min(w, columns - p.x), h }, columns);
   return settle(panels.map((q) => (q.id === id ? resized : q)), id);
 }
