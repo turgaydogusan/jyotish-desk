@@ -236,3 +236,30 @@ test("print sheets are paper-white in the dark theme and, at their longest, each
     expect(await sheet.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   }
 });
+
+test("updates: nothing is checked until asked; About checks, shows the notes and installs the consented version", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.getByRole("button", { name: "Hakkında" }).click();
+  const about = page.getByRole("dialog", { name: "Jyotish Desk hakkında" });
+  await expect(about.getByText("Sürüm 0.9.0")).toBeVisible();
+  await expect(about.getByText("https://github.com/turgaydogusan/jyotish-desk")).toBeVisible();
+  await expect(about.getByRole("checkbox", { name: "Açılışta güncellemeleri denetle" })).not.toBeChecked();
+  expect(await ipcCalls(page, "check_for_update")).toHaveLength(0);
+
+  await about.getByRole("button", { name: "Şimdi denetle" }).click();
+  await expect(about.getByRole("status")).toHaveText("Yeni sürüm: 0.9.1 (2026-12-01).");
+  await expect(about.getByLabel("0.9.1 sürüm notları")).toHaveText("- Baskı düzeltmesi");
+  expect(await ipcCalls(page, "install_update")).toHaveLength(0);
+  await about.getByRole("button", { name: "0.9.1 sürümünü indir ve kur" }).click();
+  await expect(about.getByRole("status")).toContainText("0.9.1 kuruldu.");
+  expect(await ipcCalls(page, "install_update")).toEqual([{ version: "0.9.1" }]);
+  await expect(about.getByRole("button", { name: "Kapat" })).toBeFocused();
+
+  // Tercih açılınca bir sonraki açılış denetler ve bildirim bandında haber verir.
+  await about.getByRole("checkbox", { name: "Açılışta güncellemeleri denetle" }).check();
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Bildirimler" })).toContainText("Yeni sürüm var: 0.9.1.");
+  expect(await ipcCalls(page, "check_for_update")).toHaveLength(1);
+});

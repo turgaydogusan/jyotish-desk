@@ -94,6 +94,13 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
           JSON.stringify(args.path) === JSON.stringify(fixture.dasha_children.path) ? fixture.dasha_children.periods : [],
         transits_at: () => fixture.transit,
         print_window: () => null,
+        // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.
+        app_info: () => ({ version: "0.9.0", updaterConfigured: true }),
+        check_for_update: () => ({ version: "0.9.1", notes: "- Baskı düzeltmesi", published: "2026-12-01" }),
+        install_update: (args) => {
+          if (args.version !== "0.9.1") throw { code: "update_changed", params: {} };
+          return null;
+        },
       };
       Object.assign(window, {
         __TAURI_INTERNALS__: {
