@@ -27,6 +27,14 @@ export const commands = {
 };
 
 /* Types */
+/**  Spec §5 `Ashtakavarga`. Burç sütunları Koç'tan (0) Balık'a (11). */
+export type Ashtakavarga = {
+	/**  `ASHTAKAVARGA_GRAHAS` sırasında yedi BAV. */
+	bav: [([number, number, number, number, number, number, number, number, number, number, number, number]), ([number, number, number, number, number, number, number, number, number, number, number, number]), ([number, number, number, number, number, number, number, number, number, number, number, number]), ([number, number, number, number, number, number, number, number, number, number, number, number]), ([number, number, number, number, number, number, number, number, number, number, number, number]), ([number, number, number, number, number, number, number, number, number, number, number, number]), ([number, number, number, number, number, number, number, number, number, number, number, number])],
+	/**  Burç başına yedi BAV'ın toplamı; toplamı her zaman `SAV_TOTAL`. */
+	sav: [number, number, number, number, number, number, number, number, number, number, number, number],
+};
+
 export type AyanamsaSystem = "Lahiri" | "Raman" | 
 /**  Krishnamurti (KP). */
 "Kp" | 
@@ -59,10 +67,7 @@ export type CalcSettings = {
 	sunrise_def: SunriseDef,
 };
 
-/**
- *  M3 haritası (Plan 06): vargalar ve Vimshottari dahil. Panchang ve ashtakavarga
- *  Plan 07'de eklenir.
- */
+/**  M3 haritası (spec §5): vargalar, Vimshottari, panchang ve ashtakavarga dahil. */
 export type Chart = {
 	meta: ChartMeta,
 	jd_ut: number | null,
@@ -78,6 +83,10 @@ export type Chart = {
 	vargas: VargaChart[],
 	/**  Vimshottari, 1–3. seviyeler. Ay'ın sidereal boylamından (her zodyak kipinde). */
 	dasha: Dasha,
+	/**  Doğum anının panchangı; Güneş ve Ay her kipte sidereal. */
+	panchang: Panchang,
+	/**  Rasi çerçevesindeki burçlardan (`grahas[..7].sign`, `lagna.sign`). */
+	ashtakavarga: Ashtakavarga,
 };
 
 export type ChartMeta = {
@@ -93,7 +102,13 @@ export type ChartWarning =
 /**  Güneş veya Ay Moshier yedeğiyle hesaplandı (paketlenen ephemeris aralığı dışında). */
 "LowPrecision" | 
 /**  Placidus kutup dairesinde hesaplanamadı; bhava başlangıçları Porphyry. */
-"PlacidusPolarFallback";
+"PlacidusPolarFallback" | 
+/**
+ *  Doğum yerinde gün doğumu ya da batımı yok (kutup gecesi/gündüzü). Panchang'ın
+ *  `sunrise_jd_ut`/`sunset_jd_ut`'si boştur; vara gün 06:00 yerel ortalama saatte
+ *  başlıyor sayılarak bulunur.
+ */
+"SunriseUnavailable";
 
 /**  Yanma orbları, derece (BPHS). */
 export type CombustionOrbs = {
@@ -185,6 +200,25 @@ export type HouseSystem = "WholeSign" |
 /**  KP. */
 "Placidus";
 
+export type Karana = {
+	/**  1..=60 (yarım tithi sırası). */
+	no: number,
+	name: KaranaName,
+	ends_jd_ut: number | null,
+};
+
+export type KaranaName = 
+/**  Sabit: Shukla 1. tithinin 1. yarısı (karana 1). */
+"Kimstughna" | "Bava" | "Balava" | "Kaulava" | "Taitila" | "Garaja" | "Vanija" | 
+/**  Bhadra olarak da bilinir. */
+"Vishti" | 
+/**  Sabit: Krishna 14. tithinin 2. yarısı (karana 58). */
+"Shakuni" | 
+/**  Sabit: Amavasya'nın 1. yarısı (karana 59). */
+"Chatushpada" | 
+/**  Sabit: Amavasya'nın 2. yarısı (karana 60). */
+"Naga";
+
 export type Lagna = {
 	/**  Rasi çerçevesinde boylam. */
 	lon: number | null,
@@ -196,7 +230,44 @@ export type Lagna = {
 	pada: number,
 };
 
+export type NityaYoga = {
+	/**  1 Vishkambha … 27 Vaidhriti. */
+	no: number,
+	ends_jd_ut: number | null,
+};
+
 export type NodeKind = "Mean" | "True";
+
+export type Paksha = 
+/**  Büyüyen Ay: tithi 1–15. */
+"Shukla" | 
+/**  Küçülen Ay: tithi 16–30. */
+"Krishna";
+
+/**
+ *  Doğum anının panchangı (spec §5 `Panchang`). Tithi, nakshatra, yoga ve karana doğum
+ *  anındaki değerdir; `ends_jd_ut` o andan sonraki ilk sınırdır. Vara doğumdan önceki son
+ *  gün doğumundan gelir.
+ */
+export type Panchang = {
+	tithi: Tithi,
+	vara: Vara,
+	nakshatra: PanchangNakshatra,
+	yoga: NityaYoga,
+	karana: Karana,
+	/**  Doğumdan önceki son gün doğumu; kutup gecesi/gündüzünde `None`. */
+	sunrise_jd_ut: number | null,
+	/**  O gün doğumundan sonraki ilk gün batımı (1 gün içinde); yoksa `None`. */
+	sunset_jd_ut: number | null,
+};
+
+export type PanchangNakshatra = {
+	/**  Ay'ın nakshatrası, 1..=27. */
+	no: number,
+	/**  1..=4. */
+	pada: number,
+	ends_jd_ut: number | null,
+};
 
 export type PlanetRow = {
 	body: string,
@@ -215,6 +286,16 @@ export type SunriseDef =
 "DiskCenterNoRefraction" | 
 /**  Üst kenar, atmosfer kırılmasıyla (batı konvansiyonu). */
 "UpperLimbRefracted";
+
+export type Tithi = {
+	/**  1..=30. */
+	no: number,
+	paksha: Paksha,
+	ends_jd_ut: number | null,
+};
+
+/**  Hafta günü: Ravi, Soma, Mangala, Budha, Guru, Shukra, Shani. */
+export type Vara = "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";
 
 export type Varga = 
 /**  Rasi. */

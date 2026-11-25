@@ -4,11 +4,13 @@
 use ephemeris::{Body, Ephemeris, Precision, Zodiac};
 use serde::{Deserialize, Serialize};
 
+use crate::ashtakavarga::{compute_ashtakavarga, Ashtakavarga};
 use crate::combustion::is_combust;
 use crate::dasha::{vimshottari, Dasha, DashaSeed};
 use crate::dignity::{dignity, sign_lord};
 use crate::graha::{Graha, GrahaPosition};
 use crate::houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
+use crate::panchang::{compute_panchang, Panchang};
 use crate::settings::{CalcSettings, HouseSystem, ZodiacMode, JD_UT_RANGE};
 use crate::varga::{all_vargas, is_vargottama, VargaChart};
 use crate::zodiac::{deg_in_sign, nakshatra_pada, normalize, Sign};
@@ -25,6 +27,10 @@ pub enum ChartWarning {
     LowPrecision,
     /// Placidus kutup dairesinde hesaplanamadı; bhava başlangıçları Porphyry.
     PlacidusPolarFallback,
+    /// Doğum yerinde gün doğumu ya da batımı yok (kutup gecesi/gündüzü). Panchang'ın
+    /// `sunrise_jd_ut`/`sunset_jd_ut`'si boştur; vara gün 06:00 yerel ortalama saatte
+    /// başlıyor sayılarak bulunur.
+    SunriseUnavailable,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -37,8 +43,7 @@ pub struct ChartMeta {
     pub warnings: Vec<ChartWarning>,
 }
 
-/// M3 haritası (Plan 06): vargalar ve Vimshottari dahil. Panchang ve ashtakavarga
-/// Plan 07'de eklenir.
+/// M3 haritası (spec §5): vargalar, Vimshottari, panchang ve ashtakavarga dahil.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Chart {
@@ -56,6 +61,10 @@ pub struct Chart {
     pub vargas: Vec<VargaChart>,
     /// Vimshottari, 1–3. seviyeler. Ay'ın sidereal boylamından (her zodyak kipinde).
     pub dasha: Dasha,
+    /// Doğum anının panchangı; Güneş ve Ay her kipte sidereal.
+    pub panchang: Panchang,
+    /// Rasi çerçevesindeki burçlardan (`grahas[..7].sign`, `lagna.sign`).
+    pub ashtakavarga: Ashtakavarga,
 }
 
 const PLANETS: [(Graha, Body); 7] = [
@@ -237,6 +246,13 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         moon_sidereal_lon: to_sidereal(raw[1].lon),
         year_days: settings.dasha_year,
     })?;
+    let panchang = compute_panchang(eph, jd_ut, geo_lat, geo_lon, settings)?;
+    if panchang.sunrise_jd_ut.is_none() || panchang.sunset_jd_ut.is_none() {
+        warnings.push(ChartWarning::SunriseUnavailable);
+    }
+    // grahas her zaman 9 elemandır, ilk yedisi ASHTAKAVARGA_GRAHAS sırasındadır.
+    let signs: [Sign; 7] = std::array::from_fn(|i| grahas[i].sign);
+    let ashtakavarga = compute_ashtakavarga(signs, lagna.sign);
     Ok(Chart {
         meta: ChartMeta {
             engine_version: ENGINE_VERSION.to_owned(),
@@ -256,6 +272,8 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         },
         vargas,
         dasha,
+        panchang,
+        ashtakavarga,
     })
 }
 
@@ -265,6 +283,7 @@ mod tests {
     use crate::dasha::DashaSeed;
     use crate::dignity::Dignity;
     use crate::fake::FakeEph;
+    use crate::panchang::compute_panchang;
     use crate::settings::NodeKind;
     use crate::varga::Varga;
 
@@ -586,5 +605,46 @@ mod tests {
             assert!((first.start_jd_ut - (JD - 0.325 * 18.0 * 365.25)).abs() < 1e-6);
             assert_eq!(c.dasha.periods.len(), 819);
         }
+    }
+
+    #[test]
+    fn panchang_and_ashtakavarga_follow_their_frames() {
+        let c = chart(&mut FakeEph::default(), &CalcSettings::default());
+        let p = compute_panchang(
+            &mut FakeEph::default(),
+            JD,
+            41.0,
+            29.0,
+            &CalcSettings::default(),
+        )
+        .unwrap();
+        assert_eq!(c.panchang, p);
+        assert_eq!(c.panchang.tithi.no, 8);
+        assert_eq!(
+            c.ashtakavarga.sav,
+            [26, 27, 26, 31, 33, 28, 30, 28, 24, 28, 26, 30]
+        );
+        assert!(c.meta.warnings.is_empty());
+
+        // Tropikal-rasi kipinde panchang yine sidereal; ashtakavarga tropikal burçlardan.
+        // Sahte haritada her burç bir ileri kayar (ayanamsa 24°), SAV bir sütun döner.
+        let t = chart(&mut FakeEph::default(), &tropical_rasi());
+        assert_eq!(t.panchang, p);
+        assert_eq!(
+            t.ashtakavarga.sav,
+            [30, 26, 27, 26, 31, 33, 28, 30, 28, 24, 28, 26]
+        );
+    }
+
+    #[test]
+    fn missing_sunrise_becomes_a_warning() {
+        let mut eph = FakeEph {
+            polar: true,
+            ..FakeEph::default()
+        };
+        let c = chart(&mut eph, &CalcSettings::default());
+        assert_eq!(c.meta.warnings, [ChartWarning::SunriseUnavailable]);
+        assert_eq!(c.panchang.sunrise_jd_ut, None);
+        assert_eq!(c.panchang.vara, crate::panchang::Vara::Saturday);
     }
 }

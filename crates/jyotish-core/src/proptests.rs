@@ -40,6 +40,7 @@ mod chart_properties {
     use ephemeris::Body;
     use proptest::prelude::*;
 
+    use crate::ashtakavarga::{compute_ashtakavarga, SAV_TOTAL};
     use crate::chart::compute_chart;
     use crate::fake::FakeEph;
     use crate::houses::house_from_cusps;
@@ -55,6 +56,10 @@ mod chart_properties {
         Body::Venus,
         Body::Saturn,
     ];
+
+    /// Gerçekçi boylam hızları (°/gün), `PLANETS` sırasında. Panchang bitiş araması Ay'ın
+    /// Güneş'ten hızlı olmasını ister; eşit hızda harita `PanchangSearch` döner.
+    const SPEEDS: [f64; 7] = [0.98, 13.2, 0.6, 1.2, -0.1, 1.1, 0.05];
 
     proptest! {
         #[test]
@@ -85,8 +90,8 @@ mod chart_properties {
             node in 0.0f64..360.0,
         ) {
             let mut eph = FakeEph { asc, ..FakeEph::default() };
-            for (body, lon) in PLANETS.iter().zip(lons) {
-                eph = eph.with(*body, lon, 1.0);
+            for ((body, lon), speed) in PLANETS.iter().zip(lons).zip(SPEEDS) {
+                eph = eph.with(*body, lon, speed);
             }
             eph = eph.with(Body::MeanNode, node, -0.053);
             let c = compute_chart(&mut eph, 2_451_545.0, 0.0, 0.0, &CalcSettings::default())
@@ -96,6 +101,26 @@ mod chart_properties {
                 prop_assert_eq!(usize::from(p.house), expected, "{:?}", p.graha);
                 prop_assert_eq!(p.house, house_from_cusps(p.lon, &c.bhavas.cusps));
             }
+        }
+
+        #[test]
+        fn chart_ashtakavarga_uses_rasi_signs(
+            lons in proptest::array::uniform7(0.0f64..360.0),
+            asc in 0.0f64..360.0,
+            tropical in any::<bool>(),
+        ) {
+            let mut eph = FakeEph { asc, ..FakeEph::default() };
+            for ((body, lon), speed) in PLANETS.iter().zip(lons).zip(SPEEDS) {
+                eph = eph.with(*body, lon, speed);
+            }
+            let mut s = CalcSettings::default();
+            if tropical {
+                s.zodiac = ZodiacMode::TropicalRasiSiderealNakshatra;
+            }
+            let c = compute_chart(&mut eph, 2_451_545.0, 0.0, 0.0, &s).unwrap();
+            let signs = std::array::from_fn(|i| c.grahas[i].sign);
+            prop_assert_eq!(&c.ashtakavarga, &compute_ashtakavarga(signs, c.lagna.sign));
+            prop_assert_eq!(c.ashtakavarga.sav.iter().map(|&v| u16::from(v)).sum::<u16>(), SAV_TOTAL);
         }
     }
 }

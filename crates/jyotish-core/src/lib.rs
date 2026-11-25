@@ -1,8 +1,8 @@
 //! Saf, yan etkisiz Jyotish hesabı. Ephemeris'e yalnızca `ephemeris::Ephemeris`
 //! trait'i üzerinden erişir; I/O, Tauri ve atlas bağımlılığı yoktur.
 //!
-//! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga
-//! ve Vimshottari dasha (M3, Plan 06). Panchang ve ashtakavarga Plan 07'de eklenir.
+//! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga,
+//! Vimshottari dasha, panchang, ashtakavarga ve transit (M3).
 
 pub mod ashtakavarga;
 mod chart;
