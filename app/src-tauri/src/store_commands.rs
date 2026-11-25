@@ -1,9 +1,10 @@
 //! Kayıt yönetimi komutları (danışan, harita, not, etiket, tercihler) ve dosya içe/dışa
 //! aktarma. Harita hesabı gerektirmez; gövdeler `store`'dadır.
 
-use std::fs::File;
-use std::io::{Read, Write};
+use std::fs::{File, OpenOptions};
+use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
@@ -48,11 +49,50 @@ fn io_error(path: &Path, e: std::io::Error) -> CommandError {
     )
 }
 
+/// Geçici dosya adı için denenen ad sayısı (ad doluysa sıradaki denenir).
+const TEMP_ATTEMPTS: u32 = 16;
+
+/// Süreç içinde her yazım ayrı bir geçici ad alır: eşzamanlı iki dışa aktarma aynı dosyayı
+/// paylaşmaz.
+static TEMP_SEQ: AtomicU32 = AtomicU32::new(0);
+
+/// Ad hedefin adından türemez: uzun bir hedef adı dosya adı sınırını aşmaz.
+fn temp_name(n: u32) -> String {
+    format!(".jyotish-desk-{}-{n}.tmp", std::process::id())
+}
+
+/// Hedefin klasöründe **yeni** bir geçici dosya açar. Var olan bir dosyanın ya da bağlantının
+/// üzerine yazılmaz (`create_new`); Unix'te dosya yalnızca sahibine açıktır (dışa aktarma not
+/// içerebilir).
+fn create_temp(target: &Path, seq: &AtomicU32) -> std::io::Result<(PathBuf, File)> {
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut taken = ErrorKind::AlreadyExists.into();
+    for _ in 0..TEMP_ATTEMPTS {
+        let tmp = target.with_file_name(temp_name(seq.fetch_add(1, Ordering::Relaxed)));
+        match options.open(&tmp) {
+            Ok(f) => return Ok((tmp, f)),
+            Err(e) if e.kind() == ErrorKind::AlreadyExists => taken = e,
+            Err(e) => return Err(e),
+        }
+    }
+    Err(taken)
+}
+
 /// Aynı klasörde geçici dosyaya yazıp yerine taşır: yarıda kesilen yazım eski dosyayı bozmaz.
 pub fn write_atomic(path: &Path, text: &str) -> Result<(), CommandError> {
-    let tmp = path.with_file_name(format!(".{}.{}.tmp", base_name(path), std::process::id()));
+    write_atomic_with(path, text, &TEMP_SEQ)
+}
+
+fn write_atomic_with(path: &Path, text: &str, seq: &AtomicU32) -> Result<(), CommandError> {
+    // Yalnızca bu çağrının açtığı geçici dosya silinir.
+    let (tmp, mut f) = create_temp(path, seq).map_err(|e| io_error(path, e))?;
     let written = (|| {
-        let mut f = File::create(&tmp)?;
         f.write_all(text.as_bytes())?;
         f.sync_all()?;
         std::fs::rename(&tmp, path)
@@ -63,7 +103,9 @@ pub fn write_atomic(path: &Path, text: &str) -> Result<(), CommandError> {
     })
 }
 
-/// `MAX_IMPORT_BYTES`'tan büyük dosya okunmaz (okurken büyüyen dosya da reddedilir).
+/// `MAX_IMPORT_BYTES`'tan büyük dosya okunmaz (okurken büyüyen dosya da reddedilir). Sıradan
+/// dosya olmayan yol (klasör, adlandırılmış boru, aygıt) açılmadan reddedilir: boru boyut
+/// denetiminden 0 ile geçer ve açılması yazan biri gelene dek bekler.
 pub fn read_bounded(path: &Path) -> Result<String, CommandError> {
     let too_large = || {
         CommandError::new(
@@ -74,10 +116,11 @@ pub fn read_bounded(path: &Path) -> Result<String, CommandError> {
             ],
         )
     };
-    let len = std::fs::metadata(path)
-        .map_err(|e| io_error(path, e))?
-        .len();
-    if len > MAX_IMPORT_BYTES {
+    let meta = std::fs::metadata(path).map_err(|e| io_error(path, e))?;
+    if !meta.is_file() {
+        return Err(io_error(path, ErrorKind::InvalidInput.into()));
+    }
+    if meta.len() > MAX_IMPORT_BYTES {
         return Err(too_large());
     }
     let mut text = String::new();
@@ -492,10 +535,116 @@ mod tests {
     #[test]
     fn the_webview_is_granted_no_dialog_or_file_system_permission() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/capabilities");
-        assert_eq!(std::fs::read_dir(dir).unwrap().count(), 1);
+        // Finder'ın `.DS_Store`'u gibi gizli dosyalar yetenek dosyası değildir.
+        let names: Vec<String> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|n| !n.starts_with('.'))
+            .collect();
+        assert_eq!(names, ["default.json"]);
         let v: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
         assert_eq!(v["permissions"], serde_json::json!(["core:event:default"]));
+        // Yetenek `tauri.conf.json` içinde satır içi de tanımlanamaz.
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        assert!(conf["app"]["security"].get("capabilities").is_none());
+        // Dosya sistemi eklentisi kurulmaz: pencere eklentisinin bağımlılığıdır, o kadar.
+        assert!(!include_str!("lib.rs").contains("tauri_plugin_fs"));
+    }
+
+    #[test]
+    fn simultaneous_exports_to_one_target_all_succeed_and_leave_one_whole_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("out.json");
+        let texts: Vec<String> = (0..8).map(|i| i.to_string().repeat(64 * 1024)).collect();
+        for _ in 0..25 {
+            std::thread::scope(|s| {
+                let writers: Vec<_> = texts
+                    .iter()
+                    .map(|t| s.spawn(|| write_atomic(&path, t)))
+                    .collect();
+                for w in writers {
+                    w.join().unwrap().unwrap();
+                }
+            });
+        }
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(texts.contains(&text));
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_target_with_a_very_long_name_is_written() {
+        let dir = tempfile::tempdir().unwrap();
+        // 255 baytlık ad sınırına yakın: geçici dosyanın adı hedefin adından türeyemez.
+        let path = dir.path().join(format!("{}.json", "a".repeat(245)));
+        write_atomic(&path, "yeni").unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "yeni");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_exported_file_is_readable_by_its_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("out.json");
+        let options = ExportOptions {
+            include_notes: true,
+            client_ids: None,
+        };
+        export_json_file_blocking(&populated(), &path, &options).unwrap();
+        assert!(std::fs::read_to_string(&path).unwrap().contains("gizli"));
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_temporary_file_is_never_an_existing_file_or_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let victim = dir.path().join("victim");
+        std::fs::write(&victim, "dokunma").unwrap();
+        let target = dir.path().join("out.json");
+        // İlk iki ad dolu: biri başka bir dosyaya bağlantı, öbürü sıradan dosya.
+        std::os::unix::fs::symlink(&victim, target.with_file_name(temp_name(0))).unwrap();
+        std::fs::write(target.with_file_name(temp_name(1)), "başkasının").unwrap();
+        let seq = AtomicU32::new(0);
+        let (tmp, mut f) = create_temp(&target, &seq).unwrap();
+        f.write_all(b"yeni").unwrap();
+        assert_eq!(tmp, target.with_file_name(temp_name(2)));
+        assert_eq!(std::fs::read_to_string(&victim).unwrap(), "dokunma");
+        assert_eq!(
+            std::fs::read_to_string(target.with_file_name(temp_name(1))).unwrap(),
+            "başkasının"
+        );
+        // Bütün adlar doluysa hata döner; var olan dosyalar silinmez.
+        let full = tempfile::tempdir().unwrap();
+        let target = full.path().join("out.json");
+        for n in 0..TEMP_ATTEMPTS {
+            std::fs::write(target.with_file_name(temp_name(n)), "dolu").unwrap();
+        }
+        let e = write_atomic_with(&target, "yeni", &AtomicU32::new(0)).unwrap_err();
+        assert_eq!(e.code, "file_io");
+        assert_eq!(e.params["file"], "out.json");
+        assert_eq!(
+            std::fs::read_dir(full.path()).unwrap().count(),
+            TEMP_ATTEMPTS as usize
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_import_from_something_that_is_not_a_regular_file_is_refused_unread() {
+        // Adlandırılmış boru ya da aygıt boyut denetiminden 0 ile geçer ve okuma hiç bitmeyebilir.
+        let store = Mutex::new(Store::open_in_memory().unwrap());
+        let e = import_json_file_blocking(&store, Path::new("/dev/null")).unwrap_err();
+        assert_eq!(e.code, "file_io");
+        assert_eq!(e.params["file"], "null");
+        let dir = tempfile::tempdir().unwrap();
+        let e = read_bounded(dir.path()).unwrap_err();
+        assert_eq!(e.code, "file_io");
     }
 
     #[test]

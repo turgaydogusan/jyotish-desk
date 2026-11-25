@@ -64,6 +64,30 @@ test("checking Include notes exports with notes; cancelling the file dialog says
   expect(screen.queryByRole("region", { name: "Bildirimler" })).toBeNull();
 });
 
+test("Include notes is off again each time the export dialog opens", async () => {
+  vi.mocked(api.exportClientsJson).mockResolvedValue(ok("danisanlar.json"));
+  renderData();
+  const open = () => {
+    fireEvent.click(within(section()).getByRole("button", { name: "JSON olarak dışa aktar…" }));
+    return screen.getByRole("dialog", { name: "JSON olarak dışa aktar" });
+  };
+  let dialog = open();
+  fireEvent.click(within(dialog).getByRole("checkbox", { name: "Notları dahil et" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Dosya seç ve kaydet…" }));
+  await waitFor(() => expect(within(section()).getByRole("button", { name: "JSON olarak dışa aktar…" })).toBeEnabled());
+  expect(api.exportClientsJson).toHaveBeenLastCalledWith(true);
+  // İkinci açılış: önceki seçim taşınmaz (notlar hassas veridir, spec §5).
+  dialog = open();
+  expect(within(dialog).getByRole("checkbox", { name: "Notları dahil et" })).not.toBeChecked();
+  // İşaretleyip vazgeçmek de seçimi taşımaz.
+  fireEvent.click(within(dialog).getByRole("checkbox", { name: "Notları dahil et" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Vazgeç" }));
+  dialog = open();
+  expect(within(dialog).getByRole("checkbox", { name: "Notları dahil et" })).not.toBeChecked();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Dosya seç ve kaydet…" }));
+  await waitFor(() => expect(api.exportClientsJson).toHaveBeenLastCalledWith(false));
+});
+
 test("CSV export errors are shown with the file name only", async () => {
   vi.mocked(api.exportClientsCsv).mockResolvedValue({ status: "error", error: { code: "file_io", params: { file: "haritalar.csv", detail: "permission denied" } } });
   renderData();

@@ -67,7 +67,7 @@ test("chart accessible-name words exist in every language", () => {
 });
 
 // Arka ucun döndürebildiği her `CommandError.code` (commands.rs, client_commands.rs,
-// atlas_commands.rs). Dosya ve içe aktarma kodları M6'da arayüze açılınca eklenir.
+// atlas_commands.rs, store_commands.rs), dosya ve içe aktarma kodlarıyla birlikte.
 const BACKEND_CODES = [
   "ipc", "calc", "engine_stopped", "task_failed", "data_files_missing", "invalid_path", "env_override", "already_open", "job_panicked", "print_failed",
   "store_sqlite", "store_migration", "store_json", "store_too_new", "store_unavailable", "not_found", "invalid_input",

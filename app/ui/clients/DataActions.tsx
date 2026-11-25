@@ -28,6 +28,12 @@ export function DataActions() {
     }
   };
 
+  // Her açılışta kapalı başlar: önceki dışa aktarmanın seçimi taşınmaz (notlar hassas veridir).
+  const openExport = () => {
+    setIncludeNotes(false);
+    setAsking(true);
+  };
+
   const exported = (file: string | null) => file !== null && push({ id: "exchange", type: "info", messageKey: "data.exported", params: { file } });
 
   const exportJson = () =>
@@ -73,7 +79,7 @@ export function DataActions() {
         {t("data.heading")}
       </h2>
       <div className="sidebar-actions">
-        <button type="button" disabled={busy} onClick={() => setAsking(true)}>
+        <button type="button" disabled={busy} onClick={openExport}>
           {t("data.exportJson")}
         </button>
         <button type="button" disabled={busy} onClick={() => void exportCsv()}>
