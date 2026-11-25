@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import chartCss from "./chart.css?raw";
 import { ChartSvg } from "./ChartSvg";
-import type { ChartData, ChartLabels, ChartStyle } from "./types";
+import { RETRO_MARK, type ChartData, type ChartLabels, type ChartStyle } from "./types";
 
 const labels: ChartLabels = {
   title: "Chart",
@@ -76,7 +76,7 @@ test("markers: retro R, combust c, vargottama underline — no colour coding", (
   const moon = screen.getByRole("button", { name: "Mo, Le 3°, vargottama" });
   expect(moon.querySelector("text")).toHaveAttribute("text-decoration", "underline");
   expect(screen.getByRole("button", { name: "Su, Le 12°" }).querySelector("text")).not.toHaveAttribute("text-decoration");
-  for (const b of screen.getAllByRole("button")) expect(b.getAttribute("aria-label")).not.toMatch(/[a-z]R/);
+  for (const b of screen.getAllByRole("button")) expect(b.getAttribute("aria-label")).not.toMatch(new RegExp(`\\p{Ll}${RETRO_MARK}`, "u"));
   for (const el of document.querySelectorAll("svg *")) {
     expect(el.getAttribute("fill") ?? "").not.toMatch(/#|rgb/);
     expect(el.getAttribute("stroke") ?? "").not.toMatch(/#|rgb/);
