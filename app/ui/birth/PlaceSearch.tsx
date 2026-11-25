@@ -1,6 +1,7 @@
 // Yer arama kutusu (WAI-ARIA 1.2 combobox, liste açılır). Yazdıkça 200 ms sonra
 // `search_places` çağrılır; eski isteğin geç gelen yanıtı yok sayılır. Atlas yoksa bilgi
-// verilir ve elle koordinat girişi açık kalır (spec §12).
+// verilir ve elle koordinat girişi açık kalır (spec §12). Etkin seçenek kaydırılarak görünür
+// tutulur; liste görünmüyorken Enter ve Esc tüketilmez (Esc pencereye gider).
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
@@ -28,12 +29,16 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
   const [error, setError] = useState<CommandError | null>(null);
   const [query, setQuery] = useState<string | null>(null);
   const seq = useRef(0);
+  const listRef = useRef<HTMLUListElement>(null);
+  const shown = open && hits.length > 0;
 
   // Yalnızca kullanıcı yazınca aranır (`query`); seçim ya da dışarıdan değer araması tetiklemez.
   useEffect(() => {
     if (query === null) return;
     const mine = ++seq.current;
     if (query.trim() === "") {
+      // Alan boşalınca eski aramanın hatası da kalkar.
+      setError(null);
       setHits([]);
       setOpen(false);
       return;
@@ -56,6 +61,11 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Etkin seçenek (aria-activedescendant) kaydırılan listede görünür tutulur.
+  useEffect(() => {
+    if (shown && active >= 0) listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
+  }, [shown, active, hits]);
+
   const choose = (hit: PlaceHit) => {
     seq.current++;
     setQuery(null);
@@ -65,6 +75,9 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    // IME bileşimi sürerken oklar aday listesinde gezer, Enter adayı onaylar (WebKit bunu
+    // 229 koduyla bildirir): seçenek değişmez, seçilmez.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "ArrowDown" && hits.length > 0) {
       e.preventDefault();
       setOpen(true);
@@ -73,11 +86,12 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
       e.preventDefault();
       setOpen(true);
       setActive((a) => (a <= 0 ? hits.length - 1 : a - 1));
-    } else if (e.key === "Enter" && open && active >= 0 && hits[active]) {
+    } else if (e.key === "Enter" && shown && active >= 0 && hits[active]) {
       e.preventDefault();
       choose(hits[active]);
-    } else if (e.key === "Escape" && open) {
-      // Liste kapanır; pencere açık kalır.
+    } else if (e.key === "Escape" && shown) {
+      // Görünen liste kapanır; pencere açık kalır. Liste görünmüyorsa (sonuç yok ya da
+      // kapalı) Esc tüketilmez ve pencereyi kapatır.
       e.preventDefault();
       e.stopPropagation();
       setOpen(false);
@@ -86,7 +100,6 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
 
   const listId = `${id}-list`;
   const statusId = `${id}-status`;
-  const shown = open && hits.length > 0;
   return (
     <div className="place-search">
       <input
@@ -108,7 +121,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
         onKeyDown={onKeyDown}
         onBlur={() => setOpen(false)}
       />
-      <ul id={listId} role="listbox" aria-label={t("birth.placeResults")} className="place-results" hidden={!shown}>
+      <ul ref={listRef} id={listId} role="listbox" aria-label={t("birth.placeResults")} className="place-results" hidden={!shown}>
         {hits.map((h, i) => (
           <li
             key={h.geoname_id}

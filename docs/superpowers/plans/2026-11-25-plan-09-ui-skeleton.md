@@ -8152,7 +8152,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 11: Atlas üzerinde erişilebilir yer arama kutusu
 
-WAI-ARIA combobox (D17): yazdıkça 200 ms debounce ile `search_places`; eski yanıtlar sıra numarasıyla yok sayılır; ↑/↓ ile seçenek, Enter ile seçim, Esc listeyi kapatır ve olayın üst pencereye (modal) gitmesini durdurur. Sonuç sayısı canlı bölgede duyurulur. `atlas_unavailable` hatası elle koordinat girişini engellemez.
+WAI-ARIA combobox (D17): yazdıkça 200 ms debounce ile `search_places`; eski yanıtlar sıra numarasıyla yok sayılır; ↑/↓ ile seçenek (etkin seçenek kaydırılarak görünür tutulur ve yalnızca renkle değil, odak halkasıyla aynı çizgiyle işaretlenir), Enter ile seçim, Esc görünen listeyi kapatır ve olayın üst pencereye (modal) gitmesini durdurur. Liste görünmüyorken (sonuç yok ya da liste kapalı) Enter ve Esc tüketilmez: Esc ilk basışta pencereye ulaşır. IME bileşimi sürerken oklar, Enter ve Esc listeye dokunmaz. Sonuç sayısı canlı bölgede duyurulur. `atlas_unavailable` hatası elle koordinat girişini engellemez; alan boşalınca hata metni kalkar.
 
 **Files:**
 - Create: `app/ui/birth/PlaceSearch.test.tsx`
@@ -8161,6 +8161,7 @@ WAI-ARIA combobox (D17): yazdıkça 200 ms debounce ile `search_places`; eski ya
 - Modify: `app/ui/i18n/en.ts`
 - Modify: `app/ui/i18n/fr.ts`
 - Modify: `app/ui/i18n/tr.ts`
+- Modify: `app/ui/setupTests.ts`
 
 **Interfaces:**
 - Consumes: `api.searchPlaces` (Task 3), `PlaceHit` (Task 1).
@@ -8175,13 +8176,14 @@ WAI-ARIA combobox (D17): yazdıkça 200 ms debounce ile `search_places`; eski ya
 ```tsx
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 
 vi.mock("../api", () => ({ api: { searchPlaces: vi.fn() } }));
 
 import { api } from "../api";
 import type { PlaceHit } from "../bindings";
 import { fixture } from "../test/fixture";
+import birthCss from "./birth.css?raw";
 import { PlaceSearch, SEARCH_DEBOUNCE_MS, SEARCH_LIMIT } from "./PlaceSearch";
 
 function Harness({ onSelect }: { onSelect(h: PlaceHit): void }) {
@@ -8194,7 +8196,10 @@ beforeEach(() => {
   vi.mocked(api.searchPlaces).mockReset();
   vi.mocked(api.searchPlaces).mockResolvedValue({ status: "ok", data: fixture().places });
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 const box = () => screen.getByRole("combobox", { name: "Doğum yeri" });
 async function type(text: string) {
@@ -8240,21 +8245,82 @@ test("a stale response is ignored", async () => {
   expect(screen.getAllByRole("option")[0]).toHaveTextContent("New Delhi");
 });
 
-test("Escape closes the list without bubbling; mouse selection works", async () => {
+// Fikstürde tek yer var; gezinme testleri için üç sonuç.
+const threeHits = (): PlaceHit[] => ["Delhi", "Delhi Cantonment", "New Delhi"].map((name, i) => ({ ...fixture().places[0], name, geoname_id: i + 1 }));
+
+test("the active option is scrolled into view as it changes", async () => {
+  vi.mocked(api.searchPlaces).mockResolvedValue({ status: "ok", data: threeHits() });
+  const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+  render(<Harness onSelect={() => {}} />);
+  await type("delhi");
+  const options = screen.getAllByRole("option");
+  expect(options.length).toBe(3);
+  expect(scroll.mock.contexts.at(-1)).toBe(options[0]);
+  expect(scroll).toHaveBeenLastCalledWith({ block: "nearest" });
+  fireEvent.keyDown(box(), { key: "ArrowDown" });
+  expect(scroll.mock.contexts.at(-1)).toBe(options[1]);
+  fireEvent.keyDown(box(), { key: "ArrowUp" });
+  fireEvent.keyDown(box(), { key: "ArrowUp" });
+  expect(scroll.mock.contexts.at(-1)).toBe(options[options.length - 1]);
+});
+
+test("the active option is marked by an outline, not by colour alone", () => {
+  const rule = /\.place-results li\.is-active \{([^}]*)\}/.exec(birthCss)?.[1] ?? "";
+  expect(rule).toMatch(/outline:\s*2px solid var\(--ink\)/);
+});
+
+// Pencere (Dialog) Esc'i belge düzeyinde dinler: liste Esc'i ancak görünürken tüketir.
+function documentKeys() {
+  const onKey = vi.fn();
+  document.addEventListener("keydown", onKey);
+  onTestFinished(() => document.removeEventListener("keydown", onKey));
+  return onKey;
+}
+
+test("Escape closes a visible list without reaching the document, then passes through; mouse selection works", async () => {
   const onSelect = vi.fn();
-  const onOuterKey = vi.fn();
-  render(
-    <div onKeyDown={onOuterKey}>
-      <Harness onSelect={onSelect} />
-    </div>,
-  );
+  const onDocumentKey = documentKeys();
+  render(<Harness onSelect={onSelect} />);
   await type("new delhi");
-  fireEvent.keyDown(box(), { key: "Escape" });
+  expect(fireEvent.keyDown(box(), { key: "Escape" })).toBe(false);
   expect(box()).toHaveAttribute("aria-expanded", "false");
-  expect(onOuterKey).not.toHaveBeenCalled();
+  expect(onDocumentKey).not.toHaveBeenCalled();
+  // Liste kapalı: ikinci Esc pencereye ulaşır.
+  expect(fireEvent.keyDown(box(), { key: "Escape" })).toBe(true);
+  expect(onDocumentKey).toHaveBeenCalledTimes(1);
   fireEvent.keyDown(box(), { key: "ArrowDown" });
   fireEvent.mouseDown(screen.getAllByRole("option")[0]);
   expect(onSelect).toHaveBeenCalledTimes(1);
+});
+
+test("with no results the first Escape and Enter are not consumed", async () => {
+  vi.mocked(api.searchPlaces).mockResolvedValue({ status: "ok", data: [] });
+  const onSelect = vi.fn();
+  const onDocumentKey = documentKeys();
+  render(<Harness onSelect={onSelect} />);
+  await type("zzzz");
+  expect(screen.getByRole("status")).toHaveTextContent("0 sonuç");
+  expect(box()).toHaveAttribute("aria-expanded", "false");
+  expect(fireEvent.keyDown(box(), { key: "Enter" })).toBe(true);
+  expect(fireEvent.keyDown(box(), { key: "Escape" })).toBe(true);
+  expect(onDocumentKey.mock.calls.map(([e]) => (e as KeyboardEvent).key)).toEqual(["Enter", "Escape"]);
+  expect(onSelect).not.toHaveBeenCalled();
+});
+
+test("keys pressed during IME composition neither move nor select nor close", async () => {
+  vi.mocked(api.searchPlaces).mockResolvedValue({ status: "ok", data: threeHits() });
+  const onSelect = vi.fn();
+  render(<Harness onSelect={onSelect} />);
+  await type("delhi");
+  const first = screen.getAllByRole("option")[0].id;
+  for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+    fireEvent.keyDown(box(), { key: "ArrowDown", ...composing });
+    fireEvent.keyDown(box(), { key: "Enter", ...composing });
+    fireEvent.keyDown(box(), { key: "Escape", ...composing });
+  }
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(box()).toHaveAttribute("aria-expanded", "true");
+  expect(box()).toHaveAttribute("aria-activedescendant", first);
 });
 
 test("an unavailable atlas is explained and leaves the field usable", async () => {
@@ -8264,6 +8330,9 @@ test("an unavailable atlas is explained and leaves the field usable", async () =
   expect(screen.getByRole("status")).toHaveTextContent("Yer atlası açılamadı; koordinatları elle girin.");
   expect(box()).toHaveAttribute("aria-expanded", "false");
   expect(box()).toHaveValue("delhi");
+  // Alan boşalınca eski aramanın hatası kalkar.
+  await type("");
+  expect(screen.getByRole("status")).toBeEmptyDOMElement();
 });
 ```
 
@@ -8284,7 +8353,8 @@ Expected: FAIL — `Failed to resolve import "./PlaceSearch"`.
 ```tsx
 // Yer arama kutusu (WAI-ARIA 1.2 combobox, liste açılır). Yazdıkça 200 ms sonra
 // `search_places` çağrılır; eski isteğin geç gelen yanıtı yok sayılır. Atlas yoksa bilgi
-// verilir ve elle koordinat girişi açık kalır (spec §12).
+// verilir ve elle koordinat girişi açık kalır (spec §12). Etkin seçenek kaydırılarak görünür
+// tutulur; liste görünmüyorken Enter ve Esc tüketilmez (Esc pencereye gider).
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
@@ -8312,12 +8382,16 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
   const [error, setError] = useState<CommandError | null>(null);
   const [query, setQuery] = useState<string | null>(null);
   const seq = useRef(0);
+  const listRef = useRef<HTMLUListElement>(null);
+  const shown = open && hits.length > 0;
 
   // Yalnızca kullanıcı yazınca aranır (`query`); seçim ya da dışarıdan değer araması tetiklemez.
   useEffect(() => {
     if (query === null) return;
     const mine = ++seq.current;
     if (query.trim() === "") {
+      // Alan boşalınca eski aramanın hatası da kalkar.
+      setError(null);
       setHits([]);
       setOpen(false);
       return;
@@ -8340,6 +8414,11 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Etkin seçenek (aria-activedescendant) kaydırılan listede görünür tutulur.
+  useEffect(() => {
+    if (shown && active >= 0) listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
+  }, [shown, active, hits]);
+
   const choose = (hit: PlaceHit) => {
     seq.current++;
     setQuery(null);
@@ -8349,6 +8428,9 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    // IME bileşimi sürerken oklar aday listesinde gezer, Enter adayı onaylar (WebKit bunu
+    // 229 koduyla bildirir): seçenek değişmez, seçilmez.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "ArrowDown" && hits.length > 0) {
       e.preventDefault();
       setOpen(true);
@@ -8357,11 +8439,12 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
       e.preventDefault();
       setOpen(true);
       setActive((a) => (a <= 0 ? hits.length - 1 : a - 1));
-    } else if (e.key === "Enter" && open && active >= 0 && hits[active]) {
+    } else if (e.key === "Enter" && shown && active >= 0 && hits[active]) {
       e.preventDefault();
       choose(hits[active]);
-    } else if (e.key === "Escape" && open) {
-      // Liste kapanır; pencere açık kalır.
+    } else if (e.key === "Escape" && shown) {
+      // Görünen liste kapanır; pencere açık kalır. Liste görünmüyorsa (sonuç yok ya da
+      // kapalı) Esc tüketilmez ve pencereyi kapatır.
       e.preventDefault();
       e.stopPropagation();
       setOpen(false);
@@ -8370,7 +8453,6 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
 
   const listId = `${id}-list`;
   const statusId = `${id}-status`;
-  const shown = open && hits.length > 0;
   return (
     <div className="place-search">
       <input
@@ -8392,7 +8474,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
         onKeyDown={onKeyDown}
         onBlur={() => setOpen(false)}
       />
-      <ul id={listId} role="listbox" aria-label={t("birth.placeResults")} className="place-results" hidden={!shown}>
+      <ul ref={listRef} id={listId} role="listbox" aria-label={t("birth.placeResults")} className="place-results" hidden={!shown}>
         {hits.map((h, i) => (
           <li
             key={h.geoname_id}
@@ -8450,6 +8532,9 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
 .place-results li.is-active {
   background: var(--select);
   color: var(--ink-strong);
+  /* Etkin seçenek yalnızca renkle ayrılmaz: genel odak halkasıyla aynı çizgi. */
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
 }
 .place-meta {
   color: var(--text-2);
@@ -8461,6 +8546,24 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
   color: var(--text-2);
   font-size: var(--fs-table);
 }
+```
+
+`app/ui/setupTests.ts` değiştir (birleşik fark; `@@` satırları bağlamı gösterir). jsdom `scrollIntoView`'u uygulamaz; bu satır olmadan listeyi açan her test (Task 12 form testleri dahil) düşer:
+
+```diff
+--- a/app/ui/setupTests.ts
++++ b/app/ui/setupTests.ts
+@@ -1,6 +1,10 @@
+ import "@testing-library/jest-dom/vitest";
+ import { i18n } from "./i18n";
+ 
++// jsdom `scrollIntoView`'u uygulamaz; etkin seçeneğini görünür tutan bileşenler (yer arama)
++// onu çağırır. Çağrıyı denetleyen test `vi.spyOn` ile izler.
++Element.prototype.scrollIntoView = () => {};
++
+ // Her test Türkçe ve boş depolamayla başlar.
+ afterEach(async () => {
+   localStorage.clear();
 ```
 
 `app/ui/i18n/en.ts` değiştir (birleşik fark; `@@` satırları bağlamı gösterir):
@@ -8524,12 +8627,12 @@ pnpm --dir app exec vitest run ui/birth
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  35 passed (35)`, `Tests  287 passed (287)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: `ui/birth` 15 test (PlaceSearch 8); tam takımda `Test Files  35 passed (35)`, `Tests  291 passed (291)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A app/ui/birth/PlaceSearch.test.tsx app/ui/birth/PlaceSearch.tsx app/ui/birth/birth.css app/ui/i18n/en.ts app/ui/i18n/fr.ts app/ui/i18n/tr.ts
+git add -A app/ui/birth/PlaceSearch.test.tsx app/ui/birth/PlaceSearch.tsx app/ui/birth/birth.css app/ui/i18n/en.ts app/ui/i18n/fr.ts app/ui/i18n/tr.ts app/ui/setupTests.ts
 git diff --cached -U0 -- . ':!app/pnpm-lock.yaml' ':!*.png' ':!app/ui/test/fixtures/delhi.json' | grep '^+' | grep -inE 'k(a|ā|aa)la|\bcala\b'   # boş olmalı
 git commit -m "feat(ui): accessible place search combobox over the bundled atlas
 
@@ -9129,7 +9232,7 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
 ```diff
 --- a/app/ui/birth/PlaceSearch.tsx
 +++ b/app/ui/birth/PlaceSearch.tsx
-@@ -17,9 +17,11 @@ export interface PlaceSearchProps {
+@@ -18,9 +18,11 @@ export interface PlaceSearchProps {
    onSelect(hit: PlaceHit): void;
    invalid?: boolean;
    describedBy?: string;
@@ -9142,7 +9245,7 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
    const { t, i18n } = useTranslation();
    const id = useId();
    const [hits, setHits] = useState<PlaceHit[]>([]);
-@@ -90,7 +92,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
+@@ -103,7 +105,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
    return (
      <div className="place-search">
        <input
@@ -9151,7 +9254,7 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
          role="combobox"
          aria-autocomplete="list"
          aria-expanded={shown}
-@@ -98,7 +100,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
+@@ -111,7 +113,7 @@ export function PlaceSearch({ value, onChange, onSelect, invalid, describedBy }:
          aria-activedescendant={shown && active >= 0 ? `${id}-opt-${active}` : undefined}
          aria-invalid={invalid || undefined}
          aria-describedby={[statusId, describedBy].filter(Boolean).join(" ")}
@@ -9167,7 +9270,7 @@ export function BirthForm({ mode, onClose }: BirthFormProps) {
 ```diff
 --- a/app/ui/birth/birth.css
 +++ b/app/ui/birth/birth.css
-@@ -35,3 +35,51 @@
+@@ -38,3 +38,51 @@
    color: var(--text-2);
    font-size: var(--fs-table);
  }
@@ -9541,7 +9644,7 @@ pnpm --dir app exec vitest run ui/birth ui/App.test.tsx
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: tam takımda `Test Files  36 passed (36)`, `Tests  295 passed (295)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
+Expected: tam takımda `Test Files  36 passed (36)`, `Tests  299 passed (299)`; `build` hatasız (`tsc --noEmit` çıktısız, `vite build` `✓ built`).
 
 - [ ] **Step 5: Commit**
 
@@ -9891,7 +9994,7 @@ pnpm --dir app e2e:visual
 pnpm --dir app test
 pnpm --dir app build
 ```
-Expected: `e2e` iki çalıştırmada da `4 passed` (kararsızlık yok); `e2e:visual` `6 passed`; vitest `36 passed (36)` / `295 passed (295)`; `build` hatasız. `git status` `app/test-results` ve `app/playwright-report`'u göstermez (`.gitignore`).
+Expected: `e2e` iki çalıştırmada da `4 passed` (kararsızlık yok); `e2e:visual` `6 passed`; vitest `36 passed (36)` / `299 passed (299)`; `build` hatasız. `git status` `app/test-results` ve `app/playwright-report`'u göstermez (`.gitignore`).
 
 - [ ] **Step 7: Commit**
 
@@ -9939,7 +10042,7 @@ pnpm --dir app build
 pnpm --dir app e2e
 pnpm --dir app e2e:visual
 ```
-Expected: `Test Files  36 passed (36)`, `Tests  295 passed (295)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
+Expected: `Test Files  36 passed (36)`, `Tests  299 passed (299)`; `build` hatasız; e2e `4 passed`; görsel `6 passed` (yalnızca macOS'ta, yerel).
 
 - [ ] **Step 4: Yasak dizgi taraması ve temiz çalışma ağacı**
 
@@ -9980,7 +10083,7 @@ Expected: yedi madde de beklendiği gibi; biri tutmazsa ilgili görevin testine 
 - `ViewState` tek depodan serileştirilir ve store'a yazılır; localStorage düzeni bir kez taşınır.
 - Plan 08 ertelenen madde 2 (harita olmadan düzen kaydı) ve 12 (ayrıştırıcı eşliği) kapanır.
 - Düzen sınırı yazarken de uygulanır: arayüz 64'ten fazla düzen yazmaz, yeniden açılışta düzen kaybolmaz.
-- Task 14'ün bütün adımları beklenen çıktıyı verir; vitest 295, e2e 4, görsel 6 (yerel, PNG temelleri yalnızca bu adımda karşılaştırılır).
+- Task 14'ün bütün adımları beklenen çıktıyı verir; vitest 299, e2e 4, görsel 6 (yerel, PNG temelleri yalnızca bu adımda karşılaştırılır).
 
 ## Bu planın kapsamadıkları
 
@@ -9998,6 +10101,7 @@ Expected: yedi madde de beklendiği gibi; biri tutmazsa ilgili görevin testine 
 12. **M5'te oluşturulan danışanlar:** M6 danışan listesine kadar yalnızca oturum geri yüklemesiyle (son açılan harita) ulaşılır; listelenemez, yeniden seçilemez, silinemez.
 13. **İnceleme önerileri (M6):** atlas açılamama nedeni (`AtlasState` hatayı saklayıp `search_places`'ten döndürebilir; şimdi yalnızca `atlas_unavailable`); tarih değişince `fold` seçiminin sıfırlanması; Esc ile yarım taslağın kaybı (onay ya da taslak saklama).
 14. **Task 10 incelemesinin ertelediği küçük bulgular (M6, içe aktarma arayüzüyle):** sabit ofsette saat üst sınırı ve `-0:00`'ın `-0` vermesi (aralığı Rust denetler, `offset_out_of_range` alana bağlanır; `-0` JSON'da `0`'dır); `INPUT_FIELDS`'in prototip anahtarları (alan adları Rust'ta sabit dizgilerdir); istemcide tarih ve saat biçim denetimi (`type=date`/`type=time` ve Rust `invalid_input` yeterli); `errorField`'in öbür kodları ve `Fixed`/`Lmt` taslakları için ek testler; saniyeli saatin `type=time` kutusunda WKWebView'de görünmesi elle doğrulanmalı (model değeri korur, kutunun saniye alanını göstermesi tarayıcıya bağlıdır).
+15. **Task 11 incelemesinin ertelediği küçük bulgular (M6):** yeni arama beklenirken önceki listenin görünür durması ve o aralıkta Enter'ın önceki listeden seçmesi (aralık 200 ms debounce + yerel atlas sorgusu; seçim alanda ve koordinatlarda görünür; çözüm yazarken etkin seçeneği sıfırlamaktır, ama o zaman Enter formu gönderir, bu yüzden formun Enter davranışıyla birlikte tasarlanır); WKWebView'da elle denetim: 8 sonuçla ↑/↓ kaydırması, etkin seçenek çizgisinin iki temada görünürlüğü ve IME ile yer adı yazımı (jsdom yerleşim hesaplamaz, gerçek bileşim olayı üretmez). İncelemenin `api.searchPlaces` için istediği `.catch` eklenmedi: `api.ts` `wrap` hiçbir zaman reddetmez, her hatayı `{status: "error"}` olarak döndürür.
 
 ---
 
@@ -10056,8 +10160,8 @@ Belirsiz ya da ertelenmiş adım yok; her kod adımı tam kodu ya da birleşik f
 | 8 | 31 | 262 | — |
 | 9 | 33 | 276 | — |
 | 10 | 34 | 283 | — |
-| 11 | 35 | 287 | — |
-| 12 | 36 | 295 | — |
-| 13 | 36 | 295 | + Playwright e2e 4, görsel 6 (yerel) |
+| 11 | 35 | 291 | — |
+| 12 | 36 | 299 | — |
+| 13 | 36 | 299 | + Playwright e2e 4, görsel 6 (yerel) |
 
 Plan kopyada (`/Users/ttd/jd-p09`) iki kez uygulandı; ikincisinde plan dosyasından (yeni dosyalar ve farklar betikle uygulanarak) yeniden kuruldu, inceleme düzeltmeleri ilgili görevlere işlendi ve her commit'te vitest + `build` ölçüldü: bütün kapılar geçti, e2e üç kez kararsızlıksız çalıştı, görsel temeller birebir yeniden üretildi. Yeniden kurulum iki plan hatasını da gösterdi ve ikisi düzeltildi: `pnpm --dir app vitest run` pnpm 11'de çalışmaz (`Command "app" not found`), komutlar `pnpm --dir app exec vitest run`'dır; `ui_fixture` fikstür klasörünü kendisi oluşturur. Doğrulama sırasında bulunan iki hata Task 8 koduna işlendi: (1) klavye tembel yüklenen 4. seviyeye ulaşamıyordu (`loaded()` yardımcısı), (2) istenen yolun bir alt seviyesi olmayan yanıt sonsuz özyinelemeye yol açıyordu (`childrenOf` süzgeci); ikisinin de gerileme testi vardır. Task 8 incelemesi iki klavye hatası daha buldu ve ikisi Task 8 koduna işlendi: (3) "Yeniden dene" düğmesinin tuşlarını ağaç yutuyordu, (4) odaklı öğe ağaçtan çıkınca sekme durağı kayboluyordu; ikisinin ve geç gelen eski yanıtın testi vardır. Task 9 incelemesi, tuzağın ve Esc'in odağın pencerede kalmasına bağlı olduğunu ve Tab testinin boş (vacuous) olduğunu buldu; ikisi de Task 9 koduna işlendi, gerileme testi `Dialog.test.tsx`'tir.

@@ -24,6 +24,9 @@
 .place-results li.is-active {
   background: var(--select);
   color: var(--ink-strong);
+  /* Etkin seçenek yalnızca renkle ayrılmaz: genel odak halkasıyla aynı çizgi. */
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
 }
 .place-meta {
   color: var(--text-2);
