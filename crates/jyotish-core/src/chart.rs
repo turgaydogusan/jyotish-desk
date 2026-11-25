@@ -9,7 +9,7 @@ use crate::dasha::{vimshottari, Dasha, DashaSeed};
 use crate::dignity::{dignity, sign_lord};
 use crate::graha::{Graha, GrahaPosition};
 use crate::houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
-use crate::settings::{CalcSettings, HouseSystem, ZodiacMode};
+use crate::settings::{CalcSettings, HouseSystem, ZodiacMode, JD_UT_RANGE};
 use crate::varga::{all_vargas, is_vargottama, VargaChart};
 use crate::zodiac::{deg_in_sign, nakshatra_pada, normalize, Sign};
 use crate::CoreError;
@@ -84,6 +84,21 @@ fn finite_body(p: &ephemeris::BodyPosition) -> Result<(), CoreError> {
     Ok(())
 }
 
+/// Hesap anı ve konum denetimi; `compute_chart` ve `compute_panchang` ortak kullanır.
+pub(crate) fn check_moment(jd_ut: f64, geo_lat: f64, geo_lon: f64) -> Result<(), CoreError> {
+    // NaN ve sonsuz da aralık dışındadır.
+    if !JD_UT_RANGE.contains(&jd_ut) {
+        return Err(CoreError::InvalidJulianDay(jd_ut));
+    }
+    if !((-90.0..=90.0).contains(&geo_lat) && (-180.0..=180.0).contains(&geo_lon)) {
+        return Err(CoreError::InvalidLocation {
+            lat: geo_lat,
+            lon: geo_lon,
+        });
+    }
+    Ok(())
+}
+
 /// Rasi çerçevesinde ham konum.
 struct Raw {
     graha: Graha,
@@ -105,15 +120,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
     settings: &CalcSettings,
 ) -> Result<Chart, CoreError> {
     settings.validate()?;
-    if !jd_ut.is_finite() {
-        return Err(CoreError::InvalidJulianDay(jd_ut));
-    }
-    if !((-90.0..=90.0).contains(&geo_lat) && (-180.0..=180.0).contains(&geo_lon)) {
-        return Err(CoreError::InvalidLocation {
-            lat: geo_lat,
-            lon: geo_lon,
-        });
-    }
+    check_moment(jd_ut, geo_lat, geo_lon)?;
 
     let mode = settings.ayanamsa.sidereal_mode();
     let ayanamsa = eph.ayanamsa(jd_ut, mode)?;
@@ -494,6 +501,16 @@ mod tests {
             compute_chart(&mut eph, f64::NAN, 0.0, 0.0, &s),
             Err(CoreError::InvalidJulianDay(_))
         ));
+        // JD_UT_RANGE (D2): sonlu ama SE aralığı dışındaki anlar reddedilir.
+        for jd in [1e300, -1e300, 625_001.0, 2_817_998.0] {
+            assert_eq!(
+                compute_chart(&mut eph, jd, 0.0, 0.0, &s),
+                Err(CoreError::InvalidJulianDay(jd)),
+                "{jd}"
+            );
+        }
+        assert!(compute_chart(&mut eph, 625_002.0, 0.0, 0.0, &s).is_ok());
+        assert!(compute_chart(&mut eph, 2_817_997.0, 0.0, 0.0, &s).is_ok());
         let bad = CalcSettings {
             schema_version: 2,
             ..CalcSettings::default()

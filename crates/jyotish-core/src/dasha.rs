@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::graha::Graha;
-use crate::settings::DASHA_YEAR_RANGE;
+use crate::settings::{DASHA_YEAR_RANGE, JD_UT_RANGE};
 use crate::zodiac::{nakshatra_pada, normalize, NAKSHATRA_SPAN_DEG};
 use crate::CoreError;
 
@@ -73,7 +73,8 @@ pub struct DashaSeed {
 
 impl DashaSeed {
     pub fn validate(&self) -> Result<(), CoreError> {
-        if !self.birth_jd_ut.is_finite() {
+        // `compute_chart` ile aynı aralık; NaN ve sonsuz da dışarıdadır.
+        if !JD_UT_RANGE.contains(&self.birth_jd_ut) {
             return Err(CoreError::InvalidDashaInput("birth_jd_ut"));
         }
         if !self.moon_sidereal_lon.is_finite() {
@@ -359,6 +360,17 @@ mod tests {
             }),
             CoreError::InvalidDashaInput("moon_sidereal_lon")
         );
+        // D2: sonlu ama hesap aralığı dışındaki doğum anı (ör. IPC'den gelen 1e300).
+        for jd in [1e300, 625_001.0, 2_817_998.0] {
+            assert_eq!(
+                bad(DashaSeed {
+                    birth_jd_ut: jd,
+                    ..seed(0.0)
+                }),
+                CoreError::InvalidDashaInput("birth_jd_ut"),
+                "{jd}"
+            );
+        }
         for y in [0.0, 299.0, 1e308, f64::NAN] {
             assert_eq!(
                 bad(DashaSeed {

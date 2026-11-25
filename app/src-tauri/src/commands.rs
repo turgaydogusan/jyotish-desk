@@ -365,4 +365,22 @@ mod tests {
         assert_eq!(err.code, "invalid_dasha_input");
         assert_eq!(err.params["field"], "path");
     }
+
+    #[test]
+    fn ipc_floats_round_trip_exactly() {
+        // serde_json'un varsayılan ayrıştırıcısı bu değeri 1 ulp kaydırır (2459475.016772588).
+        // `float_roundtrip` uygulama crate'inde açıktır; özellik birleşimiyle Tauri'nin komut
+        // argümanı ayrıştırması da aynı yolu kullanır (Plan 06 incelemesi D1).
+        let jd = 2_459_475.016_772_588_2_f64;
+        let seed = DashaSeed {
+            birth_jd_ut: jd,
+            moon_sidereal_lon: 199.470_529,
+            year_days: 365.25,
+        };
+        let json = serde_json::to_string(&seed).expect("serialize");
+        assert!(json.contains("2459475.0167725882"), "{json}");
+        let back: DashaSeed = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.birth_jd_ut.to_bits(), jd.to_bits());
+        assert_eq!(back, seed);
+    }
 }

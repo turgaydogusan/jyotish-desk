@@ -174,6 +174,12 @@ pub const CUSTOM_T0_JD_RANGE: std::ops::RangeInclusive<f64> = 625_000.0..=2_818_
 /// 365.25 bu aralıktadır; dışı sonsuz ya da anlamsız tarihler üretir.
 pub const DASHA_YEAR_RANGE: std::ops::RangeInclusive<f64> = 300.0..=400.0;
 
+/// Kabul edilen hesap anı, UT Jülyen günü (yaklaşık −3000 … +3000 yılları). SE'nin Moshier
+/// aralığı `625000.5 … 2818000.5` ET'dir (`sweph.h`, `MOSHPLEPH_START/END`). Panchang
+/// aramaları anın 1.25 gün öncesine ve 1.5 gün sonrasına uzanır; ΔT sınırlarda 1 günden
+/// azdır. 2 ve 3 günlük paylar her SE çağrısını aralıkta tutar. NaN ve sonsuz dışarıdadır.
+pub const JD_UT_RANGE: std::ops::RangeInclusive<f64> = 625_002.0..=2_817_997.0;
+
 impl CalcSettings {
     /// Sürüm ve değer aralıklarını denetler. Sürüm göçü `store` planında yapılır;
     /// burada yalnızca desteklenen sürüm kabul edilir.
