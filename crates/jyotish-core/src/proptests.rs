@@ -300,3 +300,29 @@ mod panchang_properties {
         }
     }
 }
+
+mod ashtakavarga_properties {
+    use proptest::prelude::*;
+
+    use crate::ashtakavarga::{compute_ashtakavarga, BAV_TOTALS, SAV_TOTAL};
+    use crate::zodiac::Sign;
+
+    proptest! {
+        #[test]
+        fn bav_and_sav_totals_are_fixed(
+            idx in proptest::array::uniform7(0usize..12),
+            lagna in 0usize..12,
+        ) {
+            let a = compute_ashtakavarga(idx.map(Sign::from_index), Sign::from_index(lagna));
+            for (row, total) in a.bav.iter().zip(BAV_TOTALS) {
+                prop_assert_eq!(row.iter().map(|&v| u16::from(v)).sum::<u16>(), u16::from(total));
+                // Bir burca en çok sekiz referans bindu verir.
+                prop_assert!(row.iter().all(|&v| v <= 8));
+            }
+            prop_assert_eq!(a.sav.iter().map(|&v| u16::from(v)).sum::<u16>(), SAV_TOTAL);
+            for s in 0..12 {
+                prop_assert_eq!(a.sav[s], a.bav.iter().map(|row| row[s]).sum::<u8>());
+            }
+        }
+    }
+}

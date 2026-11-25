@@ -4,6 +4,7 @@
 //! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga
 //! ve Vimshottari dasha (M3, Plan 06). Panchang ve ashtakavarga Plan 07'de eklenir.
 
+pub mod ashtakavarga;
 mod chart;
 mod combustion;
 pub mod dasha;
@@ -20,6 +21,9 @@ pub mod settings;
 pub mod varga;
 pub mod zodiac;
 
+pub use ashtakavarga::{
+    compute_ashtakavarga, Ashtakavarga, ASHTAKAVARGA_GRAHAS, BAV_TOTALS, SAV_TOTAL,
+};
 pub use chart::{compute_chart, Chart, ChartMeta, ChartWarning, ENGINE_VERSION};
 pub use combustion::is_combust;
 pub use dasha::{
