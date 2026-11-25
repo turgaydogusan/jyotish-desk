@@ -2,8 +2,8 @@
 //! sidereal = tropikal − `ayanamsa`. Evler lagnadan eşit 30°'lik cusp'lardır.
 
 use ephemeris::{
-    Ayanamsa, Body, BodyPosition, EphError, Ephemeris, HouseSystem, Houses, Precision,
-    SiderealMode, Zodiac,
+    Ayanamsa, Body, BodyPosition, EphError, Ephemeris, HouseSystem, Houses, Precision, RiseSet,
+    SiderealMode, SunDisc, Zodiac,
 };
 
 use crate::zodiac::normalize;
@@ -20,6 +20,12 @@ pub(crate) struct FakeEph {
     pub porphyry_fallback: bool,
     /// Son `houses` çağrısında istenen sistem.
     pub last_house_system: Option<HouseSystem>,
+    /// Sahte gün doğumu ve batımı her gün `n + offset` anındadır (n tamsayı JD; JD n + 0.5
+    /// UT gece yarısıdır). 0.67 ≈ 04:05 UT, 0.15 ≈ 15:36 UT.
+    pub sunrise_offset: f64,
+    pub sunset_offset: f64,
+    /// Güneş hiç doğup batmıyor (kutup gecesi ya da gündüzü).
+    pub polar: bool,
 }
 
 impl Default for FakeEph {
@@ -42,6 +48,9 @@ impl Default for FakeEph {
             moshier_bodies: Vec::new(),
             porphyry_fallback: false,
             last_house_system: None,
+            sunrise_offset: 0.67,
+            sunset_offset: 0.15,
+            polar: false,
         }
     }
 }
@@ -113,6 +122,25 @@ impl Ephemeris for FakeEph {
             mc: normalize(asc + 270.0),
             porphyry_fallback: self.porphyry_fallback,
         })
+    }
+
+    fn sun_rise_set(
+        &mut self,
+        after_jd_ut: f64,
+        event: RiseSet,
+        _geo_lat: f64,
+        _geo_lon: f64,
+        _disc: SunDisc,
+    ) -> Result<Option<f64>, EphError> {
+        if self.polar {
+            return Ok(None);
+        }
+        let offset = match event {
+            RiseSet::Rise => self.sunrise_offset,
+            RiseSet::Set => self.sunset_offset,
+        };
+        // `after_jd_ut`'den kesinlikle sonraki ilk `n + offset`.
+        Ok(Some((after_jd_ut - offset).floor() + 1.0 + offset))
     }
 
     fn swe_version(&self) -> String {

@@ -25,6 +25,19 @@ pub const SE_MC: usize = 1;
 /// `serr` tamponları için SE'nin `AS_MAXCH` değeri.
 pub const AS_MAXCH: usize = 256;
 
+/// `swe_rise_trans` olayları ve bayrakları (swephexp.h).
+pub const SE_CALC_RISE: i32 = 1;
+pub const SE_CALC_SET: i32 = 2;
+pub const SE_BIT_DISC_CENTER: i32 = 256;
+pub const SE_BIT_NO_REFRACTION: i32 = 512;
+pub const SE_BIT_GEOCTR_NO_ECL_LAT: i32 = 128;
+/// Hint gün doğumu: disk merkezi, kırılmasız, jeosantrik ve ekliptik enlemsiz (swephexp.h).
+pub const SE_BIT_HINDU_RISING: i32 =
+    SE_BIT_DISC_CENTER | SE_BIT_NO_REFRACTION | SE_BIT_GEOCTR_NO_ECL_LAT;
+/// `swe_rise_trans` dönüşü: cisim bu aramada doğmuyor ya da batmıyor (swecl.c,
+/// `swe_rise_trans_true_hor`: "rise or set not found"). Hata değildir.
+pub const RISE_TRANS_NOT_FOUND: i32 = -2;
+
 extern "C" {
     pub fn swe_set_ephe_path(path: *const c_char);
     pub fn swe_close();
@@ -63,4 +76,18 @@ extern "C" {
         ascmc_speed: *mut c_double,
         serr: *mut c_char,
     ) -> c_int;
+    /// `starname` gezegenler için NULL. `geopos` 3 double: boylam (doğu +), enlem, yükseklik (m).
+    /// Sonuç `*tret`'e yazılır; swetest.c `call_rise_set` de tek bir double geçirir.
+    pub fn swe_rise_trans(
+        tjd_ut: c_double,
+        ipl: i32,
+        starname: *mut c_char,
+        epheflag: i32,
+        rsmi: i32,
+        geopos: *mut c_double,
+        atpress: c_double,
+        attemp: c_double,
+        tret: *mut c_double,
+        serr: *mut c_char,
+    ) -> i32;
 }

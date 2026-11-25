@@ -5,7 +5,7 @@ use std::sync::{Mutex, MutexGuard, TryLockError};
 
 use crate::{
     ffi, Ayanamsa, Body, BodyPosition, EphError, Ephemeris, HouseSystem, Houses, Precision,
-    SiderealMode, Zodiac,
+    RiseSet, SiderealMode, SunDisc, Zodiac,
 };
 
 /// SE global durumunu koruyan süreç çapında kilit.
@@ -16,6 +16,11 @@ const J2000: f64 = 2_451_545.0;
 /// SE'nin yol tamponu sınırı: `AS_MAXCH - 1 - 13` (vendor/swisseph/sweph.c,
 /// `swe_set_ephe_path`); daha uzun yollar sessizce derleme-zamanı varsayılanına düşer.
 const MAX_PATH_BYTES: usize = ffi::AS_MAXCH - 1 - 13;
+
+/// Kırılmalı tanım için standart atmosfer (swetest.c `datm` varsayılanı). Hint tanımında
+/// (`SE_BIT_NO_REFRACTION`) SE bu değerleri kullanmaz.
+const STD_PRESSURE_HPA: f64 = 1013.25;
+const STD_TEMPERATURE_C: f64 = 15.0;
 
 /// Swiss Ephemeris'in tek sahibi. Var olduğu sürece başka örnek açılamaz
 /// (açmaya çalışan iş parçacığı bekler).
@@ -241,6 +246,43 @@ impl Ephemeris for SwissEph {
             mc: norm360(ascmc[ffi::SE_MC]),
             porphyry_fallback,
         })
+    }
+
+    fn sun_rise_set(
+        &mut self,
+        after_jd_ut: f64,
+        event: RiseSet,
+        geo_lat: f64,
+        geo_lon: f64,
+        disc: SunDisc,
+    ) -> Result<Option<f64>, EphError> {
+        let mut geopos = [geo_lon, geo_lat, 0.0_f64];
+        let mut tret = 0.0_f64;
+        let mut serr: [c_char; ffi::AS_MAXCH] = [0; ffi::AS_MAXCH];
+        // SAFETY: geopos 3 double; tret tek double (swecl.c yalnızca *tret yazar, swetest.c
+        // de tek double geçirir); starname NULL (gezegen); serr AS_MAXCH; kilit tutuluyor.
+        let ret = unsafe {
+            ffi::swe_rise_trans(
+                after_jd_ut,
+                Body::Sun.se_id(),
+                std::ptr::null_mut(),
+                ffi::SEFLG_SWIEPH,
+                event.se_code() | disc.rsmi_bits(),
+                geopos.as_mut_ptr(),
+                STD_PRESSURE_HPA,
+                STD_TEMPERATURE_C,
+                &mut tret,
+                serr.as_mut_ptr(),
+            )
+        };
+        if ret == ffi::RISE_TRANS_NOT_FOUND {
+            return Ok(None);
+        }
+        if ret < 0 {
+            return Err(EphError::Calc(read_cstr(&serr)));
+        }
+        // ret ≥ 0 iken serr Moshier uyarısı içerebilir; hassasiyet Güneş/Ay konumundan alınır.
+        Ok(Some(tret))
     }
 
     fn swe_version(&self) -> String {

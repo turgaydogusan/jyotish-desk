@@ -207,7 +207,7 @@ pub fn print_window(window: tauri::WebviewWindow) -> Result<(), CommandError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ephemeris::{Ayanamsa, BodyPosition, HouseSystem, Houses, Precision};
+    use ephemeris::{Ayanamsa, BodyPosition, HouseSystem, Houses, Precision, RiseSet, SunDisc};
 
     /// Her cisme sabit boylam veren sahte motor; Rahu 100°.
     struct Fake;
@@ -248,6 +248,16 @@ mod tests {
             _z: Zodiac,
         ) -> Result<Houses, EphError> {
             Err(EphError::Calc("fake: houses unused".into()))
+        }
+        fn sun_rise_set(
+            &mut self,
+            _after: f64,
+            _event: RiseSet,
+            _lat: f64,
+            _lon: f64,
+            _disc: SunDisc,
+        ) -> Result<Option<f64>, EphError> {
+            Ok(None)
         }
         fn swe_version(&self) -> String {
             "fake".into()

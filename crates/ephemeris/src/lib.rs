@@ -10,7 +10,8 @@ pub use engine::Engine;
 pub use error::EphError;
 pub use swiss::SwissEph;
 pub use types::{
-    Ayanamsa, Body, BodyPosition, HouseSystem, Houses, Precision, SiderealMode, Zodiac,
+    Ayanamsa, Body, BodyPosition, HouseSystem, Houses, Precision, RiseSet, SiderealMode, SunDisc,
+    Zodiac,
 };
 
 /// Gök cismi konumu sağlayan motor. Üst katmanlar testte sahte motor takar.
@@ -29,6 +30,17 @@ pub trait Ephemeris {
         system: HouseSystem,
         zodiac: Zodiac,
     ) -> Result<Houses, EphError>;
+    /// Güneş'in `after_jd_ut`'den sonraki ilk doğuşu ya da batışı, UT JD. Güneş bu aramada
+    /// ufku geçmiyorsa (kutup gecesi ya da gündüzü) `Ok(None)`. `geo_lat` kuzey +,
+    /// `geo_lon` doğu +, derece; gözlemci deniz seviyesinde.
+    fn sun_rise_set(
+        &mut self,
+        after_jd_ut: f64,
+        event: RiseSet,
+        geo_lat: f64,
+        geo_lon: f64,
+        disc: SunDisc,
+    ) -> Result<Option<f64>, EphError>;
     /// Swiss Ephemeris sürüm dizgisi (ör. "2.10.03").
     fn swe_version(&self) -> String;
 }

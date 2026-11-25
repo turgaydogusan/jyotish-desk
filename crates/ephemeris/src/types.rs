@@ -131,3 +131,37 @@ pub struct Houses {
     /// Placidus kutup dairesinde hesaplanamadı; cusp'lar Porphyry'dir.
     pub porphyry_fallback: bool,
 }
+
+/// Güneş olayı.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RiseSet {
+    Rise,
+    Set,
+}
+
+impl RiseSet {
+    pub(crate) fn se_code(self) -> i32 {
+        match self {
+            Self::Rise => ffi::SE_CALC_RISE,
+            Self::Set => ffi::SE_CALC_SET,
+        }
+    }
+}
+
+/// Doğuş ve batışta ufka değen nokta.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SunDisc {
+    /// Disk merkezi, kırılmasız, jeosantrik (`SE_BIT_HINDU_RISING`).
+    CenterNoRefraction,
+    /// Üst kenar, standart atmosfer kırılmasıyla (SE varsayılanı).
+    UpperLimbRefracted,
+}
+
+impl SunDisc {
+    pub(crate) fn rsmi_bits(self) -> i32 {
+        match self {
+            Self::CenterNoRefraction => ffi::SE_BIT_HINDU_RISING,
+            Self::UpperLimbRefracted => 0,
+        }
+    }
+}
