@@ -32,7 +32,7 @@ pub use model::{
     BirthData, ChartKind, ChartRecord, Client, FoldChoice, Gender, MomentWarning, NewChart,
     NewClient, Note, Place, ResolvedRecord, TimeCertainty, TzChoice,
 };
-pub use notes::{normalize_tags, TagCount, MAX_TAG_CHARS, RECENT_NOTES};
+pub use notes::{normalize_tags, TagCount, MAX_NOTE_BYTES, MAX_TAG_CHARS, RECENT_NOTES};
 pub use open::{OpenRecord, StoreWarning};
 pub use schema::SCHEMA_VERSION;
 pub use search::{SearchHit, SearchMatch};

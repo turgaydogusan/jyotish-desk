@@ -15,6 +15,7 @@ vi.mock("./api", () => ({
     listCharts: vi.fn(async () => ({ status: "ok", data: [] })),
     searchClients: vi.fn(async () => ({ status: "ok", data: [] })),
     openClient: vi.fn(),
+    listNotes: vi.fn(async () => ({ status: "ok", data: [] })),
   },
 }));
 

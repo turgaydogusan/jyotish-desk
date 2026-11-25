@@ -14,6 +14,16 @@ use crate::{Store, StoreError};
 pub const RECENT_NOTES: u32 = 20;
 /// Etiket uzunluğu sınırı (karakter).
 pub const MAX_TAG_CHARS: usize = 64;
+/// Not gövdesi sınırı (UTF-8 bayt). Arayüz `maxLength` ile daha önce durur
+/// (`MAX_NOTE_UNITS` 16 384 UTF-16 birimi en çok 49 152 bayttır).
+pub const MAX_NOTE_BYTES: usize = 65_536;
+
+fn check_body(body: &str) -> Result<(), StoreError> {
+    if body.len() > MAX_NOTE_BYTES {
+        return Err(StoreError::InvalidInput("body"));
+    }
+    Ok(())
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -111,6 +121,7 @@ impl Store {
         chart_id: Option<u32>,
         body: &str,
     ) -> Result<Note, StoreError> {
+        check_body(body)?;
         self.client(client_id)?;
         if let Some(ch) = chart_id {
             if self.chart(ch)?.client_id != client_id {
@@ -129,6 +140,7 @@ impl Store {
 
     /// Otomatik kayıt; `created_at` değişmez.
     pub fn update_note(&mut self, id: u32, body: &str) -> Result<Note, StoreError> {
+        check_body(body)?;
         let now = self.now();
         let n = self.conn.execute(
             "UPDATE client_notes SET body = ?1, updated_at = ?2 WHERE id = ?3",
@@ -249,6 +261,25 @@ mod tests {
             s.delete_note(n2.id),
             Err(StoreError::NotFound { what: "note", .. })
         ));
+    }
+
+    #[test]
+    fn a_note_body_over_the_cap_is_invalid_input_and_nothing_is_written() {
+        let mut s = store();
+        let (a, _) = s.create_client(&new_client("A")).unwrap();
+        let at_cap = "ş".repeat(MAX_NOTE_BYTES / 2);
+        let n = s.add_note(a.id, None, &at_cap).unwrap();
+        let over = format!("{at_cap}x");
+        assert!(matches!(
+            s.add_note(a.id, None, &over),
+            Err(StoreError::InvalidInput("body"))
+        ));
+        assert!(matches!(
+            s.update_note(n.id, &over),
+            Err(StoreError::InvalidInput("body"))
+        ));
+        assert_eq!(s.note(n.id).unwrap().body, at_cap);
+        assert_eq!(s.notes(a.id, 10).unwrap().len(), 1);
     }
 
     #[test]

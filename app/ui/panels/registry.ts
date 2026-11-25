@@ -1,6 +1,7 @@
 // Panel türü → bileşen (spec §3.3). Yeni panel türü yalnızca buraya eklenir.
 import { DashaTreePanel } from "../dasha/DashaTreePanel";
 import { isKnownPanelKind, type KnownPanelKind } from "../layout/model";
+import { NotesPanel } from "../notes/NotesPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import type { PanelDefinition } from "./types";
@@ -12,7 +13,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   dasha_tree: { titleKey: "panel.dasha_tree", component: DashaTreePanel },
   dasha_strip: { titleKey: "panel.dasha_strip", component: UnavailablePanel },
   transit_table: { titleKey: "panel.transit_table", component: UnavailablePanel },
-  notes: { titleKey: "panel.notes", component: UnavailablePanel },
+  notes: { titleKey: "panel.notes", component: NotesPanel },
   birth_info: { titleKey: "panel.birth_info", component: UnavailablePanel },
 };
 

@@ -1,7 +1,7 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
-vi.mock("../api", () => ({ api: { dashaChildren: vi.fn() } }));
+vi.mock("../api", () => ({ api: { dashaChildren: vi.fn(), listNotes: vi.fn(async () => ({ status: "ok", data: [] })) } }));
 
 import { api } from "../api";
 import { fixture } from "../test/fixture";
@@ -60,7 +60,7 @@ test("renders every panel of the active layout on a 12-column grid", async () =>
   expect(frame("b").style.gridRow).toBe("1 / span 4");
   expect(screen.getByRole("region", { name: "Graha tablosu" })).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: "Güneş" })).toBeInTheDocument();
-  expect(screen.getByRole("region", { name: "Notlar" })).toHaveTextContent("Bu panel sonraki bir sürümde gelecek.");
+  expect(await within(screen.getByRole("region", { name: "Notlar" })).findByRole("button", { name: "Yeni not" })).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Bilinmeyen panel" })).toHaveTextContent("“yoga_list” paneli");
 });
 

@@ -3,6 +3,7 @@ import { DashaTreePanel } from "../dasha/DashaTreePanel";
 import { setLanguage } from "../i18n";
 import { tr } from "../i18n/tr";
 import { PANEL_KINDS, type Panel } from "../layout/model";
+import { NotesPanel } from "../notes/NotesPanel";
 import { fixture } from "../test/fixture";
 import { renderWithStores } from "../test/render";
 import { ChartPanel } from "./ChartPanel";
@@ -21,12 +22,13 @@ const chartPanel = (settings: Record<string, unknown> = { varga: "D1", style: "n
 });
 const tablePanel: Panel = { id: "t", kind: "graha_table", x: 6, y: 0, w: 6, h: 8, settings: {} };
 
-test("registry covers the seven kinds; chart, graha_table and dasha_tree are implemented", () => {
+test("registry covers the seven kinds; chart, graha_table, dasha_tree and notes are implemented", () => {
   expect(Object.keys(PANEL_REGISTRY).sort()).toEqual([...PANEL_KINDS].sort());
   expect(PANEL_REGISTRY.chart.component).toBe(ChartPanel);
   expect(PANEL_REGISTRY.graha_table.component).toBe(GrahaTablePanel);
   expect(PANEL_REGISTRY.dasha_tree.component).toBe(DashaTreePanel);
-  for (const kind of ["dasha_strip", "transit_table", "notes", "birth_info"] as const) {
+  expect(PANEL_REGISTRY.notes.component).toBe(NotesPanel);
+  for (const kind of ["dasha_strip", "transit_table", "birth_info"] as const) {
     expect(PANEL_REGISTRY[kind].component).toBe(UnavailablePanel);
   }
   expect(panelDefinition("yoga_list")).toMatchObject({ titleKey: "panel.unknown", component: UnavailablePanel });
