@@ -22,9 +22,9 @@ Her karar gerekçesiyle kayıtlıdır; alt projelerin hepsini bağlar.
 - **K2 — Ortak girdi `ChartInput { jd_ut, lat, lon, settings, time_known }`.** `compute_chart` ile aynı alanlar, artı `time_known`. Doğum saati bilinmiyorsa lagnaya bağlı her çıktı `None` döner; arayüzün gizlemesine güvenilmez. Gerekçe: aynı veriyi AI paneli ve baskı da okuyacak; gizleme tek yerde olmalı. İstisna: verisini v1'den beri `Chart`'tan okuyan paneller (3.1'in Panchang ve Ashtakavarga panelleri). K1 `Chart`'ı dondurduğu için bu ikisinde "saat bilinmiyor" davranışı v1 panellerindeki gibi arayüzde uygulanır (§4).
 - **K3 — Saf çekirdek, ince toplayıcı.** Her modülün hesap fonksiyonu ephemeris görmeyen düz bir girdi alır (`Positions` ve `GrahaPoint`; tam tanım §4'tedir ve esas olan odur. `lagna_lon` sidereal boylamdır; `lagna_sign` ve `rasi_sign` rasi çerçevesindedir (K5). `compute_positions(eph, &ChartInput)` ya da `From<&Chart>` ile üretilir; el örnekleri için ephemeris görmeyen `Positions::synthetic` vardır). Zamana bağlı modüller (Shadbala, Muhurta) gereken astronomik değerleri ayrı bir toplayıcı fonksiyonla alır ve saf fonksiyona verir. Gerekçe: el hesabı fixture'ları ephemeris olmadan yazılabilir (§13).
 - **K4 — Evler rasi evidir.** Aksi yazmadıkça "ev" lagna burcundan sayılan bütün burç evidir; `CalcSettings.house_system` yalnızca v1'deki bhava tablosunu etkiler. Gerekçe: yoga, arudha, argala ve kuta kuralları klasik kaynaklarda burç sayımıyla tanımlıdır; ev sistemi ayarıyla sessizce değişen yoga listesi hata kaynağıdır.
-- **K5 — Rasi çerçevesi `settings.zodiac`'ı izler.** Burca dayalı her kural haritanın rasi çerçevesindeki burçları kullanır (v1'deki dignity ve varga ile aynı); nakshatraya dayalı kurallar sidereal boylamı kullanır.
+- **K5 — Rasi çerçevesi `settings.zodiac`'ı izler.** Burca dayalı her kural haritanın rasi çerçevesindeki burçları kullanır (v1'deki dignity ve varga ile aynı); nakshatraya dayalı kurallar sidereal boylamı kullanır. Burç içi derece de rasi çerçevesindedir (`GrahaPoint.deg_in_sign`; chara karaka sırası bunu kullanır).
 - **K6 — Doğal iyicil/kötücül sınıfı tek fonksiyondur.** `nature(graha, positions) -> Benefic | Malefic`: Jüpiter ve Venüs iyicil; Güneş, Mars, Satürn, Rahu, Ketu kötücül; Ay büyürken (Güneş'ten uzanım `[0°, 180°)`; tam 180° küçülen yarıdadır, v1 `paksha` sınırıyla aynı) iyicil, küçülürken kötücül; Merkür aynı burçta kötücül varsa ve iyicil yoksa kötücül, değilse iyicil (BPHS, graha nitelikleri bölümü). Modüller kendi listesini tutmaz.
-- **K7 — Ayarlar: `CalcSettings` şema sürümü 2.** `advanced: AdvancedSettings` alt yapısı eklenir. Alanlar ve göç 3.1'de tanımlanır; hesapta kullanımları ve ayar penceresindeki denetimleri 3.2 ve 3.3'tedir. Tolerans saklanan kaydın okunmasındadır (`store`): eksik `advanced` anahtarları varsayılanla dolar, bilinmeyen anahtarlar yok sayılır ve kayıtta durur. IPC tipinde alanlar zorunludur (`serde(default)` yoktur); tanınmayan bir seçenek değeri kaydı okunamaz kılar ve ayar genel varsayılana döner (uyarıyla). Sürüm 1 → 2 göçü varsayılanları yazar. Yalnızca en az iki uygulanmış seçeneği olan kararlar ayar olur: `karaka_scheme {Eight, Seven}` ve `jaimini_co_lords: bool`. Tek seçenekli yöntemler ayar değildir; her modül sonucu `method` kimliği taşır (ör. `"chara_dasha.padakrama_v1"`), baskı ve AI paneli hangi yöntemin kullanıldığını buradan söyler. Fark rozeti `advanced` alanlarını da kapsar.
+- **K7 — Ayarlar: `CalcSettings` şema sürümü 2.** `advanced: AdvancedSettings` alt yapısı eklenir. Alanlar ve göç 3.1'de tanımlanır; hesapta kullanımları 3.2 ve 3.3'tedir; ayar penceresindeki iki denetim ("İleri modül ayarları" grubu: karaka şeması seçicisi ve eş lord kutusu) 3.2'dedir, çünkü `jaimini_co_lords` arudha hesabında da kullanılır; 3.3 yeni denetim eklemez. Tolerans saklanan kaydın okunmasındadır (`store`): eksik `advanced` anahtarları varsayılanla dolar, bilinmeyen anahtarlar yok sayılır ve kayıtta durur. IPC tipinde alanlar zorunludur (`serde(default)` yoktur); tanınmayan bir seçenek değeri kaydı okunamaz kılar ve ayar genel varsayılana döner (uyarıyla). Sürüm 1 → 2 göçü varsayılanları yazar. Yalnızca en az iki uygulanmış seçeneği olan kararlar ayar olur: `karaka_scheme {Eight, Seven}` ve `jaimini_co_lords: bool`. Tek seçenekli yöntemler ayar değildir; her modül sonucu `method` kimliği taşır (ör. `"chara_dasha.padakrama_v1"`), baskı ve AI paneli hangi yöntemin kullanıldığını buradan söyler. Fark rozeti `advanced` alanlarını da kapsar.
 - **K8 — Hata ve uyarı.** Yeni hatalar `CoreError` → `{code, params}` yolunu izler; parametreler danışan verisi taşımaz. Ölümcül olmayan durumlar modül sonucunun `warnings` alanındadır.
 - **K9 — Başka yazılım çıktısı fixture olmaz.** Bu modüllerde referans değerler klasik kuraldan elle türetilir (§13). Gerekçe: clean-room; ayrıca bu teknikler yazılımdan yazılıma varyant farkı taşır, başka programla aynı sonucu vermek doğruluk ölçütü değildir.
 - **K10 — Baskı düzeni eklenmez.** Dört baskı düzeni (UI spec §7) değişmez. Modül baskıları ayrı bir işin konusudur.
@@ -36,7 +36,7 @@ Her karar gerekçesiyle kayıtlıdır; alt projelerin hepsini bağlar.
 | Sıra | Alt proje | Plan | Bağımlı olduğu | Ürettiği |
 |---|---|---|---|---|
 | 1 | 3.1 Ortak temel: bakışlar, ev lordları, modül IPC'si, panchang, ashtakavarga ve bakış panelleri | 14 | v1 | `drishti`, `lordship`, `ChartInput`, üç panel |
-| 2 | 3.2 Jaimini çekirdeği: chara karaka, rashi drishti, arudha pada, karakamsha, argala | 15 | 3.1 | `jaimini` modülü, üç panel |
+| 2 | 3.2 Jaimini çekirdeği: chara karaka, rashi drishti, arudha pada, karakamsha, argala | 15 | 3.1 | `jaimini` modülü, üç yeni panel; `chart`, `drishti` ve `graha_table` panellerine birer ek; ayar penceresinde iki denetim |
 | 3 | 3.3 Chara dasha | 16 | 3.2 | burç dashası, dasa panellerinde sistem seçimi |
 | 4 | 3.4 Shadbala ve Bhava bala | 17 | 3.1 | `shadbala` modülü, iki panel |
 | 5 | 3.5 Yogalar | 18 | 3.1 | kural kataloğu, yoga paneli |
@@ -138,25 +138,28 @@ Kaynak: Jaimini Upadesha Sutraları ve BPHS'nin karaka, pada ve argala bölümle
 - `Eight` (varsayılan): Güneş…Satürn ve Rahu. Rahu'nun derecesi `30 − deg_in_sign` alınır. Sıra: Atma (AK), Amatya (AmK), Bhratri (BK), Matri (MK), Pitri (PiK), Putra (PK), Gnati (GK), Dara (DK).
 - `Seven`: Rahu yok. Sıra: AK, AmK, BK, MK, PK, GK, DK.
 - Ketu karaka olmaz.
-- Eşitlik: iki grahanın derecesi 1″ içinde eşitse sonuç `tie: true` taşır; sıra tam `f64` değeriyle, o da eşitse Güneş…Rahu doğal sırasıyla belirlenir. Karaka birleşmesi kuralları uygulanmaz.
+- Derece rasi çerçevesindeki burç içi derecedir (K5). `effective_deg` sıralamada kullanılan değerdir: Rahu için `30 − deg_in_sign`, yani `(0, 30]` aralığındadır (Rahu burcun 0°'sindeyse 30); diğerleri için burç içi derecenin kendisi.
+- Eşitlik: sıradaki iki komşunun etkin derece farkı 1″ ya da daha azsa (sınır dahil) iki kayıt da `tie: true` taşır; sıra tam `f64` değeriyle, o da eşitse Güneş…Rahu doğal sırasıyla belirlenir. Karaka birleşmesi kuralları uygulanmaz.
 - Karar: varsayılan `Eight`, çünkü BPHS'nin karaka bölümü iki şemayı da verir ve sekizli şema karaka kaybetmez; yedili şemayı kullanan ekoller harita başına ayarla seçer.
 
-**Rashi drishti.** Yürük (chara) burç, kendisine bitişik olan dışında üç sabit burca bakar; sabit (sthira) burç, bitişiği dışında üç yürük burca bakar; çift doğalı (dwiswabhava) burç diğer üç çift doğalıya bakar. "Bitişik": yürük burç için kendinden sonraki sabit burç, sabit burç için kendinden önceki yürük burç. Örnek: Koç → Aslan, Akrep, Kova; Boğa → Yengeç, Terazi, Oğlak; İkizler → Başak, Yay, Balık. Bir burçtaki grahalar o burcun baktığı burçlara ve oradaki grahalara bakar.
+**Rashi drishti.** Yürük (chara) burç, kendisine bitişik olan dışında üç sabit burca bakar; sabit (sthira) burç, bitişiği dışında üç yürük burca bakar; çift doğalı (dwiswabhava) burç diğer üç çift doğalıya bakar. "Bitişik": yürük burç için kendinden sonraki sabit burç, sabit burç için kendinden önceki yürük burç. Örnek: Koç → Aslan, Akrep, Kova; Boğa → Yengeç, Terazi, Oğlak; İkizler → Başak, Yay, Balık. Bir burçtaki grahalar o burcun baktığı burçlara ve oradaki grahalara bakar. `graha_rashi_drishti` 27 kayıttır: `Graha::ALL` sırasında dokuz graha (düğümler dahil), her biri için üç hedef burç ve o burçtaki grahalar.
+
+**Sayım yönü.** Jaimini sayımında burçlar iki gruptur: düz sayan Koç, Boğa, İkizler, Terazi, Akrep, Yay; ters sayan Yengeç, Aslan, Başak, Oğlak, Kova, Balık. `counts_forward(sign)` grubu, `directed_count(from, to)` burcun kendi yönündeki kapsayıcı sayımı (1–12) verir. Gruplar burada tanımlanır, çünkü eş lord seçiminin 5. ölçütü onlara muhtaçtır; chara dasha (§6) aynı iki fonksiyonu kullanır.
 
 **Eş lordlar.** `jaimini_co_lords = true` (varsayılan) iken Akrep'in lordları Mars ile Ketu, Kova'nın lordları Satürn ile Rahu'dur ve güçlü olan lord sayılır. `stronger_co_lord(sign, positions)` sırayla şu ölçütleri uygular, ilk ayrım kazanır:
 
-1. Yalnızca biri burcun kendisindeyse, burcun dışındaki lord seçilir.
-2. Aynı burçta daha çok graha ile birlikte olan (diğer eş lord sayılmaz).
-3. Yücelme burcunda olan; ikisi de değilse, düşüş burcunda olmayan. Düğümlere bu adım uygulanmaz.
+1. Yalnızca biri burcun kendisindeyse, burcun dışındaki lord seçilir. İkisi de burcun içindeyse ya da ikisi de dışındaysa bu ölçüt ayırmaz.
+2. Bulunduğu burçta daha çok graha ile birlikte olan. Sayıma yalnızca öteki eş lord girmez; öteki düğüm girer (ör. Akrep için Mars ile Ketu karşılaştırılırken Rahu sayılır).
+3. Düğümlerin yücelme ve düşüş burcu yoktur; ölçüt yalnızca graha lordun (Mars ya da Satürn) durumuna bakar: yücelme burcundaysa o, düşüş burcundaysa düğüm seçilir; ikisi de değilse ölçüt ayırmaz.
 4. Bulunduğu burcun türü: çift doğalı > sabit > yürük.
-5. Söz konusu burçtan lorda, burcun sayım yönünde (3.3) daha uzak olan.
+5. Söz konusu burçtan lorda, burcun sayım yönünde (yukarıdaki "Sayım yönü") daha uzak olan.
 6. Mars (Akrep) ya da Satürn (Kova).
 
 `jaimini_co_lords = false` iken yalnızca Mars ve Satürn kullanılır. Bu fonksiyon arudha ve chara dasha tarafından ortak kullanılır.
 
-**Arudha pada** (BPHS, pada bölümü). `h` evinin burcu `S`, lordu `T` burcunda olsun; `n`, `S`'den `T`'ye kapsayıcı sayım (1–12). Hesaplanan pada `T`'den `n`. burçtur. İstisna: hesaplanan burç `S`'nin kendisi ya da `S`'den 7. burç ise pada, hesaplanan burçtan 10. burçtur (yani sırasıyla `S`'den 10. ve `S`'den 4. burç). On iki pada verilir: A1 (Arudha Lagna, AL) … A12 (Upapada, UL). Graha arudhaları kapsam dışıdır.
+**Arudha pada** (BPHS, pada bölümü). `h` evinin burcu `S`, lordu `T` burcunda olsun; `n`, `S`'den `T`'ye kapsayıcı sayım (1–12). Hesaplanan pada `T`'den `n`. burçtur. İstisna: hesaplanan burç `S`'nin kendisi ya da `S`'den 7. burç ise pada, hesaplanan burçtan 10. burçtur (yani sırasıyla `S`'den 10. ve `S`'den 4. burç). On iki pada verilir: A1 (Arudha Lagna, AL) … A12 (Upapada, UL). `ArudhaPada.lord` evin hesapta kullanılan lordudur (Akrep ve Kova evlerinde seçilen eş lord); padanın düştüğü burcun lordu değildir. Graha arudhaları kapsam dışıdır.
 
-**Karakamsha.** Atmakaraka'nın navamsa (D9) burcu. Sonuç iki görünüm taşır: karakamsha burcu rasi haritasına taşınmış (her grahanın D1 burcunun karakamshadan ev sayısı) ve swamsha (her grahanın D9 burcunun karakamshadan ev sayısı). Karakamsha lagnaya bağlı değildir; doğum saati bilinmiyorsa "yaklaşık" işaretlenir (AK değişebilir).
+**Karakamsha.** Atmakaraka'nın navamsa (D9) burcu. Sonuç iki görünüm taşır: karakamsha burcu rasi haritasına taşınmış (her grahanın D1 burcunun karakamshadan ev sayısı) ve swamsha (her grahanın D9 burcunun karakamshadan ev sayısı). Karakamsha lagnaya bağlı değildir; doğum saati bilinmiyorsa "yaklaşık" işaretlenir (AK değişebilir). İşaret arayüzdedir (v1 panellerindeki gibi): uyarı satırı, Ay'ın derecesinde ve karakamsha burcunda "≈"; graha tablosunun karaka sütununda Ay'ın rolünde "≈". Raporda yaklaşıklık alanı yoktur; AI paketleyicisi yaklaşıklığı girdideki `time_known`'dan okur.
 
 **Argala.** Her burç referans alınarak hesaplanır (12 satır):
 
@@ -184,14 +187,14 @@ pub struct JaiminiReport {
     pub karakas: Vec<CharaKaraka>,                 // 7 ya da 8
     pub karakamsha: Karakamsha,
     pub rashi_drishti: [[bool; 12]; 12],
-    pub graha_rashi_drishti: Vec<SignAspect>,      // graha → baktığı burçlar ve oradaki grahalar
+    pub graha_rashi_drishti: Vec<SignAspect>,      // 27 kayıt: Graha::ALL sırasında, graha başına üç hedef burç ve oradaki grahalar
     pub arudhas: Option<[ArudhaPada; 12]>,         // saat bilinmiyorsa None
     pub argala: [ArgalaRow; 12],                   // lagna burcundan sıralı; saat bilinmiyorsa Koç'tan
     pub warnings: Vec<ChartWarning>,
 }
 ```
 
-Argala lagnaya bağlı değildir (referans burçtur), bu yüzden doğum saati bilinmese de döner; yalnızca satır sırası değişir. Komut: `compute_jaimini(input: ChartInput) -> JaiminiReport`. `JaiminiReport` AI paneli için sözleşmedir; alan adları değişirse AI paketleyicisi de değişir.
+Argala lagnaya bağlı değildir (referans burçtur), bu yüzden doğum saati bilinmese de döner; yalnızca satır sırası değişir. Komut: `compute_jaimini(input: ChartInput) -> JaiminiReport`. `JaiminiReport` AI paneli için sözleşmedir; alan adları değişirse AI paketleyicisi de değişir. `warnings` yalnızca temel haritanın `LowPrecision` uyarısını taşır; ev sistemi ve gün doğumu uyarıları bu modülü ilgilendirmez ve taşınmaz.
 
 ### Arayüz
 
@@ -201,9 +204,11 @@ Argala lagnaya bağlı değildir (referans burçtur), bu yüzden doğum saati bi
 | Arudha padalar | `arudha` | — | A1…A12: burç, lord, istisna uygulanmışsa `*` ve dipnot. AL ve UL etiketlidir. |
 | Argala | `argala` | referans (lagna / seçili burç) | Dört çift için iki graha listesi ve durum metni ("geçerli", "çekişmeli", "engelli", "yok"). |
 
-- `chart` paneline `arudha_marks` ayarı eklenir (varsayılan kapalı): padalar burçlarına "AL", "A2"… "UL" olarak yazılır.
-- `drishti` paneline `rashi` türü eklenir.
-- `graha_table` paneline isteğe bağlı "karaka" sütunu eklenir.
+- Argala panelinin `reference` ayarı `lagna` (varsayılan) ya da `selected`'dır. "Seçili burç" ortak seçimde sabitlenen öğenin burcudur: burç kendisi; ev, lagna burcundan sayılan burç (lagna yoksa haritanın çizdiği gibi Koç'tan); graha, haritadaki burcu. Panel on iki burç düğmesiyle de seçtirir. Doğum saati bilinmiyorsa lagna referansı tablo yerine bir satır açıklama gösterir; seçili burç referansı çalışır.
+- `chart` paneline `arudha_marks` ayarı eklenir (varsayılan kapalı): padalar burçlarına "AL", "A2"… "UL" olarak yazılır. Yalnızca D1'de ve doğum saati biliniyorken yazılır; diğer durumlarda kutu kullanılamaz. Kullanılamayan kutu yerel `disabled` değildir: `aria-disabled` taşır, odaklanır, etkinleştirmek ayarı değiştirmez ve nedeni görünür bir satır olarak `aria-describedby` ile bağlıdır (transit halkası kutusu da böyledir). İşaretler etkileşimsizdir ve ekran okuyucu için ayrı bir metin listesi olarak okunur; baskıya girmez (K10).
+- `drishti` paneline `rashi` türü eklenir (`kind` ayarı; dokuz graha × dokuz graha matrisi, virupa değeri yoktur; yalnızca seçili türün komutu çağrılır).
+- `graha_table` paneline isteğe bağlı "karaka" sütunu eklenir. Sütun `settings.columns` listesinde değil, ayrı bir `settings.karaka` ayarındadır: baskı tablosu o listeyi kullanır ve sütun baskıya girmez (K10).
+- Her tüketici (üç panel, harita işaretleri, rashi türü, karaka sütunu) raporu kendi isteğiyle alır; paylaşılan önbellek yoktur (K1; komut 1 ms'nin altındadır).
 - Durumlar yalnızca metinle ayrılır; renk anlam taşımaz.
 
 ### Test
@@ -226,7 +231,7 @@ Argala lagnaya bağlı değildir (referans burçtur), bu yüzden doğum saati bi
 
 Burç temelli Jaimini dashası, padakrama düzeni (20. yüzyıl Jaimini yorum geleneğinde en yaygın uygulanan biçim). `method = "chara_dasha.padakrama_v1"`.
 
-- **Burç grupları.** Düz sayan: Koç, Boğa, İkizler, Terazi, Akrep, Yay. Ters sayan: Yengeç, Aslan, Başak, Oğlak, Kova, Balık.
+- **Burç grupları.** §5 "Sayım yönü"ndeki iki gruptur (`counts_forward`, `directed_count`; 3.2'de tanımlıdır). Düz sayan: Koç, Boğa, İkizler, Terazi, Akrep, Yay. Ters sayan: Yengeç, Aslan, Başak, Oğlak, Kova, Balık.
 - **Dasha sırası.** İlk dasha lagna burcudur. Lagnadan 9. burç düz sayan gruptaysa dashalar zodyak sırasıyla, ters sayan gruptaysa ters sırayla ilerler. On iki burç birer kez gelir.
 - **Dasha süresi.** Dasha burcu düz sayan gruptaysa burçtan lorduna ileri, değilse geri doğru kapsayıcı sayılır; yıl = sayım − 1. Lord kendi burcundaysa 12 yıl. Akrep ve Kova için lord `stronger_co_lord` ile seçilir; iki eş lord da burcun içindeyse 12 yıl. Yücelme ve düşüş için ±1 yıl düzeltmesi uygulanmaz.
 - **İkinci çevrim.** On iki dasha bittikten sonra aynı sırayla ikinci çevrim gelir; her burcun süresi `12 − ilk çevrimdeki yıl`dır, 0 yıllık burçlar atlanır. Üretim doğumdan 120 yıl sonrasını geçen ilk dashada durur.
@@ -765,7 +770,7 @@ Serbest VE/VEYA ağacı, derece aralığı ve orb koşulları, bölümsel harita
 
 Doğruluk, başka yazılımın çıktısına dayanmadan dört katmanla sağlanır:
 
-1. **El örnekleri** (`tests/golden/modules/<modül>/*.json`, test dosyası `crates/jyotish-core/tests/modules_golden.rs`). Girdi sentetik `Positions`'tır (ephemeris gerekmez); beklenen değer klasik kuraldan elle türetilir ve fixture'ın `derivation` alanında adım adım yazılır. Şema: `{ id, source: "hand", rule_ref, derivation, input, expected }`. `rule_ref` genel bir göndermedir (ör. "BPHS, pada bölümü"). Bilinmeyen alan reddedilir; modül başına en az sayı test içinde sabitlenir (sessiz silinmeye karşı). `source` olarak yalnızca `hand` kabul edilir.
+1. **El örnekleri** (`tests/golden/modules/<modül>/*.json`, test dosyası `crates/jyotish-core/tests/modules_golden.rs`). Girdi sentetik `Positions`'tır (ephemeris gerekmez); beklenen değer klasik kuraldan elle türetilir ve fixture'ın `derivation` alanında adım adım yazılır. Şema: `{ id, source: "hand", rule_ref, derivation, input, expected }`. Sonucu ayara bağlı modüllerde `input` bir `advanced` alanı taşır (ör. Jaimini örneklerinde karaka şeması ve eş lord kuralı). `rule_ref` genel bir göndermedir (ör. "BPHS, pada bölümü"). Bilinmeyen alan reddedilir; modül başına en az sayı test içinde sabitlenir (sessiz silinmeye karşı). `source` olarak yalnızca `hand` kabul edilir.
 2. **Değişmezler** (proptest): her alt projenin "Property" maddeleri. Kuralın yapısından gelen ve herhangi bir girdide doğru olması gereken eşitliklerdir.
 3. **Bağımsız ikinci yazım:** tablo olarak yazılabilen kurallar (chara dasha yılları, tara, nadi, dilim sıraları, rashi drishti) testte elle girilmiş tabloyla, motorda formülle durur; ikisi her girdide eşit olmalıdır.
 4. **Çapraz denetim:** yeni kod, v1'de golden fixture'larla doğrulanmış kodla karşılaştırılır (`timeline` ↔ `compute_panchang`, `search_facts` ↔ `compute_chart`), ve astronomik olgularla (giriş anında boylam, dönüşte hız işareti, karşı konumda cheshta).

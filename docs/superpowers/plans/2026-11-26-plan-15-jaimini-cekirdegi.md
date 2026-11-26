@@ -74,6 +74,7 @@ Sahibi kararları devretti; muhafazakâr seçenek seçildi ve her karar bir sat�
   | Task 8 | | | | 68 / 608 | |
   | Task 9 | | | | 68 / 617 | |
   | Task 10 | | | | | 14 |
+  | Son inceleme düzeltmeleri | 173 | | | 68 / 624 | |
 
   Değişmeyenler: `jyotish-core` golden 8; `store` lib 84 (+1 ign.); `jyotish-desk` lib 46, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; görsel 10; yayın betiği testleri 14. `modules_golden` Task 1'de iki test kazanır (`jaimini_hand_fixtures`, `jaimini_fixtures_cover_the_required_cases`); Task 2 ve 3 aynı iki testi büyütür. `jyotish-desk` `modules` tek test olarak durur (süreçte tek SE örneği); Task 4 onu yeniden adlandırır ve Jaimini denetimlerini ekler.
 - **Taşınan kurallar (Plan 09 C1–C14, Plan 10 C2′, C15–C17), her görevin gereksinimidir:**
@@ -7191,7 +7192,7 @@ cargo deny check 2>&1 | tail -1
 PATH="$HOME/.rustup/toolchains/1.93-aarch64-apple-darwin/bin:$PATH" cargo check -p jyotish-core -p store -p jyotish-desk --all-targets 2>&1 | tail -1
 git diff 32cc752..HEAD --stat -- deny.toml Cargo.toml Cargo.lock app/package.json app/pnpm-lock.yaml app/vite.config.ts app/src-tauri/capabilities app/src-tauri/tauri.conf.json crates/store crates/jyotish-core/src/settings.rs crates/jyotish-core/src/chart.rs
 ```
-Expected: fmt ve clippy çıktısız; testler: `jyotish-core` lib `172 passed`, golden `8 passed`, `modules_golden` `5 passed`; `store` lib `84 passed; 0 failed; 1 ignored`; `jyotish-desk` lib `46 passed`, `bindings` `1 passed`, `compute_chart` `1 passed`, `modules` `1 passed`, `open_client` `1 passed`, `ui_fixture` `2 passed`; `compute_drishti median` ve `compute_jaimini median` 10 ms'nin altında; deny `advisories ok, bans ok, licenses ok, sources ok`; MSRV `Finished`; son `git diff --stat` çıktısız (bağımlılık, yetenek, yapılandırma, `store`, ayar tipi ve `Chart` değişmedi: K1, D13).
+Expected: fmt ve clippy çıktısız; testler: `jyotish-core` lib `173 passed` (son inceleme düzeltmeleriyle; Task 10 sonunda 172), golden `8 passed`, `modules_golden` `5 passed`; `store` lib `84 passed; 0 failed; 1 ignored`; `jyotish-desk` lib `46 passed`, `bindings` `1 passed`, `compute_chart` `1 passed`, `modules` `1 passed`, `open_client` `1 passed`, `ui_fixture` `2 passed`; `compute_drishti median` ve `compute_jaimini median` 10 ms'nin altında; deny `advisories ok, bans ok, licenses ok, sources ok`; MSRV `Finished`; son `git diff --stat` çıktısız (bağımlılık, yetenek, yapılandırma, `store`, ayar tipi ve `Chart` değişmedi: K1, D13).
 
 - [ ] **Step 2: Arayüz kapıları**
 
@@ -7205,7 +7206,7 @@ rm -rf app/test-results
 node --test "scripts/release/*.test.mjs" 2>&1 | grep -E "ℹ (pass|fail)"
 git status --short
 ```
-Expected: `lsof` çıktısız; `Test Files  68 passed (68)`, `Tests  617 passed (617)`; `✓ built`; e2e `14 passed`; görsel `10 passed` (temel PNG'ler değişmedi: D23); betik testleri `pass 14`, `fail 0`; `git status --short` boş.
+Expected: `lsof` çıktısız; `Test Files  68 passed (68)`, `Tests  624 passed (624)` (son inceleme düzeltmeleriyle; Task 10 sonunda 617); `✓ built`; e2e `14 passed`; görsel `10 passed` (temel PNG'ler değişmedi: D23); betik testleri `pass 14`, `fail 0`; `git status --short` boş.
 
 - [ ] **Step 3: Kural taramaları (`32cc752`'den bu yana)**
 
@@ -7258,7 +7259,7 @@ Spec §13: "`derivation` ayrı bir gözden geçirmede kuraldan yeniden hesaplan�
 - `compute_jaimini` ortak kalıpla çalışır (tek `ChartInput`, motor iş parçacığı, `blocking`, `CommandError`), beş golden anında v1 haritasıyla çapraz denetlenir ve bütçesinin (≤ 10 ms) içindedir. `karaka_scheme` ve `jaimini_co_lords` ayarları hesaba girer ve ayar penceresinden değiştirilir.
 - Üç yeni panel (Chara karaka, Arudha padalar, Argala) paletten etkin düzene eklenir ve çıkarılır; harita paneli arudha işaretlerini, Bakışlar paneli rashi türünü, graha tablosu karaka sütununu kazanır. Boş, yükleniyor, hata, dolu ve "saat bilinmiyor" durumları testlidir; ortak seçime bağlıdırlar; renk tek başına anlam taşımaz; yorum metni yoktur.
 - `Chart`, `open_client`, SQLite şeması, ayar şema sürümü, baskı düzenleri ve görsel temeller değişmemiştir.
-- Kapılar: `jyotish-core` lib 172, `modules_golden` 5, `jyotish-desk` `modules` 1; Vitest 68/617; e2e 14; görsel 10; `cargo deny` temiz; diğer sayılar tabandaki gibi. Elle denetim kapısının **[otomatik]** maddeleri testlerle doğrulanmış, **[insan]** maddeleri yapılmış ya da sahibine devredilmiştir.
+- Kapılar: `jyotish-core` lib 173, `modules_golden` 5, `jyotish-desk` `modules` 1; Vitest 68/624 (son inceleme düzeltmeleri öncesinde 172 ve 617); e2e 14; görsel 10; `cargo deny` temiz; diğer sayılar tabandaki gibi. Elle denetim kapısının **[otomatik]** maddeleri testlerle doğrulanmış, **[insan]** maddeleri yapılmış ya da sahibine devredilmiştir.
 
 ## Bu planın kapsamadıkları
 
@@ -7274,7 +7275,7 @@ Spec §13: "`derivation` ayrı bir gözden geçirmede kuraldan yeniden hesaplan�
 
 ## Spec'e geri bildirim (spec kusurları ve boşlukları)
 
-Plan yazılırken bulunan ve Kararlar'da çözülen maddeler. "Kusur" spec'in kendi içinde çelişen ya da harfiyen uygulanamayan yeridir; "boşluk" yazılmamış ayrıntıdır. Son incelemede `2026-11-26-alt-proje-3-ileri-moduller-design.md`'ye işlenmelidir.
+Plan yazılırken bulunan ve Kararlar'da çözülen maddeler. "Kusur" spec'in kendi içinde çelişen ya da harfiyen uygulanamayan yeridir; "boşluk" yazılmamış ayrıntıdır. On dört madde son incelemede `2026-11-26-alt-proje-3-ileri-moduller-design.md`'ye işlenmiştir (K5, K7, §3 tablosu, §5, §6 ve §13); son incelemenin iki kararı da oradadır (kullanılamayan harita kutuları `aria-disabled` ve görünür nedenle; graha tablosunda Ay'ın karaka rolünde "≈").
 
 1. **Boşluk — §5 Chara karaka: derecenin çerçevesi.** "Burç içi derece" tropikal-rasi kipinde tropikal mi sidereal mi, yazılmamış. Çözüm (D2): rasi çerçevesi (K5); K5'e "burç içi derece de rasi çerçevesindedir" eklenmeli.
 2. **Boşluk — §5 Chara karaka: eşitlik.** "`tie: true` taşır" hangi kaydın taşıdığını, 1″ sınırının dahil olup olmadığını ve Rahu 0°'deyken etkin derecenin 30 olduğunu söylemiyor. Çözüm (D3): iki komşu da işaretlenir, sınır dahildir, `effective_deg` Rahu için `(0, 30]`.
