@@ -197,3 +197,16 @@
 .jaimini-karakamsha .panel-message {
   font-weight: var(--fw-regular);
 }
+.argala-signs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.argala-signs .link-button[aria-pressed="true"] {
+  font-weight: var(--fw-medium);
+  text-decoration: underline;
+}
+.argala-reference {
+  margin: 4px 0 0;
+  font-weight: var(--fw-medium);
+}
