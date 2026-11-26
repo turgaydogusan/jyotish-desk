@@ -324,3 +324,105 @@ test("module panels: the palette adds Aspects, Panchang and Ashtakavarga; aspect
   expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
   expect(await ipcCalls(page, "compute_drishti")).toHaveLength(1);
 });
+
+test("jaimini panels: karakas, arudha padas and argala come from one command; chart marks, rashi drishti and the karaka scheme setting", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async (query: string, name: RegExp) => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill(query);
+    await palette.getByRole("option", { name }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  type JaiminiCall = { input: { jd_ut: number; time_known: boolean; settings: { schema_version: number; advanced: { karaka_scheme: string; jaimini_co_lords: boolean } } } };
+  const jaiminiCalls = async () => (await ipcCalls(page, "compute_jaimini")) as JaiminiCall[];
+  // Rapor panel açılmadan istenmez (ileri modüller spec'i K1).
+  expect(await jaiminiCalls()).toHaveLength(0);
+
+  await toggle("karaka", /Chara karaka panelini aç\/kapat/);
+  const karakas = page.getByRole("region", { name: "Chara karaka" });
+  await expect(karakas).toBeFocused();
+  await expect(karakas).toBeInViewport();
+  await expect(karakas.locator('tr[data-role="Atma"]')).toContainText("Ay");
+  await expect(karakas.locator('tr[data-role="Amatya"]')).toContainText("11°11′ (etkin 18°48′)");
+  await expect(karakas.locator(".jaimini-karakamsha")).toContainText("Karakamsha: Bal");
+  const first = await jaiminiCalls();
+  expect(first).toHaveLength(1);
+  expect(first[0].input).toMatchObject({ jd_ut: 2451545, time_known: true, settings: { schema_version: 2, advanced: { karaka_scheme: "Eight", jaimini_co_lords: true } } });
+
+  await toggle("arudha", /Arudha padalar panelini aç\/kapat/);
+  const arudha = page.getByRole("region", { name: "Arudha padalar" });
+  await expect(arudha.locator('tr[data-pada="1"]')).toContainText("A1 · AL");
+  await expect(arudha.locator('tr[data-pada="1"]')).toContainText("Bal*");
+  await expect(arudha.locator('tr[data-pada="12"]')).toContainText("A12 · UL");
+
+  await toggle("argala", /Argala panelini aç\/kapat/);
+  const argala = page.getByRole("region", { name: "Argala" });
+  await expect(argala.locator('tr[data-pair="5"]')).toContainText("çekişmeli");
+  // Referans ortak seçimi izler: haritada Ay'a tıklanınca Ay'ın burcu (Terazi) referans olur.
+  await argala.getByRole("combobox", { name: "Referans" }).selectOption("selected");
+  await expect(argala.getByText(/^Bir burç seçin:/)).toBeVisible();
+  await page.locator('svg [data-graha="Moon"]').first().click();
+  await expect(argala.getByText("Referans: Ter")).toBeVisible();
+  // Ortak vurgu: sabitlenen Ay karaka tablosunda da vurgulanır.
+  await expect(karakas.locator('tr[data-role="Atma"]')).toHaveClass(/is-highlighted/);
+  await page.keyboard.press("Escape");
+
+  // Harita panelinde arudha işaretleri: on iki pada burçlarına yazılır.
+  const d1 = page.getByRole("region", { name: "Harita D1" });
+  await d1.getByRole("checkbox", { name: "Arudha padalar" }).check();
+  await expect(d1.locator(".chart-mark")).toHaveCount(12);
+  await expect(d1.locator('[data-mark="AL"]')).toHaveAttribute("data-house", "10");
+  // D9 panelinde işaret kutusu kapalıdır.
+  await expect(page.getByRole("region", { name: "Harita D9" }).getByRole("checkbox", { name: "Arudha padalar" })).toBeDisabled();
+
+  // Bakışlar panelinde rashi türü aynı raporu okur; graha bakışı istenmez.
+  await toggle("bakış", /Bakışlar panelini aç\/kapat/);
+  const drishti = page.getByRole("region", { name: "Bakışlar" });
+  await drishti.getByRole("combobox", { name: "Tür" }).selectOption("rashi");
+  await expect(drishti.locator("tbody tr")).toHaveCount(9);
+  await expect(drishti.locator('tbody tr[data-graha="Ketu"] td').nth(5)).toContainText("●");
+
+  // Her tüketici raporu bir kez ister: üç panel, harita işaretleri ve rashi matrisi.
+  await expect.poll(async () => (await jaiminiCalls()).length).toBe(5);
+
+  // Ayar: karaka şeması yedili yapılınca harita yeniden hesaplanır ve rapor yeni ayarla istenir.
+  await page.keyboard.press("Meta+Comma");
+  const settings = page.getByRole("dialog", { name: "Hesap ayarları" });
+  await settings.getByLabel("Chara karaka şeması").selectOption("Seven");
+  await expect.poll(async () => (await ipcCalls(page, "save_calc_settings")).length).toBe(1);
+  const [saved] = (await ipcCalls(page, "save_calc_settings")) as { settings: { advanced: unknown } }[];
+  expect(saved.settings.advanced).toEqual({ karaka_scheme: "Seven", jaimini_co_lords: true });
+  await settings.getByRole("button", { name: "Kapat" }).click();
+  await expect.poll(async () => (await jaiminiCalls()).length).toBe(10);
+  const last = (await jaiminiCalls()).at(-1)!;
+  expect(last.input.settings.advanced).toEqual({ karaka_scheme: "Seven", jaimini_co_lords: true });
+  // Fark rozeti ileri modül ayarını da adlandırır.
+  await expect(page.getByText(/Ayar farkı/).first()).toBeVisible();
+
+  // Paneller ve ayarları düzenle birlikte kaydedilir.
+  await expect
+    .poll(async () => {
+      const saved = (await ipcCalls(page, "save_view_state")).at(-1) as { viewState: { panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: Record<string, unknown> }[] }[] } } } | undefined;
+      const layout = saved?.viewState.panel_layout;
+      return layout?.layouts.find((l) => l.id === layout.active_layout_id)?.panels.map((p) => [p.kind, p.settings.arudha_marks ?? p.settings.reference ?? p.settings.kind ?? null]);
+    })
+    .toEqual([
+      ["chart", true],
+      ["chart", null],
+      ["dasha_strip", null],
+      ["notes", null],
+      ["jaimini_karakas", null],
+      ["arudha", null],
+      ["argala", "selected"],
+      ["drishti", "rashi"],
+    ]);
+
+  // Aynı komut paneli kaldırır; odak gövdeye düşmez.
+  await toggle("karaka", /Chara karaka panelini aç\/kapat/);
+  await expect(karakas).toHaveCount(0);
+  await expect(arudha).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+});
