@@ -7,7 +7,12 @@
     "Karaka (yedili şema, Rahu sıralanmaz): Satürn 26, Ay 22, Merkür 19, Venüs 15, Mars 11, Jüpiter 7, Güneş 3. Eşitlik yok.",
     "Karakamsha: Atmakaraka Satürn Yengeç 26°. Su burcu Yengeç'ten sayılır; 26° sekizinci parçadadır (23°20′–26°40′): Yengeç'ten 8. burç Kova.",
     "D9: Güneş Koç 3° (ateş, Koç'tan; 1. parça): Koç. Ay Oğlak 22° (toprak, Oğlak'tan; 7. parça 20°–23°20′): Yengeç. Mars Başak 11° (toprak; 4. parça 10°–13°20′): Koç. Merkür Koç 19° (ateş; 6. parça 16°40′–20°): Başak. Jüpiter Aslan 7° (ateş; 3. parça 6°40′–10°): İkizler. Venüs Balık 15° (su; 5. parça 13°20′–16°40′): Akrep. Satürn: Kova. Rahu Boğa 13° (toprak; 4. parça): Koç. Ketu Akrep 13° (su; 4. parça): Terazi.",
-    "D1 evleri, Kova'dan (Güneş…Ketu): Koç 3, Oğlak 12, Başak 8, Koç 3, Aslan 7, Balık 2, Yengeç 6, Boğa 4, Akrep 10. D9 evleri, Kova'dan: Koç 3, Yengeç 6, Koç 3, Başak 8, İkizler 5, Akrep 10, Kova 1, Koç 3, Terazi 9."
+    "D1 evleri, Kova'dan (Güneş…Ketu): Koç 3, Oğlak 12, Başak 8, Koç 3, Aslan 7, Balık 2, Yengeç 6, Boğa 4, Akrep 10. D9 evleri, Kova'dan: Koç 3, Yengeç 6, Koç 3, Başak 8, İkizler 5, Akrep 10, Kova 1, Koç 3, Terazi 9.",
+    "Eş lord, Akrep (Mars Başak'ta, Ketu Akrep'te): 1. ölçüt: yalnızca Ketu burcun kendisinde; burcun dışındaki lord seçilir: Mars.",
+    "Eş lord, Kova (Satürn Yengeç'te, Rahu Boğa'da): 1. ölçüt ayırmaz. 2. ölçüt: ikisi de yalnız. 3. ölçüt: Satürn Yengeç'te ne yücelmiş ne düşmüş. 4. ölçüt: Yengeç yürük, Boğa sabit: Rahu.",
+    "Pada, İkizler lagna. 1. ev İkizler, Merkür Koç'ta (11.): Koç'tan 11. burç Kova. 2. ev Yengeç, Ay Oğlak'ta (7.): Oğlak'tan 7. burç Yengeç, evin kendisi; istisna: Yengeç'ten 10. burç Koç. 3. ev Aslan, Güneş Koç'ta (9.): Koç'tan 9. burç Yay. 4. ev Başak, Merkür Koç'ta (8.): Koç'tan 8. burç Akrep.",
+    "Pada (5–8). 5. ev Terazi, Venüs Balık'ta (6.): Balık'tan 6. burç Aslan. 6. ev Akrep, lord Mars Başak'ta (11.): Başak'tan 11. burç Yengeç. 7. ev Yay, Jüpiter Aslan'da (9.): Aslan'dan 9. burç Koç. 8. ev Oğlak, Satürn Yengeç'te (7.): Yengeç'ten 7. burç Oğlak, evin kendisi; istisna: Oğlak'tan 10. burç Terazi.",
+    "Pada (9–12). 9. ev Kova, lord Rahu Boğa'da (4.): Boğa'dan 4. burç Aslan, evden 7.; istisna: Aslan'dan 10. burç Boğa. 10. ev Balık, Jüpiter Aslan'da (6.): Aslan'dan 6. burç Oğlak. 11. ev Koç, Mars Başak'ta (6.): Başak'tan 6. burç Kova. 12. ev Boğa, Venüs Balık'ta (11.): Balık'tan 11. burç Oğlak."
   ],
   "input": {
     "lagna_lon": 75.0,
@@ -28,6 +33,21 @@
       "atmakaraka": "Saturn", "sign": "Aquarius",
       "houses_in_d1": {"Sun": 3, "Moon": 12, "Mars": 8, "Mercury": 3, "Jupiter": 7, "Venus": 2, "Saturn": 6, "Rahu": 4, "Ketu": 10},
       "houses_in_d9": {"Sun": 3, "Moon": 6, "Mars": 3, "Mercury": 8, "Jupiter": 5, "Venus": 10, "Saturn": 1, "Rahu": 3, "Ketu": 9}
-    }
+    },
+    "co_lords": {"Scorpio": {"lord": "Mars", "step": 1}, "Aquarius": {"lord": "Rahu", "step": 4}},
+    "arudhas": [
+      {"house": 1, "sign": "Aquarius", "lord": "Mercury", "exception": false},
+      {"house": 2, "sign": "Aries", "lord": "Moon", "exception": true},
+      {"house": 3, "sign": "Sagittarius", "lord": "Sun", "exception": false},
+      {"house": 4, "sign": "Scorpio", "lord": "Mercury", "exception": false},
+      {"house": 5, "sign": "Leo", "lord": "Venus", "exception": false},
+      {"house": 6, "sign": "Cancer", "lord": "Mars", "exception": false},
+      {"house": 7, "sign": "Aries", "lord": "Jupiter", "exception": false},
+      {"house": 8, "sign": "Libra", "lord": "Saturn", "exception": true},
+      {"house": 9, "sign": "Taurus", "lord": "Rahu", "exception": true},
+      {"house": 10, "sign": "Capricorn", "lord": "Jupiter", "exception": false},
+      {"house": 11, "sign": "Aquarius", "lord": "Mars", "exception": false},
+      {"house": 12, "sign": "Capricorn", "lord": "Venus", "exception": false}
+    ]
   }
 }

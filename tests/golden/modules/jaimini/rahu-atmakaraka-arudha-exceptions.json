@@ -7,7 +7,12 @@
     "Karaka (sekizli şema): Rahu'nun etkin derecesi 30 − 1 = 29. Büyükten küçüğe: Rahu 29, Venüs 26, Ay 21, Jüpiter 17, Satürn 11, Güneş 8, Mars 4, Merkür 2. Komşu farkların en küçüğü 2°: eşitlik yok.",
     "Karakamsha: Atmakaraka Rahu İkizler 1°. Hava burcu Terazi'den sayılır; 1° ilk parçadadır (0°–3°20′): Terazi.",
     "D9: Güneş Akrep 8° (su, Yengeç'ten; 3. parça 6°40′–10°): Başak. Ay Koç 21° (ateş, Koç'tan; 7. parça 20°–23°20′): Terazi. Mars Koç 4° (2. parça): Boğa. Merkür Yay 2° (ateş; 1. parça): Koç. Jüpiter Boğa 17° (toprak, Oğlak'tan; 6. parça 16°40′–20°): İkizler. Venüs Terazi 26° (hava; 8. parça 23°20′–26°40′): Boğa. Satürn Oğlak 11° (toprak; 4. parça 10°–13°20′): Koç. Rahu: Terazi. Ketu Yay 1° (1. parça): Koç.",
-    "D1 evleri, Terazi'den (Güneş…Ketu): Akrep 2, Koç 7, Koç 7, Yay 3, Boğa 8, Terazi 1, Oğlak 4, İkizler 9, Yay 3. D9 evleri, Terazi'den: Başak 12, Terazi 1, Boğa 8, Koç 7, İkizler 9, Boğa 8, Koç 7, Terazi 1, Koç 7."
+    "D1 evleri, Terazi'den (Güneş…Ketu): Akrep 2, Koç 7, Koç 7, Yay 3, Boğa 8, Terazi 1, Oğlak 4, İkizler 9, Yay 3. D9 evleri, Terazi'den: Başak 12, Terazi 1, Boğa 8, Koç 7, İkizler 9, Boğa 8, Koç 7, Terazi 1, Koç 7.",
+    "Eş lord, Akrep (Mars Koç'ta, Ketu Yay'da): 1. ölçüt ayırmaz (ikisi de Akrep'in dışında). 2. ölçüt: Mars Ay'la (1), Ketu Merkür'le (1): eşit. 3. ölçüt: Mars Koç'ta ne yücelmiş ne düşmüş. 4. ölçüt: Koç yürük, Yay çift doğalı: Ketu.",
+    "Eş lord, Kova (Satürn Oğlak'ta, Rahu İkizler'de): 1. ölçüt ayırmaz. 2. ölçüt: ikisi de yalnız (0–0). 3. ölçüt: Satürn Oğlak'ta ne yücelmiş ne düşmüş. 4. ölçüt: Oğlak yürük, İkizler çift doğalı: Rahu.",
+    "Pada, Koç lagna. 1. ev Koç, lord Mars Koç'ta (1.): hesaplanan burç Koç, evin kendisi; istisna: Koç'tan 10. burç Oğlak. 2. ev Boğa, Venüs Terazi'de (6.): Terazi'den 6. burç Balık. 3. ev İkizler, Merkür Yay'da (7.): Yay'dan 7. burç İkizler, evin kendisi; istisna: İkizler'den 10. burç Balık. 4. ev Yengeç, Ay Koç'ta (10.): Koç'tan 10. burç Oğlak, evden 7.; istisna: Oğlak'tan 10. burç Terazi.",
+    "Pada (5–8). 5. ev Aslan, Güneş Akrep'te (4.): Akrep'ten 4. burç Kova, evden 7.; istisna: Kova'dan 10. burç Akrep. 6. ev Başak, Merkür Yay'da (4.): Yay'dan 4. burç Balık, evden 7.; istisna: Balık'tan 10. burç Yay. 7. ev Terazi, Venüs Terazi'de (1.): istisna: Terazi'den 10. burç Yengeç. 8. ev Akrep, lord Ketu Yay'da (2.): Yay'dan 2. burç Oğlak.",
+    "Pada (9–12). 9. ev Yay, Jüpiter Boğa'da (6.): Boğa'dan 6. burç Terazi. 10. ev Oğlak, Satürn Oğlak'ta (1.): istisna: Oğlak'tan 10. burç Terazi. 11. ev Kova, lord Rahu İkizler'de (5.): İkizler'den 5. burç Terazi. 12. ev Balık, Jüpiter Boğa'da (3.): Boğa'dan 3. burç Yengeç."
   ],
   "input": {
     "lagna_lon": 12.0,
@@ -29,6 +34,21 @@
       "atmakaraka": "Rahu", "sign": "Libra",
       "houses_in_d1": {"Sun": 2, "Moon": 7, "Mars": 7, "Mercury": 3, "Jupiter": 8, "Venus": 1, "Saturn": 4, "Rahu": 9, "Ketu": 3},
       "houses_in_d9": {"Sun": 12, "Moon": 1, "Mars": 8, "Mercury": 7, "Jupiter": 9, "Venus": 8, "Saturn": 7, "Rahu": 1, "Ketu": 7}
-    }
+    },
+    "co_lords": {"Scorpio": {"lord": "Ketu", "step": 4}, "Aquarius": {"lord": "Rahu", "step": 4}},
+    "arudhas": [
+      {"house": 1, "sign": "Capricorn", "lord": "Mars", "exception": true},
+      {"house": 2, "sign": "Pisces", "lord": "Venus", "exception": false},
+      {"house": 3, "sign": "Pisces", "lord": "Mercury", "exception": true},
+      {"house": 4, "sign": "Libra", "lord": "Moon", "exception": true},
+      {"house": 5, "sign": "Scorpio", "lord": "Sun", "exception": true},
+      {"house": 6, "sign": "Sagittarius", "lord": "Mercury", "exception": true},
+      {"house": 7, "sign": "Cancer", "lord": "Venus", "exception": true},
+      {"house": 8, "sign": "Capricorn", "lord": "Ketu", "exception": false},
+      {"house": 9, "sign": "Libra", "lord": "Jupiter", "exception": false},
+      {"house": 10, "sign": "Libra", "lord": "Saturn", "exception": true},
+      {"house": 11, "sign": "Libra", "lord": "Rahu", "exception": false},
+      {"house": 12, "sign": "Cancer", "lord": "Jupiter", "exception": false}
+    ]
   }
 }

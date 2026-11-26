@@ -490,11 +490,13 @@ mod jaimini_properties {
     use super::foundation_properties::positions;
     use crate::graha::Graha;
     use crate::jaimini::{
-        chara_karakas, graha_rashi_drishti, karaka_roles, karakamsha, navamsa_sign,
-        rashi_drishti_signs, KARAKA_TIE_DEG,
+        arudha_padas, chara_karakas, co_lord_choice, co_lords, graha_rashi_drishti, karaka_roles,
+        karakamsha, navamsa_sign, rashi_drishti_signs, KARAKA_TIE_DEG,
     };
+    use crate::lordship::house_sign;
     use crate::settings::KarakaScheme;
     use crate::varga::is_vargottama;
+    use crate::zodiac::Sign;
 
     fn scheme() -> impl Strategy<Value = KarakaScheme> {
         prop_oneof![Just(KarakaScheme::Eight), Just(KarakaScheme::Seven)]
@@ -561,6 +563,59 @@ mod jaimini_properties {
                 for &other in &a.occupants {
                     prop_assert!(rashi_drishti_signs(p.sign_of(other)).contains(&p.sign_of(a.graha)));
                 }
+            }
+        }
+
+        #[test]
+        fn co_lord_choice_is_one_of_the_two_lords(p in positions()) {
+            for sign in [Sign::Scorpio, Sign::Aquarius] {
+                let (planet, node) = co_lords(sign).expect("co-lorded");
+                let c = co_lord_choice(sign, &p).expect("choice");
+                prop_assert!(c.lord == planet || c.lord == node);
+                prop_assert!((1..=6).contains(&c.step));
+                let (ps, ns) = (p.sign_of(planet), p.sign_of(node));
+                // 1. ölçüt: yalnızca biri burçtaysa dışarıdaki seçilir.
+                if (ps == sign) != (ns == sign) {
+                    prop_assert_eq!(c.step, 1);
+                    prop_assert_eq!(c.lord, if ps == sign { node } else { planet });
+                } else {
+                    prop_assert!(c.step > 1);
+                }
+                // İkisi aynı burçtaysa hiçbir ölçüt ayırmaz; yücelme ve düşüş dışında.
+                if ps == ns {
+                    prop_assert!(c.step == 3 || c.step == 6);
+                }
+                if c.step == 6 {
+                    prop_assert_eq!(c.lord, planet);
+                }
+            }
+        }
+
+        #[test]
+        fn no_pada_falls_in_its_house_or_the_seventh(p in positions(), co in any::<bool>()) {
+            match (p.lagna_sign, arudha_padas(&p, co)) {
+                (None, padas) => prop_assert_eq!(padas, None),
+                (Some(lagna), Some(padas)) => {
+                    for (i, pada) in padas.iter().enumerate() {
+                        let house = i as u8 + 1;
+                        prop_assert_eq!(pada.house, house);
+                        let from_house = pada.sign.house_from(house_sign(lagna, house));
+                        prop_assert!(from_house != 1 && from_house != 7);
+                        // Pada, evin lordunun burcundan lordun evden uzaklığı kadar ötededir;
+                        // istisnada bundan 10. burçtur.
+                        let lord_sign = p.sign_of(pada.lord);
+                        let n = lord_sign.house_from(house_sign(lagna, house));
+                        let computed = Sign::from_index(lord_sign.index() + usize::from(n) - 1);
+                        let want = if pada.exception {
+                            Sign::from_index(computed.index() + 9)
+                        } else {
+                            computed
+                        };
+                        prop_assert_eq!(pada.sign, want);
+                        prop_assert_eq!(pada.exception, matches!(n, 1 | 4 | 7 | 10));
+                    }
+                }
+                (Some(_), None) => prop_assert!(false, "padas with a lagna"),
             }
         }
     }

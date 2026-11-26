@@ -7,7 +7,12 @@
     "Karaka (sekizli şema): Rahu'nun etkin derecesi 30 − 21 = 9. Büyükten küçüğe: Venüs 25, Merkür 23, Satürn 17, Mars 14, Güneş 12, Rahu 9, Jüpiter 5, Ay 2. Eşitlik yok.",
     "Karakamsha: Atmakaraka Venüs İkizler 25°. Hava burcu Terazi'den sayılır; 25° sekizinci parçadadır (23°20′–26°40′): Terazi'den 8. burç Boğa.",
     "D9: Güneş Boğa 12° (toprak, Oğlak'tan; 4. parça 10°–13°20′): Koç. Ay Kova 2° (hava; 1. parça): Terazi. Mars Aslan 14° (ateş, Koç'tan; 5. parça 13°20′–16°40′): Aslan. Merkür Boğa 23° (toprak; 7. parça 20°–23°20′): Yengeç. Jüpiter İkizler 5° (hava; 2. parça 3°20′–6°40′): Akrep. Venüs: Boğa. Satürn İkizler 17° (hava; 6. parça 16°40′–20°): Balık. Rahu Aslan 21° (ateş; 7. parça): Terazi. Ketu Kova 21° (hava; 7. parça): Koç.",
-    "D1 evleri, Boğa'dan (Güneş…Ketu): Boğa 1, Kova 10, Aslan 4, Boğa 1, İkizler 2, İkizler 2, İkizler 2, Aslan 4, Kova 10. D9 evleri, Boğa'dan: Koç 12, Terazi 6, Aslan 4, Yengeç 3, Akrep 7, Boğa 1, Balık 11, Terazi 6, Koç 12."
+    "D1 evleri, Boğa'dan (Güneş…Ketu): Boğa 1, Kova 10, Aslan 4, Boğa 1, İkizler 2, İkizler 2, İkizler 2, Aslan 4, Kova 10. D9 evleri, Boğa'dan: Koç 12, Terazi 6, Aslan 4, Yengeç 3, Akrep 7, Boğa 1, Balık 11, Terazi 6, Koç 12.",
+    "Eş lord, Akrep (Mars Aslan'da, Ketu Kova'da): 1. ölçüt ayırmaz. 2. ölçüt: Mars Rahu'yla (Rahu Akrep'in eş lordu değildir, sayılır: 1), Ketu Ay'la (1): eşit. 3. ölçüt: Mars Aslan'da ne yücelmiş ne düşmüş. 4. ölçüt: Aslan ve Kova sabit: eşit. 5. ölçüt: Akrep ileri sayar: Akrep 1, Yay 2, Oğlak 3, Kova 4 (Ketu); Balık 5, Koç 6, Boğa 7, İkizler 8, Yengeç 9, Aslan 10 (Mars): Mars daha uzak.",
+    "Eş lord, Kova (Satürn İkizler'de, Rahu Aslan'da): 1. ölçüt ayırmaz (Kova'daki Ketu Kova'nın eş lordu değildir). 2. ölçüt: Satürn Jüpiter ve Venüs'le (2), Rahu Mars'la (1): Satürn.",
+    "Pada, Başak lagna. 1. ev Başak, Merkür Boğa'da (9.): Boğa'dan 9. burç Oğlak. 2. ev Terazi, Venüs İkizler'de (9.): İkizler'den 9. burç Kova. 3. ev Akrep, lord Mars Aslan'da (10.): Aslan'dan 10. burç Boğa, evden 7.; istisna: Boğa'dan 10. burç Kova. 4. ev Yay, Jüpiter İkizler'de (7.): İkizler'den 7. burç Yay, evin kendisi; istisna: Yay'dan 10. burç Başak.",
+    "Pada (5–8). 5. ev Oğlak, Satürn İkizler'de (6.): İkizler'den 6. burç Akrep. 6. ev Kova, lord Satürn İkizler'de (5.): İkizler'den 5. burç Terazi. 7. ev Balık, Jüpiter İkizler'de (4.): İkizler'den 4. burç Başak, evden 7.; istisna: Başak'tan 10. burç İkizler. 8. ev Koç, Mars Aslan'da (5.): Aslan'dan 5. burç Yay.",
+    "Pada (9–12). 9. ev Boğa, Venüs İkizler'de (2.): İkizler'den 2. burç Yengeç. 10. ev İkizler, Merkür Boğa'da (12.): Boğa'dan 12. burç Koç. 11. ev Yengeç, Ay Kova'da (8.): Kova'dan 8. burç Başak. 12. ev Aslan, Güneş Boğa'da (10.): Boğa'dan 10. burç Kova, evden 7.; istisna: Kova'dan 10. burç Akrep."
   ],
   "input": {
     "lagna_lon": 165.0,
@@ -29,6 +34,21 @@
       "atmakaraka": "Venus", "sign": "Taurus",
       "houses_in_d1": {"Sun": 1, "Moon": 10, "Mars": 4, "Mercury": 1, "Jupiter": 2, "Venus": 2, "Saturn": 2, "Rahu": 4, "Ketu": 10},
       "houses_in_d9": {"Sun": 12, "Moon": 6, "Mars": 4, "Mercury": 3, "Jupiter": 7, "Venus": 1, "Saturn": 11, "Rahu": 6, "Ketu": 12}
-    }
+    },
+    "co_lords": {"Scorpio": {"lord": "Mars", "step": 5}, "Aquarius": {"lord": "Saturn", "step": 2}},
+    "arudhas": [
+      {"house": 1, "sign": "Capricorn", "lord": "Mercury", "exception": false},
+      {"house": 2, "sign": "Aquarius", "lord": "Venus", "exception": false},
+      {"house": 3, "sign": "Aquarius", "lord": "Mars", "exception": true},
+      {"house": 4, "sign": "Virgo", "lord": "Jupiter", "exception": true},
+      {"house": 5, "sign": "Scorpio", "lord": "Saturn", "exception": false},
+      {"house": 6, "sign": "Libra", "lord": "Saturn", "exception": false},
+      {"house": 7, "sign": "Gemini", "lord": "Jupiter", "exception": true},
+      {"house": 8, "sign": "Sagittarius", "lord": "Mars", "exception": false},
+      {"house": 9, "sign": "Cancer", "lord": "Venus", "exception": false},
+      {"house": 10, "sign": "Aries", "lord": "Mercury", "exception": false},
+      {"house": 11, "sign": "Virgo", "lord": "Moon", "exception": false},
+      {"house": 12, "sign": "Scorpio", "lord": "Sun", "exception": true}
+    ]
   }
 }

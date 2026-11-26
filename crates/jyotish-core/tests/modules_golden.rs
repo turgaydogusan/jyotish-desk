@@ -7,9 +7,9 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use jyotish_core::{
-    chara_karakas, drishti_table, house_lord, houses_owned, karakamsha, kuja_dosha, moon_is_waxing,
-    nature, normalize, AdvancedSettings, Graha, KarakaRole, KujaDosha, Nature, Positions, Sign,
-    ASPECTING_GRAHAS, DRISHTI_METHOD,
+    arudha_padas, chara_karakas, co_lord_choice, drishti_table, house_lord, houses_owned,
+    jaimini_lord, karakamsha, kuja_dosha, moon_is_waxing, nature, normalize, AdvancedSettings,
+    Graha, KarakaRole, KujaDosha, Nature, Positions, Sign, ASPECTING_GRAHAS, DRISHTI_METHOD,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -249,12 +249,33 @@ struct ExpectedKarakamsha {
     houses_in_d9: BTreeMap<Graha, u8>,
 }
 
+/// Eş lord seçimi: seçilen lord ve belirleyici ölçütün numarası.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedCoLord {
+    lord: Graha,
+    step: u8,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct ExpectedPada {
+    house: u8,
+    sign: Sign,
+    lord: Graha,
+    exception: bool,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct JaiminiExpected {
     /// Rol sırasında: sekizli şemada 8, yedili şemada 7 kayıt.
     karakas: Vec<ExpectedKaraka>,
     karakamsha: ExpectedKarakamsha,
+    /// Akrep ve Kova için seçim kuralının sonucu (ayar devre dışıyken de izlenir).
+    co_lords: BTreeMap<Sign, ExpectedCoLord>,
+    /// A1…A12; doğum saati bilinmiyorsa `null`.
+    arudhas: Option<Vec<ExpectedPada>>,
 }
 
 #[test]
@@ -309,6 +330,39 @@ fn jaimini_hand_fixtures() {
                 "{id}: D9 house of {g:?}"
             );
         }
+
+        // Eş lordlar.
+        assert_eq!(
+            x.co_lords.keys().copied().collect::<Vec<_>>(),
+            [Sign::Scorpio, Sign::Aquarius],
+            "{id}: co-lorded signs"
+        );
+        for (&sign, want) in &x.co_lords {
+            let got = co_lord_choice(sign, &p).expect("co-lorded sign");
+            assert_eq!(
+                (got.lord, got.step),
+                (want.lord, want.step),
+                "{id}: co-lord of {sign:?}"
+            );
+            assert_eq!(jaimini_lord(sign, &p, true), want.lord, "{id}: {sign:?}");
+        }
+
+        // Arudha padalar.
+        let padas = arudha_padas(&p, advanced.jaimini_co_lords).map(|a| {
+            a.iter()
+                .map(|x| ExpectedPada {
+                    house: x.house,
+                    sign: x.sign,
+                    lord: x.lord,
+                    exception: x.exception,
+                })
+                .collect::<Vec<_>>()
+        });
+        assert_eq!(padas, x.arudhas, "{id}: arudha padas");
+        assert_eq!(x.arudhas.is_some(), p.lagna_sign.is_some(), "{id}");
+        if let Some(a) = &x.arudhas {
+            assert_eq!(a.len(), 12, "{id}: twelve padas");
+        }
     }
 }
 
@@ -336,4 +390,39 @@ fn jaimini_fixtures_cover_the_required_cases() {
         any(&|f, p| p.sign_of(f.expected.karakamsha.atmakaraka) == f.expected.karakamsha.sign),
         "a vargottama Atmakaraka"
     );
+    assert!(
+        any(&|f, _| f.input.advanced.is_some_and(|a| !a.jaimini_co_lords)),
+        "co-lords switched off"
+    );
+    assert!(
+        any(&|f, _| f.expected.arudhas.is_none()),
+        "birth time unknown"
+    );
+    // Lordun evden 1., 4., 7. ve 10. burçta olduğu istisnalar.
+    for n in [1u8, 4, 7, 10] {
+        assert!(
+            any(&|f, p| {
+                let (Some(lagna), Some(padas)) = (p.lagna_sign, &f.expected.arudhas) else {
+                    return false;
+                };
+                padas.iter().any(|x| {
+                    x.exception && p.sign_of(x.lord).house_from(house_sign_of(lagna, x.house)) == n
+                })
+            }),
+            "arudha exception with the lord in house {n}"
+        );
+    }
+    // Eş lord seçiminin altı ölçütünden her biri en az bir örnekte belirleyicidir.
+    for step in 1..=6u8 {
+        assert!(
+            any(&|f, _| f.expected.co_lords.values().any(|c| c.step == step)),
+            "co-lord step {step}"
+        );
+    }
+}
+
+/// `lagna` burcundan sayılan `house`. evin burcu (test yardımcısı; motorun `house_sign`'ı
+/// yerine elle sayım).
+fn house_sign_of(lagna: Sign, house: u8) -> Sign {
+    Sign::ALL[(lagna as usize + usize::from(house) - 1) % 12]
 }

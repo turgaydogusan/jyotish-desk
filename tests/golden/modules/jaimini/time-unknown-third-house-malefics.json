@@ -7,7 +7,10 @@
     "Karaka (sekizli şema): Rahu'nun etkin derecesi 30 − 11 = 19. Büyükten küçüğe: Merkür 29, Mars 24, Rahu 19, Satürn 18, Güneş 14, Venüs 9, Jüpiter 7, Ay 2. Eşitlik yok.",
     "Karakamsha: Atmakaraka Merkür Boğa 29°. Toprak burcu Oğlak'tan sayılır; 29° dokuzuncu parçadadır: Oğlak'tan 9. burç Başak.",
     "D9: Güneş İkizler 14° (hava, Terazi'den; 5. parça 13°20′–16°40′): Kova. Ay İkizler 2° (1. parça): Terazi. Mars İkizler 24° (8. parça 23°20′–26°40′): Boğa. Merkür: Başak. Jüpiter Terazi 7° (hava; 3. parça 6°40′–10°): Yay. Venüs Yengeç 9° (su, Yengeç'ten; 3. parça): Başak. Satürn Kova 18° (hava; 6. parça 16°40′–20°): Balık. Rahu Akrep 11° (su; 4. parça 10°–13°20′): Terazi. Ketu Boğa 11° (toprak; 4. parça): Koç.",
-    "D1 evleri, Başak'tan (Güneş…Ketu): İkizler 10, İkizler 10, İkizler 10, Boğa 9, Terazi 2, Yengeç 11, Kova 6, Akrep 3, Boğa 9. D9 evleri, Başak'tan: Kova 6, Terazi 2, Boğa 9, Başak 1, Yay 4, Başak 1, Balık 7, Terazi 2, Koç 8."
+    "D1 evleri, Başak'tan (Güneş…Ketu): İkizler 10, İkizler 10, İkizler 10, Boğa 9, Terazi 2, Yengeç 11, Kova 6, Akrep 3, Boğa 9. D9 evleri, Başak'tan: Kova 6, Terazi 2, Boğa 9, Başak 1, Yay 4, Başak 1, Balık 7, Terazi 2, Koç 8.",
+    "Eş lord, Akrep (Mars İkizler'de, Ketu Boğa'da): 1. ölçüt ayırmaz (Akrep'teki Rahu Akrep'in eş lordu değildir). 2. ölçüt: Mars Güneş ve Ay'la (2), Ketu Merkür'le (1): Mars.",
+    "Eş lord, Kova (Satürn Kova'da, Rahu Akrep'te): 1. ölçüt: yalnızca Satürn burcun kendisinde; burcun dışındaki lord seçilir: Rahu.",
+    "Pada: lagna olmadığı için padalar verilmez."
   ],
   "input": {
     "lagna_lon": null,
@@ -29,6 +32,8 @@
       "atmakaraka": "Mercury", "sign": "Virgo",
       "houses_in_d1": {"Sun": 10, "Moon": 10, "Mars": 10, "Mercury": 9, "Jupiter": 2, "Venus": 11, "Saturn": 6, "Rahu": 3, "Ketu": 9},
       "houses_in_d9": {"Sun": 6, "Moon": 2, "Mars": 9, "Mercury": 1, "Jupiter": 4, "Venus": 1, "Saturn": 7, "Rahu": 2, "Ketu": 8}
-    }
+    },
+    "co_lords": {"Scorpio": {"lord": "Mars", "step": 2}, "Aquarius": {"lord": "Rahu", "step": 1}},
+    "arudhas": null
   }
 }

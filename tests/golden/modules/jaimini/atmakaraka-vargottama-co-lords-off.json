@@ -7,7 +7,11 @@
     "Karaka (sekizli şema): Rahu'nun etkin derecesi 30 − 16 = 14. Büyükten küçüğe: Jüpiter 28, Merkür 25, Satürn 22, Güneş 19, Rahu 14, Mars 13, Ay 6, Venüs 3. Eşitlik yok.",
     "Karakamsha: Atmakaraka Jüpiter Balık 28°. Su burcu Yengeç'ten sayılır; 28° dokuzuncu parçadadır (26°40′–30°): Yengeç'ten 9. burç Balık. Navamsa burcu rasi burcuyla aynı: Atmakaraka vargottamadır.",
     "D9: Güneş Kova 19° (hava, Terazi'den; 6. parça 16°40′–20°): Balık. Ay Aslan 6° (ateş, Koç'tan; 2. parça 3°20′–6°40′): Boğa. Mars Boğa 13° (toprak, Oğlak'tan; 4. parça 10°–13°20′): Koç. Merkür Oğlak 25° (toprak; 8. parça 23°20′–26°40′): Aslan. Jüpiter: Balık. Venüs Balık 3° (su; 1. parça): Yengeç. Satürn Terazi 22° (hava; 7. parça 20°–23°20′): Koç. Rahu Yengeç 16° (su; 5. parça 13°20′–16°40′): Akrep. Ketu Oğlak 16° (toprak; 5. parça): Boğa.",
-    "D1 evleri, Balık'tan (Güneş…Ketu): Kova 12, Aslan 6, Boğa 3, Oğlak 11, Balık 1, Balık 1, Terazi 8, Yengeç 5, Oğlak 11. D9 evleri, Balık'tan: Balık 1, Boğa 3, Koç 2, Aslan 6, Balık 1, Yengeç 5, Koç 2, Akrep 9, Boğa 3."
+    "D1 evleri, Balık'tan (Güneş…Ketu): Kova 12, Aslan 6, Boğa 3, Oğlak 11, Balık 1, Balık 1, Terazi 8, Yengeç 5, Oğlak 11. D9 evleri, Balık'tan: Balık 1, Boğa 3, Koç 2, Aslan 6, Balık 1, Yengeç 5, Koç 2, Akrep 9, Boğa 3.",
+    "Eş lord: ayar devre dışı; padalarda Akrep'in lordu Mars, Kova'nın lordu Satürn'dür. Seçim kuralı yine de izlenir (ayar açık olsaydı kullanılırdı). Akrep (Mars Boğa'da, Ketu Oğlak'ta): 1. ölçüt ayırmaz; 2. ölçüt: Mars yalnız (0), Ketu Merkür'le (1): Ketu. Kova (Satürn Terazi'de, Rahu Yengeç'te): 1. ölçüt ayırmaz; 2. ölçüt: ikisi de yalnız; 3. ölçüt: Satürn yücelme burcunda (Terazi): Satürn.",
+    "Pada, Akrep lagna. 1. ev Akrep, Mars Boğa'da (7.): Boğa'dan 7. burç Akrep, evin kendisi; istisna: Akrep'ten 10. burç Aslan. 2. ev Yay, Jüpiter Balık'ta (4.): Balık'tan 4. burç İkizler, evden 7.; istisna: İkizler'den 10. burç Balık. 3. ev Oğlak, Satürn Terazi'de (10.): Terazi'den 10. burç Yengeç, evden 7.; istisna: Yengeç'ten 10. burç Koç. 4. ev Kova, Satürn Terazi'de (9.): Terazi'den 9. burç İkizler.",
+    "Pada (5–8). 5. ev Balık, Jüpiter Balık'ta (1.): istisna: Balık'tan 10. burç Yay. 6. ev Koç, Mars Boğa'da (2.): Boğa'dan 2. burç İkizler. 7. ev Boğa, Venüs Balık'ta (11.): Balık'tan 11. burç Oğlak. 8. ev İkizler, Merkür Oğlak'ta (8.): Oğlak'tan 8. burç Aslan.",
+    "Pada (9–12). 9. ev Yengeç, Ay Aslan'da (2.): Aslan'dan 2. burç Başak. 10. ev Aslan, Güneş Kova'da (7.): Kova'dan 7. burç Aslan, evin kendisi; istisna: Aslan'dan 10. burç Boğa. 11. ev Başak, Merkür Oğlak'ta (5.): Oğlak'tan 5. burç Boğa. 12. ev Terazi, Venüs Balık'ta (6.): Balık'tan 6. burç Aslan."
   ],
   "input": {
     "lagna_lon": 220.0,
@@ -29,6 +33,21 @@
       "atmakaraka": "Jupiter", "sign": "Pisces",
       "houses_in_d1": {"Sun": 12, "Moon": 6, "Mars": 3, "Mercury": 11, "Jupiter": 1, "Venus": 1, "Saturn": 8, "Rahu": 5, "Ketu": 11},
       "houses_in_d9": {"Sun": 1, "Moon": 3, "Mars": 2, "Mercury": 6, "Jupiter": 1, "Venus": 5, "Saturn": 2, "Rahu": 9, "Ketu": 3}
-    }
+    },
+    "co_lords": {"Scorpio": {"lord": "Ketu", "step": 2}, "Aquarius": {"lord": "Saturn", "step": 3}},
+    "arudhas": [
+      {"house": 1, "sign": "Leo", "lord": "Mars", "exception": true},
+      {"house": 2, "sign": "Pisces", "lord": "Jupiter", "exception": true},
+      {"house": 3, "sign": "Aries", "lord": "Saturn", "exception": true},
+      {"house": 4, "sign": "Gemini", "lord": "Saturn", "exception": false},
+      {"house": 5, "sign": "Sagittarius", "lord": "Jupiter", "exception": true},
+      {"house": 6, "sign": "Gemini", "lord": "Mars", "exception": false},
+      {"house": 7, "sign": "Capricorn", "lord": "Venus", "exception": false},
+      {"house": 8, "sign": "Leo", "lord": "Mercury", "exception": false},
+      {"house": 9, "sign": "Virgo", "lord": "Moon", "exception": false},
+      {"house": 10, "sign": "Taurus", "lord": "Sun", "exception": true},
+      {"house": 11, "sign": "Taurus", "lord": "Mercury", "exception": false},
+      {"house": 12, "sign": "Leo", "lord": "Venus", "exception": false}
+    ]
   }
 }
