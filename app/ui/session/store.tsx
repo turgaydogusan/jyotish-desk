@@ -1,10 +1,11 @@
 // Açık harita (oturum). Harita Rust'ta hesaplanmış gelir (`OpenedClient`); arayüz yalnızca
-// çizer (spec §4). Yeni harita açılınca görünüm deposu o haritanın dasha yoluna geçer;
+// çizer (spec §4). Yeni harita açılınca görünüm deposu o haritanın dasha yoluna ve eş bağına geçer;
 // önceki haritanın bekleyen görünüm kaydı önce ona yazılır (carried rule C5).
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import type { CalcSettings, Chart, CommandError, OpenedClient } from "../bindings";
 import { storeWarningNotices, useNotices } from "../shell/notices";
+import { compatOf } from "../view/model";
 import { useViewStore } from "../view/store";
 
 export interface Session {
@@ -55,7 +56,7 @@ export function SessionProvider({ initial, children }: { initial: OpenedClient |
       // Eski açılış hatası ("client") da kalkar: yeni harita açıldı.
       dismissWhere((n) => n.id === "boot" || n.id === "client" || n.id.startsWith("store:"));
       for (const n of storeWarningNotices(o.warnings)) push(n);
-      openChart(o.chart_record.id, o.view_state.dasha_expanded_path, o.view_state.chara_expanded_path);
+      openChart(o.chart_record.id, o.view_state.dasha_expanded_path, o.view_state.chara_expanded_path, compatOf(o.view_state));
       setOpened(o);
       touch();
     },

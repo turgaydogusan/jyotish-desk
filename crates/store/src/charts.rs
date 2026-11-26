@@ -6,6 +6,7 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use uuid::Uuid;
 
 use crate::birth::resolve_birth;
+use crate::compat::{clear_compat_links, settled_compat};
 use crate::db::{bad_column, last_id};
 use crate::model::{
     BirthData, ChartKind, ChartRecord, Client, FoldChoice, Gender, MomentWarning, NewChart,
@@ -13,8 +14,8 @@ use crate::model::{
 };
 use crate::settings::{load_calc_settings, SettingsLoad};
 use crate::view_state::{
-    chart_view_chara_path, chart_view_json, chart_view_path, empty_chart_view_json,
-    parse_panel_layout, PanelLayout, ViewState,
+    chart_view_chara_path, chart_view_compat, chart_view_json, chart_view_path,
+    empty_chart_view_json, parse_panel_layout, PanelLayout, ViewState,
 };
 use crate::{Store, StoreError};
 
@@ -518,7 +519,8 @@ impl Store {
             .and_then(|v| parse_panel_layout(&v)))
     }
 
-    /// Görünüm durumu: düzenler `app_state`'ten, iki dasha yolu haritadan (toleranslı).
+    /// Görünüm durumu: düzenler `app_state`'ten, iki dasha yolu ve eş bağı haritadan
+    /// (toleranslı). Eş bağı yalnızca var olan başka bir haritayı gösteriyorsa döner.
     pub fn view_state(&self, chart_id: u32) -> Result<ViewState, StoreError> {
         let raw: String = self
             .conn
@@ -532,25 +534,40 @@ impl Store {
                 what: "chart",
                 id: chart_id,
             })?;
+        let (partner, roles) = chart_view_compat(&raw);
+        let (compat_partner_uuid, compat_roles) =
+            settled_compat(&self.conn, chart_id, partner.as_deref(), roles)?;
         Ok(ViewState {
             panel_layout: self.panel_layout()?,
             dasha_expanded_path: chart_view_path(&raw),
             chara_expanded_path: chart_view_chara_path(&raw),
+            compat_partner_uuid,
+            compat_roles,
             ..ViewState::default()
         })
     }
 
     /// Otomatik kayıt (≈ 500 ms debounce arayüzde). `updated_at` değişmez: görünüm içerik
-    /// değildir. `panel_layout: None` kayıtlı düzeni siler (arayüz varsayılana döner).
+    /// değildir. `panel_layout: None` kayıtlı düzeni siler (arayüz varsayılana döner). Eş bağı
+    /// yalnızca var olan başka bir haritayı gösteriyorsa yazılır; kendisini ya da silinmiş bir
+    /// haritayı gösteren bağ sessizce bırakılır (silinen eş, geç gelen bir kayıtla geri gelmez).
     pub fn save_view_state(&mut self, chart_id: u32, vs: &ViewState) -> Result<(), StoreError> {
         crate::view_state::check_view_state(vs)?;
         let tx = self.conn.transaction()?;
+        let (compat_partner_uuid, compat_roles) = settled_compat(
+            &tx,
+            chart_id,
+            vs.compat_partner_uuid.as_deref(),
+            vs.compat_roles,
+        )?;
+        let chart_part = ViewState {
+            compat_partner_uuid,
+            compat_roles,
+            ..vs.clone()
+        };
         let n = tx.execute(
             "UPDATE charts SET view_state_json = ?1 WHERE id = ?2",
-            params![
-                chart_view_json(&vs.dasha_expanded_path, &vs.chara_expanded_path),
-                chart_id
-            ],
+            params![chart_view_json(&chart_part), chart_id],
         )?;
         if n == 0 {
             return Err(StoreError::NotFound {
@@ -578,18 +595,26 @@ impl Store {
     }
 
     /// Danışanı haritaları, notları ve etiket bağlarıyla kalıcı olarak siler (onay arayüzde).
+    /// Haritalarını eş olarak gösteren uyum bağları aynı işlemde temizlenir.
     pub fn delete_client(&mut self, id: u32) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
+        let removed: Vec<String> = {
+            let mut stmt = tx.prepare("SELECT uuid FROM charts WHERE client_id = ?1")?;
+            let rows = stmt.query_map(params![id], |r| r.get(0))?;
+            rows.collect::<Result<_, _>>()?
+        };
         if tx.execute("DELETE FROM clients WHERE id = ?1", params![id])? == 0 {
             return Err(StoreError::NotFound { what: "client", id });
         }
+        clear_compat_links(&tx, &removed)?;
         prune_tags(&tx)?;
         tx.commit()?;
         Ok(())
     }
 
     /// Haritayı siler; danışanın son haritası silinemez (`LastChart`). Bağlı notlar
-    /// danışanda kalır (`chart_id` boşalır).
+    /// danışanda durur (`chart_id` boşalır). Haritayı eş olarak gösteren uyum bağları aynı
+    /// işlemde temizlenir.
     pub fn delete_chart(&mut self, id: u32) -> Result<(), StoreError> {
         let chart = self.chart(id)?;
         // Sayım ve silme aynı işlemde: arada eklenen/silinen harita kuralı bozamaz.
@@ -603,6 +628,7 @@ impl Store {
             return Err(StoreError::LastChart);
         }
         tx.execute("DELETE FROM charts WHERE id = ?1", params![id])?;
+        clear_compat_links(&tx, &[chart.uuid])?;
         prune_tags(&tx)?;
         tx.commit()?;
         Ok(())

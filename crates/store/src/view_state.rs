@@ -10,10 +10,17 @@
 //! `dasha_expanded_path`, chara dasha yolu `chara_expanded_path` alanındadır. Şema sürümü
 //! değişmez: ikinci alanı taşımayan eski kayıt Vimshottari yolu sayılır ve chara yolu boş
 //! okunur.
+//!
+//! Uyum panelinin eş haritası da haritanındır (ileri modüller spec'i §9): `compat_partner_uuid`
+//! eş haritanın UUID'si, `compat_roles` açık haritanın rolüdür. Bu bağ iki danışan arasında bir
+//! ilişki bilgisidir: yalnızca var olan başka bir haritayı gösterirken saklanır, gösterdiği
+//! harita silinince temizlenir (`compat`) ve loglanmaz. Şema sürümü yine değişmez: iki alanı
+//! taşımayan eski kayıt eşsiz okunur.
 
 use jyotish_core::{Graha, Sign, SignDashaPath, MAX_DASHA_LEVEL, MAX_SIGN_DASHA_LEVEL};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
+use uuid::Uuid;
 
 /// Dasha yolunun en çok uzunluğu (`MAX_DASHA_LEVEL` seviye).
 const MAX_PATH: usize = MAX_DASHA_LEVEL as usize;
@@ -31,6 +38,23 @@ pub fn empty_chara_path() -> SignDashaPath {
 /// Chara dasha yolu geçerli mi: çevrim 1 ya da 2, en çok `MAX_SIGN_DASHA_LEVEL` burç.
 fn chara_path_fits(path: &SignDashaPath) -> bool {
     (1..=2).contains(&path.cycle) && path.signs.len() <= MAX_SIGN_PATH
+}
+
+/// Uyum panelinde rollerin atanışı (ileri modüller spec'i §9): Ashtakuta yönlüdür, roller
+/// açık harita ile eş harita arasında paylaşılır. Eş yokken değer `OpenIsGroom`'dur.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum CompatRoles {
+    /// Açık harita "1. kişi (damat rolü)", eş harita gelin rolü.
+    #[default]
+    OpenIsGroom,
+    /// Açık harita gelin rolü, eş harita damat rolü.
+    OpenIsBride,
+}
+
+/// UUID'nin kanonik yazımı (küçük harf, tireli); UUID değilse `None`.
+pub fn canonical_uuid(text: &str) -> Option<String> {
+    Uuid::parse_str(text).ok().map(|u| u.to_string())
 }
 
 pub const VIEW_STATE_SCHEMA_VERSION: u32 = 1;
@@ -53,11 +77,17 @@ pub fn check_panel_layout(pl: &PanelLayout) -> Result<(), crate::StoreError> {
     Ok(())
 }
 
-/// `save_view_state` denetimi: sürüm, iki dasha yolunun sınırları ve düzen sınırları.
+/// `save_view_state` denetimi: sürüm, iki dasha yolunun sınırları, eş haritanın UUID yazımı
+/// (kanonik) ve düzen sınırları. Eşin var olup olmadığına burada bakılmaz (`Store` bakar).
 pub fn check_view_state(vs: &ViewState) -> Result<(), crate::StoreError> {
+    let partner_fits = match &vs.compat_partner_uuid {
+        Some(uuid) => canonical_uuid(uuid).as_deref() == Some(uuid.as_str()),
+        None => true,
+    };
     if vs.schema_version != VIEW_STATE_SCHEMA_VERSION
         || vs.dasha_expanded_path.len() > usize::from(MAX_DASHA_LEVEL)
         || !chara_path_fits(&vs.chara_expanded_path)
+        || !partner_fits
     {
         return Err(crate::StoreError::InvalidInput("view_state"));
     }
@@ -79,6 +109,11 @@ pub struct ViewState {
     /// Chara dasha ağacında açık dal: çevrim ve kökten burç yolu, en çok
     /// `MAX_SIGN_DASHA_LEVEL`. Boş yolun çevrimi 1'dir.
     pub chara_expanded_path: SignDashaPath,
+    /// Uyum panelinin eş haritası: var olan başka bir haritanın UUID'si (kanonik yazım) ya da
+    /// `None`. Harita başınadır; ilişki bilgisidir ve loglanmaz.
+    pub compat_partner_uuid: Option<String>,
+    /// Açık haritanın uyum rolü; eş yokken `OpenIsGroom`.
+    pub compat_roles: CompatRoles,
 }
 
 impl Default for ViewState {
@@ -88,6 +123,8 @@ impl Default for ViewState {
             panel_layout: None,
             dasha_expanded_path: Vec::new(),
             chara_expanded_path: empty_chara_path(),
+            compat_partner_uuid: None,
+            compat_roles: CompatRoles::default(),
         }
     }
 }
@@ -246,34 +283,61 @@ pub fn parse_chara_path(v: Option<&Value>) -> SignDashaPath {
         .unwrap_or_else(empty_chara_path)
 }
 
+/// Eş bağı: `compat_partner_uuid` geçerli bir UUID ise kanonik yazımı ve `compat_roles`;
+/// UUID yoksa ya da geçersizse bağ yoktur ve rol varsayılandır. Tanınmayan rol değeri
+/// varsayılana düşer, bağ durur.
+pub fn parse_compat(
+    partner: Option<&Value>,
+    roles: Option<&Value>,
+) -> (Option<String>, CompatRoles) {
+    let Some(uuid) = partner.and_then(Value::as_str).and_then(canonical_uuid) else {
+        return (None, CompatRoles::default());
+    };
+    let roles = roles
+        .and_then(|r| serde_json::from_value::<CompatRoles>(r.clone()).ok())
+        .unwrap_or_default();
+    (Some(uuid), roles)
+}
+
 /// Tam `ViewState` JSON'unu toleranslı okur (içe aktarma ve testler). Hiçbir girdide
 /// hata ya da panik yoktur.
 pub fn parse_view_state(raw: &str) -> ViewState {
     let Ok(v) = serde_json::from_str::<Value>(raw) else {
         return ViewState::default();
     };
+    let (compat_partner_uuid, compat_roles) =
+        parse_compat(v.get("compat_partner_uuid"), v.get("compat_roles"));
     ViewState {
         schema_version: VIEW_STATE_SCHEMA_VERSION,
         panel_layout: v.get("panel_layout").and_then(parse_panel_layout),
         dasha_expanded_path: parse_dasha_path(v.get("dasha_expanded_path")),
         chara_expanded_path: parse_chara_path(v.get("chara_expanded_path")),
+        compat_partner_uuid,
+        compat_roles,
     }
 }
 
-/// Haritaya düşen kısım:
-/// `{"schema_version":1,"dasha_expanded_path":[…],"chara_expanded_path":{"cycle":1,"signs":[…]}}`.
-pub fn chart_view_json(path: &[Graha], chara: &SignDashaPath) -> String {
+/// Haritaya düşen kısım: iki dasha yolu ve eş bağı (`panel_layout` kullanıcınındır, yazılmaz).
+/// `{"schema_version":1,"dasha_expanded_path":[…],"chara_expanded_path":{…},
+/// "compat_partner_uuid":null,"compat_roles":"OpenIsGroom"}`. Eş yoksa rol varsayılan yazılır.
+pub fn chart_view_json(vs: &ViewState) -> String {
+    let roles = match vs.compat_partner_uuid {
+        Some(_) => vs.compat_roles,
+        None => CompatRoles::default(),
+    };
     json!({
         "schema_version": VIEW_STATE_SCHEMA_VERSION,
-        "dasha_expanded_path": path,
-        "chara_expanded_path": chara,
+        "dasha_expanded_path": vs.dasha_expanded_path,
+        "chara_expanded_path": vs.chara_expanded_path,
+        "compat_partner_uuid": vs.compat_partner_uuid,
+        "compat_roles": roles,
     })
     .to_string()
 }
 
-/// Yeni haritanın görünüm kaydı: iki yol da boş.
+/// Yeni haritanın görünüm kaydı: iki yol da boş, eş yok.
 pub fn empty_chart_view_json() -> String {
-    chart_view_json(&[], &empty_chara_path())
+    chart_view_json(&ViewState::default())
 }
 
 /// `charts.view_state_json`'dan lord yolu; bozuk JSON boş yol verir.
@@ -290,10 +354,20 @@ pub fn chart_view_chara_path(raw: &str) -> SignDashaPath {
         .unwrap_or_else(|_| empty_chara_path())
 }
 
+/// `charts.view_state_json`'dan eş bağı; bozuk JSON ya da eksik alan bağsız okunur. Eşin var
+/// olup olmadığına burada bakılmaz.
+pub fn chart_view_compat(raw: &str) -> (Option<String>, CompatRoles) {
+    serde_json::from_str::<Value>(raw)
+        .map(|v| parse_compat(v.get("compat_partner_uuid"), v.get("compat_roles")))
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use proptest::prelude::*;
+
+    const PARTNER: &str = "4b0f2a8e-0000-4000-8000-00000000000a";
 
     fn sample() -> ViewState {
         let mut settings = Map::new();
@@ -323,6 +397,8 @@ mod tests {
                 cycle: 2,
                 signs: vec![Sign::Aries, Sign::Taurus],
             },
+            compat_partner_uuid: Some(PARTNER.into()),
+            compat_roles: CompatRoles::OpenIsBride,
         }
     }
 
@@ -367,6 +443,7 @@ mod tests {
         assert_eq!(vs.schema_version, 1);
         assert!(vs.dasha_expanded_path.is_empty());
         assert_eq!(vs.chara_expanded_path, empty_chara_path());
+        assert_eq!(vs.compat_partner_uuid, None);
         let pl = vs.panel_layout.unwrap();
         assert_eq!(pl.active_layout_id, "");
         assert_eq!(pl.layouts.len(), 1);
@@ -425,24 +502,112 @@ mod tests {
     }
 
     #[test]
-    fn chart_view_keeps_only_the_two_dasha_paths() {
+    fn chart_view_keeps_the_two_dasha_paths_and_the_partner_link() {
         let chara = SignDashaPath {
             cycle: 2,
             signs: vec![Sign::Leo],
         };
-        let raw = chart_view_json(&[Graha::Venus], &chara);
+        let vs = ViewState {
+            dasha_expanded_path: vec![Graha::Venus],
+            chara_expanded_path: chara.clone(),
+            compat_partner_uuid: Some(PARTNER.into()),
+            compat_roles: CompatRoles::OpenIsBride,
+            ..sample()
+        };
+        // Düzen kullanıcınındır: haritanın kaydına yazılmaz.
+        let raw = chart_view_json(&vs);
         assert_eq!(
             raw,
-            r#"{"chara_expanded_path":{"cycle":2,"signs":["Leo"]},"dasha_expanded_path":["Venus"],"schema_version":1}"#
+            format!(
+                r#"{{"chara_expanded_path":{{"cycle":2,"signs":["Leo"]}},"compat_partner_uuid":"{PARTNER}","compat_roles":"OpenIsBride","dasha_expanded_path":["Venus"],"schema_version":1}}"#
+            )
         );
         assert_eq!(chart_view_path(&raw), [Graha::Venus]);
         assert_eq!(chart_view_chara_path(&raw), chara);
+        assert_eq!(
+            chart_view_compat(&raw),
+            (Some(PARTNER.to_owned()), CompatRoles::OpenIsBride)
+        );
         assert!(chart_view_path("{broken").is_empty());
         assert_eq!(chart_view_chara_path("{broken"), empty_chara_path());
         assert_eq!(
-            empty_chart_view_json(),
-            r#"{"chara_expanded_path":{"cycle":1,"signs":[]},"dasha_expanded_path":[],"schema_version":1}"#
+            chart_view_compat("{broken"),
+            (None, CompatRoles::OpenIsGroom)
         );
+        assert_eq!(
+            empty_chart_view_json(),
+            r#"{"chara_expanded_path":{"cycle":1,"signs":[]},"compat_partner_uuid":null,"compat_roles":"OpenIsGroom","dasha_expanded_path":[],"schema_version":1}"#
+        );
+        // Eş yokken rol saklanmaz: varsayılan yazılır.
+        let no_partner = ViewState {
+            compat_partner_uuid: None,
+            ..vs
+        };
+        assert_eq!(
+            chart_view_compat(&chart_view_json(&no_partner)),
+            (None, CompatRoles::OpenIsGroom)
+        );
+    }
+
+    #[test]
+    fn the_partner_link_parses_tolerantly() {
+        let read = |partner: Value, roles: Value| parse_compat(Some(&partner), Some(&roles));
+        // Büyük harfli UUID kanonik yazıma çevrilir.
+        assert_eq!(
+            read(json!(PARTNER.to_uppercase()), json!("OpenIsBride")),
+            (Some(PARTNER.to_owned()), CompatRoles::OpenIsBride)
+        );
+        // Tanınmayan rol varsayılana düşer; bağ durur.
+        assert_eq!(
+            read(json!(PARTNER), json!("Both")),
+            (Some(PARTNER.to_owned()), CompatRoles::OpenIsGroom)
+        );
+        // UUID olmayan değer: bağ yok, rol varsayılan.
+        for bad in [
+            json!(null),
+            json!(7),
+            json!(""),
+            json!("ayşe"),
+            json!([PARTNER]),
+        ] {
+            assert_eq!(
+                read(bad.clone(), json!("OpenIsBride")),
+                (None, CompatRoles::OpenIsGroom),
+                "{bad}"
+            );
+        }
+        assert_eq!(parse_compat(None, None), (None, CompatRoles::OpenIsGroom));
+        // Bu alanlardan önce yazılmış kayıt eşsiz okunur.
+        let old = r#"{"dasha_expanded_path":["Rahu"],"schema_version":1}"#;
+        assert_eq!(chart_view_compat(old), (None, CompatRoles::OpenIsGroom));
+        let vs = parse_view_state(old);
+        assert_eq!(
+            (vs.compat_partner_uuid, vs.compat_roles),
+            (None, CompatRoles::OpenIsGroom)
+        );
+    }
+
+    #[test]
+    fn a_view_state_with_a_partner_that_is_not_a_canonical_uuid_is_rejected() {
+        assert!(check_view_state(&sample()).is_ok());
+        for bad in [
+            "",
+            "ayşe",
+            &PARTNER.to_uppercase(),
+            "4b0f2a8e00004000800000000000000a",
+        ] {
+            let vs = ViewState {
+                compat_partner_uuid: Some(bad.to_owned()),
+                ..sample()
+            };
+            assert!(
+                matches!(
+                    check_view_state(&vs),
+                    Err(crate::StoreError::InvalidInput("view_state"))
+                ),
+                "{bad:?}"
+            );
+        }
     }
 
     #[test]
@@ -504,6 +669,8 @@ mod tests {
                         Just("panels".to_owned()),
                         Just("dasha_expanded_path".to_owned()),
                         Just("chara_expanded_path".to_owned()),
+                        Just("compat_partner_uuid".to_owned()),
+                        Just("compat_roles".to_owned()),
                         Just("cycle".to_owned()),
                         Just("signs".to_owned()),
                         Just("id".to_owned()),
@@ -576,8 +743,9 @@ mod tests {
             prop::collection::vec(arb_graha(), 0..=MAX_PATH),
             1u8..=2,
             prop::collection::vec(prop::sample::select(Sign::ALL.to_vec()), 0..=MAX_SIGN_PATH),
+            prop::option::of((any::<u128>(), any::<bool>())),
         )
-            .prop_map(|(pl, path, cycle, signs)| ViewState {
+            .prop_map(|(pl, path, cycle, signs, compat)| ViewState {
                 schema_version: VIEW_STATE_SCHEMA_VERSION,
                 panel_layout: pl.map(|(active, ls)| {
                     let mut uniq: Vec<Layout> = Vec::new();
@@ -593,6 +761,11 @@ mod tests {
                 }),
                 dasha_expanded_path: path,
                 chara_expanded_path: SignDashaPath { cycle, signs },
+                compat_partner_uuid: compat.map(|(bits, _)| Uuid::from_u128(bits).to_string()),
+                compat_roles: match compat {
+                    Some((_, true)) => CompatRoles::OpenIsBride,
+                    _ => CompatRoles::OpenIsGroom,
+                },
             })
     }
 
@@ -608,6 +781,14 @@ mod tests {
             let vs = parse_view_state(&v.to_string());
             prop_assert!(vs.dasha_expanded_path.len() <= MAX_PATH);
             prop_assert!(chara_path_fits(&vs.chara_expanded_path));
+            let chart_part = ViewState {
+                panel_layout: None,
+                ..vs.clone()
+            };
+            prop_assert!(check_view_state(&chart_part).is_ok());
+            if vs.compat_partner_uuid.is_none() {
+                prop_assert_eq!(vs.compat_roles, CompatRoles::OpenIsGroom);
+            }
             if let Some(pl) = &vs.panel_layout {
                 for l in &pl.layouts {
                     prop_assert!(!l.id.trim().is_empty());

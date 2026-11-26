@@ -1,9 +1,9 @@
-// Görünüm durumunun tek merkezi (spec §11 M5): düzenler ve dasha yolları tek saf reducer'dan geçer;
+// Görünüm durumunun tek merkezi (spec §11 M5): düzenler, dasha yolları ve eş bağı tek saf reducer'dan geçer;
 // ≈ 500 ms debounce ile kayıt (spec §4), pencere gizlenince ya da kapanınca hemen kayıt,
 // Cmd+1…9 ile sıradaki düzene geçiş (UI spec §3.2). Paneller düzene `useLayoutStore`,
 // dasha yollarına `useViewStore` ile ulaşır; birbirini çağırmaz.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
-import type { Graha, SignDashaPath, ViewState } from "../bindings";
+import type { CompatRoles, Graha, SignDashaPath, ViewState } from "../bindings";
 import type { Layout, LayoutState, ModulePanelKind, Panel } from "../layout/model";
 import { activeLayout, newId, normalizeState, type LayoutAction } from "../layout/reducer";
 import { toViewState, type ViewModel } from "./model";
@@ -38,8 +38,12 @@ export interface ViewStore {
   setDashaPath(path: Graha[]): void;
   /** Chara dasha ağacının açık dalı (çevrim ve burç yolu). */
   setCharaPath(path: SignDashaPath): void;
-  /** Yeni açılan harita: bekleyen kayıt önceki haritaya yazılır, yeni haritanın yolları yüklenir. */
-  openChart(chartId: number, dashaPath: unknown, charaPath?: unknown): void;
+  /** Uyum panelinin eş haritası ve açık haritanın rolü; `null` bağı kaldırır (ileri modüller spec'i §9). */
+  setCompatPartner(partnerUuid: string | null, roles: CompatRoles): void;
+  /** Uyum panelinde iki rolü değiştirir. */
+  swapCompatRoles(): void;
+  /** Yeni açılan harita: bekleyen kayıt önceki haritaya yazılır, yeni haritanın yolları ve eş bağı yüklenir. */
+  openChart(chartId: number, dashaPath: unknown, charaPath?: unknown, compat?: unknown): void;
   /** Açık harita kapandı (ör. danışan silindi): bekleyen kayıt yazılır, sonraki kayıt yalnızca düzendir. */
   closeChart(): void;
   /**
@@ -150,7 +154,9 @@ export function ViewStateProvider({
       viewState: toViewState(state),
       setDashaPath: (path) => dispatch({ type: "setDashaPath", path }),
       setCharaPath: (path) => dispatch({ type: "setCharaPath", path }),
-      openChart: (chartId, dashaPath, charaPath) => dispatch({ type: "openChart", chartId, dashaPath, charaPath }),
+      setCompatPartner: (partnerUuid, roles) => dispatch({ type: "setCompatPartner", partnerUuid, roles }),
+      swapCompatRoles: () => dispatch({ type: "swapCompatRoles" }),
+      openChart: (chartId, dashaPath, charaPath, compat) => dispatch({ type: "openChart", chartId, dashaPath, charaPath, compat }),
       closeChart: () => dispatch({ type: "closeChart" }),
       flush: () => flushRef.current(),
     };

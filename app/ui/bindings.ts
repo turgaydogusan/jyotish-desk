@@ -387,6 +387,16 @@ export type CommandError = {
 };
 
 /**
+ *  Uyum panelinde rollerin atanışı (ileri modüller spec'i §9): Ashtakuta yönlüdür, roller
+ *  açık harita ile eş harita arasında paylaşılır. Eş yokken değer `OpenIsGroom`'dur.
+ */
+export type CompatRoles = 
+/**  Açık harita "1. kişi (damat rolü)", eş harita gelin rolü. */
+"OpenIsGroom" | 
+/**  Açık harita gelin rolü, eş harita damat rolü. */
+"OpenIsBride";
+
+/**
  *  Haritanın Vimshottari ağacı: 1–3. seviyeler ön-sırada (her dönemin ardından alt
  *  dönemleri). 4. ve 5. seviyeler `dasha_children(seed, path)` ile istenir.
  */
@@ -1043,6 +1053,13 @@ export type ViewState = {
 	 *  `MAX_SIGN_DASHA_LEVEL`. Boş yolun çevrimi 1'dir.
 	 */
 	chara_expanded_path: SignDashaPath,
+	/**
+	 *  Uyum panelinin eş haritası: var olan başka bir haritanın UUID'si (kanonik yazım) ya da
+	 *  `None`. Harita başınadır; ilişki bilgisidir ve loglanmaz.
+	 */
+	compat_partner_uuid: string | null,
+	/**  Açık haritanın uyum rolü; eş yokken `OpenIsGroom`. */
+	compat_roles: CompatRoles,
 };
 
 export type YogaGroup = "Mahapurusha" | "Lunar" | "Solar" | "Raja" | "Dhana" | "Exchange" | "ViparitaRaja" | "NeechaBhanga" | "NabhasaCount" | "NabhasaAshraya" | "Dosha";

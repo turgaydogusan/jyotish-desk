@@ -13,7 +13,9 @@ use crate::charts::{clean_name, insert_chart, insert_client, ChartRow};
 use crate::db::format_ts;
 use crate::model::{BirthData, ChartKind, Gender, ResolvedRecord, TzChoice};
 use crate::settings::{load_calc_value, SettingsLoad};
-use crate::view_state::{chart_view_json, parse_chara_path, parse_dasha_path};
+use crate::view_state::{
+    canonical_uuid, chart_view_json, parse_chara_path, parse_compat, parse_dasha_path, ViewState,
+};
 use crate::{Store, StoreError};
 
 pub const EXPORT_FORMAT: &str = "jyotish-desk";
@@ -57,8 +59,9 @@ pub struct ExportChart {
     pub resolved: ResolvedRecord,
     /// Saklanan JSON aynen (daha yeni sürümün alanları korunur).
     pub calc_settings: Value,
-    /// Haritanın görünüm kısmı (`dasha_expanded_path`, `chara_expanded_path`); düzenler
-    /// kullanıcınındır, aktarılmaz.
+    /// Haritanın görünüm kısmı (`dasha_expanded_path`, `chara_expanded_path` ve, eş harita da
+    /// aynı dosyadaysa, `compat_partner_uuid` ile `compat_roles`); düzenler kullanıcınındır,
+    /// aktarılmaz.
     pub view_state: Value,
     pub tags: Vec<String>,
     pub created_at: String,
@@ -114,6 +117,26 @@ impl ImportReport {
         self.warnings_total = self.warnings_total.saturating_add(1);
         if self.warnings.len() < MAX_IMPORT_WARNINGS {
             self.warnings.push(w);
+        }
+    }
+}
+
+/// Görünüm kaydındaki eş bağının iki anahtarı (ileri modüller spec'i §9).
+const COMPAT_KEYS: [&str; 2] = ["compat_partner_uuid", "compat_roles"];
+
+/// Dışa aktarılan görünüm kaydından eş bağını çıkarır: eş harita dosyada yoksa iki danışan
+/// arasındaki ilişki bilgisi dosyaya yazılmaz.
+fn strip_compat_unless_in_file(view: &mut Value, exported: &std::collections::HashSet<String>) {
+    let Some(map) = view.as_object_mut() else {
+        return;
+    };
+    let partner = map
+        .get("compat_partner_uuid")
+        .and_then(Value::as_str)
+        .and_then(canonical_uuid);
+    if !partner.is_some_and(|u| exported.contains(&u)) {
+        for key in COMPAT_KEYS {
+            map.remove(key);
         }
     }
 }
@@ -255,6 +278,14 @@ impl Store {
                 notes,
             });
         }
+        // Eş bağı yalnızca iki harita da bu dosyadaysa yazılır (ileri modüller spec'i §9).
+        let exported: std::collections::HashSet<String> = clients
+            .iter()
+            .flat_map(|c| c.charts.iter().map(|ch| ch.uuid.clone()))
+            .collect();
+        for chart in clients.iter_mut().flat_map(|c| c.charts.iter_mut()) {
+            strip_compat_unless_in_file(&mut chart.view_state, &exported);
+        }
         Ok(serde_json::to_string_pretty(&ExportFile {
             format: EXPORT_FORMAT.into(),
             schema_version: EXPORT_SCHEMA_VERSION,
@@ -289,6 +320,13 @@ impl Store {
         let defaults = self.app_prefs()?.calc_settings;
         let now = self.now();
         let mut report = ImportReport::default();
+        // Dosyadaki haritaların UUID'leri: eş bağı yalnızca eşi bu dosyada ya da veritabanında
+        // olan haritada alınır (geçersiz UUID aşağıda kendi kaydında reddedilir).
+        let in_file: std::collections::HashSet<String> = file
+            .clients
+            .iter()
+            .flat_map(|c| c.charts.iter().filter_map(|ch| canonical_uuid(&ch.uuid)))
+            .collect();
         let tx = self.conn.transaction()?;
         for c in &file.clients {
             let client_uuid = check_uuid(&c.uuid)?;
@@ -342,8 +380,24 @@ impl Store {
                     }
                     other => other.settings().clone(),
                 };
-                let path = parse_dasha_path(ch.view_state.get("dasha_expanded_path"));
-                let chara = parse_chara_path(ch.view_state.get("chara_expanded_path"));
+                let (partner, roles) = parse_compat(
+                    ch.view_state.get("compat_partner_uuid"),
+                    ch.view_state.get("compat_roles"),
+                );
+                let partner = match partner {
+                    Some(u) if u == chart_uuid => None,
+                    Some(u) if in_file.contains(&u) || id_by_uuid(&tx, "charts", &u)?.is_some() => {
+                        Some(u)
+                    }
+                    _ => None,
+                };
+                let view = ViewState {
+                    dasha_expanded_path: parse_dasha_path(ch.view_state.get("dasha_expanded_path")),
+                    chara_expanded_path: parse_chara_path(ch.view_state.get("chara_expanded_path")),
+                    compat_partner_uuid: partner,
+                    compat_roles: roles,
+                    ..ViewState::default()
+                };
                 let chart_id = insert_chart(
                     &tx,
                     &ChartRow {
@@ -354,7 +408,7 @@ impl Store {
                         birth: &parsed.canonical,
                         resolved: &resolved,
                         calc_json: &serde_json::to_string(&settings)?,
-                        view_json: &chart_view_json(&path, &chara),
+                        view_json: &chart_view_json(&view),
                         created_at: &ts_or(&ch.created_at, &now),
                         updated_at: &ts_or(&ch.updated_at, &now),
                     },
@@ -429,7 +483,7 @@ mod tests {
     use crate::charts::testutil::new_client;
     use crate::db::testutil::store;
     use crate::open::StoreWarning;
-    use crate::view_state::ViewState;
+    use crate::view_state::CompatRoles;
     use jyotish_core::{CalcSettings, Graha, NodeKind, Sign, SignDashaPath};
     use serde_json::json;
 
@@ -699,5 +753,121 @@ mod tests {
         assert_eq!(report.warnings.len(), MAX_IMPORT_WARNINGS);
         assert_eq!(report.warnings_total as usize, MAX_IMPORT_WARNINGS + 50);
         assert_eq!(report.warnings[0].item, "u0");
+    }
+
+    /// İki danışan; ilkinin haritası ikincininkini eş olarak gösterir (gelin rolünde).
+    fn linked_pair() -> (Store, u32, u32) {
+        let mut s = store();
+        let (a, cha) = s.create_client(&new_client("Ayşe")).unwrap();
+        let (b, chb) = s.create_client(&new_client("Mehmet")).unwrap();
+        s.save_view_state(
+            cha.id,
+            &ViewState {
+                dasha_expanded_path: vec![Graha::Venus],
+                compat_partner_uuid: Some(chb.uuid),
+                compat_roles: CompatRoles::OpenIsBride,
+                ..ViewState::default()
+            },
+        )
+        .unwrap();
+        (s, a.id, b.id)
+    }
+
+    #[test]
+    fn the_partner_link_is_exported_only_when_both_charts_are_in_the_file() {
+        let (mut s, a, b) = linked_pair();
+        let partner = s.charts_of(b).unwrap()[0].uuid.clone();
+        let export = |s: &mut Store, ids: Vec<u32>| -> (String, Value) {
+            let text = s
+                .export_json(&ExportOptions {
+                    include_notes: false,
+                    client_ids: Some(ids),
+                })
+                .unwrap();
+            let v = serde_json::from_str(&text).unwrap();
+            (text, v)
+        };
+        // İki danışan birlikte: bağ ve rol dosyadadır.
+        let (_, both) = export(&mut s, vec![a, b]);
+        let view = &both["clients"][0]["charts"][0]["view_state"];
+        assert_eq!(view["compat_partner_uuid"], json!(partner));
+        assert_eq!(view["compat_roles"], json!("OpenIsBride"));
+        // Yalnızca bağın sahibi: eşin UUID'si dosyanın hiçbir yerinde geçmez; dasha yolu durur.
+        let (text, alone) = export(&mut s, vec![a]);
+        assert!(!text.contains(&partner));
+        let view = alone["clients"][0]["charts"][0]["view_state"]
+            .as_object()
+            .unwrap();
+        assert!(!view.contains_key("compat_partner_uuid") && !view.contains_key("compat_roles"));
+        assert_eq!(view["dasha_expanded_path"], json!(["Venus"]));
+        // Yalnızca eş: onun kaydında bağ zaten yoktur.
+        let (text, other) = export(&mut s, vec![b]);
+        let own = s.charts_of(a).unwrap()[0].uuid.clone();
+        assert!(!text.contains(&own));
+        assert_eq!(
+            other["clients"][0]["charts"][0]["view_state"]["compat_partner_uuid"],
+            Value::Null
+        );
+        // Veritabanındaki kayıt dışa aktarımla değişmez.
+        let chart = s.charts_of(a).unwrap()[0].id;
+        assert_eq!(
+            s.view_state(chart).unwrap().compat_partner_uuid,
+            Some(partner)
+        );
+    }
+
+    #[test]
+    fn an_imported_partner_link_needs_its_partner_in_the_file_or_in_the_database() {
+        let (mut src, a, b) = linked_pair();
+        let partner = src.charts_of(b).unwrap()[0].uuid.clone();
+        let own = src.charts_of(a).unwrap()[0].uuid.clone();
+        let all = src.export_json(&ExportOptions::default()).unwrap();
+        let link_of = |s: &Store, uuid: &str| {
+            let id: u32 = s
+                .conn
+                .query_row(
+                    "SELECT id FROM charts WHERE uuid = ?1",
+                    params![uuid],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            let v = s.view_state(id).unwrap();
+            (v.compat_partner_uuid, v.compat_roles)
+        };
+        // İki harita da dosyada: bağ ve rol alınır (eş dosyada sonra gelse de).
+        let mut dst = store();
+        dst.import_json(&all).unwrap();
+        assert_eq!(
+            link_of(&dst, &own),
+            (Some(partner.clone()), CompatRoles::OpenIsBride)
+        );
+        assert_eq!(link_of(&dst, &partner), (None, CompatRoles::OpenIsGroom));
+
+        // Elle düzenlenmiş dosya: eşi ne dosyada ne veritabanında olan bağ alınmaz.
+        let mut v: Value = serde_json::from_str(&all).unwrap();
+        v["clients"].as_array_mut().unwrap().truncate(1);
+        v["clients"][0]["charts"][0]["view_state"]["compat_partner_uuid"] = json!(partner);
+        v["clients"][0]["charts"][0]["view_state"]["compat_roles"] = json!("OpenIsBride");
+        let mut dst = store();
+        dst.import_json(&v.to_string()).unwrap();
+        assert_eq!(link_of(&dst, &own), (None, CompatRoles::OpenIsGroom));
+        // Eş veritabanında zaten varsa bağ alınır.
+        let mut dst = store();
+        let mut only_partner: Value = serde_json::from_str(&all).unwrap();
+        only_partner["clients"].as_array_mut().unwrap().remove(0);
+        dst.import_json(&only_partner.to_string()).unwrap();
+        dst.import_json(&v.to_string()).unwrap();
+        assert_eq!(
+            link_of(&dst, &own),
+            (Some(partner.clone()), CompatRoles::OpenIsBride)
+        );
+        // Kendisini gösteren bağ ve UUID olmayan değer alınmaz; içe aktarma düşmez.
+        for bad in [json!(own), json!("ayşe"), json!(7)] {
+            let mut w = v.clone();
+            w["clients"][0]["charts"][0]["view_state"]["compat_partner_uuid"] = bad;
+            let mut dst = store();
+            dst.import_json(&w.to_string()).unwrap();
+            assert_eq!(link_of(&dst, &own), (None, CompatRoles::OpenIsGroom));
+        }
     }
 }

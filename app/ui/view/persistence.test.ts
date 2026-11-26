@@ -9,7 +9,7 @@ import { BUILTIN_LAYOUT_IDS } from "../layout/model";
 import { LEGACY_LAYOUT_KEY, loadLayout, storePersistence } from "./persistence";
 
 const ok = <T,>(data: T) => ({ status: "ok" as const, data });
-const vs = { schema_version: 1, panel_layout: { active_layout_id: "a", layouts: [] }, dasha_expanded_path: [], chara_expanded_path: { cycle: 1, signs: [] } };
+const vs = { schema_version: 1, panel_layout: { active_layout_id: "a", layouts: [] }, dasha_expanded_path: [], chara_expanded_path: { cycle: 1, signs: [] }, compat_partner_uuid: null, compat_roles: "OpenIsGroom" as const };
 
 afterEach(() => vi.mocked(api.savePanelLayout).mockReset());
 

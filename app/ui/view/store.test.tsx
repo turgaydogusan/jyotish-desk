@@ -6,6 +6,8 @@ import { initialViewModel } from "./model";
 import { memoryPersistence, type ViewPersistence, type ViewSnapshot } from "./persistence";
 import { SAVE_DEBOUNCE_MS, useLayoutStore, useViewStore, ViewStateProvider } from "./store";
 
+const PARTNER = "4b0f2a8e-0000-4000-8000-00000000000a";
+
 function Probe() {
   const store = useLayoutStore();
   const view = useViewStore();
@@ -16,6 +18,11 @@ function Probe() {
       <span data-testid="chart">{String(view.model.chartId)}</span>
       <span data-testid="path">{view.model.dashaPath.join(">")}</span>
       <span data-testid="chara">{`${view.model.charaPath.cycle}:${view.model.charaPath.signs.join(">")}`}</span>
+      <span data-testid="compat">{`${view.model.compat.partnerUuid ?? "none"}:${view.model.compat.roles}`}</span>
+      <button onClick={() => view.setCompatPartner(PARTNER, "OpenIsBride")}>partner</button>
+      <button onClick={() => view.swapCompatRoles()}>swap</button>
+      <button onClick={() => view.setCompatPartner(null, "OpenIsGroom")}>unlink</button>
+      <button onClick={() => view.openChart(9, [], undefined, { partnerUuid: PARTNER, roles: "OpenIsGroom" })}>open9</button>
       <button onClick={() => store.saveAs("Benim")}>saveAs</button>
       <button onClick={() => store.select(BUILTIN_LAYOUT_IDS.research)}>research</button>
       <button onClick={() => view.setDashaPath(["Rahu", "Jupiter"] as Graha[])}>path</button>
@@ -103,6 +110,35 @@ test("the chara dasha path is saved with the open chart and loaded per chart", (
   // Yolu olmayan haritada boş yol.
   fireEvent.click(screen.getByText("open8"));
   expect(screen.getByTestId("chara")).toHaveTextContent("1:");
+});
+
+test("the partner link is saved with the open chart, swapped, cleared and loaded per chart", () => {
+  const p = memoryPersistence();
+  setup(p);
+  // Harita açık değilken eş atanmaz ve kayıt gitmez.
+  fireEvent.click(screen.getByText("partner"));
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS));
+  expect(screen.getByTestId("compat")).toHaveTextContent("none:OpenIsGroom");
+  expect(p.saved).toEqual([]);
+  fireEvent.click(screen.getByText("open7"));
+  fireEvent.click(screen.getByText("partner"));
+  expect(screen.getByTestId("compat")).toHaveTextContent(`${PARTNER}:OpenIsBride`);
+  fireEvent.click(screen.getByText("swap"));
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS));
+  // İki değişiklik tek kayıttır; dasha yolu olduğu gibi durur.
+  expect(p.saved).toEqual<ViewSnapshot[]>([
+    { chartId: 7, viewState: expect.objectContaining({ dasha_expanded_path: ["Venus"], compat_partner_uuid: PARTNER, compat_roles: "OpenIsGroom" }) },
+  ]);
+  fireEvent.click(screen.getByText("unlink"));
+  // Başka harita açılınca bekleyen kayıt önce eski haritaya yazılır; yeni harita kendi bağıyla açılır.
+  fireEvent.click(screen.getByText("open9"));
+  expect(p.saved.at(-1)).toEqual({ chartId: 7, viewState: expect.objectContaining({ compat_partner_uuid: null, compat_roles: "OpenIsGroom" }) });
+  expect(screen.getByTestId("compat")).toHaveTextContent(`${PARTNER}:OpenIsGroom`);
+  // Açılan haritanın bağı store'dan geldiği için yeniden yazılmaz.
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS));
+  expect(p.saved).toHaveLength(2);
+  fireEvent.click(screen.getByText("open8"));
+  expect(screen.getByTestId("compat")).toHaveTextContent("none:OpenIsGroom");
 });
 
 test("opening another chart flushes the pending save to the previous chart first", () => {

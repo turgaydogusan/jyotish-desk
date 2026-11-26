@@ -2,8 +2,9 @@
 // tek bir modelde tutulur ve tek bir yerden (`toViewState`) serileştirilir. Hesap ayarları
 // (`CalcSettings`) burada değildir; ikisi ayrıdır (spec §4 "Ayar katmanları"). Açık dal dasa
 // sistemi başına ayrıdır (ileri modüller spec'i §6): Vimshottari'nin lord yolu ve chara
-// dashanın burç yolu.
-import type { Graha, Sign, SignDashaPath, ViewState } from "../bindings";
+// dashanın burç yolu. Uyum panelinin eş haritası ve rolleri de haritanındır (§9): ilişki
+// bilgisidir, loglanmaz.
+import type { CompatRoles, Graha, Sign, SignDashaPath, ViewState } from "../bindings";
 import { SIGNS } from "../chart/adapter";
 import { isGrahaId } from "../chart/types";
 import { parseLayoutState, type LayoutState } from "../layout/model";
@@ -19,6 +20,34 @@ export function emptyCharaPath(): SignDashaPath {
   return { cycle: 1, signs: [] };
 }
 
+/** Uyum panelinin eş bağı: eş haritanın UUID'si ve açık haritanın rolü. Eş yokken rol `OpenIsGroom`. */
+export interface CompatLink {
+  partnerUuid: string | null;
+  roles: CompatRoles;
+}
+
+export function emptyCompat(): CompatLink {
+  return { partnerUuid: null, roles: "OpenIsGroom" };
+}
+
+/** Kanonik UUID yazımı (küçük harf, tireli); Rust `canonical_uuid`'in kabul ettiği saklama biçimi. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * Toleranslı: eş kanonik bir UUID değilse bağ yoktur ve rol varsayılandır; tanınmayan rol
+ * `OpenIsGroom`'dur (Rust `parse_compat` ile aynı). Alanları taşımayan eski kayıt eşsizdir.
+ */
+export function parseCompat(raw: unknown): CompatLink {
+  if (typeof raw !== "object" || raw === null) return emptyCompat();
+  const { partnerUuid, roles } = raw as { partnerUuid?: unknown; roles?: unknown };
+  if (typeof partnerUuid !== "string" || !UUID.test(partnerUuid)) return emptyCompat();
+  return { partnerUuid, roles: roles === "OpenIsBride" ? "OpenIsBride" : "OpenIsGroom" };
+}
+
+export function sameCompat(a: CompatLink, b: CompatLink): boolean {
+  return a.partnerUuid === b.partnerUuid && a.roles === b.roles;
+}
+
 export interface ViewModel {
   /** Görünümün yazıldığı harita; danışan açık değilse `null` (yalnızca düzen kaydedilir). */
   chartId: number | null;
@@ -27,6 +56,8 @@ export interface ViewModel {
   dashaPath: Graha[];
   /** Chara dasha ağacında açık dal: çevrim ve burç yolu (`ViewState.chara_expanded_path`). */
   charaPath: SignDashaPath;
+  /** Uyum panelinin eş bağı (`ViewState.compat_partner_uuid`, `compat_roles`). */
+  compat: CompatLink;
 }
 
 /** Toleranslı: dizi değilse, geçersiz lord içeriyorsa ya da 5'ten uzunsa boş yol (Rust ile aynı). */
@@ -51,16 +82,27 @@ export function sameCharaPath(a: SignDashaPath, b: SignDashaPath): boolean {
   return a.cycle === b.cycle && a.signs.length === b.signs.length && a.signs.every((s, i) => s === b.signs[i]);
 }
 
-/** Açılan haritanın görünüm kısmı: kimlik ve iki dasha yolu (ham; toleranslı okunur). */
+/** Açılan haritanın görünüm kısmı: kimlik, iki dasha yolu ve eş bağı (ham; toleranslı okunur). */
 export interface ChartView {
   id: number;
   dashaPath: unknown;
   charaPath?: unknown;
+  compat?: unknown;
+}
+
+/** `ViewState`'in eş bağı, modelin ham biçiminde. */
+export function compatOf(viewState: ViewState): CompatLink {
+  return { partnerUuid: viewState.compat_partner_uuid, roles: viewState.compat_roles };
 }
 
 /** `OpenedClient`'tan görünüm kısmı. */
 export function chartViewOf(opened: { chart_record: { id: number }; view_state: ViewState }): ChartView {
-  return { id: opened.chart_record.id, dashaPath: opened.view_state.dasha_expanded_path, charaPath: opened.view_state.chara_expanded_path };
+  return {
+    id: opened.chart_record.id,
+    dashaPath: opened.view_state.dasha_expanded_path,
+    charaPath: opened.view_state.chara_expanded_path,
+    compat: compatOf(opened.view_state),
+  };
 }
 
 /** Açılış modeli: düzen ham kayıttan (toleranslı), dasha yolları açılan haritadan. */
@@ -70,6 +112,7 @@ export function initialViewModel(rawLayout: unknown, chart: ChartView | null = n
     layout: parseLayoutState(rawLayout),
     dashaPath: chart ? parseDashaPath(chart.dashaPath) : [],
     charaPath: chart ? parseCharaPath(chart.charaPath) : emptyCharaPath(),
+    compat: chart ? parseCompat(chart.compat) : emptyCompat(),
   };
 }
 
@@ -80,5 +123,7 @@ export function toViewState(m: ViewModel): ViewState {
     panel_layout: { active_layout_id: m.layout.active_layout_id, layouts: m.layout.layouts },
     dasha_expanded_path: [...m.dashaPath],
     chara_expanded_path: { cycle: m.charaPath.cycle, signs: [...m.charaPath.signs] },
+    compat_partner_uuid: m.compat.partnerUuid,
+    compat_roles: m.compat.partnerUuid === null ? "OpenIsGroom" : m.compat.roles,
   };
 }

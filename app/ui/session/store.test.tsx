@@ -16,7 +16,13 @@ function other(): OpenedClient {
   const o = fixture().opened;
   o.client = { ...o.client, id: 2, name: "İkinci Danışan" };
   o.chart_record = { ...o.chart_record, id: 9, client_id: 2, tags: ["kariyer"] };
-  o.view_state = { ...o.view_state, dasha_expanded_path: ["Venus"], chara_expanded_path: { cycle: 2, signs: ["Gemini"] } };
+  o.view_state = {
+    ...o.view_state,
+    dasha_expanded_path: ["Venus"],
+    chara_expanded_path: { cycle: 2, signs: ["Gemini"] },
+    compat_partner_uuid: "4b0f2a8e-0000-4000-8000-00000000000a",
+    compat_roles: "OpenIsBride",
+  };
   o.warnings = ["LastChartMissing"];
   return o;
 }
@@ -31,6 +37,7 @@ function Probe() {
       <output aria-label="chart">{String(view.model.chartId)}</output>
       <output aria-label="path">{view.model.dashaPath.join(">")}</output>
       <output aria-label="chara">{`${view.model.charaPath.cycle}:${view.model.charaPath.signs.join(">")}`}</output>
+      <output aria-label="compat">{`${view.model.compat.partnerUuid ?? "none"}:${view.model.compat.roles}`}</output>
       <output aria-label="tags">{session.opened?.chart_record.tags.join(",") ?? "-"}</output>
       <output aria-label="revision">{session.revision}</output>
       <button onClick={() => view.setDashaPath(["Rahu"])}>path</button>
@@ -61,6 +68,9 @@ test("openClient flushes the previous chart, opens the reply and swaps the notic
   expect(out("path")).toHaveTextContent("Venus");
   // Açılan haritanın chara dasha yolu da yüklenir.
   expect(out("chara")).toHaveTextContent("2:Gemini");
+  // Eş bağı da açılan haritanınkidir (önceki harita eşsizdi) ve yeniden yazılmaz.
+  expect(out("compat")).toHaveTextContent("4b0f2a8e-0000-4000-8000-00000000000a:OpenIsBride");
+  expect(persistence.saved).toHaveLength(1);
   expect(screen.queryByText(/Son oturum açılamadı/)).toBeNull();
   expect(screen.getByText("Son açılan harita silinmiş; en son güncellenen harita açıldı.")).toBeInTheDocument();
   expect(out("revision")).toHaveTextContent("1");
