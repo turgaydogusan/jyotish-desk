@@ -512,12 +512,12 @@ Boş durum: süzülen grupta kayıt yoksa "Bu grupta oluşan yoga yok: <grup>". 
 | Kuta | En çok | Kural |
 |---|---|---|
 | Varna | 1 | Burç sınıfı: Brahmin (Yengeç, Akrep, Balık) > Kshatriya (Koç, Aslan, Yay) > Vaishya (Boğa, Başak, Oğlak) > Shudra (İkizler, Terazi, Kova). Damat rolünün sınıfı eşit ya da üstünse 1 |
-| Vashya | 2 | Beş grup: dört ayaklı (Koç, Boğa, Yay'ın ikinci yarısı, Oğlak'ın ilk yarısı), insan (İkizler, Başak, Terazi, Yay'ın ilk yarısı, Kova), su (Yengeç, Balık, Oğlak'ın ikinci yarısı), yabanıl (Aslan), böcek (Akrep). Puan 5 × 5 tablodan: {0, ½, 1, 2} |
-| Tara | 3 | Gelin nakshatrasından damadınkine sayım mod 9; 3, 5, 7 uygunsuz. Ters yön için aynısı. Her uygun yön 1½ |
+| Vashya | 2 | Beş grup: dört ayaklı (Koç, Boğa, Yay'ın ikinci yarısı, Oğlak'ın ilk yarısı), insan (İkizler, Başak, Terazi, Yay'ın ilk yarısı, Kova), su (Yengeç, Balık, Oğlak'ın ikinci yarısı), yabanıl (Aslan), böcek (Akrep). İlk yarı `[0°, 15°)` aralığıdır; tam 15° ikinci yarıdadır. Puan 5 × 5 tablodan: {0, ½, 1, 2} |
+| Tara | 3 | Gelin nakshatrasından damadınkine sayım mod 9; 3, 5, 7 uygunsuz. Ters yön için aynısı. Her uygun yön 1½. Sayım başlangıç nakshatrasını da sayar (aynı nakshatra 1); tara numarası sayımın dokuzlu döngüdeki yeridir (10 → 1, 18 → 9). İki yön birden uygunsuz olamaz (3 ↔ 8, 5 ↔ 6, 7 ↔ 4): Tara en az 1½, toplam en az 2½'dir |
 | Yoni | 4 | Nakshatranın 14 hayvan simgesinden biri; puan 14 × 14 tablodan: aynı 4, düşman çift 0, ara değerler 1–3 |
 | Graha maitri | 5 | Ay burçlarının lordları arasındaki doğal ilişki: aynı lord ya da iki yönlü dost 5; dost + nötr 4; iki yönlü nötr 3; dost + düşman 1; nötr + düşman ½; iki yönlü düşman 0 |
 | Gana | 6 | Deva, Manushya, Rakshasa; puan 3 × 3 tablodan |
-| Bhakoot | 7 | Ay burçları arası karşılıklı sayım 2/12, 5/9 ya da 6/8 ise 0, değilse 7 |
+| Bhakoot | 7 | Ay burçları arası karşılıklı sayım 2/12, 5/9 ya da 6/8 ise 0, değilse 7 (sayım başlangıç burcunu da sayar: aynı burç 1) |
 | Nadi | 8 | Adi, Madhya, Antya; farklıysa 8, aynıysa 0 |
 
 Sabit eşlemeler:
@@ -526,51 +526,120 @@ Sabit eşlemeler:
 - **Gana:** Deva — Ashwini, Mrigashira, Punarvasu, Pushya, Hasta, Swati, Anuradha, Shravana, Revati. Manushya — Bharani, Rohini, Ardra, Purva Phalguni, Uttara Phalguni, Purva Ashadha, Uttara Ashadha, Purva Bhadrapada, Uttara Bhadrapada. Rakshasa — öteki dokuz.
 - **Yoni:** at — Ashwini, Shatabhisha; fil — Bharani, Revati; koyun — Krittika, Pushya; yılan — Rohini, Mrigashira; köpek — Ardra, Mula; kedi — Punarvasu, Ashlesha; sıçan — Magha, Purva Phalguni; inek — Uttara Phalguni, Uttara Bhadrapada; manda — Hasta, Swati; kaplan — Chitra, Vishakha; geyik — Anuradha, Jyeshtha; maymun — Purva Ashadha, Shravana; firavun faresi — Uttara Ashadha; aslan — Dhanishta, Purva Bhadrapada. Düşman çiftler: at–manda, fil–aslan, koyun–maymun, yılan–firavun faresi, köpek–geyik, kedi–sıçan, inek–kaplan.
 
-**Puan tabloları** (vashya 5 × 5, yoni 14 × 14, gana 3 × 3) `kuta_tables.rs` içinde sabit veridir. Plan'ın ilk görevi bu üç tabloyu iki bağımsız basılı klasik kaynaktan aktarır, kaynaklar ayrışırsa Kuzey Hint panchang geleneğinde yaygın olanı seçer ve farkı dosyada not eder. Tabloların sağlaması gereken değişmezler: köşegen en yüksek puandır; yoni tablosu simetriktir, yedi düşman çift 0'dır, öteki hücreler {1, 2, 3}'tedir; gana tablosunda Manushya–Rakshasa iki yönde de 0'dır.
+**Puan tabloları** (vashya 5 × 5, yoni 14 × 14, gana 3 × 3) `kuta_tables.rs` içinde sabit veridir ve aşağıda hücre hücre yazılıdır (aynı tablolar `tests/golden/modules/kuta/REVIEW.md` içindedir). Satır damat rolünün, sütun gelin rolünün sınıfıdır (`[damat][gelin]`). Tablolar yaygın basılı biçimden (damat sütunda, gelin satırda verilen düzen) özgün olarak aktarılmıştır; yürüten ajanın elinde basılı kaynak yoktur ve başka yazılımın çıktısı ya da çevrimiçi bir tablo kaynak olamaz (K9). **İki bağımsız basılı klasik kaynakla hücre hücre karşılaştırma sahibin onay maddesidir (§17)** ve `REVIEW.md`'deki kayıt tablosuna yazılır; o zamana dek uyum puanları beta astrologlarına "doğrulanmamış tablo" notuyla sunulur. Bilinen ayrışmalar ve seçim (dosyanın başında notludur): vashya bakışımsızdır (yabanıl sınıf gelin rolündeyse diğer dört sınıfla 0; damat rolündeyse dört ayaklıyla ½, suyla 1; bazı derlemeler tabloyu bakışımlı verir); gana'da damat Rakshasa – gelin Deva 1, damat Deva – gelin Rakshasa 0'dır (bazı derlemelerde tersi) ve damat Manushya – gelin Deva 5'tir; yoni bakışımlıdır, ara değerlerde (1, 2, 3) derlemeler arasında tek tük hücre farkı görülür. Bir varyant ancak ikinci seçenek uygulanınca ayar olur (K7); yöntem kimliği `kuta.ashtakuta_v1`'dir.
+
+**Vashya** (sıra: dört ayaklı, insan, su, yabanıl, böcek)
+
+| damat \ gelin | dört ayaklı | insan | su | yabanıl | böcek |
+|---|---|---|---|---|---|
+| dört ayaklı | 2 | 1 | 1 | 0 | 1 |
+| insan | 1 | 2 | ½ | 0 | 1 |
+| su | 1 | ½ | 2 | 0 | 1 |
+| yabanıl | ½ | 0 | 1 | 2 | 0 |
+| böcek | 1 | 1 | 1 | 0 | 2 |
+
+**Gana**
+
+| damat \ gelin | Deva | Manushya | Rakshasa |
+|---|---|---|---|
+| Deva | 6 | 6 | 0 |
+| Manushya | 5 | 6 | 0 |
+| Rakshasa | 1 | 0 | 6 |
+
+**Yoni** (bakışımlı; sıra: at, fil, koyun, yılan, köpek, kedi, sıçan, inek, manda, kaplan, geyik,
+maymun, firavun faresi, aslan)
+
+| | at | fil | koy | yıl | köp | ked | sıç | ine | man | kap | gey | may | fir | asl |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| at | 4 | 2 | 2 | 3 | 2 | 2 | 2 | 1 | 0 | 1 | 3 | 3 | 2 | 1 |
+| fil | 2 | 4 | 3 | 3 | 2 | 2 | 2 | 2 | 3 | 1 | 2 | 3 | 2 | 0 |
+| koyun | 2 | 3 | 4 | 2 | 1 | 2 | 1 | 3 | 3 | 1 | 2 | 0 | 3 | 1 |
+| yılan | 3 | 3 | 2 | 4 | 2 | 1 | 1 | 1 | 1 | 2 | 2 | 2 | 0 | 2 |
+| köpek | 2 | 2 | 1 | 2 | 4 | 2 | 1 | 2 | 2 | 1 | 0 | 2 | 1 | 1 |
+| kedi | 2 | 2 | 2 | 1 | 2 | 4 | 0 | 2 | 2 | 1 | 3 | 3 | 2 | 1 |
+| sıçan | 2 | 2 | 1 | 1 | 1 | 0 | 4 | 2 | 2 | 2 | 2 | 2 | 1 | 2 |
+| inek | 1 | 2 | 3 | 1 | 2 | 2 | 2 | 4 | 3 | 0 | 3 | 2 | 2 | 1 |
+| manda | 0 | 3 | 3 | 1 | 2 | 2 | 2 | 3 | 4 | 1 | 2 | 2 | 2 | 1 |
+| kaplan | 1 | 1 | 1 | 2 | 1 | 1 | 2 | 0 | 1 | 4 | 1 | 1 | 2 | 1 |
+| geyik | 3 | 2 | 2 | 2 | 0 | 3 | 2 | 3 | 2 | 1 | 4 | 2 | 2 | 1 |
+| maymun | 3 | 3 | 0 | 2 | 2 | 3 | 2 | 2 | 2 | 1 | 2 | 4 | 3 | 2 |
+| firavun faresi | 2 | 2 | 3 | 0 | 1 | 2 | 1 | 2 | 2 | 2 | 2 | 3 | 4 | 2 |
+| aslan | 1 | 0 | 1 | 2 | 1 | 1 | 2 | 1 | 1 | 1 | 1 | 2 | 2 | 4 |
+
+Tabloların sağlaması gereken değişmezler: köşegen en yüksek puandır; yoni tablosu simetriktir, yedi düşman çift 0'dır, öteki hücreler {1, 2, 3}'tedir; gana tablosunda Manushya–Rakshasa iki yönde de 0'dır; vashya'da yabanıl dışındaki dört sınıf arasında tablo bakışımlıdır, yalnızca insan–su çifti ½, diğer beş farklı çift 1'dir. Testler vashya ve yoni tablolarını puan sınıfına göre ikinci bir yazımla (yoni: 15 çift 3, 26 çift 1, diğerleri 2), gana tablosunu dokuz hücresiyle sabitler.
 
 **Ek olgular** (puana girmez):
 
-- Bhakoot 0 iken iki Ay burcunun lordu aynıysa ya da iki yönlü dostsa `bhakoot_exception: true`. Nadi 0 iken iki Ay aynı nakshatranın farklı padalarındaysa ya da aynı burcun farklı nakshatralarındaysa `nadi_exception: true`. Puan değişmez; istisna ayrı gösterilir.
+- Bhakoot 0 iken iki Ay burcunun lordu aynıysa ya da iki yönlü dostsa `bhakoot_exception: true`. Nadi 0 iken iki Ay aynı nakshatranın farklı padalarındaysa ya da aynı burcun farklı nakshatralarındaysa `nadi_exception: true`. Aynı nakshatranın aynı padasında nadi istisnası yoktur. Puan değişmez; istisna ayrı gösterilir, iptal ya da telafi önerilmez.
 - Her iki harita için Kuja dosha olgusu: 3.1'deki ortak `kuja_dosha` fonksiyonu (3.5 de aynısını kullanır).
+
+**Okuma kararları.**
+
+- Sınıf kimlikleri (`kuta_class_ids`): varna `brahmin`, `kshatriya`, `vaishya`, `shudra`; vashya `quadruped`, `human`, `water`, `wild`, `insect`; yoni on dört hayvanın İngilizce adı (`horse` … `lion`); gana `deva`, `manushya`, `rakshasa`; nadi `adi`, `madhya`, `antya`. Sınıfı tablo olmayan üç kutada "sınıf" şudur: Tara'da tara numarası (`1` … `9`; damat rolününki kendi nakshatrasının gelininkinden sayısıdır, gelin rolününki tersi), graha maitride Ay burcunun lordu (`Sun` … `Saturn`), Bhakoot'ta Ay burcu (`Aries` … `Pisces`). İkili alanların sırası her yerde `[damat, gelin]`'dir.
+- Her harita kendi hesap ayarıyla hesaplanır (`chart_input` haritanın kendi ayarını döner): iki harita ayrı ayanamsa ya da zodyak kipinde olabilir; panel farkı bir satırla söyler. Karşılıklı yerleşimin evleri diğer tarafın lagna burcundan ve Ay burcundan sayılan bütün burç evleridir (K4); ev sistemi ayarı raporu etkilemez.
+- Doğum saati bilinmeyen haritada (K2) lagnaya bağlı değerler Rust'ta boştur: o haritanın `kuja_dosha.from_lagna` değeri ve o haritanın lagnasından sayılan dokuz yerleşim evi. Ay'dan sayılan on sekiz değer ve diğer yönün lagna değerleri vardır. Rapor `approximate`'tir; Ay'ın o yerel günde (öğle ∓ 12 saat, hesap aralığına kırpılır) nakshatra ya da burç değiştirip değiştirmediği `moon_day_change`'dedir. Doğum saati bilinmeyen haritaların çoğunda Ay o gün nakshatra değiştirir; rapor öğle konumunu ve değişim olgusunu verir, günün iki ucu için ayrı rapor üretmez.
 
 **Karşılıklı yerleşim.** A'nın dokuz grahasının B'nin lagnasından ve Ay'ından ev sayıları ve tersi. Karar: görev tanımındaki "composite" bu karşılıklı yerleşim tablosu ve iki haritalı görünüm olarak yorumlanır; orta nokta bileşik haritası Batı tekniğidir ve klasik Jyotish'te yeri yoktur, uygulanmaz.
 
-**Eş haritanın seçimi.** Eş, danışan veritabanındaki bir haritadır. Seçim açık haritanın `ViewState.compat_partner_uuid` alanında saklanır (harita başına; düzenler kullanıcıya ait olduğu için panel ayarında tutulmaz). Roller `ViewState.compat_roles` alanındadır; ilk atama iki danışanın `gender` alanı farklı ve doluysa ondan yapılır, değilse açık harita "1. kişi (damat rolü)" olur; "rolleri değiştir" düğmesi vardır.
+**Eş haritanın seçimi.** Eş, danışan veritabanındaki bir haritadır. Seçim açık haritanın `ViewState.compat_partner_uuid` alanında saklanır (harita başına; düzenler kullanıcıya ait olduğu için panel ayarında tutulmaz). Roller `ViewState.compat_roles` alanındadır (`CompatRoles { OpenIsGroom, OpenIsBride }`; eş yokken `OpenIsGroom`). İlk atama: yalnızca açık haritanın danışanı kadın ve eşin danışanı erkekse açık harita gelin rolünü alır; diğer her durumda (cinsiyet boş, aynı ya da "diğer") açık harita "1. kişi (damat rolü)" olur; "rolleri değiştir" düğmesi vardır. `VIEW_STATE_SCHEMA_VERSION` değişmez: iki alanı taşımayan eski kayıt eşsiz okunur. Bağ tek yönlüdür ve haritanındır (A'nın eşi B ise B'nin kaydı değişmez); bir haritanın tek eşi vardır; bağ mevcut görünüm kaydıyla (debounce, `save_view_state`) yazılır.
 
 ### Veri modeli ve IPC
 
 ```rust
+pub enum Kuta { Varna, Vashya, Tara, Yoni, GrahaMaitri, Gana, Bhakoot, Nadi }   // tablo sırası
+pub enum KutaRole { Groom, Bride }
 pub struct KutaScore { pub kuta: Kuta, pub score: f64, pub max: f64,
                        pub groom_class: String, pub bride_class: String }   // sınıf kimlikleri
-pub struct KutaReport { pub scores: [KutaScore; 8], pub total: f64,          // 0..=36
+pub struct OverlayRow { pub owner: KutaRole, pub graha: Graha,
+                        pub sign: Sign, pub deg_in_sign: f64, pub retrograde: bool,   // eş halkasının verisi
+                        pub house_from_lagna: Option<u8>,   // diğer tarafın lagnası yoksa None
+                        pub house_from_moon: u8 }
+pub struct MoonDayChange { pub nakshatra: bool, pub sign: bool }
+pub struct KutaReport { pub scores: [KutaScore; 8], pub total: f64,          // 2½..=36
                         pub bhakoot_exception: bool, pub nadi_exception: bool,
-                        pub kuja_dosha: [KujaDosha; 2],
-                        pub overlay: Option<[OverlayRow; 18]>,
-                        pub approximate: bool, pub method: String }
+                        pub kuja_dosha: [KujaDosha; 2],                      // [damat, gelin]
+                        pub overlay: [OverlayRow; 18],                       // önce damat rolünün dokuz grahası
+                        pub approximate: bool,
+                        pub moon_day_change: [MoonDayChange; 2],             // [damat, gelin]
+                        pub method: String }                                 // "kuta.ashtakuta_v1"
+pub struct ChartBrief { pub client_name: String, pub client_gender: Option<Gender>,
+                        pub chart_label: String, pub chart_kind: ChartKind }
 ```
 
-Komut: `compute_compat(groom: ChartInput, bride: ChartInput) -> KutaReport`. Arayüz eş haritanın girdisini `chart_input(chart_uuid)` adlı yeni store komutuyla alır (yalnızca çözülmüş an, konum, ayarlar, `time_known`; ad dönmez).
+`overlay` `Option` değildir: bir haritanın doğum saati bilinmiyorsa yalnızca o haritanın lagnasından sayılan dokuz değer yoktur (`house_from_lagna: None`). K8 istisnası (§8'deki yoga raporuyla aynı): rapor `warnings` alanı taşımaz; ölümcül olmayan durumlar tipli alanlardır (`approximate`, `moon_day_change`) ve temel haritanın `LowPrecision` uyarısı rapora taşınmaz.
+
+Komutlar:
+
+- `compute_compat(groom: ChartInput, bride: ChartInput) -> KutaReport`. Hatalar `compute_chart`'ın kodlarına ve parametrelerine eşlenir, hangi haritadan gelirse gelsin; parametre yalnızca reddedilen girdinin kendi alanıdır, diğer haritanın verisi hataya girmez. Yeni hata kodu yoktur. Rapor veritabanına yazılmaz, oturumda saklanmaz.
+- `chart_input(chart_uuid) -> Option<ChartInput>`: yalnızca çözülmüş an, konum, haritanın kendi ayarı ve `time_known`; ad, not, yer adı ve saat dilimi dönmez. Harita yoksa `None` (silinmiş eş). Okuma hiçbir şey yazmaz (ayar göçü yazılmaz).
+- `chart_brief(chart_uuid) -> Option<ChartBrief>`: panel başlığındaki ad ve ilk rol ataması için danışanın adı ve cinsiyeti, haritanın etiketi ve türü; doğum verisi dönmez. `chart_input` bilerek ad taşımadığı için ayrı komuttur.
+- `chart_uuid` bir kayıt kimliğidir (dosya yolu ya da adres değildir, C2′) ve Rust'ta UUID olarak denetlenir; geçersiz yazım `invalid_input` (`field: chart_uuid`) verir.
 
 ### Arayüz
 
-`compat` paneli. Başlıkta iki kişinin adı ve rolü, eş seçici (palet tarzı danışan/harita araması) ve "rolleri değiştir".
+`compat` paneli (7 × 16; paletten eklenir, K12). Başlıkta iki kişinin adı, haritası ve rolü (damat rolü önce), eş seçici (palet tarzı danışan/harita araması) ve "rolleri değiştir".
 
-- Sekiz satırlı tablo: kuta, iki tarafın sınıfı, puan / en çok. Altında toplam "n / 36".
-- İstisna ve Kuja dosha olguları tablo altında düz metin satırlarıdır.
-- Karşılıklı yerleşim: iki sütunlu 9 satırlık tablo.
-- `chart` paneline `partner_ring` ayarı eklenir: transit halkasının çizimini kullanarak eşin grahalarını dış halkada gösterir (transit halkasıyla aynı anda açık olamaz).
-- Eş seçilmemişse boş durum tek eylem sunar: "Eş harita seç".
-- İki haritadan birinin doğum saati bilinmiyorsa amber "yaklaşık" rozeti; Ay o gün nakshatra değiştiriyorsa v1'deki uyarı.
+- Sekiz satırlı tablo: kuta, iki tarafın sınıfı (sütun başlığı rol ve ad), puan / en çok. Altında toplam "n / 36". Yarım puan "1½" diye yazılır. Bhakoot sınıfı burç kısaltmasıyla gösterilir. Puanlar renklendirilmez; uyum yüzdesi, hüküm, eşik ve puanı anlatan metin yoktur.
+- İstisna ve Kuja dosha olguları tablo altında düz metin satırlarıdır (adlı bir liste).
+- Karşılıklı yerleşim: iki sütunlu 9 satırlık tablo; hücre "lagnadan n · Ay'dan n". Bilinmeyen ev çizgiyle çizilir ve ekran okuyucuya "bilinmiyor" diye okunur. Graha adları ortak vurgu düğmesidir.
+- Altta yöntem satırı ("Yöntem: kuta.ashtakuta_v1"). İki haritanın hesap ayarı farklıysa bunu söyleyen bir satır.
+- Eş seçici (`shell/Dialog`, WAI-ARIA combobox + listbox): danışan araması (boş aramada son açılanlar); danışanın açık harita dışında tek haritası varsa doğrudan eş olur, birden çoksa ikinci adımda harita seçilir; açık haritanın kendisi sunulmaz.
+- Eş seçilmemişse boş durum tek eylem sunar: "Eş harita seç". Eş seçilmeden hiçbir uyum komutu çağrılmaz.
+- Bağ varken araç çubuğu ("Eşi değiştir", "Eşi çıkar"; eş okunmuşsa "Rolleri değiştir") her durumda görünür: eş okunurken, okunamazken ve yeniden denenirken de bağ değiştirilebilir ya da çözülebilir. Eş yeniden okunurken son okunan eş başlıkta durur (panel `aria-busy`); okuma hata verirse durmaz (yeniden denemede artık bağlı olmayan bir eşin adı gösterilmez). Rapor yalnızca okunmuş eşle istenir. Eşi çıkarınca odak "Eş harita seç"e, boş durumdan eş seçince "Eşi değiştir"e gider (eş okunamasa da); odak gövdeye düşmez.
+- Eş harita silinmişse (`chart_input` ve `chart_brief` boş döner) bağ görünüm modelinden çıkarılır ve panel boş duruma döner; okuma hatası silinmiş eş sayılmaz (bağ durur, "Yeniden dene").
+- `chart` paneline `partner_ring` ayarı eklenir: transit halkasının çizimini kullanarak eşin grahalarını dış halkada gösterir (transit halkasıyla aynı anda açık olamaz; kayıtta ikisi de açıksa transit halkası çizilir). Konumlar uyum raporunun `overlay` satırlarındandır (burç, derece, retro). Düzen kullanıcınındır, eş haritanındır: kutu yalnızca açık haritanın bir eşi varken gösterilir; eşi olmayan haritada ayar açık olsa da hiçbir şey istenmez ve çizilmez. Yalnızca D1'de çizilir; başka vargada kutu odaklanır ve nedenini söyler. Eşin grahaları ekran okuyucu için sözcükle listelenir.
+- İki haritadan birinin doğum saati bilinmiyorsa "≈ yaklaşık" rozeti (kişinin adında ve raporda); o kişinin Ay'ı o gün nakshatra ya da burç değiştiriyorsa (`moon_day_change`) kişinin adıyla uyarı satırı (kenar çizgisi ve metin; renk tek başına anlam taşımaz).
 
 ### Test
 
-- **El örnekleri:** her kuta için tüm sınıf çiftlerini kapsayan tablo testleri (varna 16 sınıf çifti, maitri 49 lord çifti, bhakoot 144 burç çifti, nadi 9 sınıf çifti; tara için 729 nakshatra çiftinin tamamı, formülün ikinci bağımsız yazımıyla). Ayrıca 6 tam çift örneği, toplamı adım adım yazılmış.
-- **Property:** toplam [0, 36] ve kalem toplamına eşit; nadi, bhakoot, yoni ve maitri rol değişiminde değişmez; aynı Ay (aynı nakshatra, aynı pada) için nadi 0, yoni 4, bhakoot 7, maitri 5; tablolar yukarıdaki değişmezleri sağlar.
-- **Store:** `chart_input` ad ve not döndürmez; silinmiş eş haritada panel boş duruma döner.
+- **El örnekleri:** her kuta için tüm sınıf çiftlerini kapsayan tablo testleri (varna 16 sınıf çifti, maitri 49 lord çifti, bhakoot 144 burç çifti, nadi 9 sınıf çifti; tara için 729 nakshatra çiftinin tamamı, formülün ikinci bağımsız yazımıyla). Ayrıca raporun tamamını yazan sekiz tam çift örneği, toplamı adım adım yazılmış (`tests/golden/modules/kuta/`; §13 şemasına `input.bride` eklenir: üst düzey damat rolünün, `bride` gelin rolünün haritasıdır; `expected` = sekiz puan ve sınıf çifti, toplam, iki istisna, iki Kuja dosha olgusu, on sekiz yerleşim satırı, `approximate`). Bir kapsam testi örneklerin şunları içerdiğini denetler: her kutanın en çok ve en düşük puanı, yarım puanlar, toplamın iki ucu (36 ve 2½), iki istisna (var; puan 0 iken yok; nadi istisnasının iki yolu), aynı Ay, bölünen iki burcun dört yarısı, doğum saati bilinmeyen haritanın iki rolü ve Kuja dosha'nın üç referansı. Okuma kuralları, üç tablo, basılı kaynak karşılaştırma kaydı ve bağımsız yeniden türetme kaydı `REVIEW.md`'dedir.
+- **Property:** toplam [0, 36] (gerçek alt sınır 2½; Tara en az 1½) ve kalem toplamına eşit; nadi, bhakoot, yoni ve maitri rol değişiminde değişmez; aynı Ay (aynı nakshatra, aynı pada) için nadi 0, yoni 4, bhakoot 7, maitri 5; tablolar yukarıdaki değişmezleri sağlar.
+- **Store:** `chart_input` ad ve not döndürmez; silinmiş eş haritada panel boş duruma döner; bağ yalnızca var olan başka bir haritaya saklanır, silmede temizlenir ve geç gelen kayıtla geri gelmez; dışa ve içe aktarım kuralları (aşağıda).
+- **Komut katmanı:** beş golden anının 25 çiftinde v1 haritalarıyla çapraz denetim; ev sistemi ayarından bağımsızlık; hata kodları ve parametreleri (yalnızca reddedilen girdinin alanı); bütçe.
 
 ### Gizlilik, performans, kapsam dışı
 
-- Gizlilik: §14. Eş bağı (`compat_partner_uuid`) iki danışan arasında bir ilişki bilgisidir: JSON dışa aktarımda yalnızca iki harita da aynı dosyadaysa yazılır; bir harita ya da danışan silinince onu gösteren alanlar temizlenir; loglanmaz.
+- Gizlilik: §14. Eş bağı (`compat_partner_uuid`) iki danışan arasında bir ilişki bilgisidir: JSON dışa aktarımda yalnızca iki harita da aynı dosyadaysa yazılır; bir harita ya da danışan silinince onu gösteren alanlar aynı işlemde temizlenir; loglanmaz ve hata parametresine girmez. Kayıt ve okuma yalnızca var olan başka bir haritayı gösteren bağı tutar (kendisini ya da silinmiş bir haritayı gösteren bağ sessizce bırakılır): arayüzün gecikmeli görünüm kaydı silinmiş bir eşi geri yazamaz. İçe aktarım yalnızca eşi aynı dosyada ya da veritabanında olan bağı alır; kendisini gösteren ya da UUID olmayan değer alınmaz. Veritabanındaki bir haritaya bağ, yalnızca o haritanın 122 bitlik rastgele UUID'sini bilen (yani bu veritabanının bir dışa aktarımını görmüş) elle düzenlenmiş bir dosyayla kurulabilir; bağ veritabanının dışına hiçbir veri çıkarmaz ve kullanıcı onu panelden çözer. "Yalnızca dosyadaki eş" kuralı bunu önlemez (aynı dosyaya o UUID'yi taşıyan bir kayıt yazılabilir), bu yüzden kural sıkılaştırılmamıştır. `KutaReport` saklanmaz. Elle denetimde yalnızca deneme danışanları kullanılır.
 - Performans: ≤ 20 ms (iki temel harita dahil).
 - Kapsam dışı: Güney Hint dashakuta sistemi (Rajju, Vedha, Mahendra, Stree Deergha…), dosha iptalleri, dasa uyumu, orta nokta bileşik haritası, uyum yüzdesi ya da sözel hüküm.
 
@@ -875,13 +944,13 @@ Ek kurallar:
 ## 17. Riskler ve açık noktalar
 
 - **Varyant seçimleri tartışılabilir.** Shadbala'da yıl/ay lordunun güneş girişinden bulunması (giriş sidereal çerçevede, varası doğum yerinde ölçülür), saptavargaja değerleri, drik balada Merkür ve Jüpiter'in bakışının çeyreğin *üstüne* tam eklenmesi (1,25 kat; öteki okuma 1,00 kat — §7 madde 6; çalışma kâğıdı ile motor aynı okumayı paylaşır, yani kâğıt aritmetiği doğrular, bu seçimi değil), cheshtanın ortalama öğelerle hesabı, sıranın toplama göre verilmesi, özel bakışların ekleme-ve-kesme biçimi; chara dashada padakrama düzeni ve alt dönem sırası; chara karakada varsayılan sekizli şema; yogalarda mahapurushanın yalnızca lagnadan sayılması, Kemadruma'nın iptalleri, Neecha bhanga'nın üç koşulu ve Ay'ın kendisinden sayılmaması, değişim sınıfının değişen evlerle belirlenmesi, Dharma-Karmadhipati'nin ek kayıt olması (ikinci bir okuma gelirse katalog sürümü artar). Hepsi `method` kimliğiyle görünürdür ve tek fonksiyonda toplanmıştır; beta astrologlarından gelen geri bildirimle ikinci bir yöntem eklenebilir (o zaman K7'ye göre ayar olur).
-- **Kuta puan tabloları kaynaktan aktarılacak.** Üç tablo bu belgede hücre hücre yazılı değildir; §9'daki değişmezler ve iki kaynak kuralı planın ilk görevidir. Kaynaklar ayrışırsa seçim dosyada gerekçelendirilir.
+- **Kuta puan tabloları basılı kaynaklarla karşılaştırılmadı.** Üç tablo §9'da hücre hücre yazılıdır ve yaygın basılı biçimden aktarılmıştır; değişmezleri ve ikinci yazımları testtedir, el örnekleri bağımsız olarak yeniden türetilmiştir. Bu, aritmetiği ve okumayı doğrular, hücreleri değil: iki bağımsız basılı klasik kaynakla hücre hücre karşılaştırma sahibin işidir (`tests/golden/modules/kuta/REVIEW.md`'deki kayıt). Bakılacak ayrışma noktaları: vashya'da insan–böcek hücreleri ve yabanıl sınıfın insan, böcek ve suyla hücreleri (bakışımlı varyant); gana'da Deva/Manushya 6 ve 5'in yeri ile damat Rakshasa – gelin Deva (1 ya da 0) ve tersi; yoni'de 1, 2, 3 değerli tek tük hücreler. Karşılaştırma yapılana dek puanlar "doğrulanmamış tablo" notuyla sunulur. Öteki okuma seçimleri (taranın iki yönlü sayımı, vashya yarılarının 15° sınırı, istisnaların puanı değiştirmemesi, her haritanın kendi ayarıyla hesaplanması) §9'da yazılıdır ve ikinci bir okuma uygulanana dek ayar değildir (K7).
 - **Ortalama boylam katsayıları** yayımlanmış tablodan alındı ve ephemeris ile gezegen başına sınırlarla doğrulandı (§7). Jüpiter ve Satürn'de tek bir ±0,05° sınırı tutmaz; iç gezegenlerin güneş merkezli ortalama boylamı yalnızca alt kavuşumlarda dolaylı ölçülür.
 - **`Positions` lagnanın rasi çerçevesindeki derecesini taşımaz.** Shadbala onu Güneş'in iki çerçevedeki farkından türetir (§7 "Çerçeveler"). Başka bir modül de gerek duyarsa §4'e `lagna_deg_in_sign` eklenmesi değerlendirilir.
 - **Tek ephemeris iş parçacığı.** Uzun aramalar harita açmayı bekletebilir; dilimleme ve 300 ms sınırı bunu karşılar. Yetmezse ikinci bir `SwissEph` örneği ayrı bir işin konusudur (SE global durumu nedeniyle süreç içinde güvenli değildir; ayrı süreç gerekir).
 - **Harita araması büyük veritabanında yavaşlayabilir.** Ölçüm ilk görevdir; oturumluk önbellek yedeği tanımlıdır (§12).
 - **El örneği yazanın kuralı yanlış anlaması** motoru da yanlış doğrular. Karşılığı: ayrı gözden geçirmede yeniden türetme (§13) ve değişmezler.
-- **Sahibin kararına bırakılanlar** (engelleyici değil; varsayılanlarla ilerlenir): Shadbala yıl/ay lordu yöntemi, drik balanın okunuşu (1,25 kat) ve chara karaka varsayılanı beta öncesinde bir astrologla teyit edilmeli; Muhurta etkinlik şablonlarının (§10) sonraki bir sürüme alınıp alınmayacağı.
+- **Sahibin kararına bırakılanlar** (engelleyici değil; varsayılanlarla ilerlenir): Shadbala yıl/ay lordu yöntemi, drik balanın okunuşu (1,25 kat) ve chara karaka varsayılanı beta öncesinde bir astrologla teyit edilmeli; üç kuta puan tablosu iki basılı kaynakla karşılaştırılmalı (§9); Muhurta etkinlik şablonlarının (§10) sonraki bir sürüme alınıp alınmayacağı.
 
 ## Ek A — Adlandırma eşlemeleri
 
