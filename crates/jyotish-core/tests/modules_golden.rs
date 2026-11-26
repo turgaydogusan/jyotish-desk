@@ -7,8 +7,9 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use jyotish_core::{
-    drishti_table, house_lord, houses_owned, kuja_dosha, moon_is_waxing, nature, normalize, Graha,
-    KujaDosha, Nature, Positions, Sign, ASPECTING_GRAHAS, DRISHTI_METHOD,
+    chara_karakas, drishti_table, house_lord, houses_owned, karakamsha, kuja_dosha, moon_is_waxing,
+    nature, normalize, AdvancedSettings, Graha, KarakaRole, KujaDosha, Nature, Positions, Sign,
+    ASPECTING_GRAHAS, DRISHTI_METHOD,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -16,6 +17,7 @@ use serde::Deserialize;
 /// Modül başına en az örnek sayısı; altına düşerse test düşer (sessiz silinmeye karşı).
 const MIN_FOUNDATION: usize = 6;
 const MIN_DRISHTI: usize = 4;
+const MIN_JAIMINI: usize = 8;
 /// El hesabı ile motor arasındaki en büyük fark, virupa.
 const VIRUPA_TOL: f64 = 1e-9;
 
@@ -31,12 +33,14 @@ struct Fixture<X> {
 }
 
 /// Sentetik konumlar: sidereal boylamlar, derece. `lagna_lon: null` doğum saati bilinmeyen
-/// haritadır.
+/// haritadır. `advanced` yalnızca ayara bağlı modüllerde (Jaimini) verilir.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
     lagna_lon: Option<f64>,
     grahas: BTreeMap<Graha, f64>,
+    #[serde(default)]
+    advanced: Option<AdvancedSettings>,
 }
 
 impl Input {
@@ -225,4 +229,111 @@ fn drishti_hand_fixtures() {
             );
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedKaraka {
+    role: KarakaRole,
+    graha: Graha,
+    effective_deg: f64,
+    tie: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedKarakamsha {
+    atmakaraka: Graha,
+    sign: Sign,
+    houses_in_d1: BTreeMap<Graha, u8>,
+    houses_in_d9: BTreeMap<Graha, u8>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct JaiminiExpected {
+    /// Rol sırasında: sekizli şemada 8, yedili şemada 7 kayıt.
+    karakas: Vec<ExpectedKaraka>,
+    karakamsha: ExpectedKarakamsha,
+}
+
+#[test]
+fn jaimini_hand_fixtures() {
+    for (f, p) in load::<JaiminiExpected>("jaimini", MIN_JAIMINI) {
+        let id = &f.id;
+        let x = &f.expected;
+        let advanced = f
+            .input
+            .advanced
+            .unwrap_or_else(|| panic!("{id}: jaimini fixtures state the advanced settings"));
+
+        // Chara karaka.
+        let karakas = chara_karakas(&p, advanced.karaka_scheme);
+        assert_eq!(karakas.len(), x.karakas.len(), "{id}: karaka count");
+        for (got, want) in karakas.iter().zip(&x.karakas) {
+            assert_eq!(
+                (got.role, got.graha, got.tie),
+                (want.role, want.graha, want.tie),
+                "{id}: {:?}",
+                want.role
+            );
+            assert!(
+                (got.effective_deg - want.effective_deg).abs() < 1e-9,
+                "{id}: {:?} effective degree {}, hand value {}",
+                want.role,
+                got.effective_deg,
+                want.effective_deg
+            );
+        }
+
+        // Karakamsha.
+        assert_eq!(x.karakamsha.atmakaraka, x.karakas[0].graha, "{id}");
+        let k = karakamsha(&p, x.karakamsha.atmakaraka);
+        assert_eq!(k.sign, x.karakamsha.sign, "{id}: karakamsha");
+        assert_eq!(
+            (
+                x.karakamsha.houses_in_d1.len(),
+                x.karakamsha.houses_in_d9.len()
+            ),
+            (9, 9),
+            "{id}: nine grahas"
+        );
+        for g in Graha::ALL {
+            let i = g as usize;
+            assert_eq!(
+                k.houses_in_d1[i], x.karakamsha.houses_in_d1[&g],
+                "{id}: D1 house of {g:?}"
+            );
+            assert_eq!(
+                k.houses_in_d9[i], x.karakamsha.houses_in_d9[&g],
+                "{id}: D9 house of {g:?}"
+            );
+        }
+    }
+}
+
+/// Zorunlu durumlar (ileri modüller spec'i §5 "Test"): örnekler silinir ya da değiştirilirse
+/// kapsam sessizce daralmasın.
+#[test]
+fn jaimini_fixtures_cover_the_required_cases() {
+    let all = load::<JaiminiExpected>("jaimini", MIN_JAIMINI);
+    let any = |pred: &dyn Fn(&Fixture<JaiminiExpected>, &Positions) -> bool| {
+        all.iter().any(|(f, p)| pred(f, p))
+    };
+    assert!(
+        any(&|f, _| f.expected.karakas[0].graha == Graha::Rahu),
+        "Rahu as Atmakaraka"
+    );
+    assert!(
+        any(&|f, _| f.expected.karakas.iter().any(|k| k.tie)),
+        "a tie within one arcsecond"
+    );
+    assert!(
+        any(&|f, _| f.expected.karakas.len() == 7),
+        "the seven-karaka scheme"
+    );
+    assert!(
+        any(&|f, p| p.sign_of(f.expected.karakamsha.atmakaraka) == f.expected.karakamsha.sign),
+        "a vargottama Atmakaraka"
+    );
 }

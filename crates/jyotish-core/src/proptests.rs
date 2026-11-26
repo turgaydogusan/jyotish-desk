@@ -482,3 +482,86 @@ mod drishti_properties {
         }
     }
 }
+
+/// Jaimini çekirdeği (Alt proje 3.2).
+mod jaimini_properties {
+    use proptest::prelude::*;
+
+    use super::foundation_properties::positions;
+    use crate::graha::Graha;
+    use crate::jaimini::{
+        chara_karakas, graha_rashi_drishti, karaka_roles, karakamsha, navamsa_sign,
+        rashi_drishti_signs, KARAKA_TIE_DEG,
+    };
+    use crate::settings::KarakaScheme;
+    use crate::varga::is_vargottama;
+
+    fn scheme() -> impl Strategy<Value = KarakaScheme> {
+        prop_oneof![Just(KarakaScheme::Eight), Just(KarakaScheme::Seven)]
+    }
+
+    proptest! {
+        #[test]
+        fn karaka_order_is_a_permutation_of_the_scheme_grahas(p in positions(), s in scheme()) {
+            let k = chara_karakas(&p, s);
+            let roles = karaka_roles(s);
+            prop_assert_eq!(k.len(), roles.len());
+            let mut grahas: Vec<Graha> = k.iter().map(|c| c.graha).collect();
+            grahas.sort();
+            prop_assert_eq!(&grahas[..], &Graha::ALL[..roles.len()]);
+            prop_assert!(k.iter().all(|c| c.graha != Graha::Ketu));
+            for (i, c) in k.iter().enumerate() {
+                prop_assert_eq!(c.role, roles[i]);
+                prop_assert!((0.0..=30.0).contains(&c.effective_deg));
+                let deg = p.point(c.graha).deg_in_sign;
+                let want = if c.graha == Graha::Rahu { 30.0 - deg } else { deg };
+                prop_assert_eq!(c.effective_deg, want);
+            }
+            for w in k.windows(2) {
+                prop_assert!(w[0].effective_deg >= w[1].effective_deg);
+                let near = w[0].effective_deg - w[1].effective_deg <= KARAKA_TIE_DEG;
+                if near {
+                    prop_assert!(w[0].tie && w[1].tie);
+                }
+                if w[0].effective_deg == w[1].effective_deg {
+                    prop_assert!(w[0].graha < w[1].graha);
+                }
+            }
+            for (i, c) in k.iter().enumerate() {
+                let near = |j: usize| (c.effective_deg - k[j].effective_deg).abs() <= KARAKA_TIE_DEG;
+                let expected = (i > 0 && near(i - 1)) || (i + 1 < k.len() && near(i + 1));
+                prop_assert_eq!(c.tie, expected);
+            }
+        }
+
+        #[test]
+        fn karakamsha_houses_follow_the_two_charts(p in positions(), g in 0usize..8) {
+            let ak = Graha::ALL[g];
+            let k = karakamsha(&p, ak);
+            prop_assert_eq!(k.sign, navamsa_sign(p.point(ak)));
+            prop_assert_eq!(k.houses_in_d9[g], 1);
+            for (i, point) in p.grahas.iter().enumerate() {
+                prop_assert_eq!(k.houses_in_d1[i], point.rasi_sign.house_from(k.sign));
+                prop_assert_eq!(k.houses_in_d9[i], navamsa_sign(point).house_from(k.sign));
+            }
+            // Vargottama Atmakaraka: karakamsha kendi rasi burcudur.
+            let lon = p.point(ak).rasi_sign.index() as f64 * 30.0 + p.point(ak).deg_in_sign;
+            prop_assert_eq!(is_vargottama(lon), k.houses_in_d1[g] == 1);
+        }
+
+        #[test]
+        fn graha_rashi_drishti_follows_the_sign_table(p in positions()) {
+            let aspects = graha_rashi_drishti(&p);
+            prop_assert_eq!(aspects.len(), 27);
+            for (i, a) in aspects.iter().enumerate() {
+                prop_assert_eq!(a.graha, Graha::ALL[i / 3]);
+                prop_assert_eq!(a.target, rashi_drishti_signs(p.sign_of(a.graha))[i % 3]);
+                prop_assert_eq!(&a.occupants, &p.occupants(a.target));
+                // Karşılıklılık: hedef burçtaki her graha da bu grahanın burcuna bakar.
+                for &other in &a.occupants {
+                    prop_assert!(rashi_drishti_signs(p.sign_of(other)).contains(&p.sign_of(a.graha)));
+                }
+            }
+        }
+    }
+}

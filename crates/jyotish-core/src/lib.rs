@@ -3,7 +3,8 @@
 //!
 //! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga,
 //! Vimshottari dasha, panchang, ashtakavarga ve transit (M3). İleri modüllerin ortak temeli
-//! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`.
+//! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`. Jaimini
+//! çekirdeği (Alt proje 3.2): `jaimini`.
 
 pub mod ashtakavarga;
 mod chart;
@@ -16,6 +17,7 @@ mod error;
 mod fake;
 mod graha;
 mod houses;
+pub mod jaimini;
 pub mod lordship;
 pub mod nature;
 pub mod panchang;
@@ -45,6 +47,11 @@ pub use drishti::{
 pub use error::CoreError;
 pub use graha::{Graha, GrahaPosition};
 pub use houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
+pub use jaimini::{
+    chara_karakas, counts_forward, directed_count, graha_rashi_drishti, karaka_roles, karakamsha,
+    navamsa_sign, rashi_drishti_matrix, rashi_drishti_signs, sign_kind, CharaKaraka, KarakaRole,
+    Karakamsha, SignKind, EIGHT_KARAKA_ROLES, KARAKA_TIE_DEG, SEVEN_KARAKA_ROLES,
+};
 pub use lordship::{house_lord, house_sign, houses_owned};
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};
 pub use panchang::{

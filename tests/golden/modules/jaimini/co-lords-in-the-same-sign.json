@@ -1,0 +1,34 @@
+{
+  "id": "co-lords-in-the-same-sign",
+  "source": "hand",
+  "rule_ref": "BPHS, karaka, pada ve argala bölümleri; Jaimini Upadesha Sutraları (eş lordlar, rashi sayımı); navamsa: her burç dokuz eşit parça, ateş burçları Koç'tan, toprak Oğlak'tan, hava Terazi'den, su Yengeç'ten sayılır",
+  "derivation": [
+    "Burçlar: Güneş 238° Akrep 28°, Ay 98° Yengeç 8°, Mars 231° Akrep 21°, Merkür 253° Yay 13°, Jüpiter 323° Kova 23°, Venüs 199° Terazi 19°, Satürn 46° Boğa 16°, Rahu 34° Boğa 4°, Ketu 214° Akrep 4°. Lagna 310° Kova.",
+    "Karaka (sekizli şema): Rahu'nun etkin derecesi 30 − 4 = 26. Büyükten küçüğe: Güneş 28, Rahu 26, Jüpiter 23, Mars 21, Venüs 19, Satürn 16, Merkür 13, Ay 8. Eşitlik yok.",
+    "Karakamsha: Atmakaraka Güneş Akrep 28°. Su burcu Yengeç'ten sayılır; 28° dokuzuncu parçadadır: Yengeç'ten 9. burç Balık.",
+    "D9: Güneş: Balık. Ay Yengeç 8° (su; 3. parça 6°40′–10°): Başak. Mars Akrep 21° (su; 7. parça 20°–23°20′): Oğlak. Merkür Yay 13° (ateş, Koç'tan; 4. parça 10°–13°20′): Yengeç. Jüpiter Kova 23° (hava, Terazi'den; 7. parça): Koç. Venüs Terazi 19° (hava; 6. parça 16°40′–20°): Balık. Satürn Boğa 16° (toprak, Oğlak'tan; 5. parça 13°20′–16°40′): Boğa. Rahu Boğa 4° (toprak; 2. parça 3°20′–6°40′): Kova. Ketu Akrep 4° (su; 2. parça): Aslan.",
+    "D1 evleri, Balık'tan (Güneş…Ketu): Akrep 9, Yengeç 5, Akrep 9, Yay 10, Kova 12, Terazi 8, Boğa 3, Boğa 3, Akrep 9. D9 evleri, Balık'tan: Balık 1, Başak 7, Oğlak 11, Yengeç 5, Koç 2, Balık 1, Boğa 3, Kova 12, Aslan 6."
+  ],
+  "input": {
+    "lagna_lon": 310.0,
+    "grahas": {"Sun": 238.0, "Moon": 98.0, "Mars": 231.0, "Mercury": 253.0, "Jupiter": 323.0, "Venus": 199.0, "Saturn": 46.0, "Rahu": 34.0, "Ketu": 214.0},
+    "advanced": {"karaka_scheme": "Eight", "jaimini_co_lords": true}
+  },
+  "expected": {
+    "karakas": [
+      {"role": "Atma", "graha": "Sun", "effective_deg": 28.0, "tie": false},
+      {"role": "Amatya", "graha": "Rahu", "effective_deg": 26.0, "tie": false},
+      {"role": "Bhratri", "graha": "Jupiter", "effective_deg": 23.0, "tie": false},
+      {"role": "Matri", "graha": "Mars", "effective_deg": 21.0, "tie": false},
+      {"role": "Pitri", "graha": "Venus", "effective_deg": 19.0, "tie": false},
+      {"role": "Putra", "graha": "Saturn", "effective_deg": 16.0, "tie": false},
+      {"role": "Gnati", "graha": "Mercury", "effective_deg": 13.0, "tie": false},
+      {"role": "Dara", "graha": "Moon", "effective_deg": 8.0, "tie": false}
+    ],
+    "karakamsha": {
+      "atmakaraka": "Sun", "sign": "Pisces",
+      "houses_in_d1": {"Sun": 9, "Moon": 5, "Mars": 9, "Mercury": 10, "Jupiter": 12, "Venus": 8, "Saturn": 3, "Rahu": 3, "Ketu": 9},
+      "houses_in_d9": {"Sun": 1, "Moon": 7, "Mars": 11, "Mercury": 5, "Jupiter": 2, "Venus": 1, "Saturn": 3, "Rahu": 12, "Ketu": 6}
+    }
+  }
+}

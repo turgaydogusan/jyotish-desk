@@ -32,11 +32,16 @@ ileri modüller tasarım belgesi §13 (dört katmanlı test stratejisinin ilk ka
 
 `lagna_lon: null` doğum saati bilinmeyen haritadır: lagnaya bağlı her beklenen değer `null` olur.
 
+Ayara bağlı modüller (Jaimini) girdiye `advanced` bloğunu ekler:
+`"advanced": {"karaka_scheme": "Eight", "jaimini_co_lords": true}`. Diğer modüllerde bu alan
+yazılmaz.
+
 ## Modüller
 
 | Klasör | `expected` | En az |
 |---|---|---|
 | `foundation` | `waxing`, `nature` (dokuz graha), `kuja_dosha`, `house_lords` (12), `houses`, `houses_owned` | 6 |
 | `drishti` | `sign_aspects` (on üç tam bakışın tamamı, tablo sırasıyla), `sphuta` (en az on değer: `from`, `to`, `angle`, `value`) | 4 |
+| `jaimini` | `karakas` (rol sırasında: `role`, `graha`, `effective_deg`, `tie`), `karakamsha` (`atmakaraka`, `sign`, dokuz grahanın `houses_in_d1` ve `houses_in_d9` değeri) | 8 |
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.
