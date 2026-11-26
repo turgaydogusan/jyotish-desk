@@ -48,11 +48,13 @@ pub use error::CoreError;
 pub use graha::{Graha, GrahaPosition};
 pub use houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
 pub use jaimini::{
-    arudha_of, arudha_padas, chara_karakas, co_lord_choice, co_lords, counts_forward,
-    directed_count, graha_rashi_drishti, jaimini_lord, karaka_roles, karakamsha, navamsa_sign,
-    rashi_drishti_matrix, rashi_drishti_signs, sign_kind, stronger_co_lord, ArudhaPada,
-    CharaKaraka, CoLordChoice, KarakaRole, Karakamsha, SignKind, EIGHT_KARAKA_ROLES,
-    KARAKA_TIE_DEG, SEVEN_KARAKA_ROLES,
+    argala_row, argala_rows, argala_status, arudha_of, arudha_padas, chara_karakas, co_lord_choice,
+    co_lords, compute_jaimini, counts_forward, directed_count, graha_rashi_drishti, jaimini_lord,
+    jaimini_report, karaka_roles, karakamsha, navamsa_sign, rashi_drishti_matrix,
+    rashi_drishti_signs, sign_kind, stronger_co_lord, ArgalaPair, ArgalaRow, ArgalaStatus,
+    ArudhaPada, CharaKaraka, CoLordChoice, JaiminiReport, KarakaRole, Karakamsha, SignKind,
+    ARGALA_PAIRS, EIGHT_KARAKA_ROLES, JAIMINI_METHOD, KARAKA_TIE_DEG, SEVEN_KARAKA_ROLES,
+    THIRD_HOUSE_MALEFICS,
 };
 pub use lordship::{house_lord, house_sign, houses_owned};
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};

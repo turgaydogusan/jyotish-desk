@@ -7,9 +7,10 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use jyotish_core::{
-    arudha_padas, chara_karakas, co_lord_choice, drishti_table, house_lord, houses_owned,
-    jaimini_lord, karakamsha, kuja_dosha, moon_is_waxing, nature, normalize, AdvancedSettings,
-    Graha, KarakaRole, KujaDosha, Nature, Positions, Sign, ASPECTING_GRAHAS, DRISHTI_METHOD,
+    argala_rows, arudha_padas, chara_karakas, co_lord_choice, drishti_table, house_lord,
+    houses_owned, jaimini_lord, jaimini_report, karakamsha, kuja_dosha, moon_is_waxing, nature,
+    normalize, AdvancedSettings, ArgalaStatus, Graha, KarakaRole, KujaDosha, Nature, Positions,
+    Sign, ASPECTING_GRAHAS, DRISHTI_METHOD, JAIMINI_METHOD,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -266,6 +267,24 @@ struct ExpectedPada {
     exception: bool,
 }
 
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct ExpectedArgalaPair {
+    argala_house: u8,
+    virodha_house: u8,
+    argala_grahas: Vec<Graha>,
+    virodha_grahas: Vec<Graha>,
+    status: ArgalaStatus,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedArgalaRow {
+    reference: Sign,
+    pairs: Vec<ExpectedArgalaPair>,
+    third_house_malefic_argala: bool,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct JaiminiExpected {
@@ -276,6 +295,8 @@ struct JaiminiExpected {
     co_lords: BTreeMap<Sign, ExpectedCoLord>,
     /// A1…A12; doğum saati bilinmiyorsa `null`.
     arudhas: Option<Vec<ExpectedPada>>,
+    /// En az iki referans burç.
+    argala: Vec<ExpectedArgalaRow>,
 }
 
 #[test]
@@ -363,6 +384,45 @@ fn jaimini_hand_fixtures() {
         if let Some(a) = &x.arudhas {
             assert_eq!(a.len(), 12, "{id}: twelve padas");
         }
+
+        // Argala.
+        assert!(x.argala.len() >= 2, "{id}: at least two references");
+        let rows = argala_rows(&p);
+        assert_eq!(
+            rows[0].reference,
+            p.lagna_sign.unwrap_or(Sign::Aries),
+            "{id}: first argala row"
+        );
+        for want in &x.argala {
+            let got = rows
+                .iter()
+                .find(|r| r.reference == want.reference)
+                .expect("twelve references");
+            let pairs: Vec<ExpectedArgalaPair> = got
+                .pairs
+                .iter()
+                .map(|x| ExpectedArgalaPair {
+                    argala_house: x.argala_house,
+                    virodha_house: x.virodha_house,
+                    argala_grahas: x.argala_grahas.clone(),
+                    virodha_grahas: x.virodha_grahas.clone(),
+                    status: x.status,
+                })
+                .collect();
+            assert_eq!(pairs, want.pairs, "{id}: argala from {:?}", want.reference);
+            assert_eq!(
+                got.third_house_malefic_argala, want.third_house_malefic_argala,
+                "{id}: third house from {:?}",
+                want.reference
+            );
+        }
+
+        // Rapor aynı parçalardan kurulur.
+        let report = jaimini_report(&p, &advanced);
+        assert_eq!(report.method, JAIMINI_METHOD, "{id}");
+        assert_eq!(report.karakas, karakas, "{id}");
+        assert_eq!(report.karakamsha, k, "{id}");
+        assert_eq!(report.argala, rows, "{id}");
     }
 }
 
@@ -419,6 +479,30 @@ fn jaimini_fixtures_cover_the_required_cases() {
             "co-lord step {step}"
         );
     }
+    // Argalanın dört durumu ve 3. ev kötücül argalası.
+    for status in [
+        ArgalaStatus::None,
+        ArgalaStatus::Stands,
+        ArgalaStatus::Contested,
+        ArgalaStatus::Obstructed,
+    ] {
+        assert!(
+            any(&|f, _| f
+                .expected
+                .argala
+                .iter()
+                .any(|r| r.pairs.iter().any(|x| x.status == status))),
+            "argala status {status:?}"
+        );
+    }
+    assert!(
+        any(&|f, _| f
+            .expected
+            .argala
+            .iter()
+            .any(|r| r.third_house_malefic_argala)),
+        "three malefics in the third house"
+    );
 }
 
 /// `lagna` burcundan sayılan `house`. evin burcu (test yardımcısı; motorun `house_sign`'ı

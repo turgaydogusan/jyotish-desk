@@ -12,7 +12,9 @@
     "Eş lord, Kova (Satürn Koç'ta, Rahu Yay'da): 1. ölçüt ayırmaz. 2. ölçüt: ikisi de yalnız. 3. ölçüt: Satürn yücelme burcunda değil (Terazi), düşüş burcunda (Koç): düşüşte olmayan seçilir: Rahu.",
     "Pada, Aslan lagna. 1. ev Aslan, Güneş Başak'ta (2.): Başak'tan 2. burç Terazi. 2. ev Başak, Merkür Başak'ta (1.): istisna: Başak'tan 10. burç İkizler. 3. ev Terazi, Venüs Terazi'de (1.): istisna: Terazi'den 10. burç Yengeç. 4. ev Akrep, lord Mars Oğlak'ta (3.): Oğlak'tan 3. burç Balık.",
     "Pada (5–8). 5. ev Yay, Jüpiter Yengeç'te (8.): Yengeç'ten 8. burç Kova. 6. ev Oğlak, Satürn Koç'ta (4.): Koç'tan 4. burç Yengeç, evden 7.; istisna: Yengeç'ten 10. burç Koç. 7. ev Kova, lord Rahu Yay'da (11.): Yay'dan 11. burç Terazi. 8. ev Balık, Jüpiter Yengeç'te (5.): Yengeç'ten 5. burç Akrep.",
-    "Pada (9–12). 9. ev Koç, Mars Oğlak'ta (10.): Oğlak'tan 10. burç Terazi, evden 7.; istisna: Terazi'den 10. burç Yengeç. 10. ev Boğa, Venüs Terazi'de (6.): Terazi'den 6. burç Balık. 11. ev İkizler, Merkür Başak'ta (4.): Başak'tan 4. burç Yay, evden 7.; istisna: Yay'dan 10. burç Başak. 12. ev Yengeç, Ay Balık'ta (9.): Balık'tan 9. burç Akrep."
+    "Pada (9–12). 9. ev Koç, Mars Oğlak'ta (10.): Oğlak'tan 10. burç Terazi, evden 7.; istisna: Terazi'den 10. burç Yengeç. 10. ev Boğa, Venüs Terazi'de (6.): Terazi'den 6. burç Balık. 11. ev İkizler, Merkür Başak'ta (4.): Başak'tan 4. burç Yay, evden 7.; istisna: Yay'dan 10. burç Başak. 12. ev Yengeç, Ay Balık'ta (9.): Balık'tan 9. burç Akrep.",
+    "Argala, referans Aslan: 2 (Başak: Güneş, Merkür) ↔ 12 (Yengeç: Jüpiter): 2 > 1, geçerli. 4 (Akrep: boş) ↔ 10 (Boğa: boş): yok. 11 (İkizler: Ketu) ↔ 3 (Terazi: Venüs): çekişmeli. 5 (Yay: Rahu) ↔ 9 (Koç: Satürn): çekişmeli. 3. evde (Terazi) kötücül yok.",
+    "Argala, referans Kova: 2 (Balık: Ay) ↔ 12 (Oğlak: Mars): çekişmeli. 4 (Boğa: boş) ↔ 10 (Akrep: boş): yok. 11 (Yay: Rahu) ↔ 3 (Koç: Satürn): çekişmeli. 5 (İkizler: Ketu) ↔ 9 (Terazi: Venüs): çekişmeli. 3. evde (Koç) tek kötücül var."
   ],
   "input": {
     "lagna_lon": 130.0,
@@ -49,6 +51,28 @@
       {"house": 10, "sign": "Pisces", "lord": "Venus", "exception": false},
       {"house": 11, "sign": "Virgo", "lord": "Mercury", "exception": true},
       {"house": 12, "sign": "Scorpio", "lord": "Moon", "exception": false}
+    ],
+    "argala": [
+      {
+        "reference": "Leo",
+        "pairs": [
+          {"argala_house": 2, "virodha_house": 12, "argala_grahas": ["Sun", "Mercury"], "virodha_grahas": ["Jupiter"], "status": "Stands"},
+          {"argala_house": 4, "virodha_house": 10, "argala_grahas": [], "virodha_grahas": [], "status": "None"},
+          {"argala_house": 11, "virodha_house": 3, "argala_grahas": ["Ketu"], "virodha_grahas": ["Venus"], "status": "Contested"},
+          {"argala_house": 5, "virodha_house": 9, "argala_grahas": ["Rahu"], "virodha_grahas": ["Saturn"], "status": "Contested"}
+        ],
+        "third_house_malefic_argala": false
+      },
+      {
+        "reference": "Aquarius",
+        "pairs": [
+          {"argala_house": 2, "virodha_house": 12, "argala_grahas": ["Moon"], "virodha_grahas": ["Mars"], "status": "Contested"},
+          {"argala_house": 4, "virodha_house": 10, "argala_grahas": [], "virodha_grahas": [], "status": "None"},
+          {"argala_house": 11, "virodha_house": 3, "argala_grahas": ["Rahu"], "virodha_grahas": ["Saturn"], "status": "Contested"},
+          {"argala_house": 5, "virodha_house": 9, "argala_grahas": ["Ketu"], "virodha_grahas": ["Venus"], "status": "Contested"}
+        ],
+        "third_house_malefic_argala": false
+      }
     ]
   }
 }

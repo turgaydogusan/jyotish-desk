@@ -490,11 +490,12 @@ mod jaimini_properties {
     use super::foundation_properties::positions;
     use crate::graha::Graha;
     use crate::jaimini::{
-        arudha_padas, chara_karakas, co_lord_choice, co_lords, graha_rashi_drishti, karaka_roles,
-        karakamsha, navamsa_sign, rashi_drishti_signs, KARAKA_TIE_DEG,
+        arudha_padas, chara_karakas, co_lord_choice, co_lords, graha_rashi_drishti, jaimini_report,
+        karaka_roles, karakamsha, navamsa_sign, rashi_drishti_signs, ArgalaStatus, JAIMINI_METHOD,
+        KARAKA_TIE_DEG,
     };
     use crate::lordship::house_sign;
-    use crate::settings::KarakaScheme;
+    use crate::settings::{AdvancedSettings, KarakaScheme};
     use crate::varga::is_vargottama;
     use crate::zodiac::Sign;
 
@@ -617,6 +618,56 @@ mod jaimini_properties {
                 }
                 (Some(_), None) => prop_assert!(false, "padas with a lagna"),
             }
+        }
+
+        #[test]
+        fn report_is_consistent(p in positions(), s in scheme(), co in any::<bool>()) {
+            let advanced = AdvancedSettings { karaka_scheme: s, jaimini_co_lords: co };
+            let r = jaimini_report(&p, &advanced);
+            prop_assert_eq!(r.method.as_str(), JAIMINI_METHOD);
+            prop_assert_eq!((r.scheme, r.co_lords), (s, co));
+            prop_assert_eq!(r.karakamsha.atmakaraka, r.karakas[0].graha);
+            prop_assert_eq!(r.arudhas.is_some(), p.lagna_sign.is_some());
+            prop_assert!(r.warnings.is_empty());
+            let first = p.lagna_sign.unwrap_or(Sign::Aries);
+            for (i, row) in r.argala.iter().enumerate() {
+                prop_assert_eq!(row.reference, Sign::from_index(first.index() + i));
+                let mut seen = 0usize;
+                for pair in &row.pairs {
+                    // Aynı graha bir çiftin iki tarafında görünmez.
+                    prop_assert!(pair.argala_grahas.iter().all(|g| !pair.virodha_grahas.contains(g)));
+                    let (a, v) = (pair.argala_grahas.len(), pair.virodha_grahas.len());
+                    let want = if a == 0 {
+                        ArgalaStatus::None
+                    } else if a > v {
+                        ArgalaStatus::Stands
+                    } else if a == v {
+                        ArgalaStatus::Contested
+                    } else {
+                        ArgalaStatus::Obstructed
+                    };
+                    prop_assert_eq!(pair.status, want);
+                    for &g in &pair.argala_grahas {
+                        prop_assert_eq!(p.house_from(g, row.reference), pair.argala_house);
+                    }
+                    for &g in &pair.virodha_grahas {
+                        prop_assert_eq!(p.house_from(g, row.reference), pair.virodha_house);
+                    }
+                    seen += a + v;
+                }
+                // Sekiz ev (2, 3, 4, 5, 9, 10, 11, 12) birer kez sayılır.
+                let counted = Graha::ALL
+                    .into_iter()
+                    .filter(|&g| !matches!(p.house_from(g, row.reference), 1 | 6 | 7 | 8))
+                    .count();
+                prop_assert_eq!(seen, counted);
+            }
+            // Lagna yalnızca padaları ve argala satır sırasını etkiler.
+            let q = jaimini_report(&p.clone().without_lagna(), &advanced);
+            prop_assert_eq!(&q.karakas, &r.karakas);
+            prop_assert_eq!(&q.karakamsha, &r.karakamsha);
+            prop_assert_eq!(&q.graha_rashi_drishti, &r.graha_rashi_drishti);
+            prop_assert_eq!(q.arudhas, None);
         }
     }
 }

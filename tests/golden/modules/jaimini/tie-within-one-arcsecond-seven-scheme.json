@@ -12,7 +12,9 @@
     "Eş lord, Kova (Satürn Yay'da, Rahu Başak'ta): 1. ölçüt ayırmaz. 2. ölçüt: ikisi de yalnız. 3. ölçüt: Satürn Yay'da ne yücelmiş ne düşmüş. 4. ölçüt: Yay ve Başak çift doğalı: eşit. 5. ölçüt: Kova geri sayar: Kova 1, Oğlak 2, Yay 3 (Satürn); Akrep 4, Terazi 5, Başak 6 (Rahu): Rahu daha uzak.",
     "Pada, Yengeç lagna. 1. ev Yengeç, Ay Boğa'da (11.): Boğa'dan 11. burç Balık. 2. ev Aslan, Güneş İkizler'de (11.): İkizler'den 11. burç Koç. 3. ev Başak, Merkür İkizler'de (10.): İkizler'den 10. burç Balık, evden 7.; istisna: Balık'tan 10. burç Yay. 4. ev Terazi, Venüs Yengeç'te (10.): Yengeç'ten 10. burç Koç, evden 7.; istisna: Koç'tan 10. burç Oğlak.",
     "Pada (5–8). 5. ev Akrep, lord Ketu Balık'ta (5.): Balık'tan 5. burç Yengeç. 6. ev Yay, Jüpiter Balık'ta (4.): Balık'tan 4. burç İkizler, evden 7.; istisna: İkizler'den 10. burç Balık. 7. ev Oğlak, Satürn Yay'da (12.): Yay'dan 12. burç Akrep. 8. ev Kova, lord Rahu Başak'ta (8.): Başak'tan 8. burç Koç.",
-    "Pada (9–12). 9. ev Balık, Jüpiter Balık'ta (1.): istisna: Balık'tan 10. burç Yay. 10. ev Koç, Mars Aslan'da (5.): Aslan'dan 5. burç Yay. 11. ev Boğa, Venüs Yengeç'te (3.): Yengeç'ten 3. burç Başak. 12. ev İkizler, Merkür İkizler'de (1.): istisna: İkizler'den 10. burç Balık."
+    "Pada (9–12). 9. ev Balık, Jüpiter Balık'ta (1.): istisna: Balık'tan 10. burç Yay. 10. ev Koç, Mars Aslan'da (5.): Aslan'dan 5. burç Yay. 11. ev Boğa, Venüs Yengeç'te (3.): Yengeç'ten 3. burç Başak. 12. ev İkizler, Merkür İkizler'de (1.): istisna: İkizler'den 10. burç Balık.",
+    "Argala, referans Yengeç: 2 (Aslan: Mars) ↔ 12 (İkizler: Güneş, Merkür): 1 < 2, engelli. 4 (Terazi: boş) ↔ 10 (Koç: boş): yok. 11 (Boğa: Ay) ↔ 3 (Başak: Rahu): 1 = 1, çekişmeli. 5 (Akrep: boş) ↔ 9 (Balık: Jüpiter, Ketu): yok. 3. evde (Başak) tek kötücül var.",
+    "Argala, referans Boğa: 2 (İkizler: Güneş, Merkür) ↔ 12 (Koç: boş): geçerli. 4 (Aslan: Mars) ↔ 10 (Kova: boş): geçerli. 11 (Balık: Jüpiter, Ketu) ↔ 3 (Yengeç: Venüs): 2 > 1, geçerli. 5 (Başak: Rahu) ↔ 9 (Oğlak: boş): geçerli. 3. evde (Yengeç) kötücül yok."
   ],
   "input": {
     "lagna_lon": 100.0,
@@ -48,6 +50,28 @@
       {"house": 10, "sign": "Sagittarius", "lord": "Mars", "exception": false},
       {"house": 11, "sign": "Virgo", "lord": "Venus", "exception": false},
       {"house": 12, "sign": "Pisces", "lord": "Mercury", "exception": true}
+    ],
+    "argala": [
+      {
+        "reference": "Cancer",
+        "pairs": [
+          {"argala_house": 2, "virodha_house": 12, "argala_grahas": ["Mars"], "virodha_grahas": ["Sun", "Mercury"], "status": "Obstructed"},
+          {"argala_house": 4, "virodha_house": 10, "argala_grahas": [], "virodha_grahas": [], "status": "None"},
+          {"argala_house": 11, "virodha_house": 3, "argala_grahas": ["Moon"], "virodha_grahas": ["Rahu"], "status": "Contested"},
+          {"argala_house": 5, "virodha_house": 9, "argala_grahas": [], "virodha_grahas": ["Jupiter", "Ketu"], "status": "None"}
+        ],
+        "third_house_malefic_argala": false
+      },
+      {
+        "reference": "Taurus",
+        "pairs": [
+          {"argala_house": 2, "virodha_house": 12, "argala_grahas": ["Sun", "Mercury"], "virodha_grahas": [], "status": "Stands"},
+          {"argala_house": 4, "virodha_house": 10, "argala_grahas": ["Mars"], "virodha_grahas": [], "status": "Stands"},
+          {"argala_house": 11, "virodha_house": 3, "argala_grahas": ["Jupiter", "Ketu"], "virodha_grahas": ["Venus"], "status": "Stands"},
+          {"argala_house": 5, "virodha_house": 9, "argala_grahas": ["Rahu"], "virodha_grahas": [], "status": "Stands"}
+        ],
+        "third_house_malefic_argala": false
+      }
     ]
   }
 }
