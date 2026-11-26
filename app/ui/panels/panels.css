@@ -250,3 +250,43 @@
   padding: 6px 6px 2px;
   font-weight: var(--fw-medium);
 }
+
+/* Uyum paneli (ileri modüller spec'i §9). */
+.compat-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 0;
+}
+.compat-people div {
+  display: flex;
+  gap: 6px;
+}
+.compat-people dt {
+  color: var(--text-2);
+}
+.compat-people dd {
+  margin: 0;
+  font-weight: var(--fw-medium);
+}
+.compat-table caption {
+  text-align: left;
+  padding: 6px 6px 2px;
+  font-weight: var(--fw-medium);
+}
+.compat-table tfoot th,
+.compat-table tfoot td {
+  font-weight: var(--fw-medium);
+  border-bottom: 0;
+}
+.compat-facts {
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+}
+/* Uyarı yalnızca renkle ayrılmaz: kenar çizgisi ve metin. */
+.compat-warning {
+  padding-left: 6px;
+  border-left: 2px solid var(--warn);
+  color: var(--text);
+}

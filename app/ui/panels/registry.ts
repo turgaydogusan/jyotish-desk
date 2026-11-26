@@ -9,6 +9,7 @@ import { AshtakavargaPanel } from "./AshtakavargaPanel";
 import { BhavaBalaPanel } from "./BhavaBalaPanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
+import { CompatPanel } from "./CompatPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { DrishtiPanel } from "./DrishtiPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
@@ -40,6 +41,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   bhava_bala: { titleKey: "panel.bhava_bala", component: BhavaBalaPanel },
   // Yogalar (Plan 18).
   yogas: { titleKey: "panel.yogas", component: YogasPanel },
+  // Uyum (Plan 19).
+  compat: { titleKey: "panel.compat", component: CompatPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };
