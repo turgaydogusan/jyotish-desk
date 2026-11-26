@@ -221,6 +221,10 @@
 .bala-scroll {
   overflow-x: auto;
 }
+/* The focus ring is drawn inside: the panel body clips what lies outside the scroll box. */
+.bala-scroll:focus-visible {
+  outline-offset: -2px;
+}
 .bala-scroll caption {
   text-align: left;
   padding: 6px 6px 2px;

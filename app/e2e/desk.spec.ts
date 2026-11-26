@@ -556,6 +556,10 @@ test("shadbala and bhava bala: two palette panels on one command; units, items v
   await expect(jupiter.locator("td").nth(6)).toHaveText("8.89");
   await shadbala.getByRole("combobox", { name: "Ayrıntı" }).selectOption("items");
   await expect(shadbala.getByRole("table", { name: "Sthana bala kalemleri" })).toBeVisible();
+  // Kalem tablolarında odaklanabilir denetim yoktur: kaydırma kabı klavye odağı alır.
+  const sthanaScroll = shadbala.getByRole("group", { name: "Sthana bala kalemleri" });
+  await sthanaScroll.focus();
+  await expect(sthanaScroll).toBeFocused();
   await expect(shadbala.getByRole("table", { name: "Zaman gücü kalemleri" }).locator('tbody tr[data-graha="Saturn"] td').nth(5)).toHaveText("0.75");
   expect(await calls()).toHaveLength(1);
 

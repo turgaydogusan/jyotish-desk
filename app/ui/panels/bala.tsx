@@ -1,7 +1,7 @@
 // Shadbala ve Bhava bala panellerinin ortak parçaları (ileri modüller spec'i §7 "Arayüz"):
 // birim ayarı, sayı biçimi ve "rapor yok" açıklaması. Değerler Rust'tan virupa olarak gelir;
 // rupa gösterimi yalnızca birim çevirisidir (60 virupa = 1 rupa), astrolojik hesap değildir (C4).
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { OpenedClient } from "../bindings";
 import type { Panel } from "../layout/model";
@@ -31,6 +31,28 @@ export function formatFixed(value: number | null, digits: number): string {
 export function formatBala(virupa: number | null, unit: BalaUnit): string {
   if (virupa === null) return DASH;
   return unit === "rupa" ? formatFixed(virupa / VIRUPAS_PER_RUPA, 2) : formatFixed(virupa, 1);
+}
+
+/**
+ * Oran, iki ondalık. 1'in altındaki oran yuvarlanınca "1.00" yazılmaz (0,995 ile 1 arası "0.99"
+ * olur): hücredeki `<1` işaretiyle çelişmesin. Gösterimdir; oran Rust'tan gelir (C4).
+ */
+export function formatRatio(ratio: number | null): string {
+  const text = formatFixed(ratio, 2);
+  return ratio !== null && ratio < 1 && text === "1.00" ? "0.99" : text;
+}
+
+/**
+ * Tablonun yatay kaydırma kabı. Dar panelde tablo yana kayar; içinde odaklanabilir denetim
+ * olmayan tablolar da klavyeyle kaydırılabilsin diye kap odak alır ve adını tablonun
+ * başlığından (`labelledBy`: `caption` kimliği) okur.
+ */
+export function BalaScroll({ labelledBy, children }: { labelledBy: string; children: ReactNode }) {
+  return (
+    <div className="bala-scroll" role="group" tabIndex={0} aria-labelledby={labelledBy}>
+      {children}
+    </div>
+  );
 }
 
 /** Birim seçicisi; değer panelin `unit` ayarıdır ve düzenle birlikte saklanır. */

@@ -11,7 +11,7 @@ import type { Panel } from "../layout/model";
 import { useShadbala } from "../modules/useShadbala";
 import { useSession } from "../session/store";
 import { useLayoutStore } from "../view/store";
-import { BalaUnavailable, balaUnit, formatBala, formatFixed, UnitSelect, type BalaUnit } from "./bala";
+import { BalaScroll, BalaUnavailable, balaUnit, formatBala, formatFixed, formatRatio, UnitSelect, type BalaUnit } from "./bala";
 import "./panels.css";
 import { PinButton } from "./PinButton";
 import { PanelError, PanelSkeleton, usePanelLoadPhase } from "./states";
@@ -85,6 +85,7 @@ function Shadbala({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
 function Report({ report, detail, unit }: { report: ShadbalaReport; detail: ShadbalaDetail; unit: BalaUnit }) {
   const { t } = useTranslation();
   const { active } = useHighlight();
+  const id = useId();
   const on = (g: Graha) => active?.type === "graha" && active.id === g;
   const num = (v: number | null) => <td className="num">{formatBala(v, unit)}</td>;
   const name = (row: GrahaShadbala) => (
@@ -105,9 +106,9 @@ function Report({ report, detail, unit }: { report: ShadbalaReport; detail: Shad
 
   return (
     <>
-      <div className="bala-scroll">
+      <BalaScroll labelledBy={`${id}-summary`}>
         <table className="module-table">
-          <caption className="visually-hidden">{t("shadbala.caption")}</caption>
+          <caption id={`${id}-summary`} className="visually-hidden">{t("shadbala.caption")}</caption>
           <thead>
             <tr>
               <th scope="col">{t("shadbala.graha")}</th>
@@ -144,7 +145,7 @@ function Report({ report, detail, unit }: { report: ShadbalaReport; detail: Shad
                 <td className="num">{unit === "rupa" ? formatFixed(row.rupas, 2) : formatBala(row.total, unit)}</td>
                 {num(row.required)}
                 <td className="num">
-                  {formatFixed(row.ratio, 2)}
+                  {formatRatio(row.ratio)}
                   {below(row) && (
                     <>
                       {" "}
@@ -158,12 +159,12 @@ function Report({ report, detail, unit }: { report: ShadbalaReport; detail: Shad
             ))}
           </tbody>
         </table>
-      </div>
+      </BalaScroll>
       {detail === "items" && (
         <>
-          <div className="bala-scroll">
+          <BalaScroll labelledBy={`${id}-sthana`}>
             <table className="module-table">
-              <caption>{t("shadbala.sthanaCaption")}</caption>
+              <caption id={`${id}-sthana`}>{t("shadbala.sthanaCaption")}</caption>
               <thead>
                 <tr>
                   <th scope="col">{t("shadbala.graha")}</th>
@@ -191,10 +192,10 @@ function Report({ report, detail, unit }: { report: ShadbalaReport; detail: Shad
                 ))}
               </tbody>
             </table>
-          </div>
-          <div className="bala-scroll">
+          </BalaScroll>
+          <BalaScroll labelledBy={`${id}-temporal`}>
             <table className="module-table">
-              <caption>{t("shadbala.temporalCaption")}</caption>
+              <caption id={`${id}-temporal`}>{t("shadbala.temporalCaption")}</caption>
               <thead>
                 <tr>
                   <th scope="col">{t("shadbala.graha")}</th>
@@ -222,7 +223,7 @@ function Report({ report, detail, unit }: { report: ShadbalaReport; detail: Shad
                 ))}
               </tbody>
             </table>
-          </div>
+          </BalaScroll>
         </>
       )}
       <ul className="bala-lords" aria-label={t("shadbala.lords")}>

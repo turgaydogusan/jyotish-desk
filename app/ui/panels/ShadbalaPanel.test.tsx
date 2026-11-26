@@ -9,7 +9,7 @@ import type { Panel } from "../layout/model";
 import { fixture, unknownTimeOpened } from "../test/fixture";
 import { renderWithStores } from "../test/render";
 import { useLayoutStore } from "../view/store";
-import { balaUnit, formatBala, formatFixed } from "./bala";
+import { balaUnit, formatBala, formatFixed, formatRatio } from "./bala";
 import { BELOW_MARK, ShadbalaPanel, shadbalaDetail } from "./ShadbalaPanel";
 
 const ok = (report: ShadbalaReport | null = fixture().shadbala): Result<ShadbalaReport | null> => ({ status: "ok", data: report });
@@ -145,6 +145,32 @@ test("a ratio below one carries the text mark and a legend; a graha war is writt
   expect(within(mars).getByText("Venüs ile graha savaşında; kazanan Mars")).toHaveClass("visually-hidden");
   expect(within(venus).getByText("savaş: Ma")).toBeInTheDocument();
   expect(within(rows[1]).queryByText(/savaş/)).toBeNull();
+});
+
+test("a ratio just below one never reads 1.00 next to the below mark", async () => {
+  // Rounding 0.995–0.999… to two decimals would print "1.00 <1".
+  expect([formatRatio(0.9951), formatRatio(0.9999), formatRatio(0.994), formatRatio(0.94), formatRatio(1), formatRatio(1.004), formatRatio(1.3)]).toEqual(["0.99", "0.99", "0.99", "0.94", "1.00", "1.00", "1.30"]);
+  expect([formatRatio(null), formatRatio(Number.NaN), formatRatio(-0.2)]).toEqual(["—", "—", "−0.20"]);
+  const report = fixture().shadbala;
+  report.grahas[5].ratio = 0.9972;
+  vi.mocked(api.computeShadbala).mockResolvedValue(ok(report));
+  renderPanel();
+  const venus = within(await summary()).getAllByRole("row")[6];
+  expect(venus.querySelectorAll("td")[8].textContent).toBe(`0.99 ${BELOW_MARK}gerekli değerin altında`);
+});
+
+test("every table sits in a keyboard-focusable scroll group named by its caption", async () => {
+  // A narrow panel scrolls the tables sideways; the items tables hold no focusable control,
+  // so the scroll container itself takes the keyboard focus (arrow keys scroll it).
+  renderPanel({ detail: "items" });
+  await summary();
+  for (const name of [CAPTION, "Sthana bala kalemleri", "Zaman gücü kalemleri"]) {
+    const group = screen.getByRole("group", { name });
+    expect(group).toHaveClass("bala-scroll");
+    expect(group).toHaveAttribute("tabindex", "0");
+    expect(within(group).getByRole("table", { name })).toBeInTheDocument();
+  }
+  expect(screen.getAllByRole("group")).toHaveLength(3);
 });
 
 test("unknown birth time: Rust returns no report and the panel says why; the toolbar stays", async () => {

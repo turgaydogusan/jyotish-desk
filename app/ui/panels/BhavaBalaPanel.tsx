@@ -2,6 +2,7 @@
 // dig, drishti), toplamı ve sırası. Değerler Shadbala paneliyle aynı rapordan
 // (`compute_shadbala`) gelir; burada hesap yoktur (C4). Bhavalar eşittir ve lagna burcundan
 // sayılan rasi evleriyle aynı burçtadır; ev sistemi ayarından bağımsızdır.
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import type { OpenedClient, ShadbalaReport } from "../bindings";
 import { signIndex } from "../chart/adapter";
@@ -9,7 +10,7 @@ import { useHighlight } from "../highlight/store";
 import type { Panel } from "../layout/model";
 import { useShadbala } from "../modules/useShadbala";
 import { useSession } from "../session/store";
-import { BalaUnavailable, balaUnit, formatBala, UnitSelect, type BalaUnit } from "./bala";
+import { BalaScroll, BalaUnavailable, balaUnit, formatBala, UnitSelect, type BalaUnit } from "./bala";
 import "./panels.css";
 import { PinButton } from "./PinButton";
 import { PanelError, PanelSkeleton, usePanelLoadPhase } from "./states";
@@ -47,14 +48,15 @@ function BhavaBala({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
 function Bhavas({ report, unit, opened }: { report: ShadbalaReport; unit: BalaUnit; opened: OpenedClient }) {
   const { t } = useTranslation();
   const { active } = useHighlight();
+  const captionId = useId();
   const lagna = signIndex(opened.chart.lagna.sign);
   // Burç vurgusu D1 evidir: lagna burcundan sayılan burç (gösterim eşlemesi, hesap değil).
   const activeHouse = active?.type === "house" ? active.house : active?.type === "sign" ? ((active.sign - lagna + 12) % 12) + 1 : null;
   return (
     <>
-      <div className="bala-scroll">
+      <BalaScroll labelledBy={captionId}>
         <table className="module-table">
-          <caption className="visually-hidden">{t("bhavaBala.caption")}</caption>
+          <caption id={captionId} className="visually-hidden">{t("bhavaBala.caption")}</caption>
           <thead>
             <tr>
               <th scope="col">{t("bhavaBala.bhava")}</th>
@@ -95,7 +97,7 @@ function Bhavas({ report, unit, opened }: { report: ShadbalaReport; unit: BalaUn
             })}
           </tbody>
         </table>
-      </div>
+      </BalaScroll>
       <p className="panel-message">{t("bhavaBala.note")}</p>
       <p className="panel-message">{t(`bala.legend.${unit}`)}</p>
       <p className="panel-message">{t("bala.method", { method: report.method })}</p>

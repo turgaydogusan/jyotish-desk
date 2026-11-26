@@ -63,6 +63,16 @@ test("lists the twelve bhavas with lord, three items, total and rank from the sh
   expect(screen.getByText("Yöntem: shadbala.bphs_v1")).toBeInTheDocument();
 });
 
+test("the table sits in a keyboard-focusable scroll group named by its caption", async () => {
+  renderPanel();
+  const name = "Bhava bala: on iki bhavanın lordu, üç kalemi, toplamı ve sırası";
+  const table = await screen.findByRole("table", { name });
+  const group = screen.getByRole("group", { name });
+  expect(group).toHaveClass("bala-scroll");
+  expect(group).toHaveAttribute("tabindex", "0");
+  expect(group).toContainElement(table);
+});
+
 test("the unit is saved with the layout and redraws the values in rupas", async () => {
   const { persistence } = renderPanel();
   const t = await table();
