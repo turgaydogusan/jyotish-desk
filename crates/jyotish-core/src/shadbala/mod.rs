@@ -58,6 +58,12 @@ pub const WAR_GRAHAS: [Graha; 5] = [
 ];
 /// Graha savaşı: iki grahanın boylam farkı en çok bu kadar derecedir (sınır dahil).
 pub const GRAHA_WAR_ORB_DEG: f64 = 1.0;
+/// Ardışık iki gün doğumu arasındaki süre en çok bu kadar gündür (sınır dahil). Kutup
+/// dairelerinin yakınında ardışık doğuşlar 24 saatten bir saatten fazla ayrılabilir; daha
+/// uzun bir aralık "sonraki" doğuşun ertesi günün doğuşu olmadığını gösterir (kutup gecesinin
+/// ya da gündüzünün ardından gelen ilk doğuş) ve saat dilimleri ile gece üçte birleri
+/// tanımsızdır.
+pub const MAX_SUNRISE_GAP_DAYS: f64 = 1.5;
 
 /// Sthana bala (konum gücü) kalemleri, virupa.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -189,7 +195,7 @@ pub struct ShadbalaAstro {
 
 impl ShadbalaAstro {
     /// Değerler sonlu ve sıralı mı: doğuş ≤ doğum < sonraki doğuş, doğuş < batış < sonraki
-    /// doğuş.
+    /// doğuş; iki doğuş arası en çok `MAX_SUNRISE_GAP_DAYS`.
     pub fn is_consistent(&self) -> bool {
         let m = &self.mean;
         let finite = [
@@ -213,6 +219,7 @@ impl ShadbalaAstro {
             && self.jd_ut < self.next_sunrise_jd_ut
             && self.sunrise_jd_ut < self.sunset_jd_ut
             && self.sunset_jd_ut < self.next_sunrise_jd_ut
+            && self.next_sunrise_jd_ut - self.sunrise_jd_ut <= MAX_SUNRISE_GAP_DAYS
     }
 }
 
@@ -557,6 +564,31 @@ mod tests {
         assert_eq!(graha_war(Mars, &p).map(|w| w.with), Some(Jupiter));
         assert_eq!(graha_war(Mercury, &p).map(|w| w.with), Some(Jupiter));
         assert_eq!(graha_war(Jupiter, &p).map(|w| w.with), Some(Mercury));
+    }
+
+    #[test]
+    fn consecutive_sunrises_more_than_a_day_and_a_half_apart_give_no_report() {
+        // Near the polar circles an ephemeris may return a "next" sunrise that is not the
+        // next day's: the day is then not a day of 24 hora parts and three night watches.
+        let p = sky(BASE);
+        let at_cap = ShadbalaAstro {
+            next_sunrise_jd_ut: 0.25 + MAX_SUNRISE_GAP_DAYS,
+            ..astro()
+        };
+        assert!(at_cap.is_consistent());
+        assert!(shadbala(&p, &at_cap).is_some());
+        let beyond = ShadbalaAstro {
+            next_sunrise_jd_ut: 0.25 + MAX_SUNRISE_GAP_DAYS + 0.01,
+            ..astro()
+        };
+        assert!(!beyond.is_consistent());
+        assert_eq!(shadbala(&p, &beyond), None);
+        // Weeks later (the first sunrise after a polar night).
+        let polar = ShadbalaAstro {
+            next_sunrise_jd_ut: 40.25,
+            ..astro()
+        };
+        assert_eq!(shadbala(&p, &polar), None);
     }
 
     #[test]

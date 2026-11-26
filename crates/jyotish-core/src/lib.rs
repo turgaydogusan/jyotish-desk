@@ -83,8 +83,8 @@ pub use shadbala::{
     saptavargaja_points, shadbala, sthana_bala, sun_entry_before, temporal_bala, time_lords,
     tribhaga_lord, uccha_bala, vara_lord, BhavaBala, BhavaSignKind, GrahaShadbala, GrahaWar,
     MeanLongitudes, ShadbalaAstro, ShadbalaReport, SthanaBala, TemporalBala, TimeLords,
-    GRAHA_WAR_ORB_DEG, HORA_CYCLE, SAPTAVARGA, SHADBALA_GRAHAS, SHADBALA_METHOD, VIRUPAS_PER_RUPA,
-    WAR_GRAHAS,
+    GRAHA_WAR_ORB_DEG, HORA_CYCLE, MAX_SUNRISE_GAP_DAYS, SAPTAVARGA, SHADBALA_GRAHAS,
+    SHADBALA_METHOD, VIRUPAS_PER_RUPA, WAR_GRAHAS,
 };
 pub use transit::{compute_transits, TransitGraha, TransitSnapshot};
 pub use varga::{

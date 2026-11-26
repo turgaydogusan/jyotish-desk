@@ -181,15 +181,32 @@ fn lord_bala(graha: Graha, lord: Graha, value: f64) -> f64 {
 }
 
 /// Bir grahanın zaman gücü kalemleri ve toplamı. Güneş'in ayana balası iki katıdır; Jüpiter
-/// tribhaga balayı her zaman alır.
+/// tribhaga balayı her zaman alır. Düğümlerde her kalem 0'dır.
 pub fn temporal_bala(
     graha: Graha,
     positions: &Positions,
     astro: &ShadbalaAstro,
     lords: &TimeLords,
 ) -> TemporalBala {
-    // `SHADBALA_GRAHAS`, `Graha::ALL`'un ilk yedisidir: sıra numarası aynıdır.
-    debug_assert_eq!(SHADBALA_GRAHAS.get(graha as usize), Some(&graha));
+    // `SHADBALA_GRAHAS`, `Graha::ALL`'un ilk yedisidir: sıra numarası aynıdır. Düğümler
+    // dizide yoktur ve güçleri hesaplanmaz.
+    let Some(tropical) = SHADBALA_GRAHAS
+        .iter()
+        .position(|g| *g == graha)
+        .map(|i| astro.tropical_lons[i])
+    else {
+        return TemporalBala {
+            day_night: 0.0,
+            paksha: 0.0,
+            tribhaga: 0.0,
+            year_lord: 0.0,
+            month_lord: 0.0,
+            weekday_lord: 0.0,
+            hora_lord: 0.0,
+            ayana: 0.0,
+            total: 0.0,
+        };
+    };
     let day_night = day_night_bala(graha, hours_from_noon(astro));
     let paksha = paksha_bala(graha, positions);
     let tribhaga = if graha == Graha::Jupiter || graha == lords.tribhaga {
@@ -201,11 +218,6 @@ pub fn temporal_bala(
     let month_lord = lord_bala(graha, lords.month, MONTH_LORD_BALA);
     let weekday_lord = lord_bala(graha, lords.weekday, WEEKDAY_LORD_BALA);
     let hora_lord = lord_bala(graha, lords.hora, HORA_LORD_BALA);
-    let tropical = astro
-        .tropical_lons
-        .get(graha as usize)
-        .copied()
-        .unwrap_or(0.0);
     let ayana = ayana_bala(graha, tropical) * if graha == Graha::Sun { 2.0 } else { 1.0 };
     TemporalBala {
         day_night,
@@ -258,6 +270,32 @@ mod tests {
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9
+    }
+
+    #[test]
+    fn the_nodes_get_no_temporal_strength() {
+        // Rahu and Ketu have no Shadbala; like the other item functions this one returns zeros.
+        let p = Positions::synthetic(Some(0.0), [10.0; 9]);
+        let a = astro_at(0.5);
+        let lords = time_lords(&a);
+        for node in [Graha::Rahu, Graha::Ketu] {
+            let t = temporal_bala(node, &p, &a, &lords);
+            assert_eq!(
+                [
+                    t.day_night,
+                    t.paksha,
+                    t.tribhaga,
+                    t.year_lord,
+                    t.month_lord,
+                    t.weekday_lord,
+                    t.hora_lord,
+                    t.ayana,
+                    t.total
+                ],
+                [0.0; 9],
+                "{node:?}"
+            );
+        }
     }
 
     #[test]

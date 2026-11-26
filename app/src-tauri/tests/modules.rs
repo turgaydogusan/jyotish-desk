@@ -11,8 +11,8 @@ use jyotish_core::{
     rashi_drishti_signs, shadbala, sign_dasha_children, sign_dasha_path_at, sphuta_drishti,
     sun_entry_before, vara_lord, AdvancedSettings, CalcSettings, ChartInput, ChartWarning, Graha,
     KarakaRole, KarakaScheme, Positions, Sign, SignDashaPeriod, Varga, ASPECTING_GRAHAS,
-    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS,
-    SHADBALA_METHOD,
+    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, MAX_SUNRISE_GAP_DAYS, SEVEN_KARAKA_ROLES,
+    SHADBALA_GRAHAS, SHADBALA_METHOD,
 };
 use jyotish_desk_lib::commands::compute_chart_blocking;
 use jyotish_desk_lib::module_commands::{
@@ -920,6 +920,77 @@ fn shadbala_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     }
     // Beş andan biri kutup gecesindedir (Tromsø, Aralık): raporu yoktur.
     assert_eq!(reports, inputs.len() - 1, "reports for the golden moments");
+
+    // Kutup dairesinin hemen altı ve üstü, gündönümlerinde (65°'nin üstünde SE'nin yavaş doğuş
+    // araması kullanılır). Rapor varsa ardışık iki doğuş bir günden az ayrıdır ve gün batımı
+    // aralarındadır; rapor yoksa harita `SunriseUnavailable` uyarısını taşır. Hiçbiri hata
+    // vermez.
+    let base = inputs[0].1.clone();
+    // (enlem, JD UT, rapor bekleniyor mu)
+    let high_latitude = [
+        // 2000-06-21 10:00 UT ve 2000-12-21 10:00 UT. 65,5°: yazın Güneş gece yarısında kısa
+        // bir süre batar, kışın öğle çevresinde kısa bir süre doğar.
+        (65.5, 2_451_716.916_667, true),
+        (65.5, 2_451_899.916_667, true),
+        // 66,5°: golden ayarının doğuş tanımıyla (disk merkezi, kırılmasız) sınırın hemen
+        // altı; gündüz yazın 23,4 saat, kışın 37 dakikadır.
+        (66.5, 2_451_716.916_667, true),
+        (66.5, 2_451_899.916_667, true),
+        // 67°: yazın Güneş batmaz, kışın doğmaz.
+        (67.0, 2_451_716.916_667, false),
+        (67.0, 2_451_899.916_667, false),
+    ];
+    for (lat, jd_ut, expect_report) in high_latitude {
+        let input = ChartInput {
+            jd_ut,
+            lat,
+            lon: 25.0,
+            ..base.clone()
+        };
+        let id = format!("lat {lat} jd {jd_ut}");
+        let report = compute_shadbala_blocking(engine, input.clone())
+            .unwrap_or_else(|e| panic!("{id}: {}", e.code));
+        let chart = compute_chart_blocking(
+            engine,
+            input.jd_ut,
+            input.lat,
+            input.lon,
+            input.settings.clone(),
+        )
+        .expect("chart");
+        assert_eq!(report.is_some(), expect_report, "{id}");
+        let Some(report) = report else {
+            assert!(
+                chart
+                    .meta
+                    .warnings
+                    .contains(&ChartWarning::SunriseUnavailable),
+                "{id}: no report although the Sun rises and sets"
+            );
+            continue;
+        };
+        let astro = {
+            let (input, chart) = (input.clone(), chart.clone());
+            engine
+                .call(move |se: &mut SwissEph| compute_shadbala_astro(se, &input, &chart))
+                .expect("engine")
+                .expect("astro")
+                .expect("sunrise and sunset")
+        };
+        let gap = astro.next_sunrise_jd_ut - astro.sunrise_jd_ut;
+        let daylight = astro.sunset_jd_ut - astro.sunrise_jd_ut;
+        eprintln!("high latitude {id}: sunrise gap {gap:.4} d, daylight {daylight:.4} d");
+        assert!((0.9..=1.1).contains(&gap), "{id}: sunrise gap {gap} days");
+        assert!(gap <= MAX_SUNRISE_GAP_DAYS, "{id}");
+        assert!(
+            daylight > 0.0 && daylight < gap,
+            "{id}: daylight {daylight}"
+        );
+        assert!(astro.is_consistent(), "{id}");
+        let want = shadbala(&Positions::from(&chart), &astro).expect("lagna");
+        assert_eq!(report.grahas, want.grahas, "{id}");
+        assert_eq!(report.time_lords, want.time_lords, "{id}");
+    }
 
     // Hatalar `compute_chart` ile aynı kodlara eşlenir; saat bilinmese de denetlenir.
     let delhi = inputs

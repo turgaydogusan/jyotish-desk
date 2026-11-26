@@ -974,8 +974,26 @@ fn shadbala_fixtures_cover_the_required_cases() {
         any(&|x, _, _| x.grahas.values().all(|row| row.war.is_none())),
         "an example without a war"
     );
-    // Negatif drik bala; moolatrikona (D1'de 45 puan ancak toplam ≥ 45 ile görünür); her
-    // kendradi değeri; bhava dig balanın uç değerleri.
+    // Moolatrikona (D1'de 45 puan): en az bir graha moolatrikona derece aralığındadır. Aralıklar
+    // burada elle yazılıdır (sidereal boylam; sentetik konumlarda rasi çerçevesiyle aynıdır):
+    // Güneş Aslan 0°–20°, Ay Boğa 3°–30°, Mars Koç 0°–12°, Merkür Başak 15°–20°, Jüpiter Yay
+    // 0°–10°, Venüs Terazi 0°–15°, Satürn Kova 0°–20°.
+    let moolatrikona = [
+        (Graha::Sun, 120.0, 140.0),
+        (Graha::Moon, 33.0, 60.0),
+        (Graha::Mars, 0.0, 12.0),
+        (Graha::Mercury, 165.0, 170.0),
+        (Graha::Jupiter, 240.0, 250.0),
+        (Graha::Venus, 180.0, 195.0),
+        (Graha::Saturn, 300.0, 320.0),
+    ];
+    assert!(
+        any(&|_, p, _| moolatrikona
+            .iter()
+            .any(|(g, from, to)| (*from..*to).contains(&p.point(*g).sidereal_lon))),
+        "a graha inside its moolatrikona range"
+    );
+    // Negatif drik bala; her kendradi değeri; bhava dig balanın uç değerleri.
     assert!(
         any(&|x, _, _| x.grahas.values().any(|row| row.drik < 0.0)),
         "a negative drik bala"
