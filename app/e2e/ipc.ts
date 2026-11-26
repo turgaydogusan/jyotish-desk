@@ -122,13 +122,18 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         // Uyum: eş haritanın girdisi ve kısa kimliği; başka kimlik `null` döner (harita yok).
         // Rapor yeniden hesaplanmaz, rollerden seçilir: açık harita damat rolündeyse `report`,
         // gelin rolündeyse `report_swapped`; gelin rolündeki eşin doğum saati bilinmiyorsa
-        // `report_time_unknown`.
+        // `report_time_unknown`. Bu ikisinin birleşimi fikstürde yoktur ve hata verir.
         chart_input: (args) => (args.chartUuid === partnerUuid ? { ...fixture.compat.input, time_known: !partnerUnknownTime } : null),
         chart_brief: (args) => (args.chartUuid === partnerUuid ? { ...fixture.compat.brief, client_name: ayse.client.name } : null),
         compute_compat: (args) => {
           const groom = args.groom as { jd_ut: number; time_known: boolean };
           const bride = args.bride as { jd_ut: number; time_known: boolean };
-          if (!isOpenChart(groom)) return fixture.compat.report_swapped;
+          if (!isOpenChart(groom)) {
+            // Fikstürde roller değişmişken eşin doğum saatinin bilinmediği rapor yoktur: yaklaşık
+            // olmayan rapor sessizce dönmez.
+            if (!groom.time_known) throw { code: "ipc", params: { detail: "no fixture: swapped roles with an unknown birth time" } };
+            return fixture.compat.report_swapped;
+          }
           return bride.time_known ? fixture.compat.report : fixture.compat.report_time_unknown;
         },
         print_window: () => null,

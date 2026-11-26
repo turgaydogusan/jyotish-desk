@@ -578,6 +578,33 @@ mod tests {
         }
         assert_eq!(vashya_points(Vashya::Wild, Vashya::Quadruped), 0.5);
         assert_eq!(vashya_points(Vashya::Wild, Vashya::Water), 1.0);
+        // İkinci yazım, puan sınıfına göre: yabanıl dışındaki dört sınıf arasında yalnızca
+        // insan–su çifti ½'dir; diğer beş farklı çift 1'dir (iki yönde).
+        let tame = [
+            Vashya::Quadruped,
+            Vashya::Human,
+            Vashya::Water,
+            Vashya::Insect,
+        ];
+        for g in tame {
+            for b in tame {
+                let half = matches!(
+                    (g, b),
+                    (Vashya::Human, Vashya::Water) | (Vashya::Water, Vashya::Human)
+                );
+                let want = if g == b {
+                    2.0
+                } else if half {
+                    0.5
+                } else {
+                    1.0
+                };
+                assert_eq!(vashya_points(g, b), want, "{g:?} {b:?}");
+            }
+        }
+        // Yabanıl damat rolündeyse insanla ve böcekle 0.
+        assert_eq!(vashya_points(Vashya::Wild, Vashya::Human), 0.0);
+        assert_eq!(vashya_points(Vashya::Wild, Vashya::Insect), 0.0);
         // Yabanıl dışındaki dört sınıf arasında tablo bakışımlıdır.
         for g in Vashya::ALL {
             for b in Vashya::ALL {

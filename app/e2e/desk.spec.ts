@@ -740,7 +740,10 @@ test("compat: a palette panel; a partner from the picker, the kuta table, swappe
   await compat.getByRole("table", { name: "Karşılıklı yerleşim" }).getByRole("button", { name: "Jüpiter" }).click();
   await expect(page.locator('svg [data-graha="Jupiter"]').first()).toHaveClass(/chart-planet--highlight/);
   await expect(compat.locator('tr[data-graha="Jupiter"]')).toHaveClass(/is-highlighted/);
+  // Esc sabitlemeyi kaldırır: satır ve haritadaki graha vurgusuz kalır.
   await page.keyboard.press("Escape");
+  await expect(compat.locator('tr[data-graha="Jupiter"]')).not.toHaveClass(/is-highlighted/);
+  await expect(page.locator(".chart-planet--highlight")).toHaveCount(0);
 
   // Roller değişir: rapor iki girdi yer değiştirerek yeniden istenir; eş yeniden okunmaz.
   await compat.getByRole("button", { name: "Rolleri değiştir" }).click();

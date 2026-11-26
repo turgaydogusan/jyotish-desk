@@ -1550,20 +1550,36 @@ fn compat_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         assert_eq!(swapped.moon_day_change[1], MoonDayChange::default(), "{id}");
     }
 
-    // Hatalar `compute_chart` ile aynı kodlara eşlenir, hangi haritadan gelirse gelsin;
-    // parametreler danışan verisi taşımaz.
+    // Hatalar `compute_chart` ile aynı kodlara ve aynı parametrelere eşlenir, hangi haritadan
+    // gelirse gelsin: parametreler yalnızca reddedilen girdinin kendi alanıdır (`compute_chart`
+    // ile aynı anahtarlar); geçerli diğer haritanın anı, konumu ya da ayarı hataya girmez.
+    // Parametreler loglanmaz (C1).
     let bad_place = ChartInput {
         lat: 91.0,
         time_known: false,
         ..delhi.clone()
     };
     for (groom, bride) in [(&bad_place, &istanbul), (&istanbul, &bad_place)] {
+        let err = compute_compat_blocking(engine, groom.clone(), bride.clone()).unwrap_err();
+        assert_eq!(err.code, "invalid_location");
+        let params: Vec<(&str, &str)> = err
+            .params
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
         assert_eq!(
-            compute_compat_blocking(engine, groom.clone(), bride.clone())
-                .unwrap_err()
-                .code,
-            "invalid_location"
+            params,
+            [
+                ("lat", bad_place.lat.to_string().as_str()),
+                ("lon", bad_place.lon.to_string().as_str())
+            ]
         );
+        let other = [
+            istanbul.jd_ut.to_string(),
+            istanbul.lat.to_string(),
+            istanbul.lon.to_string(),
+        ];
+        assert!(err.params.values().all(|v| !other.contains(v)));
     }
     let old_settings = ChartInput {
         settings: CalcSettings {
@@ -1572,11 +1588,11 @@ fn compat_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         },
         ..delhi.clone()
     };
+    let err = compute_compat_blocking(engine, istanbul.clone(), old_settings).unwrap_err();
+    assert_eq!(err.code, "unsupported_schema_version");
     assert_eq!(
-        compute_compat_blocking(engine, istanbul.clone(), old_settings)
-            .unwrap_err()
-            .code,
-        "unsupported_schema_version"
+        err.params.keys().map(String::as_str).collect::<Vec<_>>(),
+        ["found", "supported"]
     );
 
     // Performans: spec §15 "compute_compat ≤ 20 ms" (iki temel harita dahil). En pahalı
