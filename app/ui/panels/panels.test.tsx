@@ -11,6 +11,7 @@ import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel } from "./ChartPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
+import { PanchangPanel } from "./PanchangPanel";
 import { panelDefinition, PANEL_REGISTRY } from "./registry";
 import { UnavailablePanel } from "./UnavailablePanel";
 
@@ -34,6 +35,7 @@ test("registry covers every catalog kind", () => {
   expect(PANEL_REGISTRY.birth_info.component).toBe(BirthInfoPanel);
   expect(PANEL_REGISTRY.dasha_strip.component).toBe(DashaStripPanel);
   expect(PANEL_REGISTRY.transit_table.component).toBe(TransitTablePanel);
+  expect(PANEL_REGISTRY.panchang.component).toBe(PanchangPanel);
   expect(panelDefinition("yoga_list")).toMatchObject({ titleKey: "panel.unknown", component: UnavailablePanel });
   const keys = new Set(Object.keys(tr.panel).map((k) => `panel.${k}`));
   for (const kind of [...PANEL_KINDS, "yoga_list"]) expect(keys.has(panelDefinition(kind).titleKey)).toBe(true);

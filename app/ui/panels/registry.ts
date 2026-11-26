@@ -7,6 +7,7 @@ import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
+import { PanchangPanel } from "./PanchangPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
 
@@ -18,8 +19,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   transit_table: { titleKey: "panel.transit_table", component: TransitTablePanel },
   notes: { titleKey: "panel.notes", component: NotesPanel },
   birth_info: { titleKey: "panel.birth_info", component: BirthInfoPanel },
-  // İleri modül panelleri (Plan 14): içerikleri Task 6–8'de gelir.
-  panchang: { titleKey: "panel.panchang", component: UnavailablePanel },
+  // İleri modül panelleri (Plan 14).
+  panchang: { titleKey: "panel.panchang", component: PanchangPanel },
   ashtakavarga: { titleKey: "panel.ashtakavarga", component: UnavailablePanel },
   drishti: { titleKey: "panel.drishti", component: UnavailablePanel },
 };

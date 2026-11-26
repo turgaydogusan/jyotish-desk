@@ -7,24 +7,11 @@ import { sameTarget, type HighlightTarget } from "../highlight/target";
 import { useSession } from "../session/store";
 import { useLayoutStore } from "../view/store";
 import { timeUnknown } from "../session/birth";
+import { Approx } from "./Approx";
 import { APPROX_COLUMNS, grahaCellText, lagnaCellText, NUMERIC_COLUMNS as NUMERIC } from "./grahaCells";
 import { GRAHA_COLUMNS, grahaColumns, toggleColumn, type GrahaColumn } from "./grahaColumns";
 import "./panels.css";
 import type { PanelProps } from "./types";
-
-/** Yaklaşık değer: "≈" işareti (fare için `title`) ve ekran okuyucu için bir kez okunan metin. */
-function Approx({ on, label, children }: { on: boolean; label: string; children: ReactNode }) {
-  if (!on) return <>{children}</>;
-  return (
-    <span>
-      <span aria-hidden="true" title={label}>
-        ≈
-      </span>
-      <span className="visually-hidden">{label} </span>
-      {children}
-    </span>
-  );
-}
 
 /** Hücre metni `grahaCells.ts`'ten; burada yalnızca erişilebilirlik sarmalayıcıları eklenir. */
 function grahaCell(t: TFunction, g: GrahaPosition, column: GrahaColumn, approx: boolean): ReactNode {
