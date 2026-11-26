@@ -263,3 +263,61 @@ test("updates: nothing is checked until asked; About checks, shows the notes and
   await expect(page.getByRole("region", { name: "Bildirimler" })).toContainText("Yeni sürüm var: 0.9.1.");
   expect(await ipcCalls(page, "check_for_update")).toHaveLength(1);
 });
+
+test("module panels: the palette adds Aspects, Panchang and Ashtakavarga; aspects are computed once and share the highlight", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async (query: string, name: RegExp) => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill(query);
+    await palette.getByRole("option", { name }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  // Modül sonucu panel açılmadan istenmez (ileri modüller spec'i K1).
+  expect(await ipcCalls(page, "compute_drishti")).toHaveLength(0);
+
+  await toggle("bakış", /Bakışlar panelini aç\/kapat/);
+  const drishti = page.getByRole("region", { name: "Bakışlar" });
+  await expect(drishti).toBeFocused();
+  await expect(drishti).toBeInViewport();
+  await expect(drishti.getByRole("table")).toBeVisible();
+  const calls = (await ipcCalls(page, "compute_drishti")) as { input: { jd_ut: number; time_known: boolean; settings: { schema_version: number } } }[];
+  expect(calls).toHaveLength(1);
+  expect(calls[0].input).toMatchObject({ jd_ut: 2451545, time_known: true, settings: { schema_version: 2 } });
+  // Jüpiter Koç'tan Yay'daki Güneş'e tam bakar; virupa görünümü sayıyı gösterir.
+  const jupiter = drishti.locator('tbody tr[data-graha="Jupiter"]');
+  await expect(jupiter.locator("td").first()).toContainText("●");
+  await drishti.getByRole("combobox", { name: "Değer" }).selectOption("virupa");
+  await expect(jupiter.locator("td").first()).toHaveText("52.4");
+  expect(await ipcCalls(page, "compute_drishti")).toHaveLength(1);
+
+  await toggle("panchang", /Panchang panelini aç\/kapat/);
+  const panchang = page.getByRole("region", { name: "Panchang" });
+  await expect(panchang.locator('tr[data-row="tithi"]')).toContainText("Krishna 11 · Ekadashi");
+  await expect(panchang.locator('tr[data-row="tithi"]')).toContainText("2000-01-02 13:19");
+  await toggle("ashtakavarga", /Ashtakavarga panelini aç\/kapat/);
+  const ashtakavarga = page.getByRole("region", { name: "Ashtakavarga" });
+  await expect(ashtakavarga.locator('tr[data-row="sav"]')).toContainText("337");
+  await expect(ashtakavarga).toBeFocused();
+
+  // Ortak vurgu: bakış tablosundaki Jüpiter satırı haritada ve ashtakavarga satırında da vurgulanır.
+  await jupiter.getByRole("button", { name: "Jüpiter" }).hover();
+  await expect(page.locator('svg [data-graha="Jupiter"]').first()).toHaveClass(/chart-planet--highlight/);
+  await expect(ashtakavarga.locator('tr[data-graha="Jupiter"]')).toHaveClass(/is-highlighted/);
+
+  // Paneller düzenle birlikte kaydedilir.
+  await expect
+    .poll(async () => {
+      const saved = (await ipcCalls(page, "save_view_state")).at(-1) as { viewState: { panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: unknown }[] }[] } } } | undefined;
+      const layout = saved?.viewState.panel_layout;
+      return layout?.layouts.find((l) => l.id === layout.active_layout_id)?.panels.map((p) => p.kind);
+    })
+    .toEqual(["chart", "chart", "dasha_strip", "notes", "drishti", "panchang", "ashtakavarga"]);
+
+  // Aynı komut paneli kaldırır.
+  await toggle("bakış", /Bakışlar panelini aç\/kapat/);
+  await expect(drishti).toHaveCount(0);
+  await expect(panchang).toBeVisible();
+});
