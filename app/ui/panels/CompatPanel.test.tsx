@@ -13,6 +13,7 @@ import { tr } from "../i18n/tr";
 import { compatInputs, initialRoles } from "../modules/useCompat";
 import { chartInput } from "../modules/input";
 import { fixture, unknownTimeOpened } from "../test/fixture";
+import { useSession } from "../session/store";
 import { renderWithStores } from "../test/render";
 import { CompatPanel, formatKutaScore, KUTAS } from "./CompatPanel";
 
@@ -342,4 +343,112 @@ test("every kuta and every class id of the Rust catalog is named in three langua
     expect(en.compat.class[kuta]).toEqual(tr.compat.class[kuta]);
     expect(fr.compat.class[kuta]).toEqual(tr.compat.class[kuta]);
   }
+});
+
+const OTHER = "00000000-0000-4000-8000-0000000000aa";
+
+/** Aynı panelin yanında, kayıt sayacını artıran düğme (başka bir kayıt değişikliği). */
+function Touch() {
+  const { touch } = useSession();
+  return (
+    <button type="button" onClick={touch}>
+      kayıt
+    </button>
+  );
+}
+
+function pickable(uuid: string) {
+  const mehmet = client(7, "Mehmet Kaya", "Male");
+  vi.mocked(api.listClients).mockResolvedValue(ok([mehmet]));
+  vi.mocked(api.listCharts).mockResolvedValue(ok([chartOf(mehmet, 70, uuid)]));
+}
+
+test("changing the partner keeps the people, the toolbar and the focus while the new partner is read", async () => {
+  pickable(OTHER);
+  renderPanel();
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  const change = screen.getByRole("button", { name: "Eşi değiştir" });
+  const toolbar = change.parentElement as HTMLElement;
+  let resolve!: (r: Result<ReturnType<typeof fixture>["compat"]["brief"] | null>) => void;
+  vi.mocked(api.chartBrief).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  change.focus();
+  fireEvent.click(change);
+  const dialog = screen.getByRole("dialog", { name: "Eş harita seç" });
+  fireEvent.click(await within(dialog).findByRole("option", { name: "Mehmet Kaya" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(api.chartBrief).toHaveBeenCalledWith(OTHER));
+  // Yeni eş okunurken eski eş ve araç çubuğu yerinde, panel meşgul işaretli; odak "Eşi değiştir"de.
+  expect(screen.getByRole("button", { name: "Eşi değiştir" })).toBe(change);
+  expect(change.parentElement).toBe(toolbar);
+  expect(people()).toHaveLength(2);
+  expect(document.querySelector(".compat-panel")).toHaveAttribute("aria-busy", "true");
+  expect(document.activeElement).toBe(change);
+  await act(async () => resolve(ok(fixture().compat.brief)));
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  expect(document.querySelector(".compat-panel")).not.toHaveAttribute("aria-busy");
+  expect(document.activeElement).toBe(change);
+});
+
+test("a record change re-reads the partner without unmounting the toolbar or dropping the focus", async () => {
+  renderWithStores(
+    <>
+      <CompatPanel />
+      <Touch />
+    </>,
+    { opened: linked() },
+  );
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  const swap = screen.getByRole("button", { name: "Rolleri değiştir" });
+  swap.focus();
+  let resolve!: (r: Result<ReturnType<typeof fixture>["compat"]["brief"] | null>) => void;
+  vi.mocked(api.chartBrief).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  fireEvent.click(screen.getByRole("button", { name: "kayıt" }));
+  await waitFor(() => expect(api.chartBrief).toHaveBeenCalledTimes(2));
+  expect(screen.getByRole("button", { name: "Rolleri değiştir" })).toBe(swap);
+  expect(people()).toHaveLength(2);
+  expect(document.activeElement).toBe(swap);
+  await act(async () => resolve(ok(fixture().compat.brief)));
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  expect(document.activeElement).toBe(swap);
+});
+
+test("removing the partner moves the focus to the pick button", async () => {
+  renderPanel();
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  const remove = screen.getByRole("button", { name: "Eşi çıkar" });
+  remove.focus();
+  fireEvent.click(remove);
+  const pick = await screen.findByRole("button", { name: "Eş harita seç" });
+  expect(document.activeElement).toBe(pick);
+});
+
+test("picking a partner from the empty state leaves the focus on the change button of the new state", async () => {
+  pickable(PARTNER);
+  renderPanel(fixture().opened);
+  fireEvent.click(screen.getByRole("button", { name: "Eş harita seç" }));
+  fireEvent.click(await within(screen.getByRole("dialog")).findByRole("option", { name: "Mehmet Kaya" }));
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Eşi değiştir" }));
+});
+
+test("an unreadable partner can still be changed or unlinked", async () => {
+  vi.mocked(api.chartInput).mockResolvedValue(failure);
+  const { persistence } = renderPanel();
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  expect(people()).toHaveLength(0);
+  expect(screen.getByRole("button", { name: "Eşi değiştir" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Eşi çıkar" }));
+  const pick = await screen.findByRole("button", { name: "Eş harita seç" });
+  expect(document.activeElement).toBe(pick);
+  await waitFor(() => expect(persistence.saved.at(-1)?.viewState.compat_partner_uuid).toBeNull());
+});
+
+test("an unknown house is read as unknown, not only drawn as a dash", async () => {
+  vi.mocked(api.computeCompat).mockImplementation(async () => ok(fixture().compat.report_time_unknown));
+  renderPanel();
+  const overlay = await screen.findByRole("table", { name: "Karşılıklı yerleşim" });
+  const unknown = within(overlay).getAllByRole("img");
+  expect(unknown.length).toBeGreaterThan(0);
+  expect(unknown[0]).toHaveAccessibleName(/^lagnadan bilinmiyor · Ay'dan \d+$/);
+  expect(unknown[0]).toHaveTextContent(/^lagnadan — · Ay'dan \d+$/);
 });

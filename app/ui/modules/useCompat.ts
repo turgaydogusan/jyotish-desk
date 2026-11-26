@@ -4,7 +4,7 @@
 // Arayüzde hesap yoktur (C4) ve rapor saklanmaz (K1). Eş harita silinmişse bağ kaldırılır:
 // silinen bir danışanı gösteren ilişki bilgisi geç gelen bir kayıtla geri yazılmaz. Girdiler ve
 // eş bağı kişisel veridir: loglanmaz.
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { api, type Result } from "../api";
 import type { ChartBrief, ChartInput, CommandError, CompatRoles, Gender, KutaReport, KutaRole, OpenedClient } from "../bindings";
 import { useSession } from "../session/store";
@@ -20,8 +20,13 @@ export interface CompatPartner {
 }
 
 export interface CompatState {
-  /** Bağ var ve eş harita okundu. */
+  /**
+   * Bağ var ve eş harita okundu. Eş yeniden okunurken (eş değişti, kayıt sayacı arttı) aynı açık
+   * harita için son okunan eş tutulur; başlık ve araç çubuğu kaybolmaz, odak düşmez (`loading`).
+   */
   partner: CompatPartner | null;
+  /** Açık haritanın görünüm kaydındaki eş bağı; eş okunamasa da bağ varsa çözülebilir. */
+  partnerUuid: string | null;
   /** Açık haritanın rolü. */
   openRole: KutaRole;
   report: KutaReport | null;
@@ -66,7 +71,13 @@ export function useCompat(opened: OpenedClient | null, enabled = true): CompatSt
   // `revision` kayıt değişikliklerinde artar (silme, düzenleme): eş yeniden okunur.
   const partnerKey = active && partnerUuid !== null ? JSON.stringify([opened.chart_record.id, partnerUuid, revision]) : null;
   const lookup = useModule(partnerKey, () => loadPartner(partnerUuid as string));
-  const partner = lookup.data ?? null;
+  // `useModule` anahtar değişince `data`yı boşaltır: aynı harita için son iyi eş, yeni okuma
+  // sürerken gösterilir. Rapor yine yalnızca okunmuş eşle istenir.
+  const settledPartner = lookup.data ?? null;
+  const lastPartner = useRef<{ chartId: number; partner: CompatPartner } | null>(null);
+  if (partnerKey === null) lastPartner.current = null;
+  else if (settledPartner !== null) lastPartner.current = { chartId: (opened as OpenedClient).chart_record.id, partner: settledPartner };
+  const partner = settledPartner ?? (lookup.loading && lastPartner.current?.chartId === opened?.chart_record.id ? (lastPartner.current?.partner ?? null) : null);
   const missing = partnerKey !== null && !lookup.loading && lookup.error === null && lookup.data === null;
 
   const { setCompatPartner } = view;
@@ -74,14 +85,15 @@ export function useCompat(opened: OpenedClient | null, enabled = true): CompatSt
     if (missing) setCompatPartner(null, "OpenIsGroom");
   }, [missing, setCompatPartner]);
 
-  const reportKey = active && partner !== null ? JSON.stringify([inputKey(opened), partner.input, roles]) : null;
+  const reportKey = active && settledPartner !== null ? JSON.stringify([inputKey(opened), settledPartner.input, roles]) : null;
   const report = useModule(reportKey, () => {
-    const [groom, bride] = compatInputs(chartInput(opened as OpenedClient), (partner as CompatPartner).input, roles);
+    const [groom, bride] = compatInputs(chartInput(opened as OpenedClient), (settledPartner as CompatPartner).input, roles);
     return api.computeCompat(groom, bride);
   });
 
   return {
     partner,
+    partnerUuid: active ? partnerUuid : null,
     openRole: roles === "OpenIsGroom" ? "Groom" : "Bride",
     report: report.data,
     error: lookup.error ?? report.error,

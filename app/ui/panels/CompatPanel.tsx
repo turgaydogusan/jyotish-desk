@@ -3,7 +3,7 @@
 // `compute_compat`'tan gelir; burada hesap yoktur (C4). Uyum yüzdesi, hüküm ve açıklama metni
 // yoktur; adlar ve sınıflar etikettir. Eş harita açık haritanın görünüm kaydındadır ve eş
 // seçiciyle atanır; roller ("damat rolü", "gelin rolü") açıkça gösterilir ve değiştirilebilir.
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { KujaDosha, Kuta, KutaReport, KutaRole, KutaScore, OpenedClient, OverlayRow } from "../bindings";
 import { signIndex, SIGNS } from "../chart/adapter";
@@ -56,17 +56,41 @@ function Compat({ opened }: { opened: OpenedClient }) {
   const compat = useCompat(opened);
   const phase = usePanelLoadPhase(compat.loading);
   const [picking, setPicking] = useState(false);
-  const picker = picking && (
-    <PartnerPicker openChartId={opened.chart_record.id} onClose={() => setPicking(false)} onPick={(chart, client) => compat.setPartner(chart.uuid, client.gender)} />
-  );
+  const pickButton = useRef<HTMLButtonElement>(null);
+  const changeButton = useRef<HTMLButtonElement>(null);
+  // Odak kaybı: boş durumun düğmesi eş atanınca, araç çubuğunun düğmeleri eş çıkarılınca DOM'dan
+  // gider. Eylem sonrası odağın gideceği düğme istenir; düğme ortaya çıkınca odak oraya alınır.
+  const [wantFocus, setWantFocus] = useState<"pick" | "change" | null>(null);
   const { partner, report } = compat;
+  const empty = partner === null && !compat.loading && compat.error === null;
+  const linked = compat.partnerUuid !== null && (partner !== null || compat.error !== null);
+  useEffect(() => {
+    if (wantFocus === null || picking) return;
+    const target = wantFocus === "pick" ? pickButton.current : changeButton.current;
+    if (target === null) return;
+    // Kullanıcı bu arada başka bir kontrole geçtiyse odağı çalma.
+    const active = document.activeElement;
+    if (active === null || active === document.body || active.matches("main[tabindex]")) target.focus({ preventScroll: true });
+    setWantFocus(null);
+  }, [wantFocus, picking, empty, partner]);
+  const picker = picking && (
+    <PartnerPicker
+      openChartId={opened.chart_record.id}
+      onClose={() => setPicking(false)}
+      onPick={(chart, client) => {
+        // Boş durumdan seçilirse tetikleyen düğme kalkar: eş okununca odak "Eşi değiştir"e gider.
+        if (empty) setWantFocus("change");
+        compat.setPartner(chart.uuid, client.gender);
+      }}
+    />
+  );
   // Eş bağı yok (ya da eş harita silinmiş ve bağ kaldırılmış): tek eylemli boş durum.
-  if (partner === null && !compat.loading && compat.error === null) {
+  if (empty) {
     return (
       <div className="module-panel compat-panel">
         <p className="panel-message">{t("compat.empty")}</p>
         <div>
-          <button type="button" onClick={() => setPicking(true)}>
+          <button ref={pickButton} type="button" onClick={() => setPicking(true)}>
             {t("compat.pick")}
           </button>
         </div>
@@ -75,22 +99,28 @@ function Compat({ opened }: { opened: OpenedClient }) {
     );
   }
   return (
-    <div className="module-panel compat-panel">
-      {partner !== null && (
-        <>
-          <People opened={opened} partner={partner} openRole={compat.openRole} />
-          <div className="module-toolbar">
+    <div className="module-panel compat-panel" aria-busy={compat.loading && partner !== null ? true : undefined}>
+      {partner !== null && <People opened={opened} partner={partner} openRole={compat.openRole} />}
+      {linked && (
+        <div className="module-toolbar">
+          {partner !== null && (
             <button type="button" onClick={compat.swapRoles}>
               {t("compat.swap")}
             </button>
-            <button type="button" onClick={() => setPicking(true)}>
-              {t("compat.change")}
-            </button>
-            <button type="button" onClick={compat.clearPartner}>
-              {t("compat.remove")}
-            </button>
-          </div>
-        </>
+          )}
+          <button ref={changeButton} type="button" onClick={() => setPicking(true)}>
+            {t("compat.change")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setWantFocus("pick");
+              compat.clearPartner();
+            }}
+          >
+            {t("compat.remove")}
+          </button>
+        </div>
       )}
       {compat.error ? (
         <PanelError error={compat.error} onRetry={compat.retry} />
@@ -149,7 +179,15 @@ function Report({ report, names, settingsDiffer }: { report: KutaReport; names: 
     </tr>
   );
   // Karşılıklı yerleşim: ilk dokuz satır damat rolünün, son dokuzu gelin rolünün grahalarıdır.
-  const cell = (row: OverlayRow) => t("compat.overlayCell", { lagna: row.house_from_lagna ?? DASH, moon: row.house_from_moon });
+  // Bilinmeyen ev çizgiyle çizilir; ekran okuyucuya hücrenin "bilinmiyor" diyen adı verilir.
+  const cell = (row: OverlayRow) =>
+    row.house_from_lagna === null ? (
+      <span role="img" aria-label={t("compat.overlayCell", { lagna: kujaValue(null), moon: row.house_from_moon })}>
+        {t("compat.overlayCell", { lagna: DASH, moon: row.house_from_moon })}
+      </span>
+    ) : (
+      t("compat.overlayCell", { lagna: row.house_from_lagna, moon: row.house_from_moon })
+    );
   return (
     <>
       {report.approximate && (
