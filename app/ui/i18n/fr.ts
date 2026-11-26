@@ -96,7 +96,7 @@ export const fr: Messages = {
     view: "Vue",
     format: "Format",
     sav: "SAV",
-    bavOf: "BAV de {{graha}}",
+    bavOf: "BAV : {{graha}}",
     formats: { table: "Tableau", chart: "Dans la carte" },
     total: "Total",
     caption: "Ashtakavarga, {{view}} : bindus par signe",

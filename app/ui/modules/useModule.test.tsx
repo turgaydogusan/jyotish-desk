@@ -100,3 +100,15 @@ test("StrictMode's second effect run does not call the command again", async () 
   await act(async () => again.resolve({ status: "ok", data: "A2" }));
   expect(state()).toBe("A2");
 });
+
+test("a fetch that rejects ends as an error instead of loading forever, and retry asks again", async () => {
+  const fetch = vi
+    .fn<() => Promise<Result<string>>>()
+    .mockRejectedValueOnce(new Error("bridge down"))
+    .mockResolvedValueOnce({ status: "ok", data: "B" });
+  render(<Probe k="a" fetch={fetch} />);
+  await act(async () => {});
+  expect(state()).toBe("error:ipc");
+  await act(async () => screen.getByRole("button", { name: "retry" }).click());
+  expect(state()).toBe("B");
+});

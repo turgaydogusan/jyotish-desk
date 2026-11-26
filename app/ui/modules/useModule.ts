@@ -28,9 +28,15 @@ export function useModule<T>(key: string | null, fetch: () => Promise<Result<T>>
     const id = `${attempt}:${key}`;
     if (inflight.current?.id !== id) inflight.current = { id, promise: latest.current() };
     let live = true;
-    void inflight.current.promise.then((result) => {
-      if (live) setSettled({ key, attempt, result });
-    });
+    void inflight.current.promise.then(
+      (result) => {
+        if (live) setSettled({ key, attempt, result });
+      },
+      // `api` sarmalayıcıları reddetmez; yine de reddeden bir istek sonsuz yükleme bırakmaz.
+      (e: unknown) => {
+        if (live) setSettled({ key, attempt, result: { status: "error", error: { code: "ipc", params: { detail: String(e) } } } });
+      },
+    );
     return () => {
       live = false;
     };

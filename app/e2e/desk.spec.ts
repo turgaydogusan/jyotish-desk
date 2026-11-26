@@ -320,4 +320,7 @@ test("module panels: the palette adds Aspects, Panchang and Ashtakavarga; aspect
   await toggle("bakış", /Bakışlar panelini aç\/kapat/);
   await expect(drishti).toHaveCount(0);
   await expect(panchang).toBeVisible();
+  // Odak gövdeye düşmez; diğer panellerin eklenip kaldırılması bakışları yeniden istemez.
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+  expect(await ipcCalls(page, "compute_drishti")).toHaveLength(1);
 });
