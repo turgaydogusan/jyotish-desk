@@ -280,7 +280,7 @@ fn next_boundary<E: Ephemeris + ?Sized>(
 }
 
 /// Doğumdan önceki son gün doğumu, `[jd_ut − SUNRISE_WINDOW_DAYS, jd_ut]` içinde.
-fn day_sunrise<E: Ephemeris + ?Sized>(
+pub(crate) fn day_sunrise<E: Ephemeris + ?Sized>(
     eph: &mut E,
     jd_ut: f64,
     geo_lat: f64,
@@ -327,6 +327,38 @@ fn day_sunset<E: Ephemeris + ?Sized>(
         Some(t) if t > sunrise && t - sunrise < MAX_DAYLIGHT_DAYS => Ok(Some(t)),
         _ => Ok(None),
     }
+}
+
+/// `sunrise`'tan sonraki ilk gün doğumu; arama ufkunda yoksa `None`. Shadbala'nın saat
+/// dilimleri ve gece üçte birleri için (ileri modüller spec'i §7).
+pub(crate) fn following_sunrise<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    sunrise: f64,
+    geo_lat: f64,
+    geo_lon: f64,
+    disc: SunDisc,
+) -> Result<Option<f64>, CoreError> {
+    let from = sunrise + RISE_STEP_DAYS;
+    match eph.sun_rise_set(from, RiseSet::Rise, geo_lat, geo_lon, disc)? {
+        Some(t) if !t.is_finite() => Err(CoreError::NonFiniteResult("sunrise")),
+        Some(t) if t > from => Ok(Some(t)),
+        _ => Ok(None),
+    }
+}
+
+/// `jd_ut` anının varası: vara o andan önceki son gün doğumunda başlar; gün doğumu yoksa gün
+/// 06:00 yerel ortalama saatte başlıyor sayılır (`compute_panchang` ile aynı kural).
+pub(crate) fn vara_at<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    jd_ut: f64,
+    geo_lat: f64,
+    geo_lon: f64,
+    disc: SunDisc,
+) -> Result<Vara, CoreError> {
+    Ok(match day_sunrise(eph, jd_ut, geo_lat, geo_lon, disc)? {
+        Some(r) => local_weekday(r, geo_lon),
+        None => local_weekday(jd_ut - FALLBACK_DAY_START, geo_lon),
+    })
 }
 
 /// Doğum anının panchangı (spec §5). Güneş ve Ay her zodyak kipinde sidereal sorulur.

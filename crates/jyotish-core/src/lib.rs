@@ -76,14 +76,15 @@ pub use settings::{
 };
 pub use shadbala::{
     ayana_bala, ayana_declination, bhava_balas, bhava_dig_bala, bhava_midpoint, bhava_sign_kind,
-    cheshta_bala, cheshta_from, circular_midpoint, day_night_bala, dig_bala, drekkana_bala,
-    drik_bala, drik_bala_at, graha_war, hora_index, hora_lord, hours_from_noon, is_daytime,
-    kendradi_bala, mean_longitudes, naisargika_bala, ojayugma_bala, paksha_bala, paksha_elongation,
-    rasi_lon, required_bala, saptavargaja_bala, saptavargaja_points, shadbala, sthana_bala,
-    temporal_bala, time_lords, tribhaga_lord, uccha_bala, vara_lord, BhavaBala, BhavaSignKind,
-    GrahaShadbala, GrahaWar, MeanLongitudes, ShadbalaAstro, ShadbalaReport, SthanaBala,
-    TemporalBala, TimeLords, GRAHA_WAR_ORB_DEG, HORA_CYCLE, SAPTAVARGA, SHADBALA_GRAHAS,
-    SHADBALA_METHOD, VIRUPAS_PER_RUPA, WAR_GRAHAS,
+    cheshta_bala, cheshta_from, circular_midpoint, compute_shadbala, compute_shadbala_astro,
+    day_night_bala, dig_bala, drekkana_bala, drik_bala, drik_bala_at, graha_war, hora_index,
+    hora_lord, hours_from_noon, is_daytime, kendradi_bala, mean_longitudes, naisargika_bala,
+    ojayugma_bala, paksha_bala, paksha_elongation, rasi_lon, required_bala, saptavargaja_bala,
+    saptavargaja_points, shadbala, sthana_bala, sun_entry_before, temporal_bala, time_lords,
+    tribhaga_lord, uccha_bala, vara_lord, BhavaBala, BhavaSignKind, GrahaShadbala, GrahaWar,
+    MeanLongitudes, ShadbalaAstro, ShadbalaReport, SthanaBala, TemporalBala, TimeLords,
+    GRAHA_WAR_ORB_DEG, HORA_CYCLE, SAPTAVARGA, SHADBALA_GRAHAS, SHADBALA_METHOD, VIRUPAS_PER_RUPA,
+    WAR_GRAHAS,
 };
 pub use transit::{compute_transits, TransitGraha, TransitSnapshot};
 pub use varga::{

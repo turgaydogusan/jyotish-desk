@@ -4,10 +4,13 @@
 //! (60 virupa = 1 rupa).
 //!
 //! Hesap fonksiyonları ephemeris görmez (K3): `shadbala` yalnızca `Positions` ve
-//! `ShadbalaAstro` alır. Ek A: üçüncü güç yalnızca "zaman gücü" (`temporal`) adıyla anılır.
+//! `ShadbalaAstro` alır. `compute_shadbala` (`collect` alt modülü) temel haritayı ve gereken
+//! astronomik değerleri toplayıp ona verir. Ek A: üçüncü güç yalnızca "zaman gücü"
+//! (`temporal`) adıyla anılır.
 
 mod bhava;
 mod cheshta;
+mod collect;
 mod sthana;
 mod temporal;
 
@@ -26,6 +29,7 @@ pub use cheshta::{
     cheshta_bala, cheshta_from, circular_midpoint, mean_longitudes, MeanLongitudes, MEAN_JUPITER,
     MEAN_MARS, MEAN_MERCURY, MEAN_SATURN, MEAN_SUN, MEAN_VENUS,
 };
+pub use collect::{compute_shadbala, compute_shadbala_astro, sun_entry_before};
 pub use sthana::{
     drekkana_bala, kendradi_bala, ojayugma_bala, rasi_lon, saptavargaja_bala, saptavargaja_points,
     sthana_bala, uccha_bala, SAPTAVARGA,
@@ -156,8 +160,8 @@ pub struct ShadbalaReport {
     pub warnings: Vec<ChartWarning>,
 }
 
-/// Saf hesabın astronomik girdisi (K3): toplayıcı ephemeris'ten üretir, el örnekleri elle
-/// yazar. Zamanlar UT Jülyen günüdür; hesap yalnızca farklarını kullanır.
+/// Saf hesabın astronomik girdisi (K3): toplayıcı `compute_shadbala_astro` ile üretir, el
+/// örnekleri elle yazar. Zamanlar UT Jülyen günüdür; hesap yalnızca farklarını kullanır.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ShadbalaAstro {
