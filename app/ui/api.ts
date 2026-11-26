@@ -89,6 +89,9 @@ export const api = {
   // Shadbala ve Bhava bala: `null` doğum saati bilinmeyen ya da o gün Güneş'in doğmadığı ya da
   // batmadığı haritadır.
   computeShadbala: (input: ChartInput) => wrap(() => commands.computeShadbala(input)),
+  // Yogalar: doğum saati bilinmiyorsa rapor yine döner; lagna isteyen kurallar atlanmış,
+  // diğer kayıtlar `approximate` işaretlidir.
+  computeYogas: (input: ChartInput) => wrap(() => commands.computeYogas(input)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

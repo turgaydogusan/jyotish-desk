@@ -35,6 +35,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             module_commands::chara_dasha_children,
             module_commands::chara_dasha_at,
             module_commands::compute_shadbala,
+            module_commands::compute_yogas,
             client_commands::open_client,
             client_commands::restore_session,
             client_commands::create_client,

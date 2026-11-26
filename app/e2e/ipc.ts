@@ -112,6 +112,8 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
         chara_dasha_at: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.chara_dasha_at : null),
         // Shadbala: fikstürdeki gerçek sonuç; saat bilinmiyorsa Rust `null` döner.
         compute_shadbala: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.shadbala : null),
+        // Yogalar: fikstürdeki iki gerçek sonuç (doğum saati bilinen ve bilinmeyen girdi).
+        compute_yogas: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.yogas : fixture.yogas_time_unknown),
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.
         app_info: () => ({ version: "0.9.0", updaterConfigured: true }),

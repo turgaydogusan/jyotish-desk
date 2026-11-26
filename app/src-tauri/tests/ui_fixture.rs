@@ -11,13 +11,14 @@ use std::sync::Mutex;
 
 use atlas::Timestamp;
 use ephemeris::Engine;
-use jyotish_core::ChartInput;
+use jyotish_core::{ChartInput, YOGA_CATALOG, YOGA_CONDITIONS};
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
 use jyotish_desk_lib::module_commands::{
     chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
     compute_drishti_blocking, compute_jaimini_blocking, compute_shadbala_blocking,
+    compute_yogas_blocking,
 };
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
@@ -129,9 +130,25 @@ fn ui_fixture_is_up_to_date() {
     )
     .expect("chara dasha children at the transit moment");
     // Shadbala ve Bhava bala: aynı girdiyle (doğum saati biliniyor, Güneş doğup batıyor).
-    let shadbala = compute_shadbala_blocking(&engine, module_input)
+    let shadbala = compute_shadbala_blocking(&engine, module_input.clone())
         .expect("shadbala")
         .expect("time known and a sunrise");
+    // Yogalar: aynı girdiyle ve doğum saati bilinmeyen girdiyle (lagna isteyen kurallar atlanır).
+    // Katalog (kimlik ve grup) ve alt koşul kimlikleri: arayüz testleri her birinin üç dilde
+    // adı olduğunu bu listeden denetler.
+    let yogas = compute_yogas_blocking(&engine, module_input.clone()).expect("yogas");
+    let yogas_time_unknown = compute_yogas_blocking(
+        &engine,
+        ChartInput {
+            time_known: false,
+            ..module_input
+        },
+    )
+    .expect("yogas without a birth time");
+    let yoga_catalog: Vec<Value> = YOGA_CATALOG
+        .iter()
+        .map(|r| json!({ "id": r.id, "group": r.group }))
+        .collect();
     // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
     assert_eq!(opened.chart_record.birth, delhi());
     let prefs = store
@@ -154,6 +171,10 @@ fn ui_fixture_is_up_to_date() {
         "chara_dasha_at": chara_at,
         "chara_dasha_at_children": chara_at_children,
         "shadbala": shadbala,
+        "yogas": yogas,
+        "yogas_time_unknown": yogas_time_unknown,
+        "yoga_catalog": yoga_catalog,
+        "yoga_conditions": YOGA_CONDITIONS,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")

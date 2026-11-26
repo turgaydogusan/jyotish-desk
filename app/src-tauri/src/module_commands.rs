@@ -8,7 +8,7 @@ use std::sync::Arc;
 use ephemeris::{Engine, SwissEph};
 use jyotish_core::{
     CharaDasha, ChartInput, DrishtiTable, JaiminiReport, ShadbalaReport, Sign, SignDashaPath,
-    SignDashaPeriod,
+    SignDashaPeriod, YogaReport,
 };
 use tauri::State;
 
@@ -157,4 +157,28 @@ pub async fn compute_shadbala(
 ) -> Result<Option<ShadbalaReport>, CommandError> {
     let engine = Arc::clone(&engine);
     blocking(move || compute_shadbala_blocking(&engine, input)).await
+}
+
+/// `compute_yogas` komutunun gövdesi; bloklar.
+pub fn compute_yogas_blocking(
+    engine: &Engine,
+    input: ChartInput,
+) -> Result<YogaReport, CommandError> {
+    let report =
+        engine.call(move |se: &mut SwissEph| jyotish_core::compute_yogas(se, &input))??;
+    Ok(report)
+}
+
+/// Yogalar: kural kataloğunun D1'de oluşan kayıtları (yoga, grahalar, evler, ilişki türü,
+/// sağlanan alt koşullar) ve değerlendirilen kural sayısı. Doğum saati bilinmiyorsa
+/// (`time_known == false`) lagna isteyen kurallar atlanır ve sayılır; diğer kayıtlar
+/// `approximate` işaretiyle döner.
+#[tauri::command]
+#[specta::specta]
+pub async fn compute_yogas(
+    engine: State<'_, Arc<Engine>>,
+    input: ChartInput,
+) -> Result<YogaReport, CommandError> {
+    let engine = Arc::clone(&engine);
+    blocking(move || compute_yogas_blocking(&engine, input)).await
 }

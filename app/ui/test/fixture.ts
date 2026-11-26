@@ -1,7 +1,8 @@
 // Gerçek veri fikstürü (app/src-tauri/tests/ui_fixture.rs üretir): Delhi 2000-01-01 17:30
 // için `create_client` dönüşü, ilk 3. seviye dönemin alt dönemleri, "new delhi" atlas araması,
 // an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit, bakış tablosu, Jaimini raporu,
-// chara dasha ve Shadbala raporu. Arayüz hesap yapmadığı için testler bunu çizer.
+// chara dasha, Shadbala raporu ve yoga raporu (kataloğuyla). Arayüz hesap yapmadığı için testler
+// bunu çizer.
 import type {
   CharaDasha,
   CommandError,
@@ -18,6 +19,8 @@ import type {
   SignDashaPath,
   SignDashaPeriod,
   TransitView,
+  YogaGroup,
+  YogaReport,
 } from "../bindings";
 import raw from "./fixtures/delhi.json?raw";
 
@@ -45,6 +48,14 @@ export interface UiFixture {
   chara_dasha_at_children: SignDashaPeriod[];
   /** `compute_shadbala`, aynı girdiyle: yedi graha, zaman lordları, on iki bhava. */
   shadbala: ShadbalaReport;
+  /** `compute_yogas`, aynı girdiyle: 41 kural değerlendirilir. */
+  yogas: YogaReport;
+  /** `compute_yogas`, `time_known: false` ile: lagna isteyen 17 kural atlanır, kayıtlar yaklaşıktır. */
+  yogas_time_unknown: YogaReport;
+  /** Rust `YOGA_CATALOG`: kural kimlikleri ve grupları, katalog sırasıyla. */
+  yoga_catalog: { id: string; group: YogaGroup }[];
+  /** Rust `YOGA_CONDITIONS`: alt koşul kimlikleri. */
+  yoga_conditions: string[];
 }
 
 const FIXTURE = JSON.parse(raw) as UiFixture;

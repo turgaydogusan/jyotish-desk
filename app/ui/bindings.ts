@@ -61,6 +61,13 @@ export const commands = {
 	 *  doğum yerinde o gün gün doğumu ya da batımı yoksa `null` döner.
 	 */
 	computeShadbala: (input: ChartInput, options?: InvokeOptions) => typedError<ShadbalaReport | null, CommandError>(__TAURI_INVOKE("compute_shadbala", { input }, options)),
+	/**
+	 *  Yogalar: kural kataloğunun D1'de oluşan kayıtları (yoga, grahalar, evler, ilişki türü,
+	 *  sağlanan alt koşullar) ve değerlendirilen kural sayısı. Doğum saati bilinmiyorsa
+	 *  (`time_known == false`) lagna isteyen kurallar atlanır ve sayılır; diğer kayıtlar
+	 *  `approximate` işaretiyle döner.
+	 */
+	computeYogas: (input: ChartInput, options?: InvokeOptions) => typedError<YogaReport, CommandError>(__TAURI_INVOKE("compute_yogas", { input }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -1036,6 +1043,51 @@ export type ViewState = {
 	 *  `MAX_SIGN_DASHA_LEVEL`. Boş yolun çevrimi 1'dir.
 	 */
 	chara_expanded_path: SignDashaPath,
+};
+
+export type YogaGroup = "Mahapurusha" | "Lunar" | "Solar" | "Raja" | "Dhana" | "Exchange" | "ViparitaRaja" | "NeechaBhanga" | "NabhasaCount" | "NabhasaAshraya" | "Dosha";
+
+/**  Oluşan bir yoga: bir kuralın bir eşleşmesi. */
+export type YogaHit = {
+	/**  Kararlı kimlik (`"mahapurusha.hamsa"`); görünen ad i18n anahtarıdır. */
+	id: string,
+	group: YogaGroup,
+	/**  Yogayı oluşturan grahalar, `Graha::ALL` sırasında. */
+	grahas: Graha[],
+	/**  Lagnadan sayılan ilgili evler, artan sırada; doğum saati bilinmiyorsa boş. */
+	houses: number[],
+	/**  İki grahanın ilişkisine dayanan kurallarda ilişki türleri; diğerlerinde boş. */
+	relations: YogaRelation[],
+	/**  Sağlanan alt koşul kimlikleri (`YOGA_CONDITIONS`); alt koşulu olmayan kurallarda boş. */
+	conditions: string[],
+	/**
+	 *  Doğum saati bilinmiyor: konumlar yaklaşıktır (Ay'ın burcu gün içinde değişebilir) ve
+	 *  lagnaya bağlı seçenekler değerlendirilmemiştir.
+	 */
+	approximate: boolean,
+};
+
+/**
+ *  İki grahanın ilişkisi (spec §8 "ilişkili"). v1'deki `dignity::Relation` (doğal dostluk)
+ *  başka bir kavramdır.
+ */
+export type YogaRelation = 
+/**  Aynı burç. */
+"Conjunction" | 
+/**  İki grahanın birbirine burç temelli tam bakışı. */
+"MutualAspect" | 
+/**  İki grahanın birbirinin burcunda olması (parivartana). */
+"Exchange";
+
+/**  `compute_yogas` sonucu. */
+export type YogaReport = {
+	catalog_version: number,
+	/**  Katalog sırasıyla; bir kuralın birden çok eşleşmesi graha sırasıyla. */
+	hits: YogaHit[],
+	/**  Değerlendirilen kural sayısı. */
+	evaluated: number,
+	/**  Doğum saati bilinmediği için değerlendirilmeyen (lagna isteyen) kural sayısı. */
+	skipped_time_unknown: number,
 };
 
 export type ZodiacMode = 

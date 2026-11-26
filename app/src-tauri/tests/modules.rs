@@ -7,17 +7,19 @@ use std::time::{Duration, Instant};
 use ephemeris::{Body, Engine, Ephemeris, SwissEph, Zodiac};
 use jyotish_core::{
     chara_dasha, cheshta_from, co_lords, compute_panchang, compute_shadbala_astro,
-    graha_aspect_signs, house_lord, house_sign, jaimini_report, mean_longitudes,
+    graha_aspect_signs, house_lord, house_sign, jaimini_report, kuja_dosha, mean_longitudes,
     rashi_drishti_signs, shadbala, sign_dasha_children, sign_dasha_path_at, sphuta_drishti,
-    sun_entry_before, vara_lord, AdvancedSettings, CalcSettings, ChartInput, ChartWarning, Graha,
-    KarakaRole, KarakaScheme, Positions, Sign, SignDashaPeriod, Varga, ASPECTING_GRAHAS,
-    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, MAX_SUNRISE_GAP_DAYS, SEVEN_KARAKA_ROLES,
-    SHADBALA_GRAHAS, SHADBALA_METHOD,
+    sun_entry_before, vara_lord, yoga_rule, yogas, AdvancedSettings, CalcSettings, ChartInput,
+    ChartWarning, Dignity, Graha, HouseSystem, KarakaRole, KarakaScheme, Positions, Sign,
+    SignDashaPeriod, Varga, YogaGroup, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD,
+    JAIMINI_METHOD, MAX_SUNRISE_GAP_DAYS, SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS, SHADBALA_METHOD,
+    YOGA_CATALOG, YOGA_CATALOG_VERSION,
 };
 use jyotish_desk_lib::commands::compute_chart_blocking;
 use jyotish_desk_lib::module_commands::{
     chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
     compute_drishti_blocking, compute_jaimini_blocking, compute_shadbala_blocking,
+    compute_yogas_blocking,
 };
 use serde_json::Value;
 
@@ -61,6 +63,7 @@ fn module_commands_run_on_the_engine_thread_and_map_errors() {
     jaimini_checks(&engine, &inputs);
     chara_dasha_checks(&engine, &inputs);
     shadbala_checks(&engine, &inputs);
+    yogas_checks(&engine, &inputs);
 }
 
 fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
@@ -1082,5 +1085,166 @@ fn shadbala_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     assert!(
         median <= Duration::from_millis(40),
         "compute_shadbala median {median:?}"
+    );
+}
+
+fn yogas_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    for (id, input) in inputs {
+        let report = compute_yogas_blocking(engine, input.clone())
+            .unwrap_or_else(|e| panic!("{id}: {}", e.code));
+        assert_eq!(report.catalog_version, YOGA_CATALOG_VERSION, "{id}");
+        assert_eq!(
+            (report.evaluated, report.skipped_time_unknown),
+            (41, 0),
+            "{id}"
+        );
+        // Çapraz denetim: v1'de golden fixture'larla doğrulanmış haritanın konumlarından aynı
+        // rapor çıkar.
+        let chart = compute_chart_blocking(
+            engine,
+            input.jd_ut,
+            input.lat,
+            input.lon,
+            input.settings.clone(),
+        )
+        .expect("chart");
+        let positions = Positions::from(&chart);
+        assert_eq!(report, yogas(&positions), "{id}");
+
+        // Değişmezler gerçek haritalarda da sağlanır: her kimlik katalogdadır, aynı kimlik ve
+        // graha kümesi iki kez dönmez, sayı yogalarından tam biri oluşur.
+        let mut seen: Vec<(&str, &[Graha])> = Vec::new();
+        for h in &report.hits {
+            let rule = yoga_rule(&h.id).unwrap_or_else(|| panic!("{id}: {} unknown", h.id));
+            assert_eq!(h.group, rule.group, "{id}: {}", h.id);
+            assert!(!h.approximate, "{id}: {}", h.id);
+            let key = (h.id.as_str(), h.grahas.as_slice());
+            assert!(!seen.contains(&key), "{id}: {key:?} twice");
+            seen.push(key);
+        }
+        let count = |group: YogaGroup| report.hits.iter().filter(|h| h.group == group).count();
+        assert_eq!(count(YogaGroup::NabhasaCount), 1, "{id}");
+
+        // v1 olgularıyla çapraz denetim: mahapurusha veren graha v1'in dignity sırasında
+        // yücelmiş, moolatrikonada ya da kendi burcundadır ve rasi evi kendradır; Neecha bhanga
+        // kaydındaki graha düşüştedir; Budha-Aditya Güneş ile Merkür'ün aynı burcudur; Kuja
+        // dosha 3.1'deki olgudur.
+        let v1 = |g: Graha| &chart.grahas[g as usize];
+        for h in &report.hits {
+            match h.group {
+                YogaGroup::Mahapurusha => {
+                    let g = v1(h.grahas[0]);
+                    assert!(
+                        matches!(
+                            g.dignity,
+                            Some(Dignity::Exalted | Dignity::Moolatrikona | Dignity::OwnSign)
+                        ),
+                        "{id}: {} with dignity {:?}",
+                        h.id,
+                        g.dignity
+                    );
+                    let house = g.sign.house_from(chart.lagna.sign);
+                    assert!([1, 4, 7, 10].contains(&house), "{id}: {}", h.id);
+                }
+                YogaGroup::NeechaBhanga => {
+                    assert_eq!(v1(h.grahas[0]).dignity, Some(Dignity::Debilitated), "{id}");
+                }
+                _ => {}
+            }
+        }
+        let has = |yoga: &str| report.hits.iter().any(|h| h.id == yoga);
+        assert_eq!(
+            has("solar.budha_aditya"),
+            v1(Graha::Sun).sign == v1(Graha::Mercury).sign,
+            "{id}"
+        );
+        let dosha = kuja_dosha(&positions);
+        assert_eq!(
+            has("dosha.kuja"),
+            dosha.from_lagna == Some(true) || dosha.from_moon || dosha.from_venus,
+            "{id}"
+        );
+
+        // Evler rasi evidir (K4): ev sistemi ayarı raporu değiştirmez.
+        for house_system in [HouseSystem::Sripati, HouseSystem::Placidus] {
+            let other = ChartInput {
+                settings: CalcSettings {
+                    house_system,
+                    ..input.settings.clone()
+                },
+                ..input.clone()
+            };
+            // Kutup dairesinin ötesinde Placidus tanımsızdır; harita uyarıyla hesaplanır ve
+            // yogalar yine aynıdır.
+            assert_eq!(
+                compute_yogas_blocking(engine, other).expect("house system"),
+                report,
+                "{id}: {house_system:?}"
+            );
+        }
+
+        // Doğum saati bilinmiyorsa lagna isteyen 17 kural atlanır; diğer kayıtlar yaklaşıktır.
+        let unknown = compute_yogas_blocking(
+            engine,
+            ChartInput {
+                time_known: false,
+                ..input.clone()
+            },
+        )
+        .expect("time unknown");
+        assert_eq!(unknown, yogas(&positions.clone().without_lagna()), "{id}");
+        assert_eq!(
+            (unknown.evaluated, unknown.skipped_time_unknown),
+            (24, 17),
+            "{id}"
+        );
+        assert_eq!(
+            (unknown.evaluated + unknown.skipped_time_unknown) as usize,
+            YOGA_CATALOG.len()
+        );
+        for h in &unknown.hits {
+            assert!(h.approximate && h.houses.is_empty(), "{id}: {}", h.id);
+            assert!(!yoga_rule(&h.id).expect("catalog").needs_lagna, "{id}");
+        }
+    }
+
+    // Hatalar `compute_chart` ile aynı kodlara eşlenir; saat bilinmese de denetlenir.
+    let delhi = inputs
+        .iter()
+        .find(|(id, _)| id == "new-delhi-2000-01-01")
+        .expect("delhi fixture")
+        .1
+        .clone();
+    let bad_place = ChartInput {
+        lat: 91.0,
+        time_known: false,
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_yogas_blocking(engine, bad_place).unwrap_err().code,
+        "invalid_location"
+    );
+    let old_settings = ChartInput {
+        settings: CalcSettings {
+            schema_version: 1,
+            ..CalcSettings::default()
+        },
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_yogas_blocking(engine, old_settings)
+            .unwrap_err()
+            .code,
+        "unsupported_schema_version"
+    );
+
+    // Performans: spec §15 "compute_yogas ≤ 10 ms" (temel harita hesabı dahil).
+    let (median, max) = median_of_15(|| {
+        compute_yogas_blocking(engine, delhi.clone()).expect("yogas");
+    });
+    eprintln!("compute_yogas median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(10),
+        "compute_yogas median {median:?}"
     );
 }
