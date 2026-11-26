@@ -4,7 +4,8 @@
 //! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga,
 //! Vimshottari dasha, panchang, ashtakavarga ve transit (M3). İleri modüllerin ortak temeli
 //! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`. Jaimini
-//! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`.
+//! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`. Shadbala ve Bhava bala
+//! (Alt proje 3.4): `shadbala`.
 
 pub mod ashtakavarga;
 mod chart;
@@ -25,6 +26,7 @@ pub mod positions;
 #[cfg(test)]
 mod proptests;
 pub mod settings;
+pub mod shadbala;
 pub mod transit;
 pub mod varga;
 pub mod zodiac;
@@ -71,6 +73,16 @@ pub use positions::{compute_positions, ChartInput, GrahaPoint, Positions};
 pub use settings::{
     AdvancedSettings, AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, KarakaScheme,
     NodeKind, SunriseDef, ZodiacMode, CALC_SETTINGS_SCHEMA_VERSION, JD_UT_RANGE,
+};
+pub use shadbala::{
+    ayana_bala, ayana_declination, cheshta_bala, cheshta_from, circular_midpoint, day_night_bala,
+    dig_bala, drekkana_bala, drik_bala, drik_bala_at, graha_war, hora_index, hora_lord,
+    hours_from_noon, is_daytime, kendradi_bala, mean_longitudes, naisargika_bala, ojayugma_bala,
+    paksha_bala, paksha_elongation, rasi_lon, required_bala, saptavargaja_bala,
+    saptavargaja_points, sthana_bala, temporal_bala, time_lords, tribhaga_lord, uccha_bala,
+    vara_lord, BhavaBala, GrahaShadbala, GrahaWar, MeanLongitudes, ShadbalaAstro, ShadbalaReport,
+    SthanaBala, TemporalBala, TimeLords, GRAHA_WAR_ORB_DEG, HORA_CYCLE, SAPTAVARGA,
+    SHADBALA_GRAHAS, SHADBALA_METHOD, VIRUPAS_PER_RUPA, WAR_GRAHAS,
 };
 pub use transit::{compute_transits, TransitGraha, TransitSnapshot};
 pub use varga::{
