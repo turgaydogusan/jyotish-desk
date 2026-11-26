@@ -17,6 +17,7 @@ export const PANEL_KINDS = [
   "arudha",
   "argala",
   "shadbala",
+  "bhava_bala",
 ] as const;
 export type KnownPanelKind = (typeof PANEL_KINDS)[number];
 
@@ -34,6 +35,7 @@ export const MODULE_PANELS = [
   { kind: "argala", w: 6, h: 9 },
   // Shadbala ve Bhava bala (Plan 17).
   { kind: "shadbala", w: 8, h: 12 },
+  { kind: "bhava_bala", w: 6, h: 14 },
 ] as const satisfies readonly { kind: KnownPanelKind; w: number; h: number }[];
 export type ModulePanelKind = (typeof MODULE_PANELS)[number]["kind"];
 

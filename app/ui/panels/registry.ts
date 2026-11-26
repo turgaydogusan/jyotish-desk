@@ -6,6 +6,7 @@ import { NotesPanel } from "../notes/NotesPanel";
 import { ArgalaPanel } from "./ArgalaPanel";
 import { ArudhaPanel } from "./ArudhaPanel";
 import { AshtakavargaPanel } from "./AshtakavargaPanel";
+import { BhavaBalaPanel } from "./BhavaBalaPanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
@@ -35,6 +36,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   argala: { titleKey: "panel.argala", component: ArgalaPanel },
   // Shadbala ve Bhava bala (Plan 17).
   shadbala: { titleKey: "panel.shadbala", component: ShadbalaPanel },
+  bhava_bala: { titleKey: "panel.bhava_bala", component: BhavaBalaPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };
