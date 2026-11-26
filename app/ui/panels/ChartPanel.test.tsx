@@ -4,9 +4,9 @@ import type { Panel } from "../layout/model";
 import { fixture, unknownTimeOpened } from "../test/fixture";
 import { renderWithStores } from "../test/render";
 import { useLayoutStore } from "../view/store";
-import { ChartPanel } from "./ChartPanel";
+import { ChartPanel, partnerPlanets } from "./ChartPanel";
 
-vi.mock("../api", () => ({ api: { transitsAt: vi.fn(), computeJaimini: vi.fn() } }));
+vi.mock("../api", () => ({ api: { transitsAt: vi.fn(), computeJaimini: vi.fn(), computeCompat: vi.fn(), chartInput: vi.fn(), chartBrief: vi.fn() } }));
 
 const LAYOUT = (settings: Record<string, unknown>) => ({
   schema_version: 1,
@@ -215,4 +215,124 @@ test("unchecking the box or leaving D1 removes the marks and their list", async 
   fireEvent.click(screen.getByRole("checkbox", { name: "Arudha padalar" }));
   await waitFor(() => expect(container.querySelector(".chart-mark")).toBeNull());
   expect(screen.queryByText(/^Arudha padalar: /)).toBeNull();
+});
+
+/** Açık harita, uyum fikstürünün eşine bağlı; eşin okunması ve rapor fikstürden gelir. */
+function withPartner(roles: "OpenIsGroom" | "OpenIsBride" = "OpenIsGroom") {
+  const opened = fixture().opened;
+  opened.view_state.compat_partner_uuid = fixture().compat.partner_uuid;
+  opened.view_state.compat_roles = roles;
+  vi.mocked(api.chartBrief).mockResolvedValue({ status: "ok", data: fixture().compat.brief });
+  vi.mocked(api.chartInput).mockResolvedValue({ status: "ok", data: fixture().compat.input });
+  vi.mocked(api.computeCompat).mockImplementation(async (groom) => ({
+    status: "ok",
+    data: groom.jd_ut === fixture().opened.chart.jd_ut ? fixture().compat.report : fixture().compat.report_swapped,
+  }));
+  return opened;
+}
+
+function clearCompat() {
+  for (const f of [api.computeCompat, api.chartInput, api.chartBrief, api.transitsAt]) vi.mocked(f).mockReset();
+}
+
+test("the partner ring draws the nine grahas of the partner chart in D1 and lists them for screen readers", async () => {
+  clearCompat();
+  const { container } = renderPanel({ varga: "D1", partner_ring: true }, withPartner());
+  await waitFor(() => expect(container.querySelectorAll(".chart-transit")).toHaveLength(9));
+  // Eşin grahaları raporun ikinci yarısıdır (açık harita damat rolünde): Güneş Balık'ta.
+  const partner = fixture().compat.report.overlay.slice(9);
+  expect(partner[0]).toMatchObject({ owner: "Bride", graha: "Sun", sign: "Pisces" });
+  expect(partnerPlanets(fixture().compat.report, "Groom").map((p) => [p.id, p.sign])).toEqual(partner.map((r) => [r.graha, ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"].indexOf(r.sign)]));
+  // Çizim transit halkasınınkidir: parantezli kısaltma, etkileşimsiz; Güneş Balık evindedir.
+  const sun = container.querySelector('.chart-transit[data-transit="Sun"]')!;
+  expect(sun).toHaveTextContent("(Gü)");
+  expect(sun).toHaveAttribute("aria-hidden", "true");
+  expect(container.querySelector('[data-sign="11"]')).toHaveAttribute("data-house", sun.getAttribute("data-house")!);
+  const list = screen.getByText(/^Eş \(Eş Danışan\): /);
+  expect(list).toHaveClass("visually-hidden");
+  expect(list.textContent!.replace(/^Eş \(Eş Danışan\): /, "").split(", ")).toHaveLength(9);
+  expect(list).toHaveTextContent("Güneş Bal 2°");
+  // Transitler okunmaz; rapor bir kez istenir.
+  expect(api.transitsAt).not.toHaveBeenCalled();
+  expect(api.computeCompat).toHaveBeenCalledTimes(1);
+});
+
+test("with the roles swapped the partner is the first half of the report: the same nine grahas are drawn", async () => {
+  clearCompat();
+  const { container } = renderPanel({ varga: "D1", partner_ring: true }, withPartner("OpenIsBride"));
+  await waitFor(() => expect(container.querySelectorAll(".chart-transit")).toHaveLength(9));
+  expect(vi.mocked(api.computeCompat).mock.calls[0][0]).toEqual(fixture().compat.input);
+  expect(partnerPlanets(fixture().compat.report_swapped, "Bride")).toEqual(partnerPlanets(fixture().compat.report, "Groom"));
+  expect(screen.getByText(/^Eş \(Eş Danışan\): /)).toHaveTextContent("Güneş Bal 2°");
+});
+
+test("the two rings are never on together: turning one on turns the other off", async () => {
+  clearCompat();
+  vi.mocked(api.transitsAt).mockResolvedValue({ status: "ok", data: fixture().transit });
+  const layout = LAYOUT({ varga: "D1", style: "north", transit_ring: true });
+  const { persistence, container } = renderWithStores(<LivePanel />, { layout, opened: withPartner() });
+  const saved = () => persistence.saved.at(-1)!.viewState.panel_layout!.layouts.find((l) => l.id === "user:t")!.panels[0].settings;
+  const transit = screen.getByRole("checkbox", { name: "Transit halkası" });
+  const partner = screen.getByRole("checkbox", { name: "Eş halkası" });
+  expect([transit, partner].map((b) => (b as HTMLInputElement).checked)).toEqual([true, false]);
+  expect(api.computeCompat).not.toHaveBeenCalled();
+  fireEvent.click(partner);
+  await waitFor(() => expect(saved()).toEqual({ varga: "D1", style: "north", transit_ring: false, partner_ring: true }));
+  expect([transit, partner].map((b) => (b as HTMLInputElement).checked)).toEqual([false, true]);
+  await waitFor(() => expect(screen.getByText(/^Eş \(/)).toBeInTheDocument());
+  expect(screen.queryByText(/^Transit:/)).toBeNull();
+  fireEvent.click(transit);
+  await waitFor(() => expect(saved()).toEqual({ varga: "D1", style: "north", transit_ring: true, partner_ring: false }));
+  await waitFor(() => expect(screen.getByText(/^Transit:/)).toBeInTheDocument());
+  expect(screen.queryByText(/^Eş \(/)).toBeNull();
+  expect(container.querySelectorAll(".chart-transit")).toHaveLength(9);
+});
+
+test("a record with both rings on draws the transit ring only", async () => {
+  clearCompat();
+  vi.mocked(api.transitsAt).mockResolvedValue({ status: "ok", data: fixture().transit });
+  renderPanel({ varga: "D1", transit_ring: true, partner_ring: true }, withPartner());
+  await screen.findByText(/^Transit:/);
+  expect(screen.getByRole("checkbox", { name: "Eş halkası" })).not.toBeChecked();
+  expect(api.computeCompat).not.toHaveBeenCalled();
+});
+
+test("the partner ring box is offered only while the open chart has a partner; outside D1 it says why", async () => {
+  clearCompat();
+  // Eş seçilmemiş: düzen ayarı açık olsa da kutu yoktur, hiçbir şey istenmez ve çizilmez.
+  const none = renderPanel({ varga: "D1", partner_ring: true });
+  expect(screen.queryByRole("checkbox", { name: "Eş halkası" })).toBeNull();
+  expect(none.container.querySelector(".chart-transit")).toBeNull();
+  expect(none.container.querySelector(".chart-toolbar-hint")).toBeNull();
+  none.unmount();
+  // Eş var, ama varga D9: kutu odaklanır, nedeni görünür bir satırdır ve tıklamak ayarı değiştirmez.
+  const d9 = renderPanel({ varga: "D9", partner_ring: true }, withPartner());
+  const box = screen.getByRole("checkbox", { name: "Eş halkası" });
+  expect(box).toBeEnabled();
+  expect(box).toHaveAttribute("aria-disabled", "true");
+  expect(box).toHaveAccessibleDescription("Eş halkası yalnızca D1'de çizilir.");
+  expect(screen.getByText("Eş halkası yalnızca D1'de çizilir.")).not.toHaveClass("visually-hidden");
+  fireEvent.click(box);
+  expect(box).toBeChecked();
+  expect(d9.container.querySelector(".chart-transit")).toBeNull();
+  for (const f of [api.computeCompat, api.chartInput, api.chartBrief]) expect(f).not.toHaveBeenCalled();
+});
+
+test("with the partner ring off nothing is asked even when a partner is linked", () => {
+  clearCompat();
+  renderPanel({ varga: "D1" }, withPartner());
+  expect(screen.getByRole("checkbox", { name: "Eş halkası" })).not.toBeChecked();
+  for (const f of [api.computeCompat, api.chartInput, api.chartBrief]) expect(f).not.toHaveBeenCalled();
+});
+
+test("a failed partner report leaves the chart drawn and offers a retry", async () => {
+  clearCompat();
+  const opened = withPartner();
+  vi.mocked(api.computeCompat).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
+  const { container } = renderPanel({ varga: "D1", partner_ring: true }, opened);
+  expect(await screen.findByRole("alert")).toHaveTextContent("Hesap tamamlanamadı (x).");
+  expect(container.querySelector("svg")).not.toBeNull();
+  expect(container.querySelector(".chart-transit")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
+  await waitFor(() => expect(container.querySelectorAll(".chart-transit")).toHaveLength(9));
 });
