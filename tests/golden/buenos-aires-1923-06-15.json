@@ -4,7 +4,7 @@
   "source_version": "2.10.03",
   "notes": "güney yarıküre, UT gece yarısı; swetest -sid1 (Lahiri), mean node, UT 15.6.1923 0:00; d9_signs ve dasha awk ile türetildi (Plan 06); panchang swetest -rise -hindu ve ikiye bölmeyle, sav awk ile türetildi (Plan 07)",
   "settings": {
-    "schema_version": 1,
+    "schema_version": 2,
     "zodiac": "Sidereal",
     "ayanamsa": "Lahiri",
     "node": "Mean",
@@ -20,7 +20,8 @@
       "venus_retro": 8.0,
       "saturn": 15.0
     },
-    "sunrise_def": "DiskCenterNoRefraction"
+    "sunrise_def": "DiskCenterNoRefraction",
+    "advanced": { "karaka_scheme": "Eight", "jaimini_co_lords": true }
   },
   "input": { "jd_ut": 2423585.5000000000, "lat": -34.6037, "lon": -58.3816 },
   "expected": {

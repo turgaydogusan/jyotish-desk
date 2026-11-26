@@ -325,6 +325,59 @@ mod tests {
     }
 
     #[test]
+    fn version_1_settings_migrate_on_open_and_unknown_advanced_keys_do_not_block() {
+        let mut s = store();
+        let (a, ch) = s.create_client(&new_client("A")).unwrap();
+        let stored_json = |s: &Store| -> String {
+            s.conn
+                .query_row(
+                    "SELECT calc_settings_json FROM charts WHERE id = ?1",
+                    params![ch.id],
+                    |r| r.get(0),
+                )
+                .unwrap()
+        };
+        let write = |s: &Store, json: &str| {
+            s.conn
+                .execute(
+                    "UPDATE charts SET calc_settings_json = ?1 WHERE id = ?2",
+                    params![json, ch.id],
+                )
+                .unwrap();
+        };
+        // Sürüm 1 kaydı (Plan 03–13'ün yazdığı biçim): `advanced` yok.
+        let v1 = concat!(
+            r#"{"schema_version":1,"zodiac":"Sidereal","ayanamsa":"Raman","node":"Mean","#,
+            r#""house_system":"WholeSign","dasha_year":365.25,"combustion_orbs":{"moon":12.0,"#,
+            r#""mars":17.0,"mercury":14.0,"mercury_retro":12.0,"jupiter":11.0,"venus":10.0,"#,
+            r#""venus_retro":8.0,"saturn":15.0},"sunrise_def":"DiskCenterNoRefraction"}"#
+        );
+        write(&s, v1);
+        let raman = CalcSettings {
+            ayanamsa: AyanamsaSystem::Raman,
+            ..CalcSettings::default()
+        };
+        let o = s.open_client(a.id, None).unwrap();
+        assert_eq!(o.calc_settings, raman);
+        assert_eq!(o.calc_settings.schema_version, 2);
+        assert!(o.warnings.is_empty());
+        // Göç edilen ayar sürüm 2 olarak geri yazılır.
+        assert_eq!(stored_json(&s), serde_json::to_string(&raman).unwrap());
+
+        // Sürüm 2 kaydında bilinmeyen `advanced` anahtarı: açılış sürer, uyarı yok, kayıt
+        // olduğu gibi durur (daha yeni bir sürümün alanı kaybolmaz).
+        let with_extra = serde_json::to_string(&raman).unwrap().replace(
+            r#""jaimini_co_lords":true"#,
+            r#""jaimini_co_lords":true,"future_option":3"#,
+        );
+        write(&s, &with_extra);
+        let o = s.open_client(a.id, None).unwrap();
+        assert_eq!(o.calc_settings, raman);
+        assert!(o.warnings.is_empty());
+        assert_eq!(stored_json(&s), with_extra);
+    }
+
+    #[test]
     fn tzdb_change_is_checked_and_reported() {
         let mut s = store();
         let (a, ch) = s.create_client(&new_client("A")).unwrap();

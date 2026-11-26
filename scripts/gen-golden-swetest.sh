@@ -171,7 +171,7 @@ for row in "${CHARTS[@]}"; do
   "source_version": "$SE_VERSION",
   "notes": "$note; swetest -sid1 (Lahiri), mean node, UT $d $t; d9_signs ve dasha awk ile türetildi (Plan 06); panchang swetest -rise -hindu ve ikiye bölmeyle, sav awk ile türetildi (Plan 07)",
   "settings": {
-    "schema_version": 1,
+    "schema_version": 2,
     "zodiac": "Sidereal",
     "ayanamsa": "Lahiri",
     "node": "Mean",
@@ -187,7 +187,8 @@ for row in "${CHARTS[@]}"; do
       "venus_retro": 8.0,
       "saturn": 15.0
     },
-    "sunrise_def": "DiskCenterNoRefraction"
+    "sunrise_def": "DiskCenterNoRefraction",
+    "advanced": { "karaka_scheme": "Eight", "jaimini_co_lords": true }
   },
   "input": { "jd_ut": $jd, "lat": $lat, "lon": $lon },
   "expected": {

@@ -20,3 +20,10 @@ test("the difference badge names the differing fields and opens the settings", (
   fireEvent.click(badge);
   expect(onSettings).toHaveBeenCalledTimes(1);
 });
+
+test("a differing advanced setting is named in the badge", () => {
+  const opened = fixture().opened;
+  opened.calc_settings = { ...opened.calc_settings, advanced: { karaka_scheme: "Eight", jaimini_co_lords: false } };
+  renderWithStores(<ChartTitle onSettings={() => {}} />, { opened });
+  expect(screen.getByRole("button", { name: /Ayar farkı/ })).toHaveAttribute("title", "Bu haritanın ayarı varsayılandan farklı: İleri modül ayarları");
+});

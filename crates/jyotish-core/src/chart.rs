@@ -556,14 +556,14 @@ mod tests {
         assert!(compute_chart(&mut eph, 625_002.0, 0.0, 0.0, &s).is_ok());
         assert!(compute_chart(&mut eph, 2_817_997.0, 0.0, 0.0, &s).is_ok());
         let bad = CalcSettings {
-            schema_version: 2,
+            schema_version: 1,
             ..CalcSettings::default()
         };
         assert_eq!(
             compute_chart(&mut eph, JD, 0.0, 0.0, &bad),
             Err(CoreError::UnsupportedSchemaVersion {
-                found: 2,
-                supported: 1
+                found: 1,
+                supported: 2
             })
         );
     }

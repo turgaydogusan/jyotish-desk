@@ -77,6 +77,17 @@ export const commands = {
 };
 
 /* Types */
+/**
+ *  İleri modüllerin ayarları (ileri modüller spec'i K7). Yalnızca en az iki uygulanmış seçeneği
+ *  olan kararlar burada durur. Bilinmeyen anahtarlar okunurken yok sayılır; eksik anahtarları
+ *  `store` varsayılanla doldurur. IPC'de her alan zorunludur.
+ */
+export type AdvancedSettings = {
+	karaka_scheme: KarakaScheme,
+	/**  Akrep için Ketu, Kova için Rahu eş lord sayılır. */
+	jaimini_co_lords: boolean,
+};
+
 export type AppInfo = {
 	version: string,
 	/**  Açık anahtar gömülü mü; değilse (anahtar üretilmeden yapılan derleme) denetim kapalıdır. */
@@ -145,6 +156,7 @@ export type CalcSettings = {
 	dasha_year: number | null,
 	combustion_orbs: CombustionOrbs,
 	sunrise_def: SunriseDef,
+	advanced: AdvancedSettings,
 };
 
 /**  M3 haritası (spec §5): vargalar, Vimshottari, panchang ve ashtakavarga dahil. */
@@ -357,6 +369,9 @@ export type ImportWarningCode =
 "CalcSettingsReset" | 
 /**  JHD: saat dilimi ofseti ile boylam 60°'den fazla uyuşmuyor; işaret kuralı şüpheli. */
 "JhdOffsetLongitudeMismatch";
+
+/**  Chara karaka şeması (ileri modüller spec'i §5): sekizli şemada Rahu da karaka olur. */
+export type KarakaScheme = "Eight" | "Seven";
 
 export type Karana = {
 	/**  1..=60 (yarım tithi sırası). */

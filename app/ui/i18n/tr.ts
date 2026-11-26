@@ -424,6 +424,7 @@ export const tr = {
       dasha_year: "Dasa yılı",
       combustion_orbs: "Yanma orbları (derece)",
       sunrise_def: "Gün doğumu",
+      advanced: "İleri modül ayarları",
     },
     zodiac: { Sidereal: "Sidereal", TropicalRasiSiderealNakshatra: "Tropik rasi, sidereal nakshatra" },
     ayanamsa: { Lahiri: "Lahiri", Raman: "Raman", Kp: "KP (Krishnamurti)", TrueChitra: "True Chitrapaksha", Custom: "Özel" },

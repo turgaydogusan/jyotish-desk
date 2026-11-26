@@ -2,7 +2,7 @@
 //! (`AppPrefs`, spec §5). Göç başarısız olursa genel varsayılan kullanılır ve uyarı verilir;
 //! saklanan JSON üzerine yazılmaz (daha yeni bir sürümün verisi kaybolmasın).
 
-use jyotish_core::{CalcSettings, CALC_SETTINGS_SCHEMA_VERSION};
+use jyotish_core::{AdvancedSettings, CalcSettings, CALC_SETTINGS_SCHEMA_VERSION};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,9 +13,34 @@ use crate::{Store, StoreError};
 /// çağıran yazar; adım yalnızca alanları dönüştürür.
 pub type ValueMigration = fn(Value) -> Result<Value, &'static str>;
 
-/// `CalcSettings` göçleri: indeks `i`, `i + 1 → i + 2` adımıdır. v1 tek sürümdür; liste
-/// boştur. v2 geldiğinde `CALC_SETTINGS_SCHEMA_VERSION` 2 olur ve buraya bir adım eklenir.
-pub const CALC_SETTINGS_MIGRATIONS: &[ValueMigration] = &[];
+/// `CalcSettings` göçleri: indeks `i`, `i + 1 → i + 2` adımıdır. Sürüm 1 → 2 `advanced`
+/// alt yapısını varsayılanlarla ekler (ileri modüller spec'i K7).
+pub const CALC_SETTINGS_MIGRATIONS: &[ValueMigration] = &[fill_advanced];
+
+/// `advanced` alt yapısını tamamlar: yoksa ya da nesne değilse varsayılanların tamamı, varsa
+/// yalnızca eksik anahtarlar yazılır. Var olan değerlere ve bilinmeyen anahtarlara dokunulmaz.
+/// Hem sürüm 1 → 2 göç adımıdır hem de sürüm 2 kayıtlarının toleranslı okumasıdır.
+fn fill_advanced(mut v: Value) -> Result<Value, &'static str> {
+    let obj = v.as_object_mut().ok_or("not an object")?;
+    let Ok(Value::Object(defaults)) = serde_json::to_value(AdvancedSettings::default()) else {
+        return Err("advanced defaults");
+    };
+    match obj.get_mut("advanced").and_then(Value::as_object_mut) {
+        Some(stored) => {
+            for (key, value) in defaults {
+                stored.entry(key).or_insert(value);
+            }
+        }
+        None => {
+            obj.insert("advanced".into(), Value::Object(defaults));
+        }
+    }
+    Ok(v)
+}
+
+fn stored_version(value: &Value) -> Option<u64> {
+    value.get("schema_version").and_then(Value::as_u64)
+}
 
 /// Ayar okumasının sonucu.
 #[derive(Debug, Clone, PartialEq)]
@@ -72,6 +97,13 @@ pub(crate) fn migrate_value<T: DeserializeOwned>(
 }
 
 pub(crate) fn load_calc_value(value: Value, fallback: &CalcSettings) -> SettingsLoad {
+    // Güncel sürümlü kayıt göç adımından geçmez; eksik `advanced` anahtarları burada dolar.
+    // Tamamlanan kayıt `Current` sayılır ve geri yazılmaz (her okumada aynı sonuç).
+    let value = if stored_version(&value) == Some(u64::from(CALC_SETTINGS_SCHEMA_VERSION)) {
+        fill_advanced(value.clone()).unwrap_or(value)
+    } else {
+        value
+    };
     match migrate_value::<CalcSettings>(
         value,
         CALC_SETTINGS_SCHEMA_VERSION,
@@ -225,7 +257,7 @@ impl Store {
 mod tests {
     use super::*;
     use crate::db::testutil::store;
-    use jyotish_core::{AyanamsaSystem, CoreError, NodeKind};
+    use jyotish_core::{AyanamsaSystem, CoreError, KarakaScheme, NodeKind};
     use serde_json::json;
 
     fn raman() -> CalcSettings {
@@ -278,7 +310,7 @@ mod tests {
             reset(&bad.to_string()),
             SettingsLoad::Reset {
                 settings: fb.clone(),
-                found_version: Some(1)
+                found_version: Some(2)
             }
         );
         let zero = json!({"schema_version": 0});
@@ -287,6 +319,85 @@ mod tests {
             SettingsLoad::Reset {
                 settings: fb,
                 found_version: Some(0)
+            }
+        );
+    }
+
+    /// Sürüm 1 kaydı: `advanced` yok (Plan 03–13 böyle yazdı).
+    fn v1_json(settings: &CalcSettings) -> Value {
+        let mut v = serde_json::to_value(settings).unwrap();
+        let obj = v.as_object_mut().unwrap();
+        obj.insert("schema_version".into(), json!(1));
+        obj.remove("advanced");
+        v
+    }
+
+    #[test]
+    fn version_1_settings_migrate_to_2_with_advanced_defaults() {
+        let stored = v1_json(&raman());
+        assert_eq!(
+            load_calc_settings(&stored.to_string(), &CalcSettings::default()),
+            SettingsLoad::Migrated {
+                settings: raman(),
+                from: 1
+            }
+        );
+        assert_eq!(raman().schema_version, 2);
+        assert_eq!(raman().advanced, AdvancedSettings::default());
+        // Göç adımı var olan değeri ezmez, yalnızca eksikleri yazar.
+        let mut partial = v1_json(&raman());
+        partial["advanced"] = json!({"jaimini_co_lords": false});
+        let SettingsLoad::Migrated { settings, from: 1 } =
+            load_calc_settings(&partial.to_string(), &CalcSettings::default())
+        else {
+            panic!("expected a migration");
+        };
+        assert!(!settings.advanced.jaimini_co_lords);
+        assert_eq!(settings.advanced.karaka_scheme, KarakaScheme::Eight);
+    }
+
+    #[test]
+    fn version_2_advanced_block_is_read_tolerantly() {
+        let load = |edit: &dyn Fn(&mut Value)| {
+            let mut v = serde_json::to_value(raman()).unwrap();
+            edit(&mut v);
+            load_calc_settings(&v.to_string(), &CalcSettings::default())
+        };
+        // Bilinmeyen anahtar yok sayılır.
+        assert_eq!(
+            load(&|v| v["advanced"]["future_option"] = json!([1, 2])),
+            SettingsLoad::Current(raman())
+        );
+        // Eksik blok, nesne olmayan blok ve eksik anahtar varsayılanla dolar.
+        for edit in [
+            (&|v: &mut Value| {
+                v.as_object_mut().unwrap().remove("advanced");
+            }) as &dyn Fn(&mut Value),
+            &|v| v["advanced"] = json!(null),
+            &|v| v["advanced"] = json!({}),
+            &|v| v["advanced"] = json!({"karaka_scheme": "Eight"}),
+        ] {
+            assert_eq!(load(edit), SettingsLoad::Current(raman()));
+        }
+        // Yazılı değer korunur.
+        let seven = CalcSettings {
+            advanced: AdvancedSettings {
+                karaka_scheme: KarakaScheme::Seven,
+                jaimini_co_lords: false,
+            },
+            ..raman()
+        };
+        assert_eq!(
+            load(&|v| v["advanced"] =
+                json!({"karaka_scheme": "Seven", "jaimini_co_lords": false, "x": 1})),
+            SettingsLoad::Current(seven)
+        );
+        // Tanınmayan seçenek değeri tolerans kapsamında değildir: ayar sıfırlanır, uyarı verilir.
+        assert_eq!(
+            load(&|v| v["advanced"]["karaka_scheme"] = json!("Nine")),
+            SettingsLoad::Reset {
+                settings: CalcSettings::default(),
+                found_version: Some(2)
             }
         );
     }

@@ -425,6 +425,7 @@ export const en: Messages = {
       dasha_year: "Dasha year",
       combustion_orbs: "Combustion orbs (degrees)",
       sunrise_def: "Sunrise",
+      advanced: "Advanced module settings",
     },
     zodiac: { Sidereal: "Sidereal", TropicalRasiSiderealNakshatra: "Tropical rasi, sidereal nakshatra" },
     ayanamsa: { Lahiri: "Lahiri", Raman: "Raman", Kp: "KP (Krishnamurti)", TrueChitra: "True Chitrapaksha", Custom: "Custom" },

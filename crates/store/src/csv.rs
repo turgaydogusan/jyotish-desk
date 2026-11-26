@@ -158,7 +158,7 @@ mod tests {
         let lines: Vec<&str> = csv.trim_end_matches("\r\n").split("\r\n").collect();
         assert_eq!(lines.len(), 2);
         let expected_start = format!(
-            "{},\"Yılmaz, Ayşe\",,{},,Natal,2000-01-01,17:30:00,Exact,New Delhi,India,NCT,28.6139,77.209,Iana,Asia/Kolkata,,,2000-01-01T12:00:00Z,19800,{},a; b,\"doğum belgesi, 1. sayfa\",\"{{\"\"schema_version\"\":1,",
+            "{},\"Yılmaz, Ayşe\",,{},,Natal,2000-01-01,17:30:00,Exact,New Delhi,India,NCT,28.6139,77.209,Iana,Asia/Kolkata,,,2000-01-01T12:00:00Z,19800,{},a; b,\"doğum belgesi, 1. sayfa\",\"{{\"\"schema_version\"\":2,",
             c.uuid,
             ch.uuid,
             atlas::tzdb_version()

@@ -195,14 +195,14 @@ mod tests {
             Err(CoreError::InvalidJulianDay(1e300))
         );
         let old = CalcSettings {
-            schema_version: 2,
+            schema_version: 1,
             ..CalcSettings::default()
         };
         assert_eq!(
             compute_transits(&mut eph, JD, &old, &c.bhavas),
             Err(CoreError::UnsupportedSchemaVersion {
-                found: 2,
-                supported: 1
+                found: 1,
+                supported: 2
             })
         );
     }

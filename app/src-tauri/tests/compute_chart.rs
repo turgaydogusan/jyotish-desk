@@ -104,12 +104,12 @@ fn compute_chart_runs_on_the_engine_thread_and_maps_errors() {
     assert_eq!(err.params["lat"], "91");
 
     let old = CalcSettings {
-        schema_version: 2,
+        schema_version: 1,
         ..CalcSettings::default()
     };
     let err = compute_chart_blocking(&engine, 2_451_545.0, 0.0, 0.0, old).unwrap_err();
     assert_eq!(err.code, "unsupported_schema_version");
-    assert_eq!(err.params["found"], "2");
+    assert_eq!(err.params["found"], "1");
 
     let absurd = CalcSettings {
         ayanamsa: AyanamsaSystem::Custom {

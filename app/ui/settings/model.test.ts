@@ -18,6 +18,12 @@ test("differences are listed in field order", () => {
   expect(settingsDiff(base(), b)).toEqual(["ayanamsa", "node", "combustion_orbs"]);
 });
 
+test("the advanced block is compared as one field (fark rozeti)", () => {
+  const b: CalcSettings = { ...base(), advanced: { ...base().advanced, karaka_scheme: "Seven" } };
+  expect(base().advanced).toEqual({ karaka_scheme: "Eight", jaimini_co_lords: true });
+  expect(settingsDiff(base(), b)).toEqual(["advanced"]);
+});
+
 test("orb text accepts a decimal comma and rejects junk or out of range", () => {
   expect(parseOrb("8")).toBe(8);
   expect(parseOrb(" 8,5 ")).toBe(8.5);

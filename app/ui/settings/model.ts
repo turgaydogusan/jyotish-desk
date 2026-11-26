@@ -15,7 +15,7 @@ export const ORB_KEYS = ["moon", "mars", "mercury", "mercury_retro", "jupiter", 
 export type OrbKey = (typeof ORB_KEYS)[number];
 
 /** Karşılaştırılan ve gösterilen alanlar, pencere sırasıyla (`schema_version` hariç). */
-export const SETTINGS_FIELDS = ["zodiac", "ayanamsa", "node", "house_system", "dasha_year", "combustion_orbs", "sunrise_def"] as const satisfies readonly (keyof CalcSettings)[];
+export const SETTINGS_FIELDS = ["zodiac", "ayanamsa", "node", "house_system", "dasha_year", "combustion_orbs", "sunrise_def", "advanced"] as const satisfies readonly (keyof CalcSettings)[];
 export type SettingsField = (typeof SETTINGS_FIELDS)[number];
 
 /** Yapısal eşitlik; nesne anahtarlarının sırası önemsizdir. */

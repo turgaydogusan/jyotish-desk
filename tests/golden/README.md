@@ -22,7 +22,7 @@ ayanamsa tanımı, nütasyon, mean/true düğüm, UT/ET.
   "source": "swetest | jhora",
   "source_version": "2.10.03",
   "notes": "yerel saat, saat dilimi, neden seçildiği",
-  "settings": { "...": "CalcSettings, tam döküm (schema_version 1)" },
+  "settings": { "...": "CalcSettings, tam döküm (schema_version 2, `advanced` bloğuyla)" },
   "input": { "jd_ut": 2451545.0, "lat": 28.6139, "lon": 77.2090 },
   "expected": {
     "ayanamsa_deg": 23.8532225,

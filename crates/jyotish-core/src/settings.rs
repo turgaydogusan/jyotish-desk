@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::CoreError;
 
-pub const CALC_SETTINGS_SCHEMA_VERSION: u32 = 1;
+/// Sürüm 2 (Alt proje 3.1): `advanced` alt yapısı eklendi. Sürüm 1 kayıtlarını `store` göç
+/// ettirir (`store::settings::CALC_SETTINGS_MIGRATIONS`).
+pub const CALC_SETTINGS_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -148,6 +150,34 @@ impl SunriseDef {
     }
 }
 
+/// Chara karaka şeması (ileri modüller spec'i §5): sekizli şemada Rahu da karaka olur.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum KarakaScheme {
+    Eight,
+    Seven,
+}
+
+/// İleri modüllerin ayarları (ileri modüller spec'i K7). Yalnızca en az iki uygulanmış seçeneği
+/// olan kararlar burada durur. Bilinmeyen anahtarlar okunurken yok sayılır; eksik anahtarları
+/// `store` varsayılanla doldurur. IPC'de her alan zorunludur.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct AdvancedSettings {
+    pub karaka_scheme: KarakaScheme,
+    /// Akrep için Ketu, Kova için Rahu eş lord sayılır.
+    pub jaimini_co_lords: bool,
+}
+
+impl Default for AdvancedSettings {
+    fn default() -> Self {
+        Self {
+            karaka_scheme: KarakaScheme::Eight,
+            jaimini_co_lords: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct CalcSettings {
@@ -160,6 +190,7 @@ pub struct CalcSettings {
     pub dasha_year: f64,
     pub combustion_orbs: CombustionOrbs,
     pub sunrise_def: SunriseDef,
+    pub advanced: AdvancedSettings,
 }
 
 impl Default for CalcSettings {
@@ -173,6 +204,7 @@ impl Default for CalcSettings {
             dasha_year: 365.25,
             combustion_orbs: CombustionOrbs::default(),
             sunrise_def: SunriseDef::DiskCenterNoRefraction,
+            advanced: AdvancedSettings::default(),
         }
     }
 }
@@ -228,16 +260,24 @@ mod tests {
     use super::*;
 
     const DEFAULT_JSON: &str = concat!(
-        r#"{"schema_version":1,"zodiac":"Sidereal","ayanamsa":"Lahiri","node":"Mean","#,
+        r#"{"schema_version":2,"zodiac":"Sidereal","ayanamsa":"Lahiri","node":"Mean","#,
         r#""house_system":"WholeSign","dasha_year":365.25,"combustion_orbs":{"moon":12.0,"#,
         r#""mars":17.0,"mercury":14.0,"mercury_retro":12.0,"jupiter":11.0,"venus":10.0,"#,
-        r#""venus_retro":8.0,"saturn":15.0},"sunrise_def":"DiskCenterNoRefraction"}"#
+        r#""venus_retro":8.0,"saturn":15.0},"sunrise_def":"DiskCenterNoRefraction","#,
+        r#""advanced":{"karaka_scheme":"Eight","jaimini_co_lords":true}}"#
     );
 
     #[test]
     fn default_matches_spec_defaults() {
         let s = CalcSettings::default();
-        assert_eq!(s.schema_version, 1);
+        assert_eq!(s.schema_version, 2);
+        assert_eq!(
+            s.advanced,
+            AdvancedSettings {
+                karaka_scheme: KarakaScheme::Eight,
+                jaimini_co_lords: true
+            }
+        );
         assert_eq!(s.zodiac, ZodiacMode::Sidereal);
         assert_eq!(s.ayanamsa, AyanamsaSystem::Lahiri);
         assert_eq!(s.node, NodeKind::Mean);
@@ -266,6 +306,29 @@ mod tests {
         assert_eq!(json, DEFAULT_JSON);
         let back: CalcSettings = serde_json::from_str(DEFAULT_JSON).unwrap();
         assert_eq!(back, CalcSettings::default());
+    }
+
+    #[test]
+    fn advanced_block_ignores_unknown_keys_and_is_required_on_the_wire() {
+        // Bilinmeyen anahtar (daha yeni bir sürümün alanı) yok sayılır.
+        let extra = DEFAULT_JSON.replace(
+            r#""jaimini_co_lords":true"#,
+            r#""jaimini_co_lords":false,"future_option":3"#,
+        );
+        let s: CalcSettings = serde_json::from_str(&extra).unwrap();
+        assert!(!s.advanced.jaimini_co_lords);
+        assert_eq!(s.advanced.karaka_scheme, KarakaScheme::Eight);
+        // IPC tipi katıdır: eksik blok ya da eksik alan reddedilir (toleransı `store` sağlar).
+        let missing = DEFAULT_JSON.replace(
+            r#","advanced":{"karaka_scheme":"Eight","jaimini_co_lords":true}"#,
+            "",
+        );
+        assert!(serde_json::from_str::<CalcSettings>(&missing).is_err());
+        let partial = DEFAULT_JSON.replace(r#","jaimini_co_lords":true"#, "");
+        assert!(serde_json::from_str::<CalcSettings>(&partial).is_err());
+        // Bilinmeyen seçenek değeri reddedilir.
+        let bad = DEFAULT_JSON.replace(r#""Eight""#, r#""Nine""#);
+        assert!(serde_json::from_str::<CalcSettings>(&bad).is_err());
     }
 
     #[test]
@@ -331,17 +394,19 @@ mod tests {
 
     #[test]
     fn validate_rejects_bad_values() {
-        let s = CalcSettings {
-            schema_version: 2,
-            ..CalcSettings::default()
-        };
-        assert_eq!(
-            s.validate(),
-            Err(CoreError::UnsupportedSchemaVersion {
-                found: 2,
-                supported: 1
-            })
-        );
+        for found in [1, 3] {
+            let s = CalcSettings {
+                schema_version: found,
+                ..CalcSettings::default()
+            };
+            assert_eq!(
+                s.validate(),
+                Err(CoreError::UnsupportedSchemaVersion {
+                    found,
+                    supported: 2
+                })
+            );
+        }
 
         let s = CalcSettings {
             dasha_year: 0.0,
