@@ -6,11 +6,13 @@
 //! Sphuta drishti parçalı doğrusaldır (virupa, 0–60); özel bakışlar eklenir ve sonuç 60'ta
 //! kesilir. Evler ve burçlar rasi çerçevesindedir (K4, K5); açı sidereal boylamlardan alınır.
 
+use ephemeris::Ephemeris;
 use serde::{Deserialize, Serialize};
 
 use crate::graha::Graha;
-use crate::positions::Positions;
+use crate::positions::{compute_positions, ChartInput, Positions};
 use crate::zodiac::{normalize, Sign};
+use crate::CoreError;
 
 /// `DrishtiTable::method`: bu dosyadaki yöntemin kimliği.
 pub const DRISHTI_METHOD: &str = "graha_drishti.bphs_v1";
@@ -152,11 +154,49 @@ pub fn drishti_table(positions: &Positions) -> DrishtiTable {
     }
 }
 
+/// `compute_drishti` komutunun hesabı: temel harita, konumlar, bakış tablosu. Bakış tablosu
+/// lagnaya bağlı değildir; `input.time_known` sonucu değiştirmez.
+pub fn compute_drishti<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    input: &ChartInput,
+) -> Result<DrishtiTable, CoreError> {
+    Ok(drishti_table(&compute_positions(eph, input)?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fake::FakeEph;
+    use crate::settings::CalcSettings;
     use Graha::*;
     use Sign::*;
+
+    #[test]
+    fn collector_builds_the_table_from_the_chart_positions() {
+        let mut eph = FakeEph::default();
+        let mut input = ChartInput {
+            jd_ut: 2_451_545.0,
+            lat: 41.0,
+            lon: 29.0,
+            settings: CalcSettings::default(),
+            time_known: true,
+        };
+        let table = compute_drishti(&mut eph, &input).unwrap();
+        let positions = compute_positions(&mut eph, &input).unwrap();
+        assert_eq!(table, drishti_table(&positions));
+        // FakeEph (ayanamsa 24°): Güneş sidereal 346°, Ay 71°: açı 85° → (85 − 60) + 15 = 40.
+        assert!((table.sphuta[0][1] - 40.0).abs() < 1e-9);
+        input.time_known = false;
+        assert_eq!(compute_drishti(&mut eph, &input).unwrap(), table);
+        input.lat = 91.0;
+        assert_eq!(
+            compute_drishti(&mut eph, &input),
+            Err(CoreError::InvalidLocation {
+                lat: 91.0,
+                lon: 29.0
+            })
+        );
+    }
 
     #[test]
     fn sign_aspects_match_the_hand_table_for_every_graha() {

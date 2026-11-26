@@ -11,9 +11,11 @@ use std::sync::Mutex;
 
 use atlas::Timestamp;
 use ephemeris::Engine;
+use jyotish_core::ChartInput;
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
+use jyotish_desk_lib::module_commands::compute_drishti_blocking;
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
 use store::{BirthData, ChartKind, NewChart, NewClient, Place, Store, TimeCertainty, TzChoice};
@@ -93,6 +95,18 @@ fn ui_fixture_is_up_to_date() {
         opened.chart.dasha.seed,
     )
     .expect("transit");
+    // Bakış tablosu: arayüzün `chartInput(opened)` ile kurduğu girdinin aynısı.
+    let drishti = compute_drishti_blocking(
+        &engine,
+        ChartInput {
+            jd_ut: opened.chart.jd_ut,
+            lat: opened.chart.geo_lat,
+            lon: opened.chart.geo_lon,
+            settings: opened.chart.meta.settings.clone(),
+            time_known: true,
+        },
+    )
+    .expect("drishti");
     // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
     assert_eq!(opened.chart_record.birth, delhi());
     let prefs = store
@@ -108,6 +122,7 @@ fn ui_fixture_is_up_to_date() {
         "gap_error": gap_error,
         "transit": transit,
         "prefs": prefs,
+        "drishti": drishti,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")

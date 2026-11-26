@@ -93,6 +93,8 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
         dasha_children: (args) =>
           JSON.stringify(args.path) === JSON.stringify(fixture.dasha_children.path) ? fixture.dasha_children.periods : [],
         transits_at: () => fixture.transit,
+        // Bakış tablosu yeniden hesaplanmaz: fikstürdeki gerçek sonuç döner.
+        compute_drishti: () => fixture.drishti,
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.
         app_info: () => ({ version: "0.9.0", updaterConfigured: true }),

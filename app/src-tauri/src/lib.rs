@@ -2,6 +2,7 @@ pub mod atlas_commands;
 pub mod client_commands;
 pub mod commands;
 pub mod data_dir;
+pub mod module_commands;
 pub mod store_commands;
 pub mod transit_commands;
 pub mod update_commands;
@@ -28,6 +29,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             transit_commands::transits_at,
             commands::dasha_children,
             commands::print_window,
+            module_commands::compute_drishti,
             client_commands::open_client,
             client_commands::restore_session,
             client_commands::create_client,

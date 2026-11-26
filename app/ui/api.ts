@@ -10,6 +10,7 @@ import {
   type AppPrefs,
   type Bhavas,
   type CalcSettings,
+  type ChartInput,
   type CommandError,
   type DashaSeed,
   type Gender,
@@ -75,6 +76,9 @@ export const api = {
   exportClientsCsv: () => wrap(() => commands.exportClientsCsv()),
   importClientsJson: () => wrap(() => commands.importClientsJson()),
   dashaChildren: (seed: DashaSeed, path: Graha[]) => wrap(() => commands.dashaChildren(seed, path)),
+  // İleri modüller: sonuç saklanmaz, panel açıkken istenir (ileri modüller spec'i K1). Girdi
+  // `modules/input.ts`'teki `chartInput(opened)` ile kurulur.
+  computeDrishti: (input: ChartInput) => wrap(() => commands.computeDrishti(input)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

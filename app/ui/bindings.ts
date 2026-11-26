@@ -26,6 +26,11 @@ export const commands = {
 	 *  Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
 	 */
 	printWindow: (options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("print_window", undefined, options)),
+	/**
+	 *  Graha bakışları: on üç tam bakış ve 7 × 9 sphuta drishti matrisi. `input`, açık haritanın
+	 *  `jd_ut`, konum ve ayarlarıdır; `time_known` doğum saatinin bilinip bilinmediğidir.
+	 */
+	computeDrishti: (input: ChartInput, options?: InvokeOptions) => typedError<DrishtiTable, CommandError>(__TAURI_INVOKE("compute_drishti", { input }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -181,6 +186,21 @@ export type Chart = {
 	ashtakavarga: Ashtakavarga,
 };
 
+/**
+ *  Modül komutlarının ortak girdisi: `compute_chart` ile aynı alanlar ve `time_known`.
+ *  Doğum saati bilinmiyorsa (`time_known == false`) lagnaya bağlı her çıktı `None` döner;
+ *  arayüzün gizlemesine güvenilmez (K2).
+ */
+export type ChartInput = {
+	jd_ut: number | null,
+	/**  Kuzey +. */
+	lat: number | null,
+	/**  Doğu +. */
+	lon: number | null,
+	settings: CalcSettings,
+	time_known: boolean,
+};
+
 export type ChartKind = "Natal" | 
 /**  Olay haritası (evlilik, kuruluş, soru anı…). */
 "Event";
@@ -283,6 +303,21 @@ export type DashaSeed = {
 };
 
 export type Dignity = "Exalted" | "Moolatrikona" | "OwnSign" | "GreatFriend" | "Friend" | "Neutral" | "Enemy" | "GreatEnemy" | "Debilitated";
+
+/**  `compute_drishti` sonucu. */
+export type DrishtiTable = {
+	/**
+	 *  Yedi grahanın tam bakışları: `ASPECTING_GRAHAS` sırasında, her graha için ev sırasıyla.
+	 *  Her zaman 13 kayıt: Güneş, Ay, Merkür ve Venüs birer; Mars, Jüpiter ve Satürn üçer.
+	 */
+	sign_aspects: SignAspect[],
+	/**
+	 *  `sphuta[i][j]`: `ASPECTING_GRAHAS[i]`'nin `Graha::ALL[j]`'ye bakış değeri, virupa.
+	 *  Grahanın kendisine bakışı 0'dır.
+	 */
+	sphuta: [([(number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null)]), ([(number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null)]), ([(number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null)]), ([(number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null)]), ([(number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null)]), ([(number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null)]), ([(number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null), (number | null)])],
+	method: string,
+};
 
 export type EngineStatus = {
 	seVersion: string,
@@ -587,6 +622,14 @@ export type SearchHit = {
 export type SearchMatch = "Name" | "Tag" | "Note";
 
 export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | "Libra" | "Scorpio" | "Sagittarius" | "Capricorn" | "Aquarius" | "Pisces";
+
+/**  Bir grahanın bir burca tam bakışı ve o burçtaki grahalar. */
+export type SignAspect = {
+	graha: Graha,
+	target: Sign,
+	/**  Hedef burçtaki grahalar, `Graha::ALL` sırasında (dokuz graha da sayılır). */
+	occupants: Graha[],
+};
 
 /**  Açılışın ölümcül olmayan durumları; arayüz uyarı bandında gösterir (spec §7). */
 export type StoreWarning = 

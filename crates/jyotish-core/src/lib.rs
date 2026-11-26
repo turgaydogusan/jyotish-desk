@@ -39,8 +39,8 @@ pub use dasha::{
 };
 pub use dignity::{dignity, Dignity, Relation};
 pub use drishti::{
-    drishti_table, graha_aspect_houses, graha_aspect_signs, sphuta_drishti, DrishtiTable,
-    SignAspect, ASPECTING_GRAHAS, DRISHTI_METHOD, FULL_DRISHTI,
+    compute_drishti, drishti_table, graha_aspect_houses, graha_aspect_signs, sphuta_drishti,
+    DrishtiTable, SignAspect, ASPECTING_GRAHAS, DRISHTI_METHOD, FULL_DRISHTI,
 };
 pub use error::CoreError;
 pub use graha::{Graha, GrahaPosition};
