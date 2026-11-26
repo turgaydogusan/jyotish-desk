@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 
 vi.mock("../api", () => ({ api: { computeJaimini: vi.fn() } }));
 
@@ -126,6 +126,26 @@ test("an error is shown in the panel and retry asks again", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
   await screen.findByRole("table");
   expect(api.computeJaimini).toHaveBeenCalledTimes(2);
+});
+
+test("retry from the keyboard keeps the focus in the panel while the error box is replaced", async () => {
+  vi.mocked(api.computeJaimini).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
+  const panel: Panel = { id: "ag", kind: "argala", x: 0, y: 0, w: 6, h: 9, settings: {} };
+  const layout = { schema_version: 1, active_layout_id: "user:t", layouts: [{ id: "user:t", name: "T", builtin: false, panels: [panel] }] };
+  renderWithStores(
+    <section className="panel" tabIndex={0} aria-label="Argala">
+      <ArgalaPanel panel={panel} />
+    </section>,
+    { layout, opened: fixture().opened },
+  );
+  const retry = await screen.findByRole("button", { name: "Yeniden dene" });
+  retry.focus();
+  expect(document.activeElement).toBe(retry);
+  fireEvent.click(retry);
+  await screen.findByRole("table");
+  expect(retry).not.toBeInTheDocument();
+  expect(document.activeElement).not.toBe(document.body);
+  expect(document.activeElement).toBe(screen.getByRole("region", { name: "Argala" }));
 });
 
 test("loading: nothing under a second, then a skeleton, then the table", async () => {

@@ -1,5 +1,5 @@
-import { fireEvent, screen, within } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
+import { act, fireEvent, screen, within } from "@testing-library/react";
+import { beforeEach, expect, test, vi } from "vitest";
 
 vi.mock("../api", () => ({ api: { computeJaimini: vi.fn() } }));
 
@@ -90,6 +90,44 @@ test("an error is shown in the panel and retry asks again", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
   await table();
   expect(api.computeJaimini).toHaveBeenCalledTimes(2);
+});
+
+test("retry from the keyboard keeps the focus in the panel while the error box is replaced", async () => {
+  vi.mocked(api.computeJaimini).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
+  const panel: Panel = { id: "ar", kind: "arudha", x: 0, y: 0, w: 4, h: 12, settings: {} };
+  const layout = { schema_version: 1, active_layout_id: "user:t", layouts: [{ id: "user:t", name: "T", builtin: false, panels: [panel] }] };
+  renderWithStores(
+    <section className="panel" tabIndex={0} aria-label="Arudha padalar">
+      <ArudhaPanel panel={panel} />
+    </section>,
+    { layout, opened: fixture().opened },
+  );
+  const retry = await screen.findByRole("button", { name: "Yeniden dene" });
+  retry.focus();
+  expect(document.activeElement).toBe(retry);
+  fireEvent.click(retry);
+  await table();
+  expect(retry).not.toBeInTheDocument();
+  expect(document.activeElement).not.toBe(document.body);
+  expect(document.activeElement).toBe(screen.getByRole("region", { name: "Arudha padalar" }));
+});
+
+test("loading: nothing under a second, then a skeleton, then the table", async () => {
+  vi.useFakeTimers();
+  try {
+    let resolve!: (r: Result<JaiminiReport>) => void;
+    vi.mocked(api.computeJaimini).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+    const { container } = renderPanel();
+    act(() => vi.advanceTimersByTime(999));
+    expect(container.querySelector(".panel-skeleton")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(container.querySelector(".panel-skeleton")).toHaveAttribute("aria-busy", "true");
+    await act(async () => resolve(ok()));
+    expect(container.querySelector(".panel-skeleton")).toBeNull();
+    expect(screen.getByRole("table")).toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test("shared highlight: a sign marks every pada in it, a graha every pada it rules, a house its sign", async () => {

@@ -7,8 +7,9 @@ use std::time::{Duration, Instant};
 use ephemeris::Engine;
 use jyotish_core::{
     co_lords, graha_aspect_signs, house_lord, house_sign, jaimini_report, rashi_drishti_signs,
-    sphuta_drishti, AdvancedSettings, CalcSettings, ChartInput, Graha, KarakaScheme, Positions,
-    Sign, Varga, ASPECTING_GRAHAS, DRISHTI_METHOD, JAIMINI_METHOD,
+    sphuta_drishti, AdvancedSettings, CalcSettings, ChartInput, ChartWarning, Graha, KarakaRole,
+    KarakaScheme, Positions, Sign, Varga, ASPECTING_GRAHAS, DRISHTI_METHOD, JAIMINI_METHOD,
+    SEVEN_KARAKA_ROLES,
 };
 use jyotish_desk_lib::commands::compute_chart_blocking;
 use jyotish_desk_lib::module_commands::{compute_drishti_blocking, compute_jaimini_blocking};
@@ -206,7 +207,15 @@ fn jaimini_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         // aynı rapor çıkar.
         let positions = Positions::from(&chart);
         let mut want = jaimini_report(&positions, &input.settings.advanced);
-        want.warnings = report.warnings.clone();
+        // Rapor temel haritanın yalnızca `LowPrecision` uyarısını taşır (ev sistemi ve gün
+        // doğumu uyarıları bu modülü ilgilendirmez).
+        want.warnings = chart
+            .meta
+            .warnings
+            .iter()
+            .copied()
+            .filter(|w| *w == ChartWarning::LowPrecision)
+            .collect();
         assert_eq!(report, want, "{id}");
 
         // Karaka sırası sekiz grahanın permütasyonudur; Ketu yoktur.
@@ -311,6 +320,19 @@ fn jaimini_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         assert_eq!((plain.scheme, plain.co_lords), (KarakaScheme::Seven, false));
         assert_eq!(plain.karakas.len(), 7, "{id}");
         assert!(plain.karakas.iter().all(|k| !k.graha.is_node()), "{id}");
+        // Yedili sıra, sekizli sıranın Rahu'suz hâlidir (Rahu dışında etkin derece
+        // aynıdır ve sıralama kararlıdır); roller yedili listenin sırasındadır.
+        let without_rahu: Vec<Graha> = report
+            .karakas
+            .iter()
+            .map(|k| k.graha)
+            .filter(|g| *g != Graha::Rahu)
+            .collect();
+        let seven: Vec<Graha> = plain.karakas.iter().map(|k| k.graha).collect();
+        assert_eq!(seven, without_rahu, "{id}");
+        let roles: Vec<KarakaRole> = plain.karakas.iter().map(|k| k.role).collect();
+        assert_eq!(roles[..], SEVEN_KARAKA_ROLES[..], "{id}");
+        assert_eq!(plain.karakamsha.atmakaraka, seven[0], "{id}");
         for pada in plain.arudhas.expect("padas") {
             assert_eq!(pada.lord, house_lord(lagna, pada.house), "{id}");
         }
@@ -345,6 +367,16 @@ fn jaimini_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
             .unwrap_err()
             .code,
         "unsupported_schema_version"
+    );
+    let bad_moment = ChartInput {
+        jd_ut: f64::NAN,
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_jaimini_blocking(engine, bad_moment)
+            .unwrap_err()
+            .code,
+        "invalid_julian_day"
     );
 
     // Performans: spec §15 "compute_jaimini ≤ 10 ms (temel harita hesabı dahil)".

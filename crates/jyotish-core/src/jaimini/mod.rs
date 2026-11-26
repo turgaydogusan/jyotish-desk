@@ -113,6 +113,7 @@ mod tests {
     use crate::graha::Graha;
     use crate::settings::CalcSettings;
     use crate::zodiac::Sign;
+    use ephemeris::Precision;
 
     fn input(advanced: AdvancedSettings, time_known: bool) -> ChartInput {
         ChartInput {
@@ -193,6 +194,28 @@ mod tests {
                 .find(|r| r.reference == row.reference)
                 .expect("row");
             assert_eq!(row, same);
+        }
+    }
+
+    #[test]
+    fn collector_carries_the_low_precision_warning_and_nothing_else() {
+        let mut eph = FakeEph::default();
+        let clean = compute_jaimini(&mut eph, &input(AdvancedSettings::default(), true)).unwrap();
+        assert!(clean.warnings.is_empty());
+
+        let mut moshier = FakeEph {
+            precision: Precision::Moshier,
+            ..FakeEph::default()
+        };
+        for time_known in [true, false] {
+            let report = compute_jaimini(
+                &mut moshier,
+                &input(AdvancedSettings::default(), time_known),
+            )
+            .unwrap();
+            assert_eq!(report.warnings, [ChartWarning::LowPrecision]);
+            // Uyarı yalnızca taşınır: hesap aynıdır.
+            assert_eq!(report.karakas, clean.karakas);
         }
     }
 
