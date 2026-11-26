@@ -7,14 +7,17 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use jyotish_core::{
-    house_lord, houses_owned, kuja_dosha, moon_is_waxing, nature, Graha, KujaDosha, Nature,
-    Positions,
+    drishti_table, house_lord, houses_owned, kuja_dosha, moon_is_waxing, nature, normalize, Graha,
+    KujaDosha, Nature, Positions, Sign, ASPECTING_GRAHAS, DRISHTI_METHOD,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
 /// Modül başına en az örnek sayısı; altına düşerse test düşer (sessiz silinmeye karşı).
 const MIN_FOUNDATION: usize = 6;
+const MIN_DRISHTI: usize = 4;
+/// El hesabı ile motor arasındaki en büyük fark, virupa.
+const VIRUPA_TOL: f64 = 1e-9;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -152,4 +155,74 @@ fn unknown_fields_are_rejected() {
     assert!(serde_json::from_str::<Fixture<FoundationExpected>>(&extra_input).is_err());
     let extra_expected = base.replace(r#""waxing":true,"#, r#""waxing":true,"more":1,"#);
     assert!(serde_json::from_str::<Fixture<FoundationExpected>>(&extra_expected).is_err());
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct ExpectedAspect {
+    graha: Graha,
+    target: Sign,
+    occupants: Vec<Graha>,
+}
+
+/// Bir sphuta drishti değeri: `angle` = (bakılan − bakan) mod 360, `value` virupa.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedSphuta {
+    from: Graha,
+    to: Graha,
+    angle: f64,
+    value: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DrishtiExpected {
+    /// On üç tam bakışın tamamı, tablo sırasıyla.
+    sign_aspects: Vec<ExpectedAspect>,
+    sphuta: Vec<ExpectedSphuta>,
+}
+
+#[test]
+fn drishti_hand_fixtures() {
+    for (f, p) in load::<DrishtiExpected>("drishti", MIN_DRISHTI) {
+        let id = &f.id;
+        let table = drishti_table(&p);
+        assert_eq!(table.method, DRISHTI_METHOD, "{id}");
+        let got: Vec<ExpectedAspect> = table
+            .sign_aspects
+            .iter()
+            .map(|a| ExpectedAspect {
+                graha: a.graha,
+                target: a.target,
+                occupants: a.occupants.clone(),
+            })
+            .collect();
+        assert_eq!(got, f.expected.sign_aspects, "{id}: sign aspects");
+        assert!(f.expected.sphuta.len() >= 10, "{id}: at least ten values");
+        for s in &f.expected.sphuta {
+            let row = ASPECTING_GRAHAS
+                .iter()
+                .position(|&g| g == s.from)
+                .unwrap_or_else(|| panic!("{id}: {:?} casts no graha aspect", s.from));
+            // Türetmedeki açı girdiyle tutarlı olmalı.
+            let angle = normalize(p.point(s.to).sidereal_lon - p.point(s.from).sidereal_lon);
+            assert!(
+                (angle - s.angle).abs() < 1e-9,
+                "{id}: {:?} → {:?} angle {angle}, fixture says {}",
+                s.from,
+                s.to,
+                s.angle
+            );
+            let got = table.sphuta[row][s.to as usize];
+            assert!(
+                (got - s.value).abs() <= VIRUPA_TOL,
+                "{id}: {:?} → {:?} at {}°: got {got}, hand value {}",
+                s.from,
+                s.to,
+                s.angle,
+                s.value
+            );
+        }
+    }
 }

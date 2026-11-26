@@ -362,7 +362,7 @@ mod foundation_properties {
     use crate::positions::Positions;
     use crate::zodiac::Sign;
 
-    fn positions() -> impl Strategy<Value = Positions> {
+    pub(super) fn positions() -> impl Strategy<Value = Positions> {
         (
             proptest::option::of(0.0f64..360.0),
             proptest::array::uniform9(0.0f64..360.0),
@@ -419,6 +419,66 @@ mod foundation_properties {
                     prop_assert_eq!(p.house_of(g), None);
                 }
             }
+        }
+    }
+}
+
+/// Graha bakışları (Alt proje 3.1).
+mod drishti_properties {
+    use proptest::prelude::*;
+
+    use super::foundation_properties::positions;
+    use crate::drishti::{
+        drishti_table, graha_aspect_signs, sphuta_drishti, ASPECTING_GRAHAS, FULL_DRISHTI,
+    };
+    use crate::graha::Graha;
+
+    proptest! {
+        #[test]
+        fn sphuta_drishti_is_within_zero_and_sixty(
+            g in 0usize..9,
+            from in -720.0f64..720.0,
+            to in -720.0f64..720.0,
+        ) {
+            let v = sphuta_drishti(Graha::ALL[g], from, to);
+            prop_assert!(v.is_finite() && (0.0..=FULL_DRISHTI).contains(&v), "{v}");
+        }
+
+        #[test]
+        fn sphuta_drishti_depends_only_on_the_angle(
+            g in 0usize..7,
+            from in 0.0f64..360.0,
+            angle in 0.0f64..360.0,
+            shift in -360.0f64..360.0,
+        ) {
+            // Özel bakış aralıklarının uçlarında değer sıçrar; yuvarlama hatasıyla ucun öbür
+            // yanına düşmemek için 30°'nin katlarından uzak durulur.
+            prop_assume!((angle / 30.0 - (angle / 30.0).round()).abs() > 1e-6);
+            let graha = ASPECTING_GRAHAS[g];
+            let a = sphuta_drishti(graha, from, from + angle);
+            let b = sphuta_drishti(graha, from + shift, from + shift + angle);
+            prop_assert!((a - b).abs() < 1e-6, "{a} vs {b}");
+        }
+
+        #[test]
+        fn drishti_table_is_consistent_with_the_positions(p in positions()) {
+            let t = drishti_table(&p);
+            prop_assert_eq!(t.sign_aspects.len(), 13);
+            for a in &t.sign_aspects {
+                prop_assert!(!a.graha.is_node());
+                prop_assert!(graha_aspect_signs(a.graha, p.sign_of(a.graha)).contains(&a.target));
+                prop_assert_eq!(&a.occupants, &p.occupants(a.target));
+            }
+            for (i, row) in t.sphuta.iter().enumerate() {
+                for (j, v) in row.iter().enumerate() {
+                    prop_assert!((0.0..=FULL_DRISHTI).contains(v));
+                    if Graha::ALL[j] == ASPECTING_GRAHAS[i] {
+                        prop_assert_eq!(*v, 0.0);
+                    }
+                }
+            }
+            // Lagna bakış tablosunu etkilemez.
+            prop_assert_eq!(drishti_table(&p.clone().without_lagna()), t);
         }
     }
 }

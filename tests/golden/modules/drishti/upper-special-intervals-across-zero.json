@@ -1,0 +1,54 @@
+{
+  "id": "upper-special-intervals-across-zero",
+  "source": "hand",
+  "rule_ref": "BPHS, bakışlar bölümü: her graha 7. burca; Mars 4 ve 8, Jüpiter 5 ve 9, Satürn 3 ve 10. Sphuta drishti tablosu ve özel bakış eklemesi: ileri modüller spec'i §4.",
+  "derivation": [
+    "Burçlar: Güneş 235° Akrep, Ay 225° Akrep, Mars 350° Balık, Merkür 120° Aslan, Jüpiter 340° Balık, Venüs 215° Akrep, Satürn 300° Kova, Rahu 30° Boğa, Ketu 210° Akrep. Akrep'teki grahalar sırayla: Güneş, Ay, Venüs, Ketu.",
+    "Tam bakışlar. Güneş, Ay ve Venüs Akrep'ten 7. Boğa: Rahu. Mars Balık'tan 4. İkizler, 7. Başak, 8. Terazi: üçü de boş. Merkür Aslan'dan 7. Kova: Satürn. Jüpiter Balık'tan 5. Yengeç: boş; 7. Başak: boş; 9. Akrep: Güneş, Ay, Venüs, Ketu. Satürn Kova'dan 3. Koç: boş; 7. Aslan: Merkür; 10. Akrep: Güneş, Ay, Venüs, Ketu.",
+    "Mars'tan (350°). Venüs: açı 215 − 350 = −135 ≡ 225°; taban (300 − 225)/2 = 37,5; Mars [210°, 240°) içinde +15 = 52,5 (Akrep Balık'tan 9. burçtur: burç bakışı yok, derece değeri var). Ketu: açı 210 − 350 ≡ 220°; 40 + 15 = 55. Güneş: açı 235 − 350 ≡ 245°; (300 − 245)/2 = 27,5; 245° aralığın dışında; 27,5.",
+    "Jüpiter'den (340°). Güneş: açı 235 − 340 ≡ 255°; taban 22,5; Jüpiter [240°, 270°) içinde +30 = 52,5. Ay: açı 225 − 340 ≡ 245°; 27,5 + 30 = 57,5. Ketu: açı 210 − 340 ≡ 230°; (300 − 230)/2 = 35; 230° aralığın dışında; 35.",
+    "Satürn'den (300°). Ay: açı 225 − 300 ≡ 285°; taban 7,5; Satürn [270°, 300°) içinde +45 = 52,5. Güneş: açı 295°; 2,5 + 45 = 47,5. Venüs: açı 275°; 12,5 + 45 = 57,5. Ketu: açı 270°; 15 + 45 = 60. Merkür: açı 120 − 300 ≡ 180°; 60. Rahu: açı 30 − 300 ≡ 90°; 45; 90° [60°, 90°) dışında; 45.",
+    "Merkür → Satürn: açı 300 − 120 = 180°; 60.",
+    "Rahu'ya (30°): Güneş'ten açı 30 − 235 ≡ 155°; (155 − 150) × 2 = 10. Venüs'ten açı 30 − 215 ≡ 175°; 50. Ay'dan açı 30 − 225 ≡ 165°; 30. Mars'tan açı 30 − 350 ≡ 40°; (40 − 30)/2 = 5."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "grahas": {"Sun": 235.0, "Moon": 225.0, "Mars": 350.0, "Mercury": 120.0, "Jupiter": 340.0, "Venus": 215.0, "Saturn": 300.0, "Rahu": 30.0, "Ketu": 210.0}
+  },
+  "expected": {
+    "sign_aspects": [
+      {"graha": "Sun", "target": "Taurus", "occupants": ["Rahu"]},
+      {"graha": "Moon", "target": "Taurus", "occupants": ["Rahu"]},
+      {"graha": "Mars", "target": "Gemini", "occupants": []},
+      {"graha": "Mars", "target": "Virgo", "occupants": []},
+      {"graha": "Mars", "target": "Libra", "occupants": []},
+      {"graha": "Mercury", "target": "Aquarius", "occupants": ["Saturn"]},
+      {"graha": "Jupiter", "target": "Cancer", "occupants": []},
+      {"graha": "Jupiter", "target": "Virgo", "occupants": []},
+      {"graha": "Jupiter", "target": "Scorpio", "occupants": ["Sun", "Moon", "Venus", "Ketu"]},
+      {"graha": "Venus", "target": "Taurus", "occupants": ["Rahu"]},
+      {"graha": "Saturn", "target": "Aries", "occupants": []},
+      {"graha": "Saturn", "target": "Leo", "occupants": ["Mercury"]},
+      {"graha": "Saturn", "target": "Scorpio", "occupants": ["Sun", "Moon", "Venus", "Ketu"]}
+    ],
+    "sphuta": [
+      {"from": "Mars", "to": "Venus", "angle": 225.0, "value": 52.5},
+      {"from": "Mars", "to": "Ketu", "angle": 220.0, "value": 55.0},
+      {"from": "Mars", "to": "Sun", "angle": 245.0, "value": 27.5},
+      {"from": "Jupiter", "to": "Sun", "angle": 255.0, "value": 52.5},
+      {"from": "Jupiter", "to": "Moon", "angle": 245.0, "value": 57.5},
+      {"from": "Jupiter", "to": "Ketu", "angle": 230.0, "value": 35.0},
+      {"from": "Saturn", "to": "Moon", "angle": 285.0, "value": 52.5},
+      {"from": "Saturn", "to": "Sun", "angle": 295.0, "value": 47.5},
+      {"from": "Saturn", "to": "Venus", "angle": 275.0, "value": 57.5},
+      {"from": "Saturn", "to": "Ketu", "angle": 270.0, "value": 60.0},
+      {"from": "Saturn", "to": "Mercury", "angle": 180.0, "value": 60.0},
+      {"from": "Saturn", "to": "Rahu", "angle": 90.0, "value": 45.0},
+      {"from": "Mercury", "to": "Saturn", "angle": 180.0, "value": 60.0},
+      {"from": "Sun", "to": "Rahu", "angle": 155.0, "value": 10.0},
+      {"from": "Venus", "to": "Rahu", "angle": 175.0, "value": 50.0},
+      {"from": "Moon", "to": "Rahu", "angle": 165.0, "value": 30.0},
+      {"from": "Mars", "to": "Rahu", "angle": 40.0, "value": 5.0}
+    ]
+  }
+}

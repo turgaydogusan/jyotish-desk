@@ -37,5 +37,6 @@ ileri modüller tasarım belgesi §13 (dört katmanlı test stratejisinin ilk ka
 | Klasör | `expected` | En az |
 |---|---|---|
 | `foundation` | `waxing`, `nature` (dokuz graha), `kuja_dosha`, `house_lords` (12), `houses`, `houses_owned` | 6 |
+| `drishti` | `sign_aspects` (on üç tam bakışın tamamı, tablo sırasıyla), `sphuta` (en az on değer: `from`, `to`, `angle`, `value`) | 4 |
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.

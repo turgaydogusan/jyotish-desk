@@ -1,0 +1,54 @@
+{
+  "id": "sign-aspect-and-degree-value-disagree",
+  "source": "hand",
+  "rule_ref": "BPHS, bakışlar bölümü: her graha 7. burca; Mars 4 ve 8, Jüpiter 5 ve 9, Satürn 3 ve 10. Sphuta drishti tablosu ve özel bakış eklemesi: ileri modüller spec'i §4.",
+  "derivation": [
+    "Burçlar: Güneş 149° Aslan, Ay 91° Yengeç, Mars 29° Koç, Merkür 179° Başak, Jüpiter 1° Koç, Venüs 88° İkizler, Satürn 2° Koç, Rahu 179° Başak, Ketu 359° Balık.",
+    "Tam bakışlar. Güneş Aslan'dan 7. Kova: boş. Ay Yengeç'ten 7. Oğlak: boş. Mars Koç'tan 4. Yengeç: Ay; 7. Terazi: boş; 8. Akrep: boş. Merkür Başak'tan 7. Balık: Ketu. Jüpiter Koç'tan 5. Aslan: Güneş; 7. Terazi: boş; 9. Yay: boş. Venüs İkizler'den 7. Yay: boş. Satürn Koç'tan 3. İkizler: Venüs; 7. Terazi: boş; 10. Oğlak: boş.",
+    "Burç bakışı tam olsa da derece değeri kısmi olabilir. Mars → Ay: açı 91 − 29 = 62°; (62 − 60) + 15 = 17; 62° Mars'ın [90°, 120°) aralığının dışında; 17.",
+    "Jüpiter → Güneş: açı 148°; taban 150 − 148 = 2; Jüpiter [120°, 150°) içinde +30 = 32.",
+    "Satürn → Venüs: açı 86°; taban (86 − 60) + 15 = 41; Satürn [60°, 90°) içinde +45 = 86; 60'ta kesilir.",
+    "Merkür → Ketu: açı 359 − 179 = 180°; 60.",
+    "Mars → Güneş: açı 120°; taban 30; ekleme yok; 30. Mars → Merkür: açı 150°; taban 150 − 150 = 0.",
+    "Satürn → Merkür: açı 177°; (177 − 150) × 2 = 54. Jüpiter → Merkür: açı 178°; (178 − 150) × 2 = 56. Jüpiter → Ay: açı 90°; 45.",
+    "Satürn → Ay: açı 89°; taban (89 − 60) + 15 = 44; +45 = 89; 60'ta kesilir.",
+    "Güneş → Ketu: açı 359 − 149 = 210°; (300 − 210)/2 = 45. Ay → Mars: açı 29 − 91 = −62 ≡ 298°; (300 − 298)/2 = 1. Venüs → Ketu: açı 359 − 88 = 271°; (300 − 271)/2 = 14,5. Merkür → Jüpiter: açı 1 − 179 = −178 ≡ 182°; (300 − 182)/2 = 59."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "grahas": {"Sun": 149.0, "Moon": 91.0, "Mars": 29.0, "Mercury": 179.0, "Jupiter": 1.0, "Venus": 88.0, "Saturn": 2.0, "Rahu": 179.0, "Ketu": 359.0}
+  },
+  "expected": {
+    "sign_aspects": [
+      {"graha": "Sun", "target": "Aquarius", "occupants": []},
+      {"graha": "Moon", "target": "Capricorn", "occupants": []},
+      {"graha": "Mars", "target": "Cancer", "occupants": ["Moon"]},
+      {"graha": "Mars", "target": "Libra", "occupants": []},
+      {"graha": "Mars", "target": "Scorpio", "occupants": []},
+      {"graha": "Mercury", "target": "Pisces", "occupants": ["Ketu"]},
+      {"graha": "Jupiter", "target": "Leo", "occupants": ["Sun"]},
+      {"graha": "Jupiter", "target": "Libra", "occupants": []},
+      {"graha": "Jupiter", "target": "Sagittarius", "occupants": []},
+      {"graha": "Venus", "target": "Sagittarius", "occupants": []},
+      {"graha": "Saturn", "target": "Gemini", "occupants": ["Venus"]},
+      {"graha": "Saturn", "target": "Libra", "occupants": []},
+      {"graha": "Saturn", "target": "Capricorn", "occupants": []}
+    ],
+    "sphuta": [
+      {"from": "Mars", "to": "Moon", "angle": 62.0, "value": 17.0},
+      {"from": "Jupiter", "to": "Sun", "angle": 148.0, "value": 32.0},
+      {"from": "Saturn", "to": "Venus", "angle": 86.0, "value": 60.0},
+      {"from": "Mercury", "to": "Ketu", "angle": 180.0, "value": 60.0},
+      {"from": "Mars", "to": "Sun", "angle": 120.0, "value": 30.0},
+      {"from": "Mars", "to": "Mercury", "angle": 150.0, "value": 0.0},
+      {"from": "Saturn", "to": "Mercury", "angle": 177.0, "value": 54.0},
+      {"from": "Jupiter", "to": "Mercury", "angle": 178.0, "value": 56.0},
+      {"from": "Jupiter", "to": "Moon", "angle": 90.0, "value": 45.0},
+      {"from": "Saturn", "to": "Moon", "angle": 89.0, "value": 60.0},
+      {"from": "Sun", "to": "Ketu", "angle": 210.0, "value": 45.0},
+      {"from": "Moon", "to": "Mars", "angle": 298.0, "value": 1.0},
+      {"from": "Venus", "to": "Ketu", "angle": 271.0, "value": 14.5},
+      {"from": "Mercury", "to": "Jupiter", "angle": 182.0, "value": 59.0}
+    ]
+  }
+}

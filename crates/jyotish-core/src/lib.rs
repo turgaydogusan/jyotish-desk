@@ -3,13 +3,14 @@
 //!
 //! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga,
 //! Vimshottari dasha, panchang, ashtakavarga ve transit (M3). İleri modüllerin ortak temeli
-//! (Alt proje 3.1): `positions` (ortak girdi), `lordship` ve `nature`.
+//! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`.
 
 pub mod ashtakavarga;
 mod chart;
 mod combustion;
 pub mod dasha;
 pub mod dignity;
+pub mod drishti;
 mod error;
 #[cfg(test)]
 mod fake;
@@ -37,6 +38,10 @@ pub use dasha::{
     VIMSHOTTARI_TOTAL_YEARS,
 };
 pub use dignity::{dignity, Dignity, Relation};
+pub use drishti::{
+    drishti_table, graha_aspect_houses, graha_aspect_signs, sphuta_drishti, DrishtiTable,
+    SignAspect, ASPECTING_GRAHAS, DRISHTI_METHOD, FULL_DRISHTI,
+};
 pub use error::CoreError;
 pub use graha::{Graha, GrahaPosition};
 pub use houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
