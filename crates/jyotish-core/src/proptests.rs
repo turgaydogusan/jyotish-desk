@@ -785,8 +785,8 @@ mod chara_dasha_properties {
                 let i = order.iter().position(|s| *s == q.signs[0]).expect("in the first cycle");
                 // Aynı sıra; 0 yıllık burçlar atlanır.
                 prop_assert!(last_index < Some(i));
-                for skipped in last_index.map_or(0, |l: usize| l + 1)..i {
-                    prop_assert_eq!(d.years[skipped], 12);
+                for skipped in &d.years[last_index.map_or(0, |l: usize| l + 1)..i] {
+                    prop_assert_eq!(*skipped, 12);
                 }
                 last_index = Some(i);
                 // İki çevrimde aynı burcun yılları toplamı 12'dir.
