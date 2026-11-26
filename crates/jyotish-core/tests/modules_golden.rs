@@ -1067,6 +1067,53 @@ const CANCEL_RULES: [&str; 3] = [
     "neecha_bhanga.neecha_bhanga",
 ];
 
+/// Hand-written debilitation signs of the seven grahas (whole sign).
+const HAND_FALL_SIGNS: [(Graha, Sign); 7] = [
+    (Graha::Sun, Sign::Libra),
+    (Graha::Moon, Sign::Scorpio),
+    (Graha::Mars, Sign::Cancer),
+    (Graha::Mercury, Sign::Pisces),
+    (Graha::Jupiter, Sign::Capricorn),
+    (Graha::Venus, Sign::Virgo),
+    (Graha::Saturn, Sign::Aries),
+];
+const HAND_COUNTED: [Graha; 5] = [
+    Graha::Mars,
+    Graha::Mercury,
+    Graha::Jupiter,
+    Graha::Venus,
+    Graha::Saturn,
+];
+
+/// The base condition of a cancelled example, and the condition that cancels it:
+/// Kemadruma: no counted graha in the Moon's sign or in the 2nd and 12th from it, and a counted
+/// graha in a kendra from the Moon or from the lagna; Shakata: the Moon in the 6th, 8th or 12th
+/// from Jupiter and in a kendra from the lagna; Neecha bhanga: a graha in its debilitation sign
+/// (the report lists no record at all, which the caller asserts).
+fn cancelled_base_holds(rule: &str, p: &Positions) -> bool {
+    let moon = p.sign_of(Graha::Moon);
+    match rule {
+        "lunar.kemadruma" => {
+            let from_moon = |g: Graha| p.house_from(g, moon);
+            let alone = HAND_COUNTED
+                .iter()
+                .all(|&g| ![12, 1, 2].contains(&from_moon(g)));
+            let in_a_kendra = HAND_COUNTED.iter().any(|&g| {
+                [4, 7, 10].contains(&from_moon(g))
+                    || p.house_of(g).is_some_and(|h| [1, 4, 7, 10].contains(&h))
+            });
+            alone && in_a_kendra
+        }
+        "lunar.shakata" => {
+            [6, 8, 12].contains(&p.house_from(Graha::Moon, p.sign_of(Graha::Jupiter)))
+                && p.house_of(Graha::Moon)
+                    .is_some_and(|h| [1, 4, 7, 10].contains(&h))
+        }
+        "neecha_bhanga.neecha_bhanga" => HAND_FALL_SIGNS.iter().any(|&(g, s)| p.sign_of(g) == s),
+        _ => false,
+    }
+}
+
 #[test]
 fn yogas_hand_fixtures() {
     for (f, p) in load::<YogasExpected>("yogas", MIN_YOGAS) {
@@ -1117,6 +1164,13 @@ fn yogas_hand_fixtures() {
             assert!(
                 CANCEL_RULES.contains(&cancelled.as_str()),
                 "{id}: {cancelled} has no cancellation rule"
+            );
+            // A cancelled case is only an example if the base condition holds in the input and
+            // the cancelling condition is what removes it. Second writing of the reading rules
+            // in `yogas/REVIEW.md`, from sign positions only.
+            assert!(
+                cancelled_base_holds(cancelled, &p),
+                "{id}: {cancelled} is marked cancelled but its base condition does not hold"
             );
         }
     }

@@ -1089,6 +1089,9 @@ fn shadbala_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
 }
 
 fn yogas_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    // The v1 cross-check arms below must not be vacuous: the golden moments hold at least one
+    // mahapurusha yoga and one Neecha bhanga record.
+    let (mut mahapurushas, mut neecha_bhangas) = (0, 0);
     for (id, input) in inputs {
         let report = compute_yogas_blocking(engine, input.clone())
             .unwrap_or_else(|e| panic!("{id}: {}", e.code));
@@ -1153,6 +1156,26 @@ fn yogas_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
             }
         }
         let has = |yoga: &str| report.hits.iter().any(|h| h.id == yoga);
+        // The other direction: a graha that v1 places in its own, moolatrikona or exaltation
+        // dignity in a rasi kendra gives its mahapurusha yoga (for these five grahas the
+        // moolatrikona sign is an own sign).
+        for (yoga, graha) in [
+            ("mahapurusha.ruchaka", Graha::Mars),
+            ("mahapurusha.bhadra", Graha::Mercury),
+            ("mahapurusha.hamsa", Graha::Jupiter),
+            ("mahapurusha.malavya", Graha::Venus),
+            ("mahapurusha.shasha", Graha::Saturn),
+        ] {
+            let g = v1(graha);
+            let dignified = matches!(
+                g.dignity,
+                Some(Dignity::Exalted | Dignity::Moolatrikona | Dignity::OwnSign)
+            );
+            let kendra = [1, 4, 7, 10].contains(&g.sign.house_from(chart.lagna.sign));
+            assert_eq!(has(yoga), dignified && kendra, "{id}: {yoga}");
+            mahapurushas += usize::from(has(yoga));
+        }
+        neecha_bhangas += count(YogaGroup::NeechaBhanga);
         assert_eq!(
             has("solar.budha_aditya"),
             v1(Graha::Sun).sign == v1(Graha::Mercury).sign,
@@ -1207,6 +1230,15 @@ fn yogas_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
             assert!(!yoga_rule(&h.id).expect("catalog").needs_lagna, "{id}");
         }
     }
+
+    assert!(
+        mahapurushas >= 1,
+        "no mahapurusha yoga in the golden moments"
+    );
+    assert!(
+        neecha_bhangas >= 1,
+        "no neecha bhanga in the golden moments"
+    );
 
     // Hatalar `compute_chart` ile aynı kodlara eşlenir; saat bilinmese de denetlenir.
     let delhi = inputs
