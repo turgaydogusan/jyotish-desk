@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 vi.mock("../api", () => ({ api: { transitsAt: vi.fn(), computeCharaDasha: vi.fn(), charaDashaChildren: vi.fn(), charaDashaAt: vi.fn() } }));
 
 import { api, type Result } from "../api";
-import type { CharaDasha, OpenedClient, TransitAt } from "../bindings";
+import type { CharaDasha, OpenedClient, SignDashaPath, SignDashaPeriod, TransitAt } from "../bindings";
 import type { Panel } from "../layout/model";
 import { fixture, unknownTimeOpened } from "../test/fixture";
 import { renderWithStores } from "../test/render";
@@ -111,6 +111,75 @@ test("the current period follows the path Rust returns for the new moment", asyn
   const next = await buttons();
   expect(names(next)).toEqual(["Boğ", "Koç", "Bal", "Kov", "Oğl", "Yay", "Akr", "Ter", "Baş", "Asl", "Yen", "İki"].map((s) => `2. İki–${s}`));
   expect(current(next).map((b) => [b.getAttribute("data-sign"), b.getAttribute("data-cycle")])).toEqual([["Aries", "2"]]);
+});
+
+test("choosing a period keeps the strip and the keyboard focus while the path of the new moment is asked", async () => {
+  renderStrip();
+  const items = await buttons();
+  let resolve!: (r: Result<SignDashaPath | null>) => void;
+  vi.mocked(api.charaDashaAt).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  items[1].focus();
+  fireEvent.click(items[1]);
+  await waitFor(() => expect(api.charaDashaAt).toHaveBeenCalledTimes(2));
+  // The answer is still pending: the last settled strip stays, marked busy, and the focus is where it was.
+  const strip = screen.getByRole("list", { name: /Dasa şeridi/ });
+  expect(strip).toHaveAttribute("aria-busy", "true");
+  expect(within(strip).getAllByRole("button")).toHaveLength(12);
+  expect(document.activeElement).toBe(items[1]);
+  expect(current(within(strip).getAllByRole("button")).map((b) => b.getAttribute("data-sign"))).toEqual(["Virgo"]);
+  await act(async () => resolve({ status: "ok", data: { cycle: 1, signs: ["Pisces", "Capricorn", "Aries"] } }));
+  await waitFor(() => expect(screen.getByRole("list", { name: /Dasa şeridi/ })).not.toHaveAttribute("aria-busy"));
+  expect(document.activeElement).toBe(items[1]);
+  expect(items[1]).toHaveAttribute("aria-current", "true");
+  expect(items[1]).toHaveTextContent("transit anında");
+});
+
+test("pratyantar: the strip and the focus stay while the path and then the third level are asked again", async () => {
+  renderStrip({ system: "chara", level: "pratyantar" });
+  const items = await buttons();
+  let resolve!: (r: Result<SignDashaPeriod[]>) => void;
+  vi.mocked(api.charaDashaAt).mockImplementation(async () => ({ status: "ok", data: { cycle: 1, signs: ["Pisces", "Leo", "Aries"] } }));
+  vi.mocked(api.charaDashaChildren).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  items[2].focus();
+  fireEvent.click(items[2]);
+  await waitFor(() => expect(api.charaDashaChildren).toHaveBeenCalledTimes(2));
+  expect(vi.mocked(api.charaDashaChildren).mock.calls[1].slice(1)).toEqual([["Pisces", "Leo"], 1]);
+  expect(screen.getByRole("list", { name: /Dasa şeridi/ })).toHaveAttribute("aria-busy", "true");
+  expect(document.activeElement).toBe(items[2]);
+  expect(names(await buttons())[0]).toBe("Bal–Baş–Asl");
+  await act(async () => resolve({ status: "ok", data: fixture().chara_dasha_at_children.map((p) => ({ ...p, signs: ["Pisces", "Leo", p.signs[2]] })) }));
+  // Another sub-period's list: the chosen button is gone, the focus moves to the current period.
+  await waitFor(async () => expect(names(await buttons())[0]).toBe("Bal–Asl–Asl"));
+  expect(current(await buttons())).toHaveLength(1);
+  expect(document.activeElement).toBe(current(await buttons())[0]);
+});
+
+test("when the chosen period leaves the strip the focus moves to the current period; to the panel when the strip gives way to an error", async () => {
+  renderStrip();
+  const items = await buttons();
+  vi.mocked(api.charaDashaAt).mockImplementationOnce(async () => ({ status: "ok", data: { cycle: 2, signs: ["Gemini", "Aries", "Pisces"] } }));
+  items[0].focus();
+  fireEvent.click(items[0]);
+  await waitFor(async () => expect(names(await buttons())[0]).toBe("2. İki–Boğ"));
+  const next = await buttons();
+  expect(current(next)).toHaveLength(1);
+  expect(document.activeElement).toBe(current(next)[0]);
+  // The next request fails: the strip is replaced by the error and the focus stays in the panel.
+  vi.mocked(api.charaDashaAt).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
+  fireEvent.click(current(next)[0]);
+  expect(await screen.findByRole("alert")).toHaveTextContent("Hesap tamamlanamadı (x).");
+  expect(document.activeElement).toBe(screen.getByRole("region", { name: "Dasa şeridi paneli" }));
+});
+
+test("a mouse user who never focused the strip does not get the focus moved", async () => {
+  renderStrip();
+  const items = await buttons();
+  const system = screen.getByRole("combobox", { name: "Sistem" });
+  system.focus();
+  vi.mocked(api.charaDashaAt).mockImplementationOnce(async () => ({ status: "ok", data: { cycle: 2, signs: ["Gemini", "Aries", "Pisces"] } }));
+  fireEvent.click(items[0]);
+  await waitFor(async () => expect(names(await buttons())[0]).toBe("2. İki–Boğ"));
+  expect(document.activeElement).toBe(system);
 });
 
 test("a moment outside the produced periods: a message instead of the strip", async () => {
