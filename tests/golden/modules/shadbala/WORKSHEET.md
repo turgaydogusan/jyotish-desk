@@ -11,7 +11,7 @@ tarihini ve bulduğu farkları yazar. Bir satır motorla uyuşmazsa önce kural 
 
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
-| | | |
+| Plan 17 Task 2'nin gözden geçiren ajanı (motoru ve bu kâğıdı yazan dışında); son incelemede yeniden koşuldu | 2026-11-26 | Üç örnek yalnızca `input`'tan, motor çalıştırılmadan ve Rust kaynağı okunmadan, tasarım belgesi §7 ve §4'ten ayrı bir betikle yeniden hesaplandı: 693 değerin (örnek başına 7 × 20 kalem, 7 sıra, 7 savaş alanı, 5 zaman lordu, 12 × 6 bhava değeri) 693'ü `expected` ile 0,01 virupa içinde aynı; fark yok. Bu kâğıttaki ara toplamlar ve toplamlar JSON ile aynı (162 değer). `HAND_HORAS` 168 hücre ve bhava burç türü tablosu 12 satır kuraldan denetlendi; fark yok. Not: drik balada Merkür ve Jüpiter'in bakışının çeyreğin üstüne tam eklenmesi (1,25 kat) kâğıdın ve gözden geçirenin ortak okumasıdır; bu bir varyant seçimidir (tasarım belgesi §17) ve bu doğrulama onu sınamaz. |
 
 ## Örnek 1 — öğle doğumu, dolunaya yakın Ay, Merkür kötücül
 
