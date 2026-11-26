@@ -7,9 +7,11 @@
 //! Evler rasi evidir (K4), burçlar rasi çerçevesindedir (K5), doğal sınıf `nature`'dır (K6).
 //! Lagnası olmayan konumlarda (doğum saati bilinmiyor) lagna isteyen kurallar değerlendirilmez.
 
+mod lords;
 mod luminaries;
 mod placement;
 
+pub use lords::{exchange_kind, ExchangeKind, DHANA_HOUSES};
 pub use placement::occupied_sign_count;
 
 use serde::{Deserialize, Serialize};
@@ -223,6 +225,38 @@ pub static YOGA_CATALOG: &[YogaRule] = &[
         false,
         luminaries::budha_aditya,
     ),
+    rule(
+        "raja.kendra_trikona",
+        YogaGroup::Raja,
+        true,
+        lords::kendra_trikona,
+    ),
+    rule(
+        "raja.dharma_karmadhipati",
+        YogaGroup::Raja,
+        true,
+        lords::dharma_karmadhipati,
+    ),
+    rule("raja.yogakaraka", YogaGroup::Raja, true, lords::yogakaraka),
+    rule("dhana.dhana", YogaGroup::Dhana, true, lords::dhana),
+    rule("exchange.maha", YogaGroup::Exchange, true, |p| {
+        lords::exchange(p, ExchangeKind::Maha)
+    }),
+    rule("exchange.third_lord", YogaGroup::Exchange, true, |p| {
+        lords::exchange(p, ExchangeKind::ThirdLord)
+    }),
+    rule("exchange.dainya", YogaGroup::Exchange, true, |p| {
+        lords::exchange(p, ExchangeKind::Dainya)
+    }),
+    rule("viparita.harsha", YogaGroup::ViparitaRaja, true, |p| {
+        lords::viparita(p, 6)
+    }),
+    rule("viparita.sarala", YogaGroup::ViparitaRaja, true, |p| {
+        lords::viparita(p, 8)
+    }),
+    rule("viparita.vimala", YogaGroup::ViparitaRaja, true, |p| {
+        lords::viparita(p, 12)
+    }),
     rule(
         "neecha_bhanga.neecha_bhanga",
         YogaGroup::NeechaBhanga,
