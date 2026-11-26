@@ -508,6 +508,10 @@ mod tests {
         let (_, chart) = lock(&store).unwrap().create_client(&new_client).unwrap();
         let vs = ViewState {
             dasha_expanded_path: vec![jyotish_core::Graha::Rahu],
+            chara_expanded_path: jyotish_core::SignDashaPath {
+                cycle: 2,
+                signs: vec![jyotish_core::Sign::Gemini],
+            },
             ..ViewState::default()
         };
         save_view_state_body(&store, chart.id, &vs).unwrap();
@@ -527,5 +531,19 @@ mod tests {
             (e.code.as_str(), e.params["field"].as_str()),
             ("invalid_input", "view_state")
         );
+        // Chara dasha yolunun çevrimi 1 ya da 2'dir.
+        let bad = ViewState {
+            chara_expanded_path: jyotish_core::SignDashaPath {
+                cycle: 0,
+                signs: Vec::new(),
+            },
+            ..ViewState::default()
+        };
+        let e = save_view_state_body(&store, chart.id, &bad).unwrap_err();
+        assert_eq!(
+            (e.code.as_str(), e.params["field"].as_str()),
+            ("invalid_input", "view_state")
+        );
+        assert_eq!(lock(&store).unwrap().view_state(chart.id).unwrap(), vs);
     }
 }

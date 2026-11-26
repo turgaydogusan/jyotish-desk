@@ -6,7 +6,7 @@ import { PrefsProvider } from "./settings/prefs";
 import { SessionProvider } from "./session/store";
 import { NoticeProvider, storeWarningNotices, useNotices, type Notice } from "./shell/notices";
 import { Shell } from "./shell/Shell";
-import { initialViewModel } from "./view/model";
+import { chartViewOf, initialViewModel } from "./view/model";
 import { storePersistence, type ViewPersistence } from "./view/persistence";
 import { ViewStateProvider } from "./view/store";
 
@@ -45,10 +45,7 @@ function Stores({ boot, persistence, children }: { boot: Boot; persistence?: Vie
       ),
   );
   const [initial] = useState(() =>
-    initialViewModel(
-      boot.layout,
-      boot.opened && { id: boot.opened.chart_record.id, dashaPath: boot.opened.view_state.dasha_expanded_path },
-    ),
+    initialViewModel(boot.layout, boot.opened && chartViewOf(boot.opened)),
   );
   return (
     <ViewStateProvider initial={initial} persistence={store}>

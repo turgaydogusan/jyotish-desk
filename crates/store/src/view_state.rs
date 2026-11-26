@@ -3,15 +3,35 @@
 //! değerde varsayılan kullanılır).
 //!
 //! Saklama ikiye ayrılır (UI spec §3.2 "Düzenler kullanıcıya aittir"): `panel_layout`
-//! kullanıcınındır ve `app_state` `panel_layout` anahtarındadır; `dasha_expanded_path`
+//! kullanıcınındır ve `app_state` `panel_layout` anahtarındadır; dasha ağacının açık dalı
 //! haritanındır ve `charts.view_state_json`'dadır. IPC'de ikisi tek `ViewState`'tir.
+//!
+//! Açık dal dasa sistemi başına ayrı tutulur (ileri modüller spec'i §6): Vimshottari yolu
+//! `dasha_expanded_path`, chara dasha yolu `chara_expanded_path` alanındadır. Şema sürümü
+//! değişmez: ikinci alanı taşımayan eski kayıt Vimshottari yolu sayılır ve chara yolu boş
+//! okunur.
 
-use jyotish_core::{Graha, MAX_DASHA_LEVEL};
+use jyotish_core::{Graha, Sign, SignDashaPath, MAX_DASHA_LEVEL, MAX_SIGN_DASHA_LEVEL};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
 /// Dasha yolunun en çok uzunluğu (`MAX_DASHA_LEVEL` seviye).
 const MAX_PATH: usize = MAX_DASHA_LEVEL as usize;
+/// Chara dasha yolunun en çok uzunluğu (`MAX_SIGN_DASHA_LEVEL` seviye).
+const MAX_SIGN_PATH: usize = MAX_SIGN_DASHA_LEVEL as usize;
+
+/// Boş chara dasha yolu: ilk çevrim, açık dal yok.
+pub fn empty_chara_path() -> SignDashaPath {
+    SignDashaPath {
+        cycle: 1,
+        signs: Vec::new(),
+    }
+}
+
+/// Chara dasha yolu geçerli mi: çevrim 1 ya da 2, en çok `MAX_SIGN_DASHA_LEVEL` burç.
+fn chara_path_fits(path: &SignDashaPath) -> bool {
+    (1..=2).contains(&path.cycle) && path.signs.len() <= MAX_SIGN_PATH
+}
 
 pub const VIEW_STATE_SCHEMA_VERSION: u32 = 1;
 /// Okunan en çok düzen (hazır düzenler dahil); fazlası atılır. Arayüzün `MAX_LAYOUTS`'u
@@ -33,10 +53,11 @@ pub fn check_panel_layout(pl: &PanelLayout) -> Result<(), crate::StoreError> {
     Ok(())
 }
 
-/// `save_view_state` denetimi: sürüm, dasha yolu uzunluğu ve düzen sınırları.
+/// `save_view_state` denetimi: sürüm, iki dasha yolunun sınırları ve düzen sınırları.
 pub fn check_view_state(vs: &ViewState) -> Result<(), crate::StoreError> {
     if vs.schema_version != VIEW_STATE_SCHEMA_VERSION
         || vs.dasha_expanded_path.len() > usize::from(MAX_DASHA_LEVEL)
+        || !chara_path_fits(&vs.chara_expanded_path)
     {
         return Err(crate::StoreError::InvalidInput("view_state"));
     }
@@ -53,8 +74,11 @@ pub struct ViewState {
     /// Kullanıcının pano düzenleri. `None`: hiç kaydedilmemiş ya da okunamadı; arayüz
     /// hazır düzenleri (`defaultLayoutState`) kullanır.
     pub panel_layout: Option<PanelLayout>,
-    /// Dasha ağacında açık dal: kökten lord yolu, en çok `MAX_DASHA_LEVEL`.
+    /// Vimshottari ağacında açık dal: kökten lord yolu, en çok `MAX_DASHA_LEVEL`.
     pub dasha_expanded_path: Vec<Graha>,
+    /// Chara dasha ağacında açık dal: çevrim ve kökten burç yolu, en çok
+    /// `MAX_SIGN_DASHA_LEVEL`. Boş yolun çevrimi 1'dir.
+    pub chara_expanded_path: SignDashaPath,
 }
 
 impl Default for ViewState {
@@ -63,6 +87,7 @@ impl Default for ViewState {
             schema_version: VIEW_STATE_SCHEMA_VERSION,
             panel_layout: None,
             dasha_expanded_path: Vec::new(),
+            chara_expanded_path: empty_chara_path(),
         }
     }
 }
@@ -201,6 +226,26 @@ pub fn parse_dasha_path(v: Option<&Value>) -> Vec<Graha> {
         .unwrap_or_default()
 }
 
+/// Chara dasha yolu: `{"cycle": 1 | 2, "signs": [burç, …]}`. Nesne değilse, çevrim ya da bir
+/// burç geçersizse ya da yol `MAX_SIGN_DASHA_LEVEL`'den uzunsa boş yol. Alan hiç yoksa (bu
+/// alandan önce yazılmış kayıt) yine boş yol.
+pub fn parse_chara_path(v: Option<&Value>) -> SignDashaPath {
+    let parsed = (|| {
+        let o = v?.as_object()?;
+        let cycle = u8::try_from(o.get("cycle")?.as_u64()?).ok()?;
+        let signs = o
+            .get("signs")?
+            .as_array()?
+            .iter()
+            .map(|s| serde_json::from_value::<Sign>(s.clone()).ok())
+            .collect::<Option<Vec<_>>>()?;
+        Some(SignDashaPath { cycle, signs })
+    })();
+    parsed
+        .filter(chara_path_fits)
+        .unwrap_or_else(empty_chara_path)
+}
+
 /// Tam `ViewState` JSON'unu toleranslı okur (içe aktarma ve testler). Hiçbir girdide
 /// hata ya da panik yoktur.
 pub fn parse_view_state(raw: &str) -> ViewState {
@@ -211,16 +256,24 @@ pub fn parse_view_state(raw: &str) -> ViewState {
         schema_version: VIEW_STATE_SCHEMA_VERSION,
         panel_layout: v.get("panel_layout").and_then(parse_panel_layout),
         dasha_expanded_path: parse_dasha_path(v.get("dasha_expanded_path")),
+        chara_expanded_path: parse_chara_path(v.get("chara_expanded_path")),
     }
 }
 
-/// Haritaya düşen kısım: `{"schema_version":1,"dasha_expanded_path":[…]}`.
-pub fn chart_view_json(path: &[Graha]) -> String {
+/// Haritaya düşen kısım:
+/// `{"schema_version":1,"dasha_expanded_path":[…],"chara_expanded_path":{"cycle":1,"signs":[…]}}`.
+pub fn chart_view_json(path: &[Graha], chara: &SignDashaPath) -> String {
     json!({
         "schema_version": VIEW_STATE_SCHEMA_VERSION,
         "dasha_expanded_path": path,
+        "chara_expanded_path": chara,
     })
     .to_string()
+}
+
+/// Yeni haritanın görünüm kaydı: iki yol da boş.
+pub fn empty_chart_view_json() -> String {
+    chart_view_json(&[], &empty_chara_path())
 }
 
 /// `charts.view_state_json`'dan lord yolu; bozuk JSON boş yol verir.
@@ -228,6 +281,13 @@ pub fn chart_view_path(raw: &str) -> Vec<Graha> {
     serde_json::from_str::<Value>(raw)
         .map(|v| parse_dasha_path(v.get("dasha_expanded_path")))
         .unwrap_or_default()
+}
+
+/// `charts.view_state_json`'dan chara dasha yolu; bozuk JSON ya da eksik alan boş yol verir.
+pub fn chart_view_chara_path(raw: &str) -> SignDashaPath {
+    serde_json::from_str::<Value>(raw)
+        .map(|v| parse_chara_path(v.get("chara_expanded_path")))
+        .unwrap_or_else(|_| empty_chara_path())
 }
 
 #[cfg(test)]
@@ -259,6 +319,10 @@ mod tests {
                 }],
             }),
             dasha_expanded_path: vec![Graha::Rahu, Graha::Jupiter],
+            chara_expanded_path: SignDashaPath {
+                cycle: 2,
+                signs: vec![Sign::Aries, Sign::Taurus],
+            },
         }
     }
 
@@ -302,6 +366,7 @@ mod tests {
         let vs = parse_view_state(&raw);
         assert_eq!(vs.schema_version, 1);
         assert!(vs.dasha_expanded_path.is_empty());
+        assert_eq!(vs.chara_expanded_path, empty_chara_path());
         let pl = vs.panel_layout.unwrap();
         assert_eq!(pl.active_layout_id, "");
         assert_eq!(pl.layouts.len(), 1);
@@ -360,14 +425,63 @@ mod tests {
     }
 
     #[test]
-    fn chart_view_keeps_only_the_dasha_path() {
-        let raw = chart_view_json(&[Graha::Venus]);
+    fn chart_view_keeps_only_the_two_dasha_paths() {
+        let chara = SignDashaPath {
+            cycle: 2,
+            signs: vec![Sign::Leo],
+        };
+        let raw = chart_view_json(&[Graha::Venus], &chara);
         assert_eq!(
             raw,
-            r#"{"dasha_expanded_path":["Venus"],"schema_version":1}"#
+            r#"{"chara_expanded_path":{"cycle":2,"signs":["Leo"]},"dasha_expanded_path":["Venus"],"schema_version":1}"#
         );
         assert_eq!(chart_view_path(&raw), [Graha::Venus]);
+        assert_eq!(chart_view_chara_path(&raw), chara);
         assert!(chart_view_path("{broken").is_empty());
+        assert_eq!(chart_view_chara_path("{broken"), empty_chara_path());
+        assert_eq!(
+            empty_chart_view_json(),
+            r#"{"chara_expanded_path":{"cycle":1,"signs":[]},"dasha_expanded_path":[],"schema_version":1}"#
+        );
+    }
+
+    #[test]
+    fn a_record_written_before_the_chara_path_reads_as_the_vimshottari_path() {
+        // Plan 16 öncesinin kaydı: yalnızca Vimshottari yolu vardır.
+        let old = r#"{"dasha_expanded_path":["Rahu","Saturn"],"schema_version":1}"#;
+        assert_eq!(chart_view_path(old), [Graha::Rahu, Graha::Saturn]);
+        assert_eq!(chart_view_chara_path(old), empty_chara_path());
+        let vs = parse_view_state(old);
+        assert_eq!(vs.dasha_expanded_path, [Graha::Rahu, Graha::Saturn]);
+        assert_eq!(vs.chara_expanded_path, empty_chara_path());
+    }
+
+    #[test]
+    fn invalid_chara_paths_are_dropped_whole() {
+        let ok = json!({"cycle": 2, "signs": ["Aries", "Taurus", "Gemini"]});
+        assert_eq!(
+            parse_chara_path(Some(&ok)),
+            SignDashaPath {
+                cycle: 2,
+                signs: vec![Sign::Aries, Sign::Taurus, Sign::Gemini]
+            }
+        );
+        for bad in [
+            json!(null),
+            json!(["Aries"]),
+            json!({"signs": ["Aries"]}),
+            json!({"cycle": 1}),
+            json!({"cycle": 0, "signs": ["Aries"]}),
+            json!({"cycle": 3, "signs": ["Aries"]}),
+            json!({"cycle": 1.5, "signs": ["Aries"]}),
+            json!({"cycle": "1", "signs": ["Aries"]}),
+            json!({"cycle": 1, "signs": "Aries"}),
+            json!({"cycle": 1, "signs": ["Aries", "Ophiuchus"]}),
+            json!({"cycle": 1, "signs": ["Aries", "Taurus", "Gemini", "Cancer"]}),
+        ] {
+            assert_eq!(parse_chara_path(Some(&bad)), empty_chara_path(), "{bad}");
+        }
+        assert_eq!(parse_chara_path(None), empty_chara_path());
     }
 
     fn arb_json() -> impl Strategy<Value = Value> {
@@ -389,6 +503,9 @@ mod tests {
                         Just("layouts".to_owned()),
                         Just("panels".to_owned()),
                         Just("dasha_expanded_path".to_owned()),
+                        Just("chara_expanded_path".to_owned()),
+                        Just("cycle".to_owned()),
+                        Just("signs".to_owned()),
                         Just("id".to_owned()),
                         Just("name".to_owned()),
                         Just("kind".to_owned()),
@@ -457,8 +574,10 @@ mod tests {
         (
             prop::option::of(("[a-z:0-9]{1,8}", prop::collection::vec(layout, 0..4))),
             prop::collection::vec(arb_graha(), 0..=MAX_PATH),
+            1u8..=2,
+            prop::collection::vec(prop::sample::select(Sign::ALL.to_vec()), 0..=MAX_SIGN_PATH),
         )
-            .prop_map(|(pl, path)| ViewState {
+            .prop_map(|(pl, path, cycle, signs)| ViewState {
                 schema_version: VIEW_STATE_SCHEMA_VERSION,
                 panel_layout: pl.map(|(active, ls)| {
                     let mut uniq: Vec<Layout> = Vec::new();
@@ -473,6 +592,7 @@ mod tests {
                     }
                 }),
                 dasha_expanded_path: path,
+                chara_expanded_path: SignDashaPath { cycle, signs },
             })
     }
 
@@ -487,6 +607,7 @@ mod tests {
         fn any_json_parses_within_bounds(v in arb_json()) {
             let vs = parse_view_state(&v.to_string());
             prop_assert!(vs.dasha_expanded_path.len() <= MAX_PATH);
+            prop_assert!(chara_path_fits(&vs.chara_expanded_path));
             if let Some(pl) = &vs.panel_layout {
                 for l in &pl.layouts {
                     prop_assert!(!l.id.trim().is_empty());

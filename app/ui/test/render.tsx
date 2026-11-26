@@ -9,7 +9,7 @@ import { PrefsProvider } from "../settings/prefs";
 import { SessionProvider } from "../session/store";
 import { NoticeProvider } from "../shell/notices";
 import { TransitProvider } from "../transit/store";
-import { initialViewModel } from "../view/model";
+import { chartViewOf, initialViewModel } from "../view/model";
 import { memoryPersistence } from "../view/persistence";
 import { ViewStateProvider } from "../view/store";
 import { fixture } from "./fixture";
@@ -25,10 +25,7 @@ export interface RenderOptions {
 
 export function renderWithStores(ui: ReactNode, { opened = fixture().opened, layout = null, debounceMs = 0, prefs = fixture().prefs.prefs }: RenderOptions = {}) {
   const persistence = memoryPersistence();
-  const initial = initialViewModel(
-    layout,
-    opened && { id: opened.chart_record.id, dashaPath: opened.view_state.dasha_expanded_path },
-  );
+  const initial = initialViewModel(layout, opened && chartViewOf(opened));
   const utils = render(
     <NoticeProvider>
       <PrefsProvider initial={prefs}>

@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use ephemeris::Engine;
-use jyotish_core::{AyanamsaSystem, CalcSettings, Graha};
+use jyotish_core::{AyanamsaSystem, CalcSettings, Graha, Sign, SignDashaPath};
 use jyotish_desk_lib::client_commands::{
     add_chart_blocking, create_client_blocking, keep_stored_moment_blocking, open_client_blocking,
     restore_session_blocking, save_calc_settings_blocking, update_chart_blocking, DB_FILE_NAME,
@@ -106,6 +106,10 @@ fn open_client_round_trips_and_is_fast() {
     let vs = ViewState {
         panel_layout: Some(layout()),
         dasha_expanded_path: vec![Graha::Rahu, Graha::Jupiter],
+        chara_expanded_path: SignDashaPath {
+            cycle: 1,
+            signs: vec![Sign::Pisces, Sign::Virgo],
+        },
         ..ViewState::default()
     };
     {
@@ -215,6 +219,10 @@ fn open_client_round_trips_and_is_fast() {
     assert_eq!(
         restored.view_state.dasha_expanded_path,
         vs2.dasha_expanded_path
+    );
+    assert_eq!(
+        restored.view_state.chara_expanded_path,
+        vs.chara_expanded_path
     );
     assert_eq!(restored.view_state.panel_layout, vs2.panel_layout);
 

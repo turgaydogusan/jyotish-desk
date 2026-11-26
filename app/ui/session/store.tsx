@@ -38,7 +38,7 @@ const SessionContext = createContext<Session | null>(null);
 
 /**
  * `initial` açılışta geri yüklenen haritadır (`restore_session`); görünüm deposunun ilk
- * modeli aynı haritayla kurulmuş olmalıdır (`initialViewModel(layout, { id, dashaPath })`).
+ * modeli aynı haritayla kurulmuş olmalıdır (`initialViewModel(layout, chartViewOf(opened))`).
  */
 export function SessionProvider({ initial, children }: { initial: OpenedClient | null; children: ReactNode }) {
   const [opened, setOpened] = useState(initial);
@@ -55,7 +55,7 @@ export function SessionProvider({ initial, children }: { initial: OpenedClient |
       // Eski açılış hatası ("client") da kalkar: yeni harita açıldı.
       dismissWhere((n) => n.id === "boot" || n.id === "client" || n.id.startsWith("store:"));
       for (const n of storeWarningNotices(o.warnings)) push(n);
-      openChart(o.chart_record.id, o.view_state.dasha_expanded_path);
+      openChart(o.chart_record.id, o.view_state.dasha_expanded_path, o.view_state.chara_expanded_path);
       setOpened(o);
       touch();
     },

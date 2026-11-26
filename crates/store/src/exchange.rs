@@ -13,7 +13,7 @@ use crate::charts::{clean_name, insert_chart, insert_client, ChartRow};
 use crate::db::format_ts;
 use crate::model::{BirthData, ChartKind, Gender, ResolvedRecord, TzChoice};
 use crate::settings::{load_calc_value, SettingsLoad};
-use crate::view_state::{chart_view_json, parse_dasha_path};
+use crate::view_state::{chart_view_json, parse_chara_path, parse_dasha_path};
 use crate::{Store, StoreError};
 
 pub const EXPORT_FORMAT: &str = "jyotish-desk";
@@ -57,7 +57,8 @@ pub struct ExportChart {
     pub resolved: ResolvedRecord,
     /// Saklanan JSON aynen (daha yeni sürümün alanları korunur).
     pub calc_settings: Value,
-    /// Haritanın görünüm kısmı (`dasha_expanded_path`); düzenler kullanıcınındır, aktarılmaz.
+    /// Haritanın görünüm kısmı (`dasha_expanded_path`, `chara_expanded_path`); düzenler
+    /// kullanıcınındır, aktarılmaz.
     pub view_state: Value,
     pub tags: Vec<String>,
     pub created_at: String,
@@ -342,6 +343,7 @@ impl Store {
                     other => other.settings().clone(),
                 };
                 let path = parse_dasha_path(ch.view_state.get("dasha_expanded_path"));
+                let chara = parse_chara_path(ch.view_state.get("chara_expanded_path"));
                 let chart_id = insert_chart(
                     &tx,
                     &ChartRow {
@@ -352,7 +354,7 @@ impl Store {
                         birth: &parsed.canonical,
                         resolved: &resolved,
                         calc_json: &serde_json::to_string(&settings)?,
-                        view_json: &chart_view_json(&path),
+                        view_json: &chart_view_json(&path, &chara),
                         created_at: &ts_or(&ch.created_at, &now),
                         updated_at: &ts_or(&ch.updated_at, &now),
                     },
@@ -428,7 +430,7 @@ mod tests {
     use crate::db::testutil::store;
     use crate::open::StoreWarning;
     use crate::view_state::ViewState;
-    use jyotish_core::{CalcSettings, Graha, NodeKind};
+    use jyotish_core::{CalcSettings, Graha, NodeKind, Sign, SignDashaPath};
     use serde_json::json;
 
     fn populated() -> (Store, u32) {
@@ -444,6 +446,10 @@ mod tests {
             ch.id,
             &ViewState {
                 dasha_expanded_path: vec![Graha::Venus],
+                chara_expanded_path: SignDashaPath {
+                    cycle: 2,
+                    signs: vec![Sign::Leo],
+                },
                 ..ViewState::default()
             },
         )
@@ -508,9 +514,14 @@ mod tests {
             src.calc_settings(ca.id).unwrap(),
             dst.calc_settings(cb.id).unwrap()
         );
+        let view = dst.view_state(cb.id).unwrap();
+        assert_eq!(view.dasha_expanded_path, [Graha::Venus]);
         assert_eq!(
-            dst.view_state(cb.id).unwrap().dasha_expanded_path,
-            [Graha::Venus]
+            view.chara_expanded_path,
+            SignDashaPath {
+                cycle: 2,
+                signs: vec![Sign::Leo]
+            }
         );
         assert_eq!(b.last_chart_id, Some(cb.id));
         let na = &src.notes(a.id, 10).unwrap()[0];
@@ -598,11 +609,12 @@ mod tests {
             dst.calc_settings(ch.id).unwrap(),
             SettingsLoad::Current(CalcSettings::default())
         );
-        assert!(dst
-            .view_state(ch.id)
-            .unwrap()
-            .dasha_expanded_path
-            .is_empty());
+        let view = dst.view_state(ch.id).unwrap();
+        assert!(view.dasha_expanded_path.is_empty());
+        assert_eq!(
+            view.chara_expanded_path,
+            crate::view_state::empty_chara_path()
+        );
     }
 
     #[test]

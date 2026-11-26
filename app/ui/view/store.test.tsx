@@ -15,10 +15,12 @@ function Probe() {
       <span data-testid="count">{store.state.layouts.length}</span>
       <span data-testid="chart">{String(view.model.chartId)}</span>
       <span data-testid="path">{view.model.dashaPath.join(">")}</span>
+      <span data-testid="chara">{`${view.model.charaPath.cycle}:${view.model.charaPath.signs.join(">")}`}</span>
       <button onClick={() => store.saveAs("Benim")}>saveAs</button>
       <button onClick={() => store.select(BUILTIN_LAYOUT_IDS.research)}>research</button>
       <button onClick={() => view.setDashaPath(["Rahu", "Jupiter"] as Graha[])}>path</button>
-      <button onClick={() => view.openChart(7, ["Venus"])}>open7</button>
+      <button onClick={() => view.setCharaPath({ cycle: 2, signs: ["Aries", "Taurus"] })}>chara</button>
+      <button onClick={() => view.openChart(7, ["Venus"], { cycle: 1, signs: ["Leo"] })}>open7</button>
       <button onClick={() => view.openChart(8, "garbage")}>open8</button>
       <button onClick={() => view.flush()}>flush</button>
       <button
@@ -84,6 +86,23 @@ test("the dasha path is part of the saved ViewState of the open chart", () => {
   expect(p.saved).toEqual<ViewSnapshot[]>([
     { chartId: 7, viewState: expect.objectContaining({ dasha_expanded_path: ["Rahu", "Jupiter"] }) },
   ]);
+});
+
+test("the chara dasha path is saved with the open chart and loaded per chart", () => {
+  const p = memoryPersistence();
+  setup(p);
+  fireEvent.click(screen.getByText("open7"));
+  expect(screen.getByTestId("chara")).toHaveTextContent("1:Leo");
+  fireEvent.click(screen.getByText("chara"));
+  expect(screen.getByTestId("chara")).toHaveTextContent("2:Aries>Taurus");
+  act(() => vi.advanceTimersByTime(SAVE_DEBOUNCE_MS));
+  // Vimshottari yolu olduğu gibi durur: iki yol ayrıdır.
+  expect(p.saved).toEqual<ViewSnapshot[]>([
+    { chartId: 7, viewState: expect.objectContaining({ dasha_expanded_path: ["Venus"], chara_expanded_path: { cycle: 2, signs: ["Aries", "Taurus"] } }) },
+  ]);
+  // Yolu olmayan haritada boş yol.
+  fireEvent.click(screen.getByText("open8"));
+  expect(screen.getByTestId("chara")).toHaveTextContent("1:");
 });
 
 test("opening another chart flushes the pending save to the previous chart first", () => {

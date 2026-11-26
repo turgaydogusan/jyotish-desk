@@ -1,9 +1,9 @@
-// Görünüm durumunun tek merkezi (spec §11 M5): düzenler ve dasha yolu tek saf reducer'dan geçer;
+// Görünüm durumunun tek merkezi (spec §11 M5): düzenler ve dasha yolları tek saf reducer'dan geçer;
 // ≈ 500 ms debounce ile kayıt (spec §4), pencere gizlenince ya da kapanınca hemen kayıt,
 // Cmd+1…9 ile sıradaki düzene geçiş (UI spec §3.2). Paneller düzene `useLayoutStore`,
-// dasha yoluna `useViewStore` ile ulaşır; birbirini çağırmaz.
+// dasha yollarına `useViewStore` ile ulaşır; birbirini çağırmaz.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
-import type { Graha, ViewState } from "../bindings";
+import type { Graha, SignDashaPath, ViewState } from "../bindings";
 import type { Layout, LayoutState, ModulePanelKind, Panel } from "../layout/model";
 import { activeLayout, newId, normalizeState, type LayoutAction } from "../layout/reducer";
 import { toViewState, type ViewModel } from "./model";
@@ -36,8 +36,10 @@ export interface ViewStore {
   /** Serileştirilmiş biçim (kayıtla aynı). */
   viewState: ViewState;
   setDashaPath(path: Graha[]): void;
-  /** Yeni açılan harita: bekleyen kayıt önceki haritaya yazılır, yeni haritanın yolu yüklenir. */
-  openChart(chartId: number, dashaPath: unknown): void;
+  /** Chara dasha ağacının açık dalı (çevrim ve burç yolu). */
+  setCharaPath(path: SignDashaPath): void;
+  /** Yeni açılan harita: bekleyen kayıt önceki haritaya yazılır, yeni haritanın yolları yüklenir. */
+  openChart(chartId: number, dashaPath: unknown, charaPath?: unknown): void;
   /** Açık harita kapandı (ör. danışan silindi): bekleyen kayıt yazılır, sonraki kayıt yalnızca düzendir. */
   closeChart(): void;
   /**
@@ -147,7 +149,8 @@ export function ViewStateProvider({
       model: state,
       viewState: toViewState(state),
       setDashaPath: (path) => dispatch({ type: "setDashaPath", path }),
-      openChart: (chartId, dashaPath) => dispatch({ type: "openChart", chartId, dashaPath }),
+      setCharaPath: (path) => dispatch({ type: "setCharaPath", path }),
+      openChart: (chartId, dashaPath, charaPath) => dispatch({ type: "openChart", chartId, dashaPath, charaPath }),
       closeChart: () => dispatch({ type: "closeChart" }),
       flush: () => flushRef.current(),
     };

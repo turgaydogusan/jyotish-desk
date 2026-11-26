@@ -13,7 +13,8 @@ use crate::model::{
 };
 use crate::settings::{load_calc_settings, SettingsLoad};
 use crate::view_state::{
-    chart_view_json, chart_view_path, parse_panel_layout, PanelLayout, ViewState,
+    chart_view_chara_path, chart_view_json, chart_view_path, empty_chart_view_json,
+    parse_panel_layout, PanelLayout, ViewState,
 };
 use crate::{Store, StoreError};
 
@@ -299,7 +300,7 @@ impl Store {
                 birth: &birth,
                 resolved: &resolved,
                 calc_json: &calc_json,
-                view_json: &chart_view_json(&[]),
+                view_json: &empty_chart_view_json(),
                 created_at: &now,
                 updated_at: &now,
             },
@@ -335,7 +336,7 @@ impl Store {
                 birth: &birth,
                 resolved: &resolved,
                 calc_json: &calc_json,
-                view_json: &chart_view_json(&[]),
+                view_json: &empty_chart_view_json(),
                 created_at: &now,
                 updated_at: &now,
             },
@@ -517,7 +518,7 @@ impl Store {
             .and_then(|v| parse_panel_layout(&v)))
     }
 
-    /// Görünüm durumu: düzenler `app_state`'ten, dasha yolu haritadan (toleranslı).
+    /// Görünüm durumu: düzenler `app_state`'ten, iki dasha yolu haritadan (toleranslı).
     pub fn view_state(&self, chart_id: u32) -> Result<ViewState, StoreError> {
         let raw: String = self
             .conn
@@ -534,6 +535,7 @@ impl Store {
         Ok(ViewState {
             panel_layout: self.panel_layout()?,
             dasha_expanded_path: chart_view_path(&raw),
+            chara_expanded_path: chart_view_chara_path(&raw),
             ..ViewState::default()
         })
     }
@@ -545,7 +547,10 @@ impl Store {
         let tx = self.conn.transaction()?;
         let n = tx.execute(
             "UPDATE charts SET view_state_json = ?1 WHERE id = ?2",
-            params![chart_view_json(&vs.dasha_expanded_path), chart_id],
+            params![
+                chart_view_json(&vs.dasha_expanded_path, &vs.chara_expanded_path),
+                chart_id
+            ],
         )?;
         if n == 0 {
             return Err(StoreError::NotFound {
@@ -629,8 +634,10 @@ mod tests {
     use crate::birth::fixtures::{delhi, istanbul};
     use crate::db::testutil::store;
     use crate::settings::AppPrefs;
-    use crate::view_state::{Layout, Panel, MAX_LAYOUTS, MAX_PANELS, MAX_VIEW_STATE_BYTES};
-    use jyotish_core::{AyanamsaSystem, Graha};
+    use crate::view_state::{
+        empty_chara_path, Layout, Panel, MAX_LAYOUTS, MAX_PANELS, MAX_VIEW_STATE_BYTES,
+    };
+    use jyotish_core::{AyanamsaSystem, Graha, Sign, SignDashaPath};
     use serde_json::Map;
 
     #[test]
@@ -787,14 +794,19 @@ mod tests {
         let vs = ViewState {
             panel_layout: Some(layout.clone()),
             dasha_expanded_path: vec![Graha::Rahu, Graha::Saturn],
+            chara_expanded_path: SignDashaPath {
+                cycle: 2,
+                signs: vec![Sign::Gemini, Sign::Taurus],
+            },
             ..ViewState::default()
         };
         s.save_view_state(a.id, &vs).unwrap();
         assert_eq!(s.view_state(a.id).unwrap(), vs);
-        // Düzen kullanıcınındır: diğer harita aynı düzeni, kendi (boş) dasha yolunu görür.
+        // Düzen kullanıcınındır: diğer harita aynı düzeni, kendi (boş) dasha yollarını görür.
         let other = s.view_state(b.id).unwrap();
         assert_eq!(other.panel_layout, Some(layout));
         assert!(other.dasha_expanded_path.is_empty());
+        assert_eq!(other.chara_expanded_path, empty_chara_path());
         // Görünüm kaydı içerik değildir.
         assert_eq!(s.chart(a.id).unwrap().updated_at, a.updated_at);
         s.save_view_state(a.id, &ViewState::default()).unwrap();
@@ -927,6 +939,20 @@ mod tests {
             },
             ViewState {
                 dasha_expanded_path: vec![jyotish_core::Graha::Sun; 6],
+                ..ViewState::default()
+            },
+            ViewState {
+                chara_expanded_path: SignDashaPath {
+                    cycle: 3,
+                    signs: Vec::new(),
+                },
+                ..ViewState::default()
+            },
+            ViewState {
+                chara_expanded_path: SignDashaPath {
+                    cycle: 1,
+                    signs: vec![Sign::Aries; 4],
+                },
                 ..ViewState::default()
             },
         ] {

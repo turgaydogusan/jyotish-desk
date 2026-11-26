@@ -936,8 +936,13 @@ export type ViewState = {
 	 *  hazır düzenleri (`defaultLayoutState`) kullanır.
 	 */
 	panel_layout: PanelLayout | null,
-	/**  Dasha ağacında açık dal: kökten lord yolu, en çok `MAX_DASHA_LEVEL`. */
+	/**  Vimshottari ağacında açık dal: kökten lord yolu, en çok `MAX_DASHA_LEVEL`. */
 	dasha_expanded_path: Graha[],
+	/**
+	 *  Chara dasha ağacında açık dal: çevrim ve kökten burç yolu, en çok
+	 *  `MAX_SIGN_DASHA_LEVEL`. Boş yolun çevrimi 1'dir.
+	 */
+	chara_expanded_path: SignDashaPath,
 };
 
 export type ZodiacMode = 
