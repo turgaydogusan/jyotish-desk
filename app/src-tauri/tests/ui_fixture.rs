@@ -15,7 +15,10 @@ use jyotish_core::ChartInput;
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
-use jyotish_desk_lib::module_commands::{compute_drishti_blocking, compute_jaimini_blocking};
+use jyotish_desk_lib::module_commands::{
+    chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
+    compute_drishti_blocking, compute_jaimini_blocking,
+};
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
 use store::{BirthData, ChartKind, NewChart, NewClient, Place, Store, TimeCertainty, TzChoice};
@@ -104,7 +107,19 @@ fn ui_fixture_is_up_to_date() {
         time_known: true,
     };
     let drishti = compute_drishti_blocking(&engine, module_input.clone()).expect("drishti");
-    let jaimini = compute_jaimini_blocking(&engine, module_input).expect("jaimini");
+    let jaimini = compute_jaimini_blocking(&engine, module_input.clone()).expect("jaimini");
+    // Chara dasha: iki seviye, ilk alt dönemin 3. seviyesi (istenerek yüklenen seviye) ve
+    // transit anının dönem yolu.
+    let chara_dasha = compute_chara_dasha_blocking(&engine, module_input.clone())
+        .expect("chara dasha")
+        .expect("time known");
+    let chara_path = chara_dasha.periods[1].signs.clone();
+    let chara_children =
+        chara_dasha_children_blocking(&engine, module_input.clone(), chara_path.clone(), 1)
+            .expect("chara dasha children");
+    let chara_at = chara_dasha_at_blocking(&engine, module_input, transit.snapshot.jd_ut)
+        .expect("chara dasha at")
+        .expect("inside the produced span");
     // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
     assert_eq!(opened.chart_record.birth, delhi());
     let prefs = store
@@ -122,6 +137,9 @@ fn ui_fixture_is_up_to_date() {
         "prefs": prefs,
         "drishti": drishti,
         "jaimini": jaimini,
+        "chara_dasha": chara_dasha,
+        "chara_dasha_children": { "path": chara_path, "cycle": 1, "periods": chara_children },
+        "chara_dasha_at": chara_at,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")

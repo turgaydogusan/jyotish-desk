@@ -37,6 +37,24 @@ export const commands = {
 	 *  bilinmiyorsa (`time_known == false`) padalar `null` döner.
 	 */
 	computeJaimini: (input: ChartInput, options?: InvokeOptions) => typedError<JaiminiReport, CommandError>(__TAURI_INVOKE("compute_jaimini", { input }, options)),
+	/**
+	 *  Chara dasha (padakrama düzeni): yön, on iki burcun yılları ve iki seviye dönem. Eş lord
+	 *  kuralı `input.settings.advanced`'ten, yıl uzunluğu `input.settings.dasha_year`'dan okunur.
+	 *  Doğum saati bilinmiyorsa (`time_known == false`) `null` döner: sıra lagnaya bağlıdır.
+	 */
+	computeCharaDasha: (input: ChartInput, options?: InvokeOptions) => typedError<CharaDasha | null, CommandError>(__TAURI_INVOKE("compute_chara_dasha", { input }, options)),
+	/**
+	 *  Bir chara dasha döneminin alt dönemleri. `path` dönemin `signs`'ı, `cycle` çevrimidir (1 ya
+	 *  da 2); boş yol o çevrimin dashalarını verir. Doğum saati bilinmiyorsa liste boştur.
+	 */
+	charaDashaChildren: (input: ChartInput, path: Sign[], cycle: number, options?: InvokeOptions) => typedError<SignDashaPeriod[], CommandError>(__TAURI_INVOKE("chara_dasha_children", { input, path, cycle }, options)),
+	/**
+	 *  `jd_ut` anını içeren chara dasha dönemlerinin yolu (üç seviye). Dasa şeridinin "güncel
+	 *  dönem"i buradan gelir; arayüz tarih karşılaştırmaz. `jd_ut` transit anıdır
+	 *  (`TransitView.snapshot.jd_ut`). Doğum saati bilinmiyorsa ya da an dönemlerin dışındaysa
+	 *  `null` döner.
+	 */
+	charaDashaAt: (input: ChartInput, jdUt: number | null, options?: InvokeOptions) => typedError<SignDashaPath | null, CommandError>(__TAURI_INVOKE("chara_dasha_at", { input, jdUt }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -207,6 +225,20 @@ export type CalcSettings = {
 	combustion_orbs: CombustionOrbs,
 	sunrise_def: SunriseDef,
 	advanced: AdvancedSettings,
+};
+
+/**  `compute_chara_dasha` sonucu. */
+export type CharaDasha = {
+	/**  Dashalar zodyak sırasıyla mı ilerliyor (lagnadan 9. burç düz sayan gruptaysa). */
+	forward: boolean,
+	/**  İlk çevrimin yılları, lagnadan dasha sırasıyla. */
+	years: [number, number, number, number, number, number, number, number, number, number, number, number],
+	/**
+	 *  İlk iki seviye, ön-sırada: her dashanın ardından on iki alt dönemi. İki çevrim de
+	 *  buradadır; `cycle` ayırır.
+	 */
+	periods: SignDashaPeriod[],
+	method: string,
 };
 
 /**  Bir rolün grahası. */
@@ -724,6 +756,26 @@ export type SignAspect = {
 	target: Sign,
 	/**  Hedef burçtaki grahalar, `Graha::ALL` sırasında (dokuz graha da sayılır). */
 	occupants: Graha[],
+};
+
+/**  Bir anı içeren dönemlerin yolu: çevrim ve kökten burçlar. */
+export type SignDashaPath = {
+	cycle: number,
+	signs: Sign[],
+};
+
+/**  Burç dashasının bir dönemi. Zamanlar UT Jülyen günüdür. */
+export type SignDashaPeriod = {
+	/**  Kökten bu döneme burçlar: `[dasha]`, `[dasha, alt dönem]`, … */
+	signs: Sign[],
+	/**  1..=3; `signs.len()` ile aynı. */
+	level: number,
+	/**  1 ya da 2: dönemin ait olduğu çevrim. */
+	cycle: number,
+	start_jd_ut: number | null,
+	end_jd_ut: number | null,
+	/**  Alt dönemleri istenebilir (`level < MAX_SIGN_DASHA_LEVEL`). */
+	has_children: boolean,
 };
 
 /**  Açılışın ölümcül olmayan durumları; arayüz uyarı bandında gösterir (spec §7). */

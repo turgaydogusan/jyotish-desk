@@ -19,6 +19,7 @@ import {
   type NewClient,
   type BirthData,
   type PanelLayout,
+  type Sign,
   type TransitAt,
   type ViewState,
 } from "./bindings";
@@ -80,6 +81,11 @@ export const api = {
   // `modules/input.ts`'teki `chartInput(opened)` ile kurulur.
   computeDrishti: (input: ChartInput) => wrap(() => commands.computeDrishti(input)),
   computeJaimini: (input: ChartInput) => wrap(() => commands.computeJaimini(input)),
+  // Chara dasha: `null` doğum saati bilinmeyen haritadır. `path` dönemin `signs`'ı, `cycle`
+  // çevrimidir; `charaDashaAt` transit anının dönem yolunu verir (arayüz tarih karşılaştırmaz).
+  computeCharaDasha: (input: ChartInput) => wrap(() => commands.computeCharaDasha(input)),
+  charaDashaChildren: (input: ChartInput, path: Sign[], cycle: number) => wrap(() => commands.charaDashaChildren(input, path, cycle)),
+  charaDashaAt: (input: ChartInput, jdUt: number) => wrap(() => commands.charaDashaAt(input, jdUt)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

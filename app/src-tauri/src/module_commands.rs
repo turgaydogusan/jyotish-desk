@@ -6,7 +6,9 @@
 use std::sync::Arc;
 
 use ephemeris::{Engine, SwissEph};
-use jyotish_core::{ChartInput, DrishtiTable, JaiminiReport};
+use jyotish_core::{
+    CharaDasha, ChartInput, DrishtiTable, JaiminiReport, Sign, SignDashaPath, SignDashaPeriod,
+};
 use tauri::State;
 
 use crate::client_commands::blocking;
@@ -55,4 +57,80 @@ pub async fn compute_jaimini(
 ) -> Result<JaiminiReport, CommandError> {
     let engine = Arc::clone(&engine);
     blocking(move || compute_jaimini_blocking(&engine, input)).await
+}
+
+/// `compute_chara_dasha` komutunun gövdesi; bloklar.
+pub fn compute_chara_dasha_blocking(
+    engine: &Engine,
+    input: ChartInput,
+) -> Result<Option<CharaDasha>, CommandError> {
+    let dasha =
+        engine.call(move |se: &mut SwissEph| jyotish_core::compute_chara_dasha(se, &input))??;
+    Ok(dasha)
+}
+
+/// Chara dasha (padakrama düzeni): yön, on iki burcun yılları ve iki seviye dönem. Eş lord
+/// kuralı `input.settings.advanced`'ten, yıl uzunluğu `input.settings.dasha_year`'dan okunur.
+/// Doğum saati bilinmiyorsa (`time_known == false`) `null` döner: sıra lagnaya bağlıdır.
+#[tauri::command]
+#[specta::specta]
+pub async fn compute_chara_dasha(
+    engine: State<'_, Arc<Engine>>,
+    input: ChartInput,
+) -> Result<Option<CharaDasha>, CommandError> {
+    let engine = Arc::clone(&engine);
+    blocking(move || compute_chara_dasha_blocking(&engine, input)).await
+}
+
+/// `chara_dasha_children` komutunun gövdesi; bloklar.
+pub fn chara_dasha_children_blocking(
+    engine: &Engine,
+    input: ChartInput,
+    path: Vec<Sign>,
+    cycle: u8,
+) -> Result<Vec<SignDashaPeriod>, CommandError> {
+    let periods = engine.call(move |se: &mut SwissEph| {
+        jyotish_core::compute_chara_dasha_children(se, &input, &path, cycle)
+    })??;
+    Ok(periods)
+}
+
+/// Bir chara dasha döneminin alt dönemleri. `path` dönemin `signs`'ı, `cycle` çevrimidir (1 ya
+/// da 2); boş yol o çevrimin dashalarını verir. Doğum saati bilinmiyorsa liste boştur.
+#[tauri::command]
+#[specta::specta]
+pub async fn chara_dasha_children(
+    engine: State<'_, Arc<Engine>>,
+    input: ChartInput,
+    path: Vec<Sign>,
+    cycle: u8,
+) -> Result<Vec<SignDashaPeriod>, CommandError> {
+    let engine = Arc::clone(&engine);
+    blocking(move || chara_dasha_children_blocking(&engine, input, path, cycle)).await
+}
+
+/// `chara_dasha_at` komutunun gövdesi; bloklar.
+pub fn chara_dasha_at_blocking(
+    engine: &Engine,
+    input: ChartInput,
+    jd_ut: f64,
+) -> Result<Option<SignDashaPath>, CommandError> {
+    let path = engine
+        .call(move |se: &mut SwissEph| jyotish_core::compute_chara_dasha_at(se, &input, jd_ut))??;
+    Ok(path)
+}
+
+/// `jd_ut` anını içeren chara dasha dönemlerinin yolu (üç seviye). Dasa şeridinin "güncel
+/// dönem"i buradan gelir; arayüz tarih karşılaştırmaz. `jd_ut` transit anıdır
+/// (`TransitView.snapshot.jd_ut`). Doğum saati bilinmiyorsa ya da an dönemlerin dışındaysa
+/// `null` döner.
+#[tauri::command]
+#[specta::specta]
+pub async fn chara_dasha_at(
+    engine: State<'_, Arc<Engine>>,
+    input: ChartInput,
+    jd_ut: f64,
+) -> Result<Option<SignDashaPath>, CommandError> {
+    let engine = Arc::clone(&engine);
+    blocking(move || chara_dasha_at_blocking(&engine, input, jd_ut)).await
 }

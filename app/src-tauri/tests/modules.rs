@@ -6,13 +6,17 @@ use std::time::{Duration, Instant};
 
 use ephemeris::Engine;
 use jyotish_core::{
-    co_lords, graha_aspect_signs, house_lord, house_sign, jaimini_report, rashi_drishti_signs,
-    sphuta_drishti, AdvancedSettings, CalcSettings, ChartInput, ChartWarning, Graha, KarakaRole,
-    KarakaScheme, Positions, Sign, Varga, ASPECTING_GRAHAS, DRISHTI_METHOD, JAIMINI_METHOD,
+    chara_dasha, co_lords, graha_aspect_signs, house_lord, house_sign, jaimini_report,
+    rashi_drishti_signs, sign_dasha_children, sign_dasha_path_at, sphuta_drishti, AdvancedSettings,
+    CalcSettings, ChartInput, ChartWarning, Graha, KarakaRole, KarakaScheme, Positions, Sign,
+    SignDashaPeriod, Varga, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD,
     SEVEN_KARAKA_ROLES,
 };
 use jyotish_desk_lib::commands::compute_chart_blocking;
-use jyotish_desk_lib::module_commands::{compute_drishti_blocking, compute_jaimini_blocking};
+use jyotish_desk_lib::module_commands::{
+    chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
+    compute_drishti_blocking, compute_jaimini_blocking,
+};
 use serde_json::Value;
 
 fn root() -> PathBuf {
@@ -53,6 +57,7 @@ fn module_commands_run_on_the_engine_thread_and_map_errors() {
     assert!(inputs.len() >= 5, "{} golden moments", inputs.len());
     drishti_checks(&engine, &inputs);
     jaimini_checks(&engine, &inputs);
+    chara_dasha_checks(&engine, &inputs);
 }
 
 fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
@@ -387,5 +392,253 @@ fn jaimini_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     assert!(
         median <= Duration::from_millis(10),
         "compute_jaimini median {median:?}"
+    );
+}
+
+fn chara_dasha_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    for (id, input) in inputs {
+        let dasha = compute_chara_dasha_blocking(engine, input.clone())
+            .unwrap_or_else(|e| panic!("{id}: {}", e.code))
+            .unwrap_or_else(|| panic!("{id}: a dasha with a known birth time"));
+        assert_eq!(dasha.method, CHARA_DASHA_METHOD, "{id}");
+        let chart = compute_chart_blocking(
+            engine,
+            input.jd_ut,
+            input.lat,
+            input.lon,
+            input.settings.clone(),
+        )
+        .expect("chart");
+        // Çapraz denetim: v1'de golden fixture'larla doğrulanmış haritanın konumlarından aynı
+        // dasha çıkar; ilk dasha doğum anında, haritanın lagna burcuyla başlar.
+        let positions = Positions::from(&chart);
+        let year = input.settings.dasha_year;
+        let want = chara_dasha(&positions, true, input.jd_ut, year).expect("lagna");
+        assert_eq!(dasha, want, "{id}");
+        let dashas: Vec<&SignDashaPeriod> = dasha.periods.iter().filter(|p| p.level == 1).collect();
+        assert_eq!(dashas[0].signs, [chart.lagna.sign], "{id}");
+        assert_eq!(dashas[0].start_jd_ut, input.jd_ut, "{id}");
+
+        // Değişmezler: ilk çevrim on iki burcun permütasyonudur; her süre 1–12 yıldır; dönemler
+        // boşluksuz ardışıktır; iki çevrimde aynı burcun yılları toplamı 12'dir.
+        let first: Vec<Sign> = dashas
+            .iter()
+            .filter(|p| p.cycle == 1)
+            .map(|p| p.signs[0])
+            .collect();
+        let mut sorted = first.clone();
+        sorted.sort_by_key(|s| s.index());
+        assert_eq!(sorted[..], Sign::ALL[..], "{id}");
+        assert!(dasha.years.iter().all(|y| (1..=12).contains(y)), "{id}");
+        for w in dashas.windows(2) {
+            assert_eq!(w[0].end_jd_ut, w[1].start_jd_ut, "{id}");
+        }
+        for p in dashas.iter().filter(|p| p.cycle == 2) {
+            let i = first
+                .iter()
+                .position(|s| *s == p.signs[0])
+                .expect("in the first cycle");
+            let years = (p.end_jd_ut - p.start_jd_ut) / year;
+            assert!(
+                (years + f64::from(dasha.years[i]) - 12.0).abs() < 1e-6,
+                "{id}: {:?}",
+                p.signs
+            );
+        }
+
+        // Alt dönemler: 2. seviye haritadaki dönemlerdir; 3. seviye ebeveyni on iki parçaya
+        // böler ve ebeveynin burcuyla biter.
+        let lagna = chart.lagna.sign;
+        let second = chara_dasha_children_blocking(engine, input.clone(), vec![lagna], 1)
+            .expect("second level");
+        assert_eq!(second[..], dasha.periods[1..13], "{id}");
+        let parent = &second[0];
+        let third = chara_dasha_children_blocking(engine, input.clone(), parent.signs.clone(), 1)
+            .expect("third level");
+        assert_eq!(
+            third,
+            sign_dasha_children(&want, &parent.signs, 1).unwrap(),
+            "{id}"
+        );
+        assert_eq!(third.len(), 12, "{id}");
+        assert_eq!(third[0].start_jd_ut, parent.start_jd_ut, "{id}");
+        assert_eq!(third[11].end_jd_ut, parent.end_jd_ut, "{id}");
+        assert_eq!(third[11].signs[2], parent.signs[1], "{id}");
+        assert!(
+            third.iter().all(|p| p.level == 3 && !p.has_children),
+            "{id}"
+        );
+        let roots =
+            chara_dasha_children_blocking(engine, input.clone(), vec![], 2).expect("second cycle");
+        assert!(
+            !roots.is_empty() && roots.iter().all(|p| p.cycle == 2 && p.level == 1),
+            "{id}"
+        );
+
+        // Bir anın yolu: doğumdan 30 yıl sonrası ilk çevrimdedir ve dönemleri anı içerir.
+        let at = input.jd_ut + 30.0 * year;
+        let path = chara_dasha_at_blocking(engine, input.clone(), at)
+            .expect("path")
+            .expect("inside the produced span");
+        assert_eq!(
+            Some(path.clone()),
+            sign_dasha_path_at(&want, at).unwrap(),
+            "{id}"
+        );
+        assert_eq!(path.signs.len(), 3, "{id}");
+        let holder = dashas
+            .iter()
+            .find(|p| p.cycle == path.cycle && p.signs[0] == path.signs[0])
+            .expect("dasha on the path");
+        assert!(holder.start_jd_ut <= at && at < holder.end_jd_ut, "{id}");
+        assert_eq!(
+            chara_dasha_at_blocking(engine, input.clone(), input.jd_ut - 1.0).expect("before"),
+            None,
+            "{id}"
+        );
+
+        // Saat bilinmiyorsa dasha Rust'ta boş döner (K2): sıra lagnaya bağlıdır.
+        let unknown = ChartInput {
+            time_known: false,
+            ..input.clone()
+        };
+        assert_eq!(
+            compute_chara_dasha_blocking(engine, unknown.clone()).expect("time unknown"),
+            None,
+            "{id}"
+        );
+        assert_eq!(
+            chara_dasha_children_blocking(engine, unknown.clone(), vec![lagna], 1)
+                .expect("time unknown"),
+            [],
+            "{id}"
+        );
+        assert_eq!(
+            chara_dasha_at_blocking(engine, unknown, at).expect("time unknown"),
+            None,
+            "{id}"
+        );
+
+        // Ayarlar hesapta kullanılır: eş lord kuralı ve yıl uzunluğu.
+        let mut plain = input.clone();
+        plain.settings.advanced.jaimini_co_lords = false;
+        plain.settings.dasha_year = 360.0;
+        let plain_dasha = compute_chara_dasha_blocking(engine, plain)
+            .expect("plain lords")
+            .expect("dasha");
+        assert_eq!(
+            plain_dasha,
+            chara_dasha(&positions, false, input.jd_ut, 360.0).expect("lagna"),
+            "{id}"
+        );
+        assert_eq!(
+            plain_dasha.periods[0].end_jd_ut,
+            input.jd_ut + f64::from(plain_dasha.years[0]) * 360.0,
+            "{id}"
+        );
+    }
+
+    // Hatalar `compute_chart` ile aynı kodlara eşlenir; yol ve çevrim hataları Vimshottari'nin
+    // koduyla (`invalid_dasha_input`) döner. Parametreler danışan verisi taşımaz.
+    let delhi = inputs
+        .iter()
+        .find(|(id, _)| id == "new-delhi-2000-01-01")
+        .expect("delhi fixture")
+        .1
+        .clone();
+    let bad_place = ChartInput {
+        lat: 91.0,
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_chara_dasha_blocking(engine, bad_place.clone())
+            .unwrap_err()
+            .code,
+        "invalid_location"
+    );
+    assert_eq!(
+        chara_dasha_children_blocking(engine, bad_place.clone(), vec![], 1)
+            .unwrap_err()
+            .code,
+        "invalid_location"
+    );
+    assert_eq!(
+        chara_dasha_at_blocking(engine, bad_place, delhi.jd_ut)
+            .unwrap_err()
+            .code,
+        "invalid_location"
+    );
+    let old_settings = ChartInput {
+        settings: CalcSettings {
+            schema_version: 1,
+            ..CalcSettings::default()
+        },
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_chara_dasha_blocking(engine, old_settings)
+            .unwrap_err()
+            .code,
+        "unsupported_schema_version"
+    );
+    let bad_moment = ChartInput {
+        jd_ut: f64::NAN,
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_chara_dasha_blocking(engine, bad_moment)
+            .unwrap_err()
+            .code,
+        "invalid_julian_day"
+    );
+    let err = chara_dasha_children_blocking(engine, delhi.clone(), vec![], 3).unwrap_err();
+    assert_eq!(
+        (err.code.as_str(), err.params["field"].as_str()),
+        ("invalid_dasha_input", "cycle")
+    );
+    let err =
+        chara_dasha_children_blocking(engine, delhi.clone(), vec![Sign::Aries; 3], 1).unwrap_err();
+    assert_eq!(
+        (err.code.as_str(), err.params["field"].as_str()),
+        ("invalid_dasha_input", "path")
+    );
+    let err = chara_dasha_at_blocking(engine, delhi.clone(), f64::NAN).unwrap_err();
+    assert_eq!(
+        (err.code.as_str(), err.params["field"].as_str()),
+        ("invalid_dasha_input", "jd_ut")
+    );
+
+    // Performans: spec §15 "compute_chara_dasha ≤ 10 ms"; §6 "alt dönemler ≤ 5 ms" (temel harita
+    // hesabı dahil).
+    let first = compute_chara_dasha_blocking(engine, delhi.clone())
+        .expect("dasha")
+        .expect("time known")
+        .periods[1]
+        .signs
+        .clone();
+    let (median, max) = median_of_15(|| {
+        compute_chara_dasha_blocking(engine, delhi.clone()).expect("chara dasha");
+    });
+    eprintln!("compute_chara_dasha median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(10),
+        "compute_chara_dasha median {median:?}"
+    );
+    let (median, max) = median_of_15(|| {
+        chara_dasha_children_blocking(engine, delhi.clone(), first.clone(), 1).expect("children");
+    });
+    eprintln!("chara_dasha_children median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(5),
+        "chara_dasha_children median {median:?}"
+    );
+    let at = delhi.jd_ut + 9_000.0;
+    let (median, max) = median_of_15(|| {
+        chara_dasha_at_blocking(engine, delhi.clone(), at).expect("path");
+    });
+    eprintln!("chara_dasha_at median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(10),
+        "chara_dasha_at median {median:?}"
     );
 }
