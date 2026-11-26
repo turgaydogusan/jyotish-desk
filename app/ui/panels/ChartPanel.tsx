@@ -1,16 +1,18 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import type { Varga } from "../bindings";
-import { chartDataFromChart, isVarga, transitPlanets, VARGA_NAMES, VARGAS } from "../chart/adapter";
+import { chartDataFromChart, isVarga, signIndex, transitPlanets, VARGA_NAMES, VARGAS } from "../chart/adapter";
 import { ChartSvg, type ChartSvgProps } from "../chart/ChartSvg";
-import { CHART_STYLES, isChartStyle, showsRetro, type ChartData } from "../chart/types";
+import { CHART_STYLES, isChartStyle, showsRetro, type ChartData, type ChartMark } from "../chart/types";
 import { useHighlight } from "../highlight/store";
+import { useJaimini } from "../modules/useJaimini";
 import { timeUnknown } from "../session/birth";
 import { useSession } from "../session/store";
 import { useTransit } from "../transit/store";
 import { useLayoutStore } from "../view/store";
-import { chartLabels } from "./labels";
+import { arudhaLabel, chartLabels, signAbbreviations } from "./labels";
 import "./panels.css";
+import { PanelError } from "./states";
 import type { PanelProps } from "./types";
 
 export function chartVarga(settings: Record<string, unknown>): Varga {
@@ -20,6 +22,8 @@ export function chartVarga(settings: Record<string, unknown>): Varga {
 /**
  * Harita paneli: açık haritanın `settings.varga` vargası, `settings.style` biçiminde.
  * Varga ve biçim seçimi panel ayarına yazılır; düzenle birlikte kaydedilir.
+ * `settings.arudha_marks` açıkken (yalnızca D1, doğum saati biliniyorsa) arudha padalar
+ * burçlarına "AL", "A2" … "UL" olarak yazılır; padalar `compute_jaimini`'den gelir.
  */
 export function ChartPanel({ panel }: PanelProps) {
   const { t } = useTranslation();
@@ -31,10 +35,18 @@ export function ChartPanel({ panel }: PanelProps) {
   const style = isChartStyle(panel.settings.style) ? panel.settings.style : "north";
   const ringOn = panel.settings.transit_ring === true;
   const ringDrawn = ringOn && varga === "D1";
+  const marksOn = panel.settings.arudha_marks === true;
+  const unknown = opened !== null && timeUnknown(opened);
+  // Padalar lagnaya bağlıdır: saat bilinmiyorsa istenmez (Rust zaten boş döner, K2).
+  const marksOff = varga !== "D1" ? "arudhaMarksOnlyD1" : unknown ? "arudhaMarksTimeUnknown" : null;
+  const jaimini = useJaimini(opened, marksOn && marksOff === null);
 
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
-  const unknown = timeUnknown(opened);
-  const data = chartDataFromChart(opened.chart, varga, { showLagna: !unknown });
+  const base = chartDataFromChart(opened.chart, varga, { showLagna: !unknown });
+  const marks: ChartMark[] = (jaimini.data?.arudhas ?? []).map((p) => ({ sign: signIndex(p.sign), text: arudhaLabel(p.house) }));
+  const data = base && marks.length > 0 ? { ...base, marks } : base;
+  const signs = signAbbreviations(t);
+  const markList = marks.map((m) => `${m.text} ${signs[m.sign]}`).join(", ");
   const svgProps = {
     style,
     labels: chartLabels(t, varga),
@@ -85,7 +97,23 @@ export function ChartPanel({ panel }: PanelProps) {
             {t("chart.transitRingOnlyD1")}
           </span>
         )}
+        <label className="chart-ring-toggle">
+          <input
+            type="checkbox"
+            checked={marksOn}
+            disabled={marksOff !== null}
+            aria-describedby={marksOff !== null ? `${id}-marks` : undefined}
+            onChange={(e) => setPanelSettings(panel.id, { arudha_marks: e.target.checked })}
+          />
+          {t("chart.arudhaMarks")}
+        </label>
+        {marksOff !== null && (
+          <span id={`${id}-marks`} className="visually-hidden">
+            {t(`chart.${marksOff}`)}
+          </span>
+        )}
       </div>
+      {jaimini.error && <PanelError error={jaimini.error} onRetry={jaimini.retry} />}
       {unknown && (
         <p className="panel-notice" role="note">
           {t("chart.timeUnknown")}
@@ -100,6 +128,8 @@ export function ChartPanel({ panel }: PanelProps) {
       ) : (
         <p className="panel-message">{t("chart.vargaMissing", { varga })}</p>
       )}
+      {/* Çizimdeki işaretler `aria-hidden`'dır: padalar burada sözcükle okunur. */}
+      {data && marks.length > 0 && <p className="visually-hidden">{t("chart.arudhaList", { list: markList })}</p>}
     </div>
   );
 }

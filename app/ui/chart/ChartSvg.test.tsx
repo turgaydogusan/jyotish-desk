@@ -287,6 +287,44 @@ test("without transits the drawing has no transit labels", () => {
   expect(container.querySelector(".chart-transit")).toBeNull();
 });
 
+test.each(STYLES)("%s: sign marks share the house layout, are plain text and not interactive", (style) => {
+  const marked: ChartData = {
+    ascSign: 0,
+    planets: [{ id: "Sun", sign: 0, degInSign: 10, retrograde: false }],
+    transits: [{ id: "Saturn", sign: 0, degInSign: 3, retrograde: true }],
+    marks: [
+      { sign: 0, text: "AL" },
+      { sign: 0, text: "A5" },
+      { sign: 7, text: "UL" },
+      // Çizilemeyen işaretler açıkça atlanır.
+      { sign: 12, text: "A9" },
+      { sign: 3, text: "" },
+    ],
+  };
+  const { container } = render(<ChartSvg data={marked} style={style} labels={labels} />);
+  const marks = [...container.querySelectorAll(".chart-mark")];
+  expect(marks.map((m) => m.textContent)).toEqual(["AL", "A5", "UL"]);
+  expect(marks.map((m) => m.getAttribute("data-house"))).toEqual(["1", "1", "8"]);
+  for (const m of marks) {
+    expect(m.closest("[role=button]")).toBeNull();
+    expect(m).toHaveAttribute("aria-hidden", "true");
+  }
+  // Aynı hücredeki dört etiket (natal, transit, iki işaret) ayrı yerlerdedir.
+  const sun = container.querySelector('[data-graha="Sun"]')!;
+  const spots = [
+    `${sun.getAttribute("data-x")},${sun.getAttribute("data-y")}`,
+    ...[container.querySelector('[data-transit="Saturn"]')!, marks[0], marks[1]].map((e) => `${e.getAttribute("x")},${e.getAttribute("y")}`),
+  ];
+  expect(new Set(spots).size).toBe(4);
+  // İşaretler evlerin erişilebilir adını değiştirmez.
+  expect(screen.getAllByRole("button", { name: /^House / })).toHaveLength(12);
+});
+
+test("without marks the drawing has no mark labels", () => {
+  const { container } = render(<ChartSvg data={data} style="north" labels={labels} />);
+  expect(container.querySelector(".chart-mark")).toBeNull();
+});
+
 test("a static drawing is one image: no buttons or tab stops, the same cells and marks", () => {
   const { container } = render(<ChartSvg data={data} style="north" labels={labels} interactive={false} />);
   expect(screen.getByRole("img", { name: "Chart" })).toBe(container.querySelector("svg.chart"));

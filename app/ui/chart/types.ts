@@ -20,12 +20,21 @@ export interface ChartPlanet {
   vargottama?: boolean;
 }
 
+/** Bir burca yazılan kısa işaret (ör. arudha pada "AL", "A2"); etkileşimsizdir. */
+export interface ChartMark {
+  /** 0 = Mesha (Koç) … 11 = Meena (Balık). */
+  sign: number;
+  text: string;
+}
+
 export interface ChartData {
   /** Lagna burcu; henüz hesaplanmıyorsa `null` (1. ev Koç kabul edilir, çağıran uyarı gösterir). */
   ascSign: number | null;
   planets: ChartPlanet[];
   /** Transit halkası (yalnızca D1, Plan 11 D9): etkileşimsiz, parantezli kısaltmalar. */
   transits?: ChartPlanet[];
+  /** Burç işaretleri (yalnızca D1; ileri modüller spec'i §5 `arudha_marks`). */
+  marks?: ChartMark[];
 }
 
 export type ChartStyle = "north" | "south" | "circle";

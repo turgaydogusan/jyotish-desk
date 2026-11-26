@@ -1,12 +1,13 @@
 // Kuzey Hint, Güney Hint ve daire haritası. Yalnızca belirteç sınıfları kullanılır;
 // gezegenlere renk verilmez. Retro "R", yanma "c", vargottama altı çizili (spec §2.3).
+// Transit etiketleri parantezli, burç işaretleri (arudha padalar) düz kısa metindir.
 // svg `role="group"`dur: `img` alt öğeleri sunumsal yapar ve ev/gezegen düğmelerini
 // ekran okuyucudan gizlerdi (spec §6).
 import { useMemo, type KeyboardEvent } from "react";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
 import "./chart.css";
 import { chartCells, layoutLabels, pathOf, VIEWBOX, type ChartCell, type LabelLayout } from "./geometry";
-import { RETRO_MARK, showsRetro, type ChartData, type ChartLabels, type ChartPlanet, type ChartStyle } from "./types";
+import { RETRO_MARK, showsRetro, type ChartData, type ChartLabels, type ChartMark, type ChartPlanet, type ChartStyle } from "./types";
 
 export interface ChartSvgProps {
   data: ChartData;
@@ -32,6 +33,11 @@ function cellHighlighted(cell: ChartCell, h: HighlightTarget | null): boolean {
 /** Çizilebilir gezegen: burç 0…11 tamsayı, derece sonlu. Diğerleri açıkça atlanır. */
 function drawable(p: ChartPlanet): boolean {
   return Number.isInteger(p.sign) && p.sign >= 0 && p.sign <= 11 && Number.isFinite(p.degInSign);
+}
+
+/** Çizilebilir işaret: burç 0…11 tamsayı ve metin boş değil. */
+function drawableMark(m: ChartMark): boolean {
+  return Number.isInteger(m.sign) && m.sign >= 0 && m.sign <= 11 && m.text !== "";
 }
 
 function labelText(p: ChartPlanet, graha: ChartLabels["graha"]): string {
@@ -73,15 +79,17 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
     };
     const natal = group(data.planets);
     const transit = group(data.transits ?? []);
+    const marked = (data.marks ?? []).filter(drawableMark);
     return cells.map((cell) => {
       const planets = natal.get(cell.sign) ?? [];
       const transits = transit.get(cell.sign) ?? [];
-      const texts = [...planets.map((p) => labelText(p, graha)), ...transits.map((p) => transitText(p, graha))];
+      const marks = marked.filter((m) => m.sign === cell.sign);
+      const texts = [...planets.map((p) => labelText(p, graha)), ...transits.map((p) => transitText(p, graha)), ...marks.map((m) => m.text)];
       const layout: LabelLayout = layoutLabels(cell, texts, hasLagna && cell.lagnaAnchor ? lagna : "");
-      return { cell, planets, transits, layout };
+      return { cell, planets, transits, marks, layout };
     });
     // textKey, graha ve lagna'yı kapsar.
-  }, [cells, data.planets, data.transits, textKey, hasLagna]);
+  }, [cells, data.planets, data.transits, data.marks, textKey, hasLagna]);
 
   const activate = (target: HighlightTarget) => (e: KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -203,6 +211,27 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
               aria-hidden="true"
             >
               {transitText(p, labels.graha)}
+            </text>
+          );
+        }),
+      )}
+      {placed.map(({ cell, planets, transits, marks, layout }) =>
+        marks.map((m, i) => {
+          const { x, y } = layout.boxes[planets.length + transits.length + i];
+          return (
+            <text
+              key={`mark-${m.text}`}
+              className="chart-mark"
+              data-mark={m.text}
+              data-house={cell.house}
+              x={x}
+              y={y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{ fontSize: `${layout.fontSize}px` }}
+              aria-hidden="true"
+            >
+              {m.text}
             </text>
           );
         }),

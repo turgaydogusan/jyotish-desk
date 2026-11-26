@@ -3,6 +3,7 @@ import { DashaStripPanel } from "../dasha/DashaStripPanel";
 import { DashaTreePanel } from "../dasha/DashaTreePanel";
 import { isKnownPanelKind, type KnownPanelKind } from "../layout/model";
 import { NotesPanel } from "../notes/NotesPanel";
+import { ArudhaPanel } from "./ArudhaPanel";
 import { AshtakavargaPanel } from "./AshtakavargaPanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
@@ -28,6 +29,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   drishti: { titleKey: "panel.drishti", component: DrishtiPanel },
   // Jaimini çekirdeği (Plan 15).
   jaimini_karakas: { titleKey: "panel.jaimini_karakas", component: JaiminiKarakasPanel },
+  arudha: { titleKey: "panel.arudha", component: ArudhaPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

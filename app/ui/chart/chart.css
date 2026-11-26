@@ -76,3 +76,9 @@
   font-style: italic;
   pointer-events: none;
 }
+
+/* Burç işaretleri (arudha padalar): kısa metin etiketi; anlamı metnin kendisi taşır (C9). */
+.chart-mark {
+  fill: var(--text-2);
+  pointer-events: none;
+}
