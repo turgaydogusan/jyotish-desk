@@ -600,3 +600,87 @@ test("shadbala and bhava bala: two palette panels on one command; units, items v
   expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
   expect(await calls()).toHaveLength(2);
 });
+
+test("yogas: a palette panel with the grouped list; the group filter and the shared highlight", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async () => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill("yoga");
+    await palette.getByRole("option", { name: /Yogalar panelini aç\/kapat/ }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  type YogasCall = { input: { jd_ut: number; time_known: boolean; settings: { schema_version: number } } };
+  const calls = async () => (await ipcCalls(page, "compute_yogas")) as YogasCall[];
+  // Rapor panel açılmadan istenmez (ileri modüller spec'i K1).
+  expect(await calls()).toHaveLength(0);
+
+  await toggle();
+  const yogas = page.getByRole("region", { name: "Yogalar" });
+  await expect(yogas).toBeFocused();
+  await expect(yogas).toBeInViewport();
+  await expect(yogas.getByRole("table")).toHaveCount(9);
+  expect(await calls()).toHaveLength(1);
+  expect((await calls())[0].input).toMatchObject({ jd_ut: 2451545, time_known: true, settings: { schema_version: 2 } });
+  // Delhi fikstürü: 9. ve 10. lord (Satürn ve Jüpiter) Koç'ta birlikte.
+  const raja = yogas.getByRole("table", { name: "Raja yogaları" });
+  const dharma = raja.locator('tbody tr[data-yoga="raja.dharma_karmadhipati"]');
+  await expect(dharma.locator("th, td")).toHaveText(["Dharma-Karmadhipati", "Jü Sa", "9 10", "birlikte", "—"]);
+  await expect(yogas.getByRole("table", { name: "Dosha" }).locator("tbody tr").locator("th, td")).toHaveText(["Kuja dosha", "Ma", "9", "—", "Venüs'ten"]);
+  await expect(yogas.getByText("Değerlendirilen kural: 41. Oluşan kayıt: 13.")).toBeVisible();
+  // İlişki ve koşul sütunlarında denetim yoktur: kaydırma kabı klavye odağı alır.
+  const list = yogas.getByRole("group", { name: "Oluşan yogalar" });
+  await list.focus();
+  await expect(list).toBeFocused();
+
+  // Ortak vurgu: satırdaki graha haritadaki grahayı ve onu içeren bütün yoga satırlarını vurgular.
+  await dharma.getByRole("button", { name: "Jüpiter" }).hover();
+  await expect(page.locator('svg [data-graha="Jupiter"]').first()).toHaveClass(/chart-planet--highlight/);
+  await expect(yogas.locator("tr.is-highlighted")).toHaveCount(4);
+  await expect(yogas.locator('tr[data-yoga="lunar.gajakesari"]')).toHaveClass(/is-highlighted/);
+
+  // Grup süzgeci listeyi daraltır; yeniden hesap istenmez ve ayar düzenle birlikte kaydedilir.
+  await yogas.getByRole("combobox", { name: "Grup" }).selectOption("Raja");
+  await expect(yogas.getByRole("table")).toHaveCount(1);
+  await expect(raja.locator("tbody tr")).toHaveCount(2);
+  await yogas.getByRole("combobox", { name: "Grup" }).selectOption("NabhasaAshraya");
+  await expect(yogas.getByText("Bu grupta oluşan yoga yok: Nabhasa: ashraya yogaları.")).toBeVisible();
+  expect(await calls()).toHaveLength(1);
+  await expect
+    .poll(async () => {
+      const saved = (await ipcCalls(page, "save_view_state")).at(-1) as { viewState: { panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: unknown }[] }[] } } } | undefined;
+      const layout = saved?.viewState.panel_layout;
+      return layout?.layouts
+        .find((l) => l.id === layout.active_layout_id)
+        ?.panels.filter((p) => p.kind === "yogas")
+        .map((p) => p.settings);
+    })
+    .toEqual([{ group: "NabhasaAshraya" }]);
+
+  // Aynı komut paneli kaldırır; odak gövdeye düşmez.
+  await toggle();
+  await expect(yogas).toHaveCount(0);
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+});
+
+test("yogas with an unknown birth time: lagna rules are skipped and the rest is marked approximate", async ({ page }) => {
+  await mockIpc(page, { session: true, unknownTime: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await palette.getByRole("combobox").fill("yoga");
+  await palette.getByRole("option", { name: /Yogalar panelini aç\/kapat/ }).click();
+  const yogas = page.getByRole("region", { name: "Yogalar" });
+  await expect(yogas.getByRole("table")).toHaveCount(4);
+  const calls = (await ipcCalls(page, "compute_yogas")) as { input: { time_known: boolean } }[];
+  expect(calls.map((c) => c.input.time_known)).toEqual([false]);
+  await expect(yogas.getByText(/^Doğum saati bilinmiyor: lagnaya bağlı 17 kural değerlendirilmedi\./)).toBeVisible();
+  await expect(yogas.getByText("Değerlendirilen kural: 24. Oluşan kayıt: 6.")).toBeVisible();
+  // Her satır "≈" işaretini taşır; evler çizgidir.
+  await expect(yogas.locator("tbody tr")).toHaveCount(6);
+  await expect(yogas.locator('tbody tr th span[aria-hidden="true"]')).toHaveText(["≈", "≈", "≈", "≈", "≈", "≈"]);
+  await expect(yogas.locator('tr[data-yoga="dosha.kuja"]').locator("th, td")).toHaveText(["≈yaklaşık Kuja dosha", "Ma", "—", "—", "Venüs'ten"]);
+});
