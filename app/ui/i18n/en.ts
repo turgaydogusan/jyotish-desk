@@ -347,6 +347,17 @@ export const en: Messages = {
   },
   dasha: {
     approx: "Birth time unknown: dasha dates are approximate (≈).",
+    system: "System",
+    systems: { vimshottari: "Vimshottari", chara: "Chara dasha" },
+    chara: {
+      direction: "Direction: {{direction}}",
+      forward: "forward",
+      backward: "reverse",
+      years: "Years: {{list}}",
+      secondCycle: "2. {{name}}",
+      timeUnknown: "Birth time unknown: chara dasha depends on the lagna and is not computed.",
+      method: "Method: {{method}}",
+    },
     strip: {
       level: "Level",
       levels: { maha: "Mahadasha", antar: "Antardasha", pratyantar: "Pratyantardasha" },

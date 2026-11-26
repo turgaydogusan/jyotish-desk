@@ -346,6 +346,17 @@ export const tr = {
   },
   dasha: {
     approx: "Doğum saati bilinmiyor: dasa tarihleri yaklaşıktır (≈).",
+    system: "Sistem",
+    systems: { vimshottari: "Vimshottari", chara: "Chara dasha" },
+    chara: {
+      direction: "Yön: {{direction}}",
+      forward: "ileri",
+      backward: "geri",
+      years: "Yıllar: {{list}}",
+      secondCycle: "2. {{name}}",
+      timeUnknown: "Doğum saati bilinmiyor: chara dasha lagnaya bağlıdır ve hesaplanmaz.",
+      method: "Yöntem: {{method}}",
+    },
     strip: {
       level: "Seviye",
       levels: { maha: "Mahadasa", antar: "Antardasa", pratyantar: "Pratyantardasa" },
