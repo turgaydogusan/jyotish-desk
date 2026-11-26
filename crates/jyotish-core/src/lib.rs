@@ -5,7 +5,7 @@
 //! Vimshottari dasha, panchang, ashtakavarga ve transit (M3). İleri modüllerin ortak temeli
 //! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`. Jaimini
 //! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`. Shadbala ve Bhava bala
-//! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`.
+//! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`. Uyum (Alt proje 3.6): `kuta`.
 
 pub mod ashtakavarga;
 mod chart;
@@ -19,6 +19,7 @@ mod fake;
 mod graha;
 mod houses;
 pub mod jaimini;
+pub mod kuta;
 pub mod lordship;
 pub mod nature;
 pub mod panchang;
