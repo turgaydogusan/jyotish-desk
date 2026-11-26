@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import type { KarakaRole } from "../bindings";
 import { GRAHA_IDS, type ChartLabels, type GrahaId } from "../chart/types";
 
 export function grahaAbbreviations(t: TFunction): Record<GrahaId, string> {
@@ -133,4 +134,21 @@ export const VARA_NAMES = {
 /** 1 tabanlı nakshatra numarasının adı; aralık dışıysa numaranın kendisi. */
 export function nakshatraName(n: number): string {
   return NAKSHATRA_NAMES[n - 1] ?? String(n);
+}
+
+/** Chara karaka rollerinin kısaltması ve adı (Sanskritçe terim; dile göre değişmez). */
+export const KARAKA_ROLES: Record<KarakaRole, { short: string; name: string }> = {
+  Atma: { short: "AK", name: "Atmakaraka" },
+  Amatya: { short: "AmK", name: "Amatyakaraka" },
+  Bhratri: { short: "BK", name: "Bhratrikaraka" },
+  Matri: { short: "MK", name: "Matrikaraka" },
+  Pitri: { short: "PiK", name: "Pitrikaraka" },
+  Putra: { short: "PK", name: "Putrakaraka" },
+  Gnati: { short: "GK", name: "Gnatikaraka" },
+  Dara: { short: "DK", name: "Darakaraka" },
+};
+
+/** Padanın etiketi: A1 Arudha Lagna (AL), A12 Upapada (UL), diğerleri A2…A11. */
+export function arudhaLabel(house: number): string {
+  return house === 1 ? "AL" : house === 12 ? "UL" : `A${house}`;
 }

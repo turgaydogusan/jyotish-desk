@@ -9,6 +9,7 @@ import { ChartPanel, chartVarga } from "./ChartPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { DrishtiPanel } from "./DrishtiPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
+import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { PanchangPanel } from "./PanchangPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
@@ -25,6 +26,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   panchang: { titleKey: "panel.panchang", component: PanchangPanel },
   ashtakavarga: { titleKey: "panel.ashtakavarga", component: AshtakavargaPanel },
   drishti: { titleKey: "panel.drishti", component: DrishtiPanel },
+  // Jaimini çekirdeği (Plan 15).
+  jaimini_karakas: { titleKey: "panel.jaimini_karakas", component: JaiminiKarakasPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

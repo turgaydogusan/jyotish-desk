@@ -24,7 +24,7 @@ function overlaps(a: Panel, b: Panel) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-test("catalog has the seven v1 panel kinds and the three foundation module panels", () => {
+test("catalog has the seven v1 panel kinds and the module panels", () => {
   expect(PANEL_KINDS).toEqual([
     "chart",
     "graha_table",
@@ -36,6 +36,7 @@ test("catalog has the seven v1 panel kinds and the three foundation module panel
     "panchang",
     "ashtakavarga",
     "drishti",
+    "jaimini_karakas",
   ]);
   expect(isKnownPanelKind("chart")).toBe(true);
   expect(isKnownPanelKind("drishti")).toBe(true);
@@ -43,7 +44,7 @@ test("catalog has the seven v1 panel kinds and the three foundation module panel
 });
 
 test("module panels are known kinds, listed once, with a size the grid accepts", () => {
-  expect(MODULE_PANELS.map((m) => m.kind)).toEqual(["panchang", "ashtakavarga", "drishti"]);
+  expect(MODULE_PANELS.map((m) => m.kind)).toEqual(["panchang", "ashtakavarga", "drishti", "jaimini_karakas"]);
   for (const m of MODULE_PANELS) {
     expect(isKnownPanelKind(m.kind)).toBe(true);
     expect(m.w).toBeGreaterThanOrEqual(minSize(m.kind).w);

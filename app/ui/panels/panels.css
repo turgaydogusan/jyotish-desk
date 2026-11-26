@@ -190,3 +190,10 @@
 .drishti-table td {
   padding: 2px 4px;
 }
+.jaimini-karakamsha {
+  margin: 8px 0 0;
+  font-weight: var(--fw-medium);
+}
+.jaimini-karakamsha .panel-message {
+  font-weight: var(--fw-regular);
+}
