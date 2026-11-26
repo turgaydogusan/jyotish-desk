@@ -1,9 +1,14 @@
-//! Muhurta (ileri modüller spec'i §10, Alt proje 3.7).
+//! Muhurta (ileri modüller spec'i §10, Alt proje 3.7): gün panchangı ve pencere araması.
 //!
 //! - `segments`: günün dilimleri ve sınıflar; saf fonksiyonlar, ephemeris görmez (K3).
+//! - `day`: seçilen anı içeren günün panchangı (`day_panchang`).
+//! - `search`: süzgece uyan zaman pencereleri, dilim dilim (`muhurta_search_page`).
 //!
 //! Hepsi olgudur: "uygun" ya da "uygunsuz" hükmü, etkinlik şablonu ve açıklama metni yoktur.
+//! Aralıklar `timeline` çekirdeğinden gelir. Sonuçlar saklanmaz (K1).
 
+pub mod day;
+pub mod search;
 pub mod segments;
 
 use serde::{Deserialize, Serialize};
@@ -11,6 +16,14 @@ use serde::{Deserialize, Serialize};
 use crate::zodiac::Sign;
 use crate::CoreError;
 
+pub use day::{
+    day_panchang, DayKarana, DayNakshatra, DayPanchang, DayTithi, PersonalFactors, DAY_FLAG_KINDS,
+};
+pub use search::{
+    muhurta_chunks, muhurta_search_page, window_snapshot, MuhurtaCriteria, MuhurtaCursor,
+    MuhurtaFilter, MuhurtaSearchPage, MuhurtaWindow, WindowSnapshot, MUHURTA_CHUNK_DAYS,
+    MUHURTA_MAX_MIN_MINUTES, MUHURTA_MAX_RANGE_DAYS, MUHURTA_MIN_WINDOW_DAYS,
+};
 pub use segments::{
     chandra_bala, day_segments, equal_parts, gulika_segment, is_panchaka, is_rikta, is_vishti,
     nakshatra_nature, rahu_segment, tara_bala, tithi_group, yamaganda_segment, ChandraBala,

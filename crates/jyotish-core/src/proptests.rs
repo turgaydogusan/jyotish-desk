@@ -1562,12 +1562,29 @@ mod timeline_properties {
 }
 
 mod muhurta_properties {
+    use ephemeris::{Body, Ephemeris};
     use proptest::prelude::*;
 
-    use crate::muhurta::day_segments;
+    use super::timeline_properties::sky;
+    use crate::chart::rasi_frame;
+    use crate::combustion::is_combust;
+    use crate::fake::FakeEph;
+    use crate::graha::Graha;
+    use crate::muhurta::day::sun_day_at;
+    use crate::muhurta::search::search_page_with;
+    use crate::muhurta::{
+        chandra_bala, day_panchang, day_segments, is_panchaka, is_rikta, is_vishti, tara_bala,
+        window_snapshot, MuhurtaCriteria, MuhurtaFilter, MuhurtaFlag, MuhurtaWindow, NatalMoon,
+        MUHURTA_MIN_WINDOW_DAYS, VAIDHRITI_YOGA, VYATIPATA_YOGA,
+    };
     use crate::panchang::Vara;
+    use crate::settings::CalcSettings;
     use crate::shadbala::vara_lord;
-    use crate::timeline::SunDay;
+    use crate::timeline::{NakshatraPada, SunDay};
+    use crate::zodiac::Sign;
+
+    const JD: f64 = 2_451_545.0;
+    const SECOND: f64 = 1.0 / 86_400.0;
 
     fn vara() -> impl Strategy<Value = Vara> {
         (0usize..7).prop_map(|i| Vara::ALL[i])
@@ -1587,6 +1604,137 @@ mod muhurta_properties {
                 next_sunrise_jd_ut: rise + length,
                 vara,
             })
+    }
+
+    fn subset<T: Clone + std::fmt::Debug + 'static>(all: Vec<T>) -> impl Strategy<Value = Vec<T>> {
+        let n = all.len();
+        // Çoğu durumda boş küme (kısıt yok); yoksa rastgele bir alt küme.
+        prop_oneof![
+            3 => Just(Vec::new()),
+            2 => proptest::sample::subsequence(all, 1..=n),
+        ]
+    }
+
+    fn criteria() -> impl Strategy<Value = MuhurtaCriteria> {
+        (
+            subset(Vara::ALL.to_vec()),
+            subset((1..=30u8).collect()),
+            subset((1..=27u8).collect()),
+            subset(Sign::ALL.to_vec()),
+            any::<bool>(),
+            prop_oneof![3 => Just(0u32), 1 => 1u32..180],
+            subset(MuhurtaFlag::ALL.to_vec()),
+            any::<bool>(),
+            any::<bool>(),
+        )
+            .prop_map(
+                |(
+                    weekdays,
+                    tithis,
+                    nakshatras,
+                    lagna_signs,
+                    daytime_only,
+                    min_minutes,
+                    exclude,
+                    require_tara,
+                    require_chandra,
+                )| MuhurtaCriteria {
+                    weekdays,
+                    tithis,
+                    nakshatras,
+                    lagna_signs,
+                    daytime_only,
+                    min_minutes,
+                    exclude,
+                    require_tara,
+                    require_chandra,
+                },
+            )
+    }
+
+    /// Süzgecin `jd` anında sağlanıp sağlanmadığı, aramadan bağımsız noktasal hesapla.
+    fn holds_at(eph: &mut FakeEph, s: &CalcSettings, f: &MuhurtaFilter, jd: f64) -> bool {
+        let c = &f.criteria;
+        let snap = window_snapshot(eph, s, jd, f.lat, f.lon).unwrap();
+        let excluded = |flag| c.exclude.contains(&flag);
+        if !c.weekdays.is_empty() && !c.weekdays.contains(&snap.vara) {
+            return false;
+        }
+        if !c.tithis.is_empty() && !c.tithis.contains(&snap.tithi) {
+            return false;
+        }
+        if !c.nakshatras.is_empty() && !c.nakshatras.contains(&snap.nakshatra) {
+            return false;
+        }
+        if !c.lagna_signs.is_empty() && !c.lagna_signs.contains(&snap.lagna_sign) {
+            return false;
+        }
+        let moon = NakshatraPada {
+            nakshatra: snap.nakshatra,
+            pada: snap.pada,
+        };
+        if (excluded(MuhurtaFlag::Rikta) && is_rikta(snap.tithi))
+            || (excluded(MuhurtaFlag::Vishti) && is_vishti(snap.karana))
+            || (excluded(MuhurtaFlag::Vyatipata) && snap.yoga == VYATIPATA_YOGA)
+            || (excluded(MuhurtaFlag::Vaidhriti) && snap.yoga == VAIDHRITI_YOGA)
+            || (excluded(MuhurtaFlag::Panchaka) && is_panchaka(moon))
+        {
+            return false;
+        }
+        let frame = rasi_frame(s);
+        let sun = eph.body(jd, Body::Sun, frame).unwrap().lon;
+        for (flag, graha, body) in [
+            (MuhurtaFlag::JupiterCombust, Graha::Jupiter, Body::Jupiter),
+            (MuhurtaFlag::VenusCombust, Graha::Venus, Body::Venus),
+        ] {
+            let p = eph.body(jd, body, frame).unwrap();
+            if excluded(flag)
+                && is_combust(graha, p.lon, sun, p.lon_speed < 0.0, &s.combustion_orbs)
+            {
+                return false;
+            }
+        }
+        let day = sun_day_at(eph, s, jd, f.lat, f.lon).unwrap();
+        if c.daytime_only && !day.is_some_and(|d| jd < d.sunset_jd_ut) {
+            return false;
+        }
+        if let Some(d) = day {
+            let seg = day_segments(&d);
+            if (excluded(MuhurtaFlag::RahuSegment) && seg.rahu.contains(jd))
+                || (excluded(MuhurtaFlag::Yamaganda) && seg.yamaganda.contains(jd))
+                || (excluded(MuhurtaFlag::Gulika) && seg.gulika.contains(jd))
+            {
+                return false;
+            }
+        }
+        if let Some(natal) = &f.natal {
+            if c.require_tara && !tara_bala(natal.nakshatra, snap.nakshatra).favourable {
+                return false;
+            }
+            let moon_sign = Sign::of(eph.body(jd, Body::Moon, frame).unwrap().lon);
+            if c.require_chandra && !chandra_bala(natal.sign, moon_sign).favourable {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn search_all(
+        eph: &mut FakeEph,
+        s: &CalcSettings,
+        f: &MuhurtaFilter,
+        chunk_days: f64,
+    ) -> Vec<MuhurtaWindow> {
+        let mut out = Vec::new();
+        let mut cursor = None;
+        loop {
+            let page = search_page_with(eph, s, f, cursor, chunk_days).unwrap();
+            out.extend(page.windows);
+            match page.next {
+                Some(next) => cursor = Some(next),
+                None => return out,
+            }
+        }
     }
 
     proptest! {
@@ -1632,6 +1780,119 @@ mod muhurta_properties {
                 if k >= 7 {
                     prop_assert_eq!(h.value, s.horas[k - 7].value);
                 }
+            }
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(48))]
+
+        #[test]
+        fn the_day_panchang_splits_its_day_and_keeps_one_vara(
+            sky in sky(),
+            offset in 0.0f64..400.0,
+            nakshatra in 1u8..=27,
+            sign in 0usize..12,
+        ) {
+            let mut eph = sky.eph();
+            let s = CalcSettings::default();
+            let natal = NatalMoon { nakshatra, sign: Sign::ALL[sign] };
+            let jd = JD + offset;
+            let d = day_panchang(&mut eph, jd, 41.0, 29.0, &s, Some(natal)).unwrap();
+            prop_assert!(d.day_start_jd_ut <= jd && jd < d.day_end_jd_ut);
+            let (a, b) = (d.day_start_jd_ut, d.day_end_jd_ut);
+            for (first, last) in [
+                (d.tithis[0].start_jd_ut, d.tithis[d.tithis.len() - 1].end_jd_ut),
+                (d.nakshatras[0].start_jd_ut, d.nakshatras[d.nakshatras.len() - 1].end_jd_ut),
+                (d.yogas[0].start_jd_ut, d.yogas[d.yogas.len() - 1].end_jd_ut),
+                (d.karanas[0].start_jd_ut, d.karanas[d.karanas.len() - 1].end_jd_ut),
+            ] {
+                prop_assert_eq!((first, last), (a, b));
+            }
+            let p = d.personal.as_ref().unwrap();
+            prop_assert_eq!(p.tara[0].start_jd_ut, a);
+            prop_assert_eq!(p.chandra[p.chandra.len() - 1].end_jd_ut, b);
+            for f in &d.flags {
+                prop_assert!(a <= f.start_jd_ut && f.start_jd_ut < f.end_jd_ut && f.end_jd_ut <= b);
+            }
+            let seg = d.segments.as_ref().unwrap();
+            prop_assert_eq!(seg.horas[0].value, vara_lord(d.vara));
+            prop_assert_eq!(seg.horas[23].end_jd_ut, b);
+        }
+
+        #[test]
+        fn every_moment_of_a_window_passes_the_filter_and_gaps_do_not(
+            sky in sky(),
+            start in 0.0f64..300.0,
+            days in 1.0f64..25.0,
+            criteria in criteria(),
+            nakshatra in 1u8..=27,
+            sign in 0usize..12,
+            samples in proptest::collection::vec(0.0f64..1.0, 3),
+        ) {
+            let mut eph = sky.eph();
+            let s = CalcSettings::default();
+            let f = MuhurtaFilter {
+                from_jd_ut: JD + start,
+                to_jd_ut: JD + start + days,
+                lat: 41.0,
+                lon: 29.0,
+                criteria,
+                natal: Some(NatalMoon { nakshatra, sign: Sign::ALL[sign] }),
+            };
+            let windows = search_all(&mut eph, &s, &f, 31.0);
+            let min_days = (f64::from(f.criteria.min_minutes) / 1440.0).max(MUHURTA_MIN_WINDOW_DAYS);
+            let mut previous_end = f.from_jd_ut;
+            for w in &windows {
+                prop_assert!(f.from_jd_ut <= w.start_jd_ut && w.end_jd_ut <= f.to_jd_ut);
+                prop_assert!(w.start_jd_ut < w.end_jd_ut);
+                prop_assert!(w.end_jd_ut - w.start_jd_ut >= min_days);
+                prop_assert!(previous_end <= w.start_jd_ut, "ordered and disjoint");
+                // Pencerenin içinden rastgele anlar (uçlardan 1 sn içeride).
+                let inner = w.end_jd_ut - w.start_jd_ut - 2.0 * SECOND;
+                if inner > 0.0 {
+                    for x in &samples {
+                        let jd = w.start_jd_ut + SECOND + inner * x;
+                        prop_assert!(holds_at(&mut eph, &s, &f, jd), "inside a window at {}", jd);
+                    }
+                }
+                // En kısa süre yokken iki pencerenin arası süzgeci sağlamaz.
+                let gap = w.start_jd_ut - previous_end;
+                if f.criteria.min_minutes == 0 && gap > 4.0 * SECOND {
+                    for x in &samples {
+                        let jd = previous_end + SECOND + (gap - 2.0 * SECOND) * x;
+                        prop_assert!(!holds_at(&mut eph, &s, &f, jd), "inside a gap at {}", jd);
+                    }
+                }
+                previous_end = w.end_jd_ut;
+            }
+        }
+
+        #[test]
+        fn chunk_length_does_not_change_the_windows(
+            sky in sky(),
+            start in 0.0f64..300.0,
+            days in 1.0f64..40.0,
+            criteria in criteria(),
+            chunk in 0.7f64..9.0,
+        ) {
+            let mut eph = sky.eph();
+            let s = CalcSettings::default();
+            let f = MuhurtaFilter {
+                from_jd_ut: JD + start,
+                to_jd_ut: JD + start + days,
+                lat: 41.0,
+                lon: 29.0,
+                criteria,
+                natal: Some(NatalMoon { nakshatra: 4, sign: Sign::Taurus }),
+            };
+            let whole = search_all(&mut eph, &s, &f, 400.0);
+            let pieces = search_all(&mut eph, &s, &f, chunk);
+            prop_assert_eq!(whole.len(), pieces.len());
+            for (a, b) in whole.iter().zip(&pieces) {
+                // Sınırlar aynı ikiye bölmeden gelmez: çözünürlük kadar oynayabilir.
+                prop_assert!((a.start_jd_ut - b.start_jd_ut).abs() < SECOND);
+                prop_assert!((a.end_jd_ut - b.end_jd_ut).abs() < SECOND);
             }
         }
     }

@@ -315,7 +315,7 @@ pub(crate) fn day_sunrise<E: Ephemeris + ?Sized>(
 }
 
 /// `sunrise`'tan sonraki ilk gün batımı; 1 gün içinde değilse `None`.
-fn day_sunset<E: Ephemeris + ?Sized>(
+pub(crate) fn day_sunset<E: Ephemeris + ?Sized>(
     eph: &mut E,
     sunrise: f64,
     geo_lat: f64,
