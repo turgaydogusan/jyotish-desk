@@ -516,3 +516,83 @@ test("chara dasha: the system selector in the dasha tree and strip; each system 
   await expect(items.nth(1)).toBeFocused();
   await expect(strip.getByRole("list")).not.toHaveAttribute("aria-busy");
 });
+
+test("shadbala and bhava bala: two palette panels on one command; units, items view and the shared highlight", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async (query: string, name: RegExp) => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill(query);
+    await palette.getByRole("option", { name }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  type ShadbalaCall = { input: { jd_ut: number; time_known: boolean; settings: { schema_version: number } } };
+  const calls = async () => (await ipcCalls(page, "compute_shadbala")) as ShadbalaCall[];
+  // Rapor panel açılmadan istenmez (ileri modüller spec'i K1).
+  expect(await calls()).toHaveLength(0);
+
+  await toggle("shadbala", /Shadbala panelini aç\/kapat/);
+  const shadbala = page.getByRole("region", { name: "Shadbala" });
+  await expect(shadbala).toBeFocused();
+  await expect(shadbala).toBeInViewport();
+  const summary = shadbala.getByRole("table", { name: /^Shadbala: yedi grahanın altı gücü/ });
+  await expect(summary).toBeVisible();
+  expect(await calls()).toHaveLength(1);
+  expect((await calls())[0].input).toMatchObject({ jd_ut: 2451545, time_known: true, settings: { schema_version: 2 } });
+  // Jüpiter en güçlü grahadır (sıra 1): toplam 533,1 virupa, oran 1,37.
+  const jupiter = summary.locator('tbody tr[data-graha="Jupiter"]');
+  await expect(jupiter.locator("td")).toHaveText(["233.8", "35.0", "185.8", "36.4", "34.3", "7.8", "533.1", "390.0", "1.37", "1"]);
+  await expect(shadbala.getByRole("list", { name: "Zaman lordları" }).getByRole("listitem")).toHaveText([
+    "Yıl lordu: Merkür",
+    "Ay lordu: Jüpiter",
+    "Gün lordu: Satürn",
+    "Saat lordu: Güneş",
+    "Tribhaga lordu: Satürn",
+  ]);
+  // Birim ve ayrıntı: yeniden hesap istenmez.
+  await shadbala.getByRole("combobox", { name: "Birim" }).selectOption("rupa");
+  await expect(jupiter.locator("td").nth(6)).toHaveText("8.89");
+  await shadbala.getByRole("combobox", { name: "Ayrıntı" }).selectOption("items");
+  await expect(shadbala.getByRole("table", { name: "Sthana bala kalemleri" })).toBeVisible();
+  await expect(shadbala.getByRole("table", { name: "Zaman gücü kalemleri" }).locator('tbody tr[data-graha="Saturn"] td').nth(5)).toHaveText("0.75");
+  expect(await calls()).toHaveLength(1);
+
+  // Bhava bala kendi isteğini yapar (her panel bir kez): aynı girdi, aynı rapor.
+  await toggle("bhava", /Bhava bala panelini aç\/kapat/);
+  const bhava = page.getByRole("region", { name: "Bhava bala" });
+  await expect(bhava).toBeFocused();
+  const seventh = bhava.locator('tbody tr[data-house="7"]');
+  await expect(seventh.locator("td")).toHaveText(["Jüpiter", "533.1", "30.0", "55.9", "619.0", "1"]);
+  expect(await calls()).toHaveLength(2);
+  expect((await calls())[1].input).toEqual((await calls())[0].input);
+
+  // Ortak vurgu: Bhava bala'daki lord, Shadbala satırını ve haritadaki grahayı vurgular.
+  await seventh.getByRole("button", { name: "Jüpiter" }).hover();
+  await expect(jupiter).toHaveClass(/is-highlighted/);
+  await expect(page.locator('svg [data-graha="Jupiter"]').first()).toHaveClass(/chart-planet--highlight/);
+  await expect(bhava.locator('tbody tr[data-house="10"]')).toHaveClass(/is-highlighted/);
+
+  // Paneller ve ayarları düzenle birlikte kaydedilir.
+  await expect
+    .poll(async () => {
+      const saved = (await ipcCalls(page, "save_view_state")).at(-1) as { viewState: { panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: unknown }[] }[] } } } | undefined;
+      const layout = saved?.viewState.panel_layout;
+      return layout?.layouts
+        .find((l) => l.id === layout.active_layout_id)
+        ?.panels.filter((p) => p.kind === "shadbala" || p.kind === "bhava_bala")
+        .map((p) => [p.kind, p.settings]);
+    })
+    .toEqual([
+      ["shadbala", { unit: "rupa", detail: "items" }],
+      ["bhava_bala", {}],
+    ]);
+
+  // Aynı komut paneli kaldırır; odak gövdeye düşmez; diğer panel yeniden istemez.
+  await toggle("shadbala", /Shadbala panelini aç\/kapat/);
+  await expect(shadbala).toHaveCount(0);
+  await expect(bhava).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+  expect(await calls()).toHaveLength(2);
+});
