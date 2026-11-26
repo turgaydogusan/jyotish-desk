@@ -354,6 +354,16 @@ mod tests {
         };
         assert!(!settings.advanced.jaimini_co_lords);
         assert_eq!(settings.advanced.karaka_scheme, KarakaScheme::Eight);
+        // Nesne olmayan `advanced` (null) varsayılanların tamamıyla değişir.
+        let mut null = v1_json(&raman());
+        null["advanced"] = json!(null);
+        assert_eq!(
+            load_calc_settings(&null.to_string(), &CalcSettings::default()),
+            SettingsLoad::Migrated {
+                settings: raman(),
+                from: 1
+            }
+        );
     }
 
     #[test]

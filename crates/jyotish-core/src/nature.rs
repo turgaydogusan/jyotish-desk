@@ -38,8 +38,7 @@ fn fixed_nature(graha: Graha, positions: &Positions) -> Nature {
                 Nature::Malefic
             }
         }
-        // Çağrılmaz; `nature` Merkür'ü kendisi çözer.
-        Graha::Mercury => Nature::Benefic,
+        Graha::Mercury => unreachable!("`nature` resolves Mercury itself"),
     }
 }
 
@@ -137,6 +136,22 @@ mod tests {
                 Nature::Malefic
             };
             assert_eq!(nature(Moon, &p), want, "moon {moon}");
+        }
+    }
+
+    #[test]
+    fn waxing_half_is_the_bright_fortnight_of_the_panchang() {
+        use crate::panchang::{paksha, tithi_no, Paksha};
+        // Sınırlar ve her tithinin içi: "büyüyen Ay" ile panchangın Shukla yarısı aynı aralıktır.
+        let mut elongations = vec![0.0, 1e-9, 179.999_999, 180.0, 180.000_001, 359.999_999];
+        elongations.extend((0..30).map(|t| f64::from(t) * 12.0 + 6.0));
+        for elongation in elongations {
+            let p = with(&[(Sun, 10.0), (Moon, 10.0 + elongation)]);
+            assert_eq!(
+                moon_is_waxing(&p),
+                paksha(tithi_no(elongation)) == Paksha::Shukla,
+                "elongation {elongation}"
+            );
         }
     }
 
