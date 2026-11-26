@@ -110,6 +110,11 @@ export const tr = {
     timeUnknown: "Doğum saati bilinmiyor: ashtakavarga lagnaya da bağlı olduğu için gösterilmiyor.",
   },
   drishti: {
+    kind: "Tür",
+    kinds: { graha: "Graha drishti", rashi: "Rashi drishti" },
+    captionRashi: "Rashi drishti: satırlar bakan, sütunlar bakılan graha",
+    rashiFull: "rashi drishti",
+    legendRashi: "{{mark}} rashi drishti: grahanın burcu, bakılan grahanın burcuna bakar; dokuz graha da sayılır. Aynı burçtaki grahalar arasında bakış yoktur.",
     value: "Değer",
     values: { full: "Tam bakış işareti", virupa: "Virupa" },
     caption: "Graha bakışları: satırlar bakan, sütunlar bakılan graha",
@@ -180,6 +185,7 @@ export const tr = {
     columns: "Sütunlar",
     lagnaRow: "Lagna",
     approx: "yaklaşık",
+    karaka: "Karaka",
   },
   errors: {
     dasha_empty: "Bu dönemin alt dönemleri alınamadı.",

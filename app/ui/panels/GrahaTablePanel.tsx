@@ -4,13 +4,16 @@ import { useTranslation } from "react-i18next";
 import type { GrahaPosition } from "../bindings";
 import { useHighlight } from "../highlight/store";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
+import { useJaimini } from "../modules/useJaimini";
 import { useSession } from "../session/store";
 import { useLayoutStore } from "../view/store";
 import { timeUnknown } from "../session/birth";
 import { Approx } from "./Approx";
 import { APPROX_COLUMNS, grahaCellText, lagnaCellText, NUMERIC_COLUMNS as NUMERIC } from "./grahaCells";
 import { GRAHA_COLUMNS, grahaColumns, toggleColumn, type GrahaColumn } from "./grahaColumns";
+import { KARAKA_ROLES } from "./labels";
 import "./panels.css";
+import { PanelError } from "./states";
 import type { PanelProps } from "./types";
 
 /** Hücre metni `grahaCells.ts`'ten; burada yalnızca erişilebilirlik sarmalayıcıları eklenir. */
@@ -35,16 +38,21 @@ function grahaCell(t: TFunction, g: GrahaPosition, column: GrahaColumn, approx: 
 /**
  * Graha tablosu (spec §3.3): sütunlar `settings.columns`'tan, değerler `Chart.grahas` ve
  * `Chart.lagna`'dan. Saat bilinmiyorsa lagna satırı ve ev sütunu gizlenir, Ay'ın saate
- * bağlı değerleri "≈" ile işaretlenir.
+ * bağlı değerleri "≈" ile işaretlenir. İsteğe bağlı "Karaka" sütunu (`settings.karaka`)
+ * chara karaka rolünü `compute_jaimini`'den okur; açık değilken komut çağrılmaz. Sütun
+ * `columns` listesinde değildir: baskı tablosu o listeyi kullanır ve değişmez (K10).
  */
 export function GrahaTablePanel({ panel }: PanelProps) {
   const { t } = useTranslation();
   const { opened } = useSession();
   const { setPanelSettings } = useLayoutStore();
   const highlight = useHighlight();
+  const karakaOn = panel.settings.karaka === true;
+  const jaimini = useJaimini(opened, karakaOn);
 
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
   if (opened.chart.grahas.length === 0) return <p className="panel-message">{t("table.empty")}</p>;
+  const roles = new Map((jaimini.data?.karakas ?? []).map((k) => [k.graha, KARAKA_ROLES[k.role]]));
 
   const unknown = timeUnknown(opened);
   const chosen = grahaColumns(panel.settings);
@@ -68,8 +76,13 @@ export function GrahaTablePanel({ panel }: PanelProps) {
               {t(`table.${c}`)}
             </label>
           ))}
+          <label>
+            <input type="checkbox" checked={karakaOn} onChange={(e) => setPanelSettings(panel.id, { karaka: e.target.checked })} />
+            {t("table.karaka")}
+          </label>
         </fieldset>
       </details>
+      {jaimini.error && <PanelError error={jaimini.error} onRetry={jaimini.retry} />}
       <table className="graha-table">
         <thead>
           <tr>
@@ -79,6 +92,7 @@ export function GrahaTablePanel({ panel }: PanelProps) {
                 {t(`table.${c}`)}
               </th>
             ))}
+            {karakaOn && <th scope="col">{t("table.karaka")}</th>}
           </tr>
         </thead>
         <tbody>
@@ -90,6 +104,7 @@ export function GrahaTablePanel({ panel }: PanelProps) {
                   {lagnaCellText(t, opened.chart.lagna, c)}
                 </td>
               ))}
+              {karakaOn && <td />}
             </tr>
           )}
           {opened.chart.grahas.map((g) => {
@@ -122,6 +137,16 @@ export function GrahaTablePanel({ panel }: PanelProps) {
                     {grahaCell(t, g, c, approx)}
                   </td>
                 ))}
+                {karakaOn && (
+                  <td data-karaka={g.graha}>
+                    {roles.has(g.graha) && (
+                      <>
+                        <abbr title={roles.get(g.graha)!.name}>{roles.get(g.graha)!.short}</abbr>
+                        <span className="visually-hidden"> {roles.get(g.graha)!.name}</span>
+                      </>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}

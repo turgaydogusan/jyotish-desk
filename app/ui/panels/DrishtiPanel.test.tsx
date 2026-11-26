@@ -1,14 +1,14 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
-vi.mock("../api", () => ({ api: { computeDrishti: vi.fn() } }));
+vi.mock("../api", () => ({ api: { computeDrishti: vi.fn(), computeJaimini: vi.fn() } }));
 
 import { api, type Result } from "../api";
-import type { DrishtiTable } from "../bindings";
+import type { DrishtiTable, JaiminiReport } from "../bindings";
 import type { Panel } from "../layout/model";
 import { fixture, unknownTimeOpened } from "../test/fixture";
 import { renderWithStores } from "../test/render";
-import { ASPECTING_GRAHAS, DrishtiPanel, drishtiValue, formatVirupa, fullAspectPairs, FULL_MARK } from "./DrishtiPanel";
+import { ASPECTING_GRAHAS, DrishtiPanel, drishtiKind, drishtiValue, formatVirupa, fullAspectPairs, FULL_MARK, rashiAspectPairs } from "./DrishtiPanel";
 
 const ok = (): Result<DrishtiTable> => ({ status: "ok", data: fixture().drishti });
 
@@ -21,9 +21,13 @@ function renderPanel(settings: Record<string, unknown> = {}, opened: ReturnType<
 const rowHeader = (name: string) => within(document.querySelector("tbody")!).getByRole("button", { name });
 const rowCells = (name: string) => [...rowHeader(name).closest("tr")!.querySelectorAll("td")].map((c) => c.textContent);
 
+const okJaimini = (): Result<JaiminiReport> => ({ status: "ok", data: fixture().jaimini });
+
 beforeEach(() => {
   vi.mocked(api.computeDrishti).mockReset();
   vi.mocked(api.computeDrishti).mockImplementation(async () => ok());
+  vi.mocked(api.computeJaimini).mockReset();
+  vi.mocked(api.computeJaimini).mockImplementation(async () => okJaimini());
 });
 
 test("asks for the open chart's aspects and marks full sign aspects, seven rows by nine columns", async () => {
@@ -163,4 +167,70 @@ test("helpers: full-aspect pairs come from the occupants, virupa text has one de
   expect([...pairs].sort()).toEqual(["Jupiter>Mercury", "Jupiter>Moon", "Jupiter>Sun", "Moon>Jupiter", "Moon>Saturn", "Saturn>Ketu", "Saturn>Moon"]);
   expect([formatVirupa(0), formatVirupa(60), formatVirupa(37.55), formatVirupa(null), formatVirupa(Number.NaN)]).toEqual(["0.0", "60.0", "37.5", "—", "—"]);
   expect(ASPECTING_GRAHAS).toEqual(["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]);
+});
+
+test("the kind selector defaults to graha drishti and asks for no Jaimini report", async () => {
+  renderPanel();
+  await screen.findByRole("table");
+  expect(screen.getByRole("combobox", { name: "Tür" })).toHaveDisplayValue("Graha drishti");
+  expect(screen.getByRole("combobox", { name: "Değer" })).toBeInTheDocument();
+  expect(api.computeJaimini).not.toHaveBeenCalled();
+  expect([drishtiKind({}), drishtiKind({ kind: "tajika" }), drishtiKind({ kind: "rashi" })]).toEqual(["graha", "graha", "rashi"]);
+});
+
+test("rashi drishti: nine rows by nine columns from the Jaimini report, marked by sign aspect", async () => {
+  renderPanel({ kind: "rashi" });
+  await screen.findByRole("table", { name: "Rashi drishti: satırlar bakan, sütunlar bakılan graha" });
+  expect(api.computeJaimini).toHaveBeenCalledTimes(1);
+  expect(api.computeJaimini).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: fixture().opened.chart.meta.settings, time_known: true });
+  expect(api.computeDrishti).not.toHaveBeenCalled();
+  // Rashi drishtide düğümler de bakar: dokuz satır. Virupa değeri yoktur: "Değer" seçici çizilmez.
+  expect(screen.getAllByRole("rowheader").map((h) => h.textContent)).toEqual(["Güneş", "Ay", "Mars", "Merkür", "Jüpiter", "Venüs", "Satürn", "Rahu", "Ketu"]);
+  expect(screen.queryByRole("combobox", { name: "Değer" })).toBeNull();
+  // Delhi fikstürü: Yay (Güneş, Merkür) boş burçlara bakar; Terazi (Ay) Kova'ya (Mars); Kova
+  // Koç'a (Jüpiter, Satürn), Yengeç'e (Rahu) ve Terazi'ye; Akrep (Venüs) Oğlak'a (Ketu), Koç'a
+  // ve Yengeç'e bakar. Bakış karşılıklıdır.
+  const f = `${FULL_MARK}rashi drishti`;
+  expect(rowCells("Güneş")).toEqual(["—", "", "", "", "", "", "", "", ""]);
+  expect(rowCells("Ay")).toEqual(["", "—", f, "", "", "", "", "", ""]);
+  expect(rowCells("Mars")).toEqual(["", f, "—", "", f, "", f, f, ""]);
+  expect(rowCells("Merkür")).toEqual(["", "", "", "—", "", "", "", "", ""]);
+  expect(rowCells("Jüpiter")).toEqual(["", "", f, "", "—", f, "", "", ""]);
+  expect(rowCells("Venüs")).toEqual(["", "", "", "", f, "—", f, f, f]);
+  expect(rowCells("Satürn")).toEqual(["", "", f, "", "", f, "—", "", ""]);
+  expect(rowCells("Rahu")).toEqual(["", "", f, "", "", f, "", "—", ""]);
+  expect(rowCells("Ketu")).toEqual(["", "", "", "", "", f, "", "", "—"]);
+  expect(document.querySelectorAll('td [aria-hidden="true"]')).toHaveLength(16);
+  expect(screen.getByText(/^● rashi drishti: grahanın burcu, bakılan grahanın burcuna bakar/)).toBeInTheDocument();
+  expect(screen.getByText("Yöntem: jaimini.core_v1")).toBeInTheDocument();
+});
+
+test("switching the kind is saved with the layout and asks the other command once", async () => {
+  const { persistence } = renderPanel({ value: "virupa" });
+  fireEvent.change(await screen.findByRole("combobox", { name: "Tür" }), { target: { value: "rashi" } });
+  await waitFor(() => expect(persistence.saved.length).toBeGreaterThan(0));
+  expect(persistence.saved.at(-1)!.viewState.panel_layout!.layouts.find((l) => l.id === "user:t")!.panels[0].settings).toEqual({ value: "virupa", kind: "rashi" });
+});
+
+test("rashi drishti: an error is shown under the toolbar, retry asks again, and the kind can still be changed", async () => {
+  vi.mocked(api.computeJaimini).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
+  renderPanel({ kind: "rashi" });
+  expect(await screen.findByRole("alert")).toHaveTextContent("Hesap tamamlanamadı (x).");
+  expect(screen.getByRole("combobox", { name: "Tür" })).toHaveDisplayValue("Rashi drishti");
+  fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
+  await screen.findByRole("table");
+  expect(api.computeJaimini).toHaveBeenCalledTimes(2);
+});
+
+test("rashi drishti: unknown birth time marks the Moon; pairs come from the occupants", async () => {
+  renderPanel({ kind: "rashi" }, unknownTimeOpened());
+  await screen.findByRole("table");
+  expect(vi.mocked(api.computeJaimini).mock.calls[0][0].time_known).toBe(false);
+  expect(document.querySelectorAll('[title="yaklaşık"]')).toHaveLength(2);
+  const pairs = rashiAspectPairs(fixture().jaimini);
+  expect(pairs.size).toBe(16);
+  for (const p of pairs) {
+    const [from, to] = p.split(">");
+    expect(pairs.has(`${to}>${from}`), p).toBe(true);
+  }
 });

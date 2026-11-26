@@ -111,6 +111,11 @@ export const en: Messages = {
     timeUnknown: "Birth time unknown: ashtakavarga also depends on the lagna and is not shown.",
   },
   drishti: {
+    kind: "Kind",
+    kinds: { graha: "Graha drishti", rashi: "Rashi drishti" },
+    captionRashi: "Rashi drishti: rows aspect, columns are aspected",
+    rashiFull: "rashi drishti",
+    legendRashi: "{{mark}} rashi drishti: the sign of the graha aspects the sign of the aspected graha; all nine grahas count. Grahas in the same sign do not aspect each other.",
     value: "Value",
     values: { full: "Full aspect mark", virupa: "Virupa" },
     caption: "Graha aspects: rows aspect, columns are aspected",
@@ -181,6 +186,7 @@ export const en: Messages = {
     columns: "Columns",
     lagnaRow: "Lagna",
     approx: "approximate",
+    karaka: "Karaka",
   },
   errors: {
     dasha_empty: "The sub-periods of this period could not be loaded.",

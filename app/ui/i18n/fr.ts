@@ -111,6 +111,11 @@ export const fr: Messages = {
     timeUnknown: "Heure de naissance inconnue : l'ashtakavarga dépend aussi du lagna et n'est pas affiché.",
   },
   drishti: {
+    kind: "Type",
+    kinds: { graha: "Graha drishti", rashi: "Rashi drishti" },
+    captionRashi: "Rashi drishti : les lignes aspectent, les colonnes sont aspectées",
+    rashiFull: "rashi drishti",
+    legendRashi: "{{mark}} rashi drishti : le signe du graha aspecte le signe du graha aspecté ; les neuf grahas comptent. Les grahas d'un même signe ne s'aspectent pas.",
     value: "Valeur",
     values: { full: "Marque d'aspect plein", virupa: "Virupa" },
     caption: "Aspects des grahas : les lignes aspectent, les colonnes sont aspectées",
@@ -181,6 +186,7 @@ export const fr: Messages = {
     columns: "Colonnes",
     lagnaRow: "Lagna",
     approx: "approximatif",
+    karaka: "Karaka",
   },
   errors: {
     dasha_empty: "Les sous-périodes de cette période n’ont pas pu être chargées.",
