@@ -290,10 +290,12 @@ Kaynak: BPHS'nin graha gücü ve bhava gücü bölümleri; hesap adımlarında 2
 
 ### Yöntem — altı güç
 
+**Çerçeveler (K5).** Burca ve burç içi dereceye dayalı kalemler rasi çerçevesindedir (uccha, saptavargaja, ojayugma, kendradi, drekkana, bhavanın burç türü). Açı farkına dayalı kalemler sidereal boylamlarla hesaplanır ve çerçeveden bağımsızdır (dig, drik, bhava drishti, paksha, graha savaşı). Ayana ve cheshta tropikal boylam kullanır. Grahanın rasi çerçevesindeki boylamı `burç başı + deg_in_sign`'dır. `Positions` lagnanın rasi çerçevesindeki derecesini taşımaz; bhava ortasının derecesi `lagna_lon + (Güneş'in rasi boylamı − Güneş'in sidereal boylamı)` ile bulunur (sidereal kipte fark 0'dır, tropikal-rasi kipinde ayanamsadır).
+
 **1. Sthana bala (konum gücü)** — beş kalemin toplamı:
 
 - *Uccha bala:* grahanın düşüş noktasından açısal uzaklığı (0°–180°) / 3.
-- *Saptavargaja bala:* D1, D2, D3, D7, D9, D12, D30 vargalarının her birinde, grahanın bulunduğu burcun lorduyla ilişkisine göre: moolatrikona 45 (yalnızca D1), kendi burcu 30, çok dost 20, dost 15, nötr 10, düşman 4, çok düşman 2. İlişki v1'deki bileşik ilişkidir (doğal + D1'den geçici). Karar: BPHS'nin değerleri kullanılır; 22,5 / 7,5 / 3,75 / 1,875 dizisini veren hesap geleneği uygulanmaz.
+- *Saptavargaja bala:* D1, D2, D3, D7, D9, D12, D30 vargalarının her birinde, grahanın bulunduğu burcun lorduyla ilişkisine göre: moolatrikona 45 (yalnızca D1), kendi burcu 30, çok dost 20, dost 15, nötr 10, düşman 4, çok düşman 2. İlişki v1'deki bileşik ilişkidir (doğal + D1'den geçici). Karar: BPHS'nin değerleri kullanılır; 22,5 / 7,5 / 3,75 / 1,875 dizisini veren hesap geleneği uygulanmaz. Kuralların sırası: (1) moolatrikona 45 yalnızca D1'de ve v1'in moolatrikona derece aralığında (`dignity::moolatrikona`); (2) varga burcu grahanın kendi burcuysa 30 (yedi vargada da; D2'de Güneş için Aslan, Ay için Yengeç); (3) değilse varga burcunun lorduyla bileşik ilişki. Geçici ilişki her vargada D1 burçlarından alınır (grahanın D1 burcu ile lordun D1 burcu; aynı burç düşmandır). Yücelme ve düşüş burcu ayrıca sayılmaz (uccha bala onu ölçer).
 - *Ojayugma bala:* Ay ve Venüs çift burçta, diğerleri tek burçta 15; aynı kural navamsa burcu için ayrıca 15.
 - *Kendradi bala:* kendra (1, 4, 7, 10) 60; panaphara (2, 5, 8, 11) 30; apoklima (3, 6, 9, 12) 15.
 - *Drekkana bala:* eril grahalar (Güneş, Mars, Jüpiter) burcun ilk 10°'sinde, nötrler (Merkür, Satürn) ikinci 10°'de, dişiller (Ay, Venüs) son 10°'de 15.
@@ -302,38 +304,40 @@ Kaynak: BPHS'nin graha gücü ve bhava gücü bölümleri; hesap adımlarında 2
 
 **3. Zaman gücü** (`temporal`; klasik adı yasak diziyi içerdiği için bu adla anılır, Ek A) — kalemleri:
 
-- *Gündüz–gece gücü* (`day_night`, klasik natonnata): `m` = doğum anının en yakın görünür öğleye uzaklığı, saat (0–12). Görünür öğle, o günün gün doğumu ile batımının orta noktasıdır. Güneş, Jüpiter, Venüs: `60 × (1 − m/12)`. Ay, Mars, Satürn: `60 × m/12`. Merkür her zaman 60.
+- *Gündüz–gece gücü* (`day_night`, klasik natonnata): `m` = doğum anının doğum gününün görünür öğlesine uzaklığı, saat; 12 saatten büyükse `24 − m` alınır (ardışık görünür öğleler 24 saat arayla sayılır; gerçek fark 30 saniyenin, yani 0,04 virupanın altındadır). Görünür öğle, o günün gün doğumu ile batımının orta noktasıdır; "gün" doğumdan önceki son gün doğumunda başlar, bu yüzden şafaktan önce doğanlarda uzaklık 12 saati aşar. Güneş, Jüpiter, Venüs: `60 × (1 − m/12)`. Ay, Mars, Satürn: `60 × m/12`. Merkür her zaman 60.
 - *Paksha bala:* `e` = Ay'ın Güneş'ten uzanımı, 0°–180°'ye indirgenmiş. Ay: `2 × e/3`. Diğerleri K6 sınıfına göre: iyicil `e/3`, kötücül `(180 − e)/3`.
-- *Tribhaga bala:* gündüz (doğuş → batış) üç eşit dilim: Merkür, Güneş, Satürn. Gece (batış → sonraki doğuş) üç eşit dilim: Ay, Venüs, Mars. İçinde bulunulan dilimin lordu 60 alır. Jüpiter her zaman 60 alır.
+- *Tribhaga bala:* gündüz (doğuş → batış) üç eşit dilim: Merkür, Güneş, Satürn. Gece (batış → sonraki doğuş) üç eşit dilim: Ay, Venüs, Mars. İçinde bulunulan dilimin lordu 60 alır. Jüpiter her zaman 60 alır. Dilimler yarı açık aralıklardır (`[başlangıç, bitiş)`): tam batış anı gecedir, tam sınırdaki an sonraki dilimdedir; saat dilimlerinde de aynı kural geçerlidir.
 - *Yıl, ay, gün ve saat lordu:* yıl lordu 15, ay lordu 30, gün lordu 45, saat lordu 60.
   - Gün lordu: vara lordu (vara gün doğumunda değişir, v1).
-  - Saat lordu (hora): gün doğumundan sonraki gün doğumuna 24 eşit dilim; ilk dilim gün lordunundur, sonrakiler Satürn → Jüpiter → Mars → Güneş → Venüs → Merkür → Ay döngüsünde ilerler.
+  - Saat lordu (hora): gün doğumundan sonraki gün doğumuna 24 eşit dilim; ilk dilim gün lordunundur, sonrakiler Satürn → Jüpiter → Mars → Güneş → Venüs → Merkür → Ay döngüsünde ilerler. Gün 24 saat değilse dilimler de eşit uzar ya da kısalır.
   - Yıl lordu: Güneş'in doğumdan önceki son sidereal Koç girişinin gerçekleştiği varanın lordu. Ay lordu: Güneş'in bulunduğu sidereal burca girişinin gerçekleştiği varanın lordu.
+  - Giriş her zodyak kipinde sidereal çerçevededir (ayarın ayanamsasıyla). Giriş anının varası doğum yerinde, v1'in vara kuralıyla ölçülür (o andan önceki son gün doğumunun yerel hafta günü; gün doğumu yoksa gün 06:00 yerel ortalama saatte başlar). Giriş anı, doğum anındaki hızdan ilk tahmin ve sekiz sabit Newton adımıyla bulunur (`sun_entry_before`).
   - Karar: yıl ve ay lordu güneş girişinden bulunur, çünkü ephemeris ile doğrulanabilir ve tek anlamlıdır; 360 günlük yıllarla ahargana sayımı uygulanmaz. Bu, modülün en çok tartışılabilir varyant seçimidir (§17).
 - *Ayana bala:* `δ = asin(sin 23°27′ × sin λ)`, `λ` tropikal boylam. Güneş, Mars, Jüpiter, Venüs: `(24 + δ) / 48 × 60`. Ay, Satürn: `(24 − δ) / 48 × 60`. Merkür: `(24 + |δ|) / 48 × 60`. Güneş'inki iki katıdır.
-- *Graha savaşı:* Mars, Merkür, Jüpiter, Venüs, Satürn'den ikisi 1° içindeyse `war: Some { with, winner }` işaretlenir; kazanan, ekliptik enlemi daha kuzeyde olandır. Güç aktarımı uygulanmaz (kapsam dışı).
+- *Graha savaşı:* Mars, Merkür, Jüpiter, Venüs, Satürn'den ikisi 1° içindeyse `war: Some { with, winner }` işaretlenir; kazanan, ekliptik enlemi daha kuzeyde olandır. Güç aktarımı uygulanmaz (kapsam dışı). Ayrıntı: fark sidereal boylamların açısal uzaklığıdır ve 1° sınırı dahildir; savaşın iki tarafı da işaretlenir. Üç graha 1° içindeyse her grahanın karşısındaki, boylamca en yakın olandır (eşitlikte Mars, Merkür, Jüpiter, Venüs, Satürn sırasında önce gelen). Enlemler eşitse aynı sırada önce gelen kazanır.
 
 **4. Cheshta bala (hareket gücü):**
 
 - Güneş: ayana bala değeri (iki katı alınmamış hâli). Ay: paksha bala değeri (iki katı alınmamış hâli).
-- Mars, Jüpiter, Satürn: `ort = (ortalama boylam + gerçek boylam) / 2` (dairesel orta nokta); `K = (ortalama Güneş − ort) mod 360`, 180°'den büyükse `360 − K`; güç `K / 3`.
+- Mars, Jüpiter, Satürn: `ort = (ortalama boylam + gerçek boylam) / 2` (dairesel orta nokta: kısa yayın ortası; tam karşıt iki boylamda yay −180° sayılır); `K = (ortalama Güneş − ort) mod 360`, 180°'den büyükse `360 − K`; güç `K / 3`.
 - Merkür, Venüs: aynı formül, "ortalama boylam" yerine ortalama Güneş, "ortalama Güneş" yerine grahanın güneş merkezli ortalama boylamı.
-- Ortalama boylamlar J2000 çağlı doğrusal ortalama öğelerden hesaplanır (`L0 + L1 × T`, tropikal, tarihin ekinoksu); gerçek boylam tropikal jeosantrik boylamdır. Katsayılar plan aşamasında yayımlanmış astronomik tablodan alınır ve ephemeris'ten uzun dönem ortalamasıyla ±0,05° içinde doğrulanır.
+- Ortalama boylamlar J2000 çağlı doğrusal ortalama öğelerden hesaplanır (`L0 + L1 × T`, tropikal, tarihin ekinoksu); gerçek boylam tropikal jeosantrik boylamdır. Katsayılar yayımlanmış tablodandır (J. Meeus, *Astronomical Algorithms*, 2. baskı, Tablo 31.A; yalnızca sabit ve doğrusal terim; `T` UT'den, J2000'den Jülyen yüzyılı): Güneş 280,466457 + 36000,7698278 T (Dünya'nın güneş merkezli ortalama boylamı + 180°); Merkür 252,250906 + 149474,0722491 T; Venüs 181,979801 + 58519,2130302 T; Mars 355,433000 + 19141,6964471 T; Jüpiter 34,351519 + 3036,3027748 T; Satürn 50,077444 + 1223,5110686 T. Katsayılar ölçüme uydurulmaz.
+- Doğrulama gerçek motorla, 1900–2100 arasında, gezegen başına sınırla yapılır (gerçek jeosantrik boylam − ortalama boylam farkının ortalaması): Güneş ve Mars ±0,05°; Jüpiter ±0,1°, Satürn ±0,3° (ikisinin ~900 yıllık karşılıklı tedirginliği iki yüzyılda ortalanmaz; ölçüm +0,055° ve −0,212°). `Ephemeris` güneş merkezli konum vermediği için Merkür ve Venüs'ün ortalama boylamı alt kavuşum anlarında Güneş'in karşısıyla karşılaştırılır: Venüs ±0,05°, Merkür ±0,5°.
 
-**5. Naisargika bala (doğal güç):** sabit. Güneş 60,00; Ay 51,43; Venüs 42,86; Jüpiter 34,29; Merkür 25,71; Mars 17,14; Satürn 8,57.
+**5. Naisargika bala (doğal güç):** sabit, 60'ın yedide birinin katları (`60 × k / 7`; Güneş 7 … Satürn 1). İki ondalıkla: Güneş 60,00; Ay 51,43; Venüs 42,86; Jüpiter 34,29; Merkür 25,71; Mars 17,14; Satürn 8,57. Hesapta yuvarlanmamış değer kullanılır.
 
-**6. Drik bala (bakış gücü):** grahaya diğer altı grahadan gelen sphuta drishti değerleri: `(Σ iyicil − Σ kötücül) / 4`, artı Merkür'ün ve Jüpiter'in bakış değerlerinin tamamı. Negatif olabilir.
+**6. Drik bala (bakış gücü):** grahaya diğer altı grahadan gelen sphuta drishti değerleri: `(Σ iyicil − Σ kötücül) / 4`, artı Merkür'ün ve Jüpiter'in bakış değerlerinin tamamı. Negatif olabilir. Karar (harfiyen okuma): diğer altı grahanın her biri K6 sınıfına göre `±bakış / 4` verir; ardından Merkür'ün ve Jüpiter'in bakış değeri bir kez daha, tamamıyla ve artı işaretle eklenir (Merkür kötücül sayılsa da). Yani iyicil Merkür ve Jüpiter bakışın 1,25 katını, kötücül sayılan Merkür 0,75 katını verir. Öteki okuma (tamamı çeyreğin *yerine* geçer: 1,00 kat) uygulanmaz; bu bir varyant seçimidir (§17). Okuma tek fonksiyondadır (`drik_bala_at`); bhava drishti aynı fonksiyonu kullanır.
 
-**Toplam ve eşik.** Toplam altı gücün toplamıdır. Klasik gerekli en az değerler (virupa): Güneş 390, Ay 360, Mars 300, Merkür 420, Jüpiter 390, Venüs 330, Satürn 300. Sonuç `total / required` oranını ve yedi graha arasındaki sırayı verir.
+**Toplam ve eşik.** Toplam altı gücün toplamıdır. Klasik gerekli en az değerler (virupa): Güneş 390, Ay 360, Mars 300, Merkür 420, Jüpiter 390, Venüs 330, Satürn 300. Sonuç `total / required` oranını ve yedi graha arasındaki sırayı verir. Sıra toplam virupaya göredir (1 en güçlü); eşit toplamda Güneş, Ay, Mars, Merkür, Jüpiter, Venüs, Satürn sırasında önce gelen öndedir. Oran ayrı sütundur ve sırayı belirlemez. `rupas = total / 60`.
 
 ### Yöntem — Bhava bala
 
-Bhava ortası `lagna_lon + 30° × (h − 1)` alınır (karar: eşit bhava; ev sistemi ayarından bağımsız ve tek anlamlı).
+Bhava ortası `lagna_lon + 30° × (h − 1)` alınır (karar: eşit bhava; ev sistemi ayarından bağımsız ve tek anlamlı). Bhavanın burcu lagna burcundan sayılan rasi evinin burcudur, derecesi lagnanın rasi çerçevesindeki derecesidir ("Çerçeveler"); lord o burcun v1 lordudur (Akrep: Mars, Kova: Satürn).
 
 - *Bhavadhipati bala:* ev lordunun Shadbala toplamı.
-- *Bhava dig bala:* bhava ortasının düştüğü burcun türüne göre güçsüz noktadan açısal uzaklık / 3. İnsan burçları (İkizler, Başak, Terazi, Kova, Yay'ın ilk yarısı): güçsüz nokta 7. bhava ortası. Dört ayaklılar (Koç, Boğa, Aslan, Yay'ın ikinci yarısı, Oğlak'ın ilk yarısı): 4. bhava ortası. Su burçları (Yengeç, Balık, Oğlak'ın ikinci yarısı): 10. bhava ortası. Akrep: 1. bhava ortası.
-- *Bhava drishti bala:* drik bala formülü, bakılan nokta bhava ortası.
-- Toplam üçünün toplamıdır; on iki bhava sıralanır.
+- *Bhava dig bala:* bhava ortasının düştüğü burcun türüne göre güçsüz noktadan açısal uzaklık / 3. İnsan burçları (İkizler, Başak, Terazi, Kova, Yay'ın ilk yarısı): güçsüz nokta 7. bhava ortası. Dört ayaklılar (Koç, Boğa, Aslan, Yay'ın ikinci yarısı, Oğlak'ın ilk yarısı): 4. bhava ortası. Su burçları (Yengeç, Balık, Oğlak'ın ikinci yarısı): 10. bhava ortası. Akrep: 1. bhava ortası. Yay ve Oğlak 15°'de bölünür (ilk yarı `[0°, 15°)`). Bhava ortaları 30° arayla durduğu için değer 0, 10, …, 60'tır.
+- *Bhava drishti bala:* drik bala formülü, bakılan nokta bhava ortası; yedi grahanın hepsi sayılır.
+- Toplam üçünün toplamıdır; on iki bhava toplama göre sıralanır (eşitlikte küçük numaralı bhava öndedir).
 
 ### Veri modeli ve IPC
 
@@ -348,6 +352,7 @@ pub struct GrahaShadbala { pub graha: Graha, pub sthana: SthanaBala, pub dig: f6
                            pub drik: f64, pub total: f64, pub rupas: f64,
                            pub required: f64, pub ratio: f64, pub rank: u8,
                            pub war: Option<GrahaWar> }
+pub struct GrahaWar { pub with: Graha, pub winner: Graha }
 pub struct TimeLords { pub year: Graha, pub month: Graha, pub weekday: Graha, pub hora: Graha,
                        pub tribhaga: Graha }
 pub struct BhavaBala { pub house: u8, pub lord: Graha, pub lord_bala: f64, pub dig: f64,
@@ -357,7 +362,24 @@ pub struct ShadbalaReport { pub grahas: [GrahaShadbala; 7], pub time_lords: Time
                             pub warnings: Vec<ChartWarning> }
 ```
 
-Saf fonksiyon `shadbala(positions, astro: &ShadbalaAstro)`; `ShadbalaAstro` toplayıcıdan gelir: önceki ve sonraki gün doğumu ile batımı, MC, tropikal boylamlar, ortalama boylamlar, yıl ve ay girişlerinin varası. Komut: `compute_shadbala(input: ChartInput) -> Option<ShadbalaReport>`; doğum saati bilinmiyorsa ya da gün doğumu yoksa (kutup günü) `None` ve ilgili uyarı.
+Saf fonksiyon `shadbala(positions, astro: &ShadbalaAstro) -> Option<ShadbalaReport>`; `ShadbalaAstro` toplayıcıdan (`compute_shadbala_astro`) gelir, el örnekleri onu elle yazar. Tip IPC'ye çıkmaz ve bilinmeyen alanı reddeder:
+
+```rust
+pub struct ShadbalaAstro {
+    pub jd_ut: f64,               // doğum anı
+    pub sunrise_jd_ut: f64,       // doğumdan önceki son gün doğumu (doğum anı dahil)
+    pub sunset_jd_ut: f64,        // o gün doğumundan sonraki ilk gün batımı
+    pub next_sunrise_jd_ut: f64,  // sonraki gün doğumu
+    pub mc_lon: f64,              // sidereal
+    pub tropical_lons: [f64; 7],
+    pub mean: MeanLongitudes,     // sun, mercury, venus, mars, jupiter, saturn
+    pub weekday: Vara, pub year_entry_weekday: Vara, pub month_entry_weekday: Vara,
+}
+```
+
+Gündüz üçte birleri doğuş → batış, gece üçte birleri batış → sonraki doğuş, saat dilimleri doğuş → sonraki doğuş arasındadır; önceki günün batışı hiçbir kalemde kullanılmaz. Saf fonksiyon lagna yoksa ya da girdi tutarsızsa `None` döner. Tutarlılık (`ShadbalaAstro::is_consistent`): değerler sonlu; doğuş ≤ doğum < sonraki doğuş; doğuş < batış < sonraki doğuş; iki doğuş arası en çok 1,5 gün (`MAX_SUNRISE_GAP_DAYS`; daha uzun bir aralık "sonraki" doğuşun ertesi günün doğuşu olmadığını gösterir ve dilimler tanımsızdır).
+
+Komut: `compute_shadbala(input: ChartInput) -> Option<ShadbalaReport>`. `None` döner: doğum saati bilinmiyorsa (K2); doğum gününün doğuşu, batışı ya da sonraki doğuşu yoksa (kutup günü ya da gecesi). Ayar, an ve konum denetimi (`compute_chart`) her durumda yapılır ve hataları aynı kodlarla döner; yeni hata kodu yoktur. `None` uyarı taşıyamaz: "ilgili uyarı" temel haritanın `SunriseUnavailable` uyarısıdır (`Chart.meta.warnings`; harita başlığındaki rozet) ve arayüz nedeni kendi bildiğinden okur (doğum saati bilinmiyorsa onu, biliniyorsa gün doğumunun yokluğunu söyler). Dolu raporun `warnings` alanı temel haritanın yalnızca `LowPrecision` uyarısını taşır. Rahu ve Ketu için kalem fonksiyonları 0 döner; rapor onları içermez.
 
 ### Arayüz
 
@@ -366,17 +388,21 @@ Saf fonksiyon `shadbala(positions, astro: &ShadbalaAstro)`; `ShadbalaAstro` topl
 | Shadbala | `shadbala` | ayrıntı (özet / kalemler), birim (virupa / rupa) | Satır: yedi graha. Özet sütunları: altı güç, toplam, gerekli, oran, sıra. "Kalemler" görünümünde sthana ve zaman gücünün alt kalemleri açılır. Altında zaman lordları satırı. |
 | Bhava bala | `bhava_bala` | birim | On iki bhava: lord, üç kalem, toplam, sıra. |
 
-- Oran 1'in altındaysa hücrede `<1` metin işareti vardır; renk kullanılmaz. Yatay çubuk gösterilirse sayı her zaman yanındadır.
-- Graha savaşı satırda `⚔` yerine düz metin "savaş: Ve" ile gösterilir.
-- Sayılar `tabular-nums`, bir ondalık.
+- Oran 1'in altındaysa hücrede `<1` metin işareti ve ekran okuyucu için "gerekli değerin altında" sözü vardır; altında bir açıklama satırı çıkar; renk kullanılmaz. `ratio < 1` karşılaştırması gösterim eşiğidir (oran Rust'tan gelir). Yatay çubuk bu sürümde çizilmez; çizilirse sayı her zaman yanındadır.
+- Graha savaşı satırda `⚔` yerine düz metin "savaş: Ve" ile gösterilir; ekran okuyucuya tam adlar ve kazanan okunur.
+- Sayılar `tabular-nums`. Virupa bir ondalık; rupa ve oran iki ondalık (bir ondalık 0,96'yı `1.0 <1` gösterirdi ve 0–10 arasındaki rupa değerlerini ayırt etmezdi); eksi işareti tipografiktir (−). 0,995 ile 1 arasındaki oran "0.99" yazılır, "1.00" değil (işaretle çelişmesin). Kalemlerin rupa gösterimi `virupa / 60`'tır (birim çevirisi, gösterim); toplamın rupası Rust'ın `rupas` alanıdır.
+- Shadbala paneli: özet tablosu her zaman görünür; "Kalemler" görünümü altına iki tablo ekler (sthana balanın beş kalemi, zaman gücünün sekiz kalemi; 24 sütunluk tek tablo dar panelde okunmaz). Altında zaman lordları listesi (beş lord, ortak vurgu düğmesi), birim açıklaması ve "Yöntem: shadbala.bphs_v1" satırı durur. Bhava bala paneli aynı raporu kendi isteğiyle okur (rapor oturumda paylaşılmaz).
+- Rapor yoksa (`None`) tablo yerine tek satır açıklama çıkar: doğum saati bilinmiyor ya da gün doğumu ya da batımı yok. Araç çubuğu yükleme, hata ve "rapor yok" durumlarında da görünür.
+- Tablolar dar panelde yatay kayar; kaydırma kabı klavye odağı alır ve adını tablonun başlığından okur (içinde odaklanabilir denetim olmayan tablolar da klavyeyle kaydırılır).
+- Klasik terimler üç dilde aynı yazılır (K11); "zaman gücü" çevrilir (Ek A).
 
 ### Test
 
-- **Çalışma kâğıdı** (`tests/golden/modules/shadbala/WORKSHEET.md` ve eşlik eden JSON, kaynak `hand`): en az 3 sentetik girdi için her kalemin aritmetiği adım adım yazılır; kâğıdı motoru yazan dışında bir gözden geçiren doğrular. Tolerans 0,01 virupa.
+- **Çalışma kâğıdı** (`tests/golden/modules/shadbala/WORKSHEET.md` ve eşlik eden JSON, kaynak `hand`): en az 3 sentetik girdi için her kalemin aritmetiği adım adım yazılır; kâğıdı motoru yazan dışında bir gözden geçiren doğrular ve kâğıdın başındaki tabloya adını, tarihi ve sonucu yazar. Tolerans 0,01 virupa. JSON girdisi §13 şemasına iki alan ekler: `astro` (`ShadbalaAstro`; zamanlar gün kesridir) ve isteğe bağlı `lats` (ekliptik enlemler); `expected` yedi grahanın 20 kalemini, `rank` ve `war` alanlarını, `time_lords`'u ve on iki bhavayı taşır; doğum saati bilinmeyen örnekte `expected` `null`'dır. Ayrı bir test örneklerin kapsaması gereken durumları sabitler (gündüz, gece ve şafak öncesi doğum; büyüyen ve küçülen Ay; enlemle ve eşit enlemle biten savaş; moolatrikona; negatif drik; Akrep ve Yay lagna; oranın iki yanı).
 - **Kalem düzeyinde el örnekleri:** her kalem için en az 4 durum (uç değerler ve bir ara değer). Örnek: yücelme noktasında uccha 60, düşüş noktasında 0; öğlede Güneş'in gündüz–gece gücü 60, gece yarısında 0; dolunayda Ay'ın paksha bala değeri 120.
 - **Property:** uccha(λ) + uccha(λ + 180°) = 60; karşıt noktalarda dig bala toplamı 60; gündüz ve gece güçlü grahaların `day_night` toplamı 60; iyicil ve kötücül paksha değerleri toplamı 60; tribhaga'da Jüpiter dışında tam bir graha 60 alır; yıl, ay, gün, saat lordu değerleri {0, 15}, {0, 30}, {0, 45}, {0, 60} kümelerindedir; naisargika sabittir; her kalem kendi aralığındadır; sıra 1–7 permütasyonudur.
-- **Astronomik çapraz denetim:** dış gezegen karşı konumdayken cheshta ≥ 55, kavuşumdayken ≤ 5 (ephemeris'ten bulunan gerçek karşı konum ve kavuşum anlarında); yıl girişi anında Güneş'in sidereal boylamı 0° ± 1″.
-- **Uçtan uca:** beş `swetest` fixture anında hata yok ve property'ler sağlanır.
+- **Astronomik çapraz denetim:** dış gezegen karşı konumdayken cheshta ≥ 55, kavuşumdayken ≤ 5 (ephemeris'ten bulunan gerçek karşı konum ve kavuşum anlarında); iç gezegenlerde alt kavuşumda ≥ 50, üst kavuşumda ≤ 10 (Merkür'ün yörünge dış merkezliği ortalama boylamı gerçek boylamdan 23°'ye kadar ayırır; ölçüm 52,3 ve 8,3); yıl girişi anında Güneş'in sidereal boylamı 0° ± 1″; giriş varası v1 panchangıyla aynıdır.
+- **Uçtan uca:** beş `swetest` fixture anında hata yoktur; dördü rapor verir ve property'ler sağlanır, biri (Tromsø 2050-12-21, kutup gecesi) `None` döner ve haritası `SunriseUnavailable` uyarısını taşır. Kutup dairesinin hemen altında ve üstünde, iki gündönümünde gerçek motorla: 65,5° ve 66,5° kuzeyde rapor vardır ve ardışık doğuşlar bir gün arayladır; 67°'de rapor yoktur.
 
 ### Gizlilik, performans, kapsam dışı
 
@@ -832,13 +858,14 @@ Ek kurallar:
 
 ## 17. Riskler ve açık noktalar
 
-- **Varyant seçimleri tartışılabilir.** Shadbala'da yıl/ay lordunun güneş girişinden bulunması, saptavargaja değerleri, özel bakışların ekleme-ve-kesme biçimi; chara dashada padakrama düzeni ve alt dönem sırası; chara karakada varsayılan sekizli şema. Hepsi `method` kimliğiyle görünürdür ve tek fonksiyonda toplanmıştır; beta astrologlarından gelen geri bildirimle ikinci bir yöntem eklenebilir (o zaman K7'ye göre ayar olur).
+- **Varyant seçimleri tartışılabilir.** Shadbala'da yıl/ay lordunun güneş girişinden bulunması (giriş sidereal çerçevede, varası doğum yerinde ölçülür), saptavargaja değerleri, drik balada Merkür ve Jüpiter'in bakışının çeyreğin *üstüne* tam eklenmesi (1,25 kat; öteki okuma 1,00 kat — §7 madde 6; çalışma kâğıdı ile motor aynı okumayı paylaşır, yani kâğıt aritmetiği doğrular, bu seçimi değil), cheshtanın ortalama öğelerle hesabı, sıranın toplama göre verilmesi, özel bakışların ekleme-ve-kesme biçimi; chara dashada padakrama düzeni ve alt dönem sırası; chara karakada varsayılan sekizli şema. Hepsi `method` kimliğiyle görünürdür ve tek fonksiyonda toplanmıştır; beta astrologlarından gelen geri bildirimle ikinci bir yöntem eklenebilir (o zaman K7'ye göre ayar olur).
 - **Kuta puan tabloları kaynaktan aktarılacak.** Üç tablo bu belgede hücre hücre yazılı değildir; §9'daki değişmezler ve iki kaynak kuralı planın ilk görevidir. Kaynaklar ayrışırsa seçim dosyada gerekçelendirilir.
-- **Ortalama boylam katsayıları** plan aşamasında yayımlanmış tablodan alınacak ve ephemeris ile doğrulanacak (§7).
+- **Ortalama boylam katsayıları** yayımlanmış tablodan alındı ve ephemeris ile gezegen başına sınırlarla doğrulandı (§7). Jüpiter ve Satürn'de tek bir ±0,05° sınırı tutmaz; iç gezegenlerin güneş merkezli ortalama boylamı yalnızca alt kavuşumlarda dolaylı ölçülür.
+- **`Positions` lagnanın rasi çerçevesindeki derecesini taşımaz.** Shadbala onu Güneş'in iki çerçevedeki farkından türetir (§7 "Çerçeveler"). Başka bir modül de gerek duyarsa §4'e `lagna_deg_in_sign` eklenmesi değerlendirilir.
 - **Tek ephemeris iş parçacığı.** Uzun aramalar harita açmayı bekletebilir; dilimleme ve 300 ms sınırı bunu karşılar. Yetmezse ikinci bir `SwissEph` örneği ayrı bir işin konusudur (SE global durumu nedeniyle süreç içinde güvenli değildir; ayrı süreç gerekir).
 - **Harita araması büyük veritabanında yavaşlayabilir.** Ölçüm ilk görevdir; oturumluk önbellek yedeği tanımlıdır (§12).
 - **El örneği yazanın kuralı yanlış anlaması** motoru da yanlış doğrular. Karşılığı: ayrı gözden geçirmede yeniden türetme (§13) ve değişmezler.
-- **Sahibin kararına bırakılanlar** (engelleyici değil; varsayılanlarla ilerlenir): Shadbala yıl/ay lordu yöntemi ve chara karaka varsayılanı beta öncesinde bir astrologla teyit edilmeli; Muhurta etkinlik şablonlarının (§10) sonraki bir sürüme alınıp alınmayacağı.
+- **Sahibin kararına bırakılanlar** (engelleyici değil; varsayılanlarla ilerlenir): Shadbala yıl/ay lordu yöntemi, drik balanın okunuşu (1,25 kat) ve chara karaka varsayılanı beta öncesinde bir astrologla teyit edilmeli; Muhurta etkinlik şablonlarının (§10) sonraki bir sürüme alınıp alınmayacağı.
 
 ## Ek A — Adlandırma eşlemeleri
 

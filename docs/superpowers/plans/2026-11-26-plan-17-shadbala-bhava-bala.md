@@ -70,6 +70,7 @@ Sahibi kararları devretti; muhafazakâr seçenek seçildi ve her karar bir sat�
   | Task 5 | | | | 71 / 665 | |
   | Task 6 | | | | 72 / 674 | |
   | Task 7 | | | | | 16 |
+  | Final inceleme | 239 | | | 72 / 677 | |
 
   Değişmeyenler: `jyotish-core` golden 8; `store` lib 86 (+1 ign.); `jyotish-desk` lib 46, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; görsel 10; yayın betiği testleri 14. `jyotish-core` lib Task 1'de 24 birim testi (sthana 8, zaman gücü 8, cheshta 4, `mod.rs` 4), Task 2'de 16 test (bhava 3, rapor 3, proptest 10), Task 3'te 6 toplayıcı testi kazanır. `modules_golden` iki test kazanır (`shadbala_hand_fixtures`, `shadbala_fixtures_cover_the_required_cases`). `jyotish-desk` `modules` tek test olarak durur (süreçte tek SE örneği); Task 4 ona `shadbala_checks`'i ekler. Task 4'te Vitest sayısı değişmez (`api.test.ts`'in tablosu büyür).
 - **Taşınan kurallar (Plan 09 C1–C14, Plan 10 C2′, C15–C17), her görevin gereksinimidir:**
