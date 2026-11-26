@@ -418,7 +418,7 @@ Komut: `compute_shadbala(input: ChartInput) -> Option<ShadbalaReport>`. `None` d
 
 Veriyle tanımlı kural kataloğu; her kural saf bir yüklemdir. Sonuç bir olgu listesidir: hangi yoga, hangi grahalar, hangi evler. Güç derecelendirmesi ve hüküm yoktur. Yalnızca D1 değerlendirilir. `YOGA_CATALOG_VERSION = 1`.
 
-Ortak tanımlar: "birlikte" = aynı burç; "karşılıklı bakış" = iki grahanın birbirine burç temelli tam bakışı; "değişim" (parivartana) = iki grahanın birbirinin burcunda olması; "ilişkili" = bu üçünden biri. Ay ve Güneş yogalarında sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn'dür.
+Ortak tanımlar: "birlikte" = aynı burç; "karşılıklı bakış" = iki grahanın birbirine burç temelli tam bakışı (7. burç her çiftte karşılıklıdır; özel bakışlardan yalnızca Mars'ın 4. ile Satürn'ün 10. bakışı birbirini karşılar); "değişim" (parivartana) = iki farklı grahanın birbirinin kendi burcunda olması; "ilişkili" = bu üçünden biri. Ay ve Güneş yogalarında sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn'dür (Güneş, Ay ve düğümler sayılmaz). Düğümler bakış atmaz, burç lordu değildir ve hiçbir kayıtta yer almaz. Lordlar lagna burcundan sayılan rasi evlerinin lordlarıdır (K4; Akrep: Mars, Kova: Satürn).
 
 | Grup | Yoga | Koşul |
 |---|---|---|
@@ -437,12 +437,12 @@ Ortak tanımlar: "birlikte" = aynı burç; "karşılıklı bakış" = iki grahan
 | Raja | Dharma-Karmadhipati | Yukarıdakinin 9. ve 10. lord özel durumu |
 | Raja | Yogakaraka | Tek graha lagna dışında hem bir kendranın hem bir trikonanın lordu |
 | Dhana | Dhana | {1, 2, 5, 9, 11} lordlarından, en az biri 2. ya da 11. lord olan iki farklı graha ilişkili |
-| Değişim | Maha / üçüncü ev lordu / Dainya | Değişim; lordlar {1,2,4,5,7,9,10,11} içindeyse Maha; biri 3. lord ve diğeri o kümedeyse "3. ev lordu değişimi"; biri 6., 8. ya da 12. lordsa Dainya |
+| Değişim | Maha / üçüncü ev lordu / Dainya | Değişim; sınıfı değişen iki ev (iki grahanın bulunduğu evler) belirler: biri 6., 8. ya da 12. evse Dainya; değilse biri 3. evse "3. ev lordu değişimi"; değilse Maha |
 | Viparita raja | Harsha, Sarala, Vimala | Sırasıyla 6., 8., 12. lord 6., 8. ya da 12. evde |
-| Neecha bhanga | Neecha bhanga | Graha düşüş burcunda ve şunlardan en az biri: düşüş burcunun lordu lagnadan ya da Ay'dan kendrada; o burçta yücelen graha lagnadan ya da Ay'dan kendrada; graha kendi dispozitörünün bakışını alıyor. Düşüş burcunda yücelen graha yoksa (Akrep) ikinci koşul uygulanmaz. Sağlanan koşullar listelenir |
+| Neecha bhanga | Neecha bhanga | Graha düşüş burcunda ve şunlardan en az biri: düşüş burcunun lordu lagnadan ya da Ay'dan kendrada; o burçta yücelen graha lagnadan ya da Ay'dan kendrada; graha kendi dispozitörünün bakışını alıyor. Düşüş burcunda yücelen graha yoksa (Akrep) ikinci koşul uygulanmaz. Ay kendisinden sayılmaz: lord ya da yücelen graha Ay ise yalnızca lagna referansı geçerlidir. Sağlanan koşullar listelenir |
 | Nabhasa – sayı | Vallaki, Dama, Pasha, Kedara, Shula, Yuga, Gola | Yedi graha sırasıyla 7, 6, 5, 4, 3, 2, 1 burca dağılmış |
 | Nabhasa – ashraya | Rajju, Musala, Nala | Yedi grahanın hepsi yürük / sabit / çift doğalı burçlarda |
-| Dosha | Kuja dosha | 3.1'deki `kuja_dosha`: Mars lagnadan, Ay'dan ya da Venüs'ten 1, 2, 4, 7, 8 ya da 12. evde; üç referans ayrı alanlarda |
+| Dosha | Kuja dosha | 3.1'deki `kuja_dosha`: Mars lagnadan, Ay'dan ya da Venüs'ten 1, 2, 4, 7, 8 ya da 12. evde; tek kayıt, sağlayan referanslar alt koşuldur (`from_lagna`, `from_moon`, `from_venus`) |
 
 Kararlar:
 
@@ -450,7 +450,17 @@ Kararlar:
 - Sunapha, Anapha ve Durudhara birbirini dışlar; Vesi, Vasi ve Ubhayachari de öyle.
 - Bir çift birden çok ilişki taşıyorsa tek kayıt, ilişki listesiyle döner.
 - İptal kuralları yalnızca tabloda yazılı olanlardır (Kemadruma, Shakata, Neecha bhanga). Kuja dosha iptalleri uygulanmaz.
-- Lagnaya bağlı yogalar doğum saati bilinmiyorsa değerlendirilmez; Ay ve Güneş yogaları "yaklaşık" işaretiyle döner.
+- Doğum saati bilinmiyorsa koşulunda lagna zorunlu olan 17 kural değerlendirilmez ve `skipped_time_unknown`'da sayılır: beş mahapurusha, Kemadruma ve Shakata (iptal kuralları lagna ister; iptali denetlenemeyen yoga bildirilmez), üç raja, dhana, üç değişim, üç viparita. Diğer 24 kural lagna seçenekleri olmadan değerlendirilir (Amala ve Vasumati yalnızca Ay'dan; Neecha bhanga'nın kendra koşulları yalnızca Ay'dan; Kuja dosha Ay'dan ve Venüs'ten); her kayıt `approximate = true` taşır ve `houses` boştur. `evaluated + skipped_time_unknown` her zaman 41'dir.
+- Katalog 41 satırdır ve tablo sırasındadır; kimlikler `"<grup>.<ad>"` biçimindedir (önekler: `mahapurusha`, `lunar`, `solar`, `raja`, `dhana`, `exchange`, `viparita`, `neecha_bhanga`, `nabhasa_count`, `nabhasa_ashraya`, `dosha`). Kayıtlar katalog sırasıyla, bir kuralın birden çok eşleşmesi graha sırasıyla döner.
+- Mahapurusha burç düzeyindedir: kendi burcu `own_sign`, yücelme burcu `exaltation` koşulunu verir, derece ayrımı yoktur (Merkür Başak'ta ikisini de taşır).
+- Kemadruma'da "boş" ve "yalnız" sayılan beş grahaya göre okunur (Güneş ve düğümler Ay'ın yanında durabilir); "Ay'dan kendralar" 1., 4., 7. ve 10. evlerdir. Gajakesari'de Ay'la aynı burç kendradır. Adhi'de üç graha aynı evde olabilir. Amala'da "o evde kötücül yok", evdeki her grahanın (düğümler dahil) K6'ya göre iyicil olmasıdır.
+- Raja: lagna lordu hem kendra hem trikona lordudur; kendra–trikona kaydı çift başınadır. Dharma-Karmadhipati, 9. ve 10. lord farklı grahalarsa ve ilişkiliyse ek bir kayıttır (aynı çift `raja.kendra_trikona` olarak da döner). Yogakaraka yalnızca lagna burcuna bağlıdır: Boğa ve Terazi'de Satürn, Yengeç ve Aslan'da Mars, Oğlak ve Kova'da Venüs.
+- Dhana: çiftin iki grahası da {1, 2, 5, 9, 11} evlerinden en az birinin lordudur, en az biri 2. ya da 11. evin lordudur ve ilişkilidirler; çift başına tek kayıt.
+- Viparita raja harfiyen uygulanır (lordun kendi evi dahil). Neecha bhanga'da düşüş burcun tamamıdır; düşüşteki her graha ayrı kayıttır; hiçbir koşul sağlanmıyorsa kayıt yoktur. Sayı ve ashraya yogaları birbirini dışlamaz.
+- `grahas` yogayı oluşturan grahalardır (`Graha::ALL` sırasında): Ay ve Güneş yogalarında ışık da listelenir; Neecha bhanga'da yalnızca düşüşteki graha; nabhasa yogalarında yedi graha; Kuja dosha'da Mars. `houses` lagnadan sayılır (artan, yinelemesiz): raja ve dhana kayıtlarında çiftin lordu olduğu ilgili evler; değişimde değişen iki ev; viparita'da lordu olunan ve bulunulan ev; diğerlerinde listelenen grahaların bulunduğu evler.
+- `relations` yalnızca çift kurallarında (kendra–trikona, Dharma-Karmadhipati, dhana, değişim) ve iki "birlikte" yogasında (Chandra-Mangala, Budha-Aditya) doludur; değişim kayıtları yalnızca `Exchange` taşır.
+- `conditions` sekiz kimlikten oluşur (`YOGA_CONDITIONS`): `own_sign`, `exaltation` (mahapurusha); `from_lagna`, `from_moon`, `from_venus` (Amala, Vasumati, Kuja dosha: tek kayıt, sağlayan referanslar); `sign_lord_in_kendra`, `exalted_graha_in_kendra`, `dispositor_aspect` (Neecha bhanga).
+- K7 ve K8 istisnası: yoga raporu `method` ve `warnings` alanı taşımaz. Yöntem kimliği `catalog_version`'dır (panel "Katalog sürümü: 1" satırını gösterir); temel haritanın `LowPrecision` uyarısı rapora taşınmaz (harita başlığındaki rozette görünür). `compute_yogas` her girdide rapor döner (`Option` değildir) ve yeni hata kodu eklemez.
 - Tüm grahaların düğüm ekseninin tek yanında toplanmasına dayanan ve klasik kaynaklarda yer almayan modern yoga kataloğa alınmaz.
 
 ### Veri modeli ve IPC
@@ -458,26 +468,32 @@ Kararlar:
 ```rust
 pub enum YogaGroup { Mahapurusha, Lunar, Solar, Raja, Dhana, Exchange, ViparitaRaja,
                      NeechaBhanga, NabhasaCount, NabhasaAshraya, Dosha }
-pub enum Relation { Conjunction, MutualAspect, Exchange }
+pub enum YogaRelation { Conjunction, MutualAspect, Exchange }
 pub struct YogaHit { pub id: String, pub group: YogaGroup, pub grahas: Vec<Graha>,
-                     pub houses: Vec<u8>, pub relations: Vec<Relation>,
+                     pub houses: Vec<u8>, pub relations: Vec<YogaRelation>,
                      pub conditions: Vec<String>,          // sağlanan alt koşul kimlikleri
                      pub approximate: bool }
 pub struct YogaReport { pub catalog_version: u32, pub hits: Vec<YogaHit>,
                         pub evaluated: u32, pub skipped_time_unknown: u32 }
 ```
 
-`id` kararlı bir kimliktir (`"mahapurusha.hamsa"`); görünen ad i18n anahtarıdır. Komut: `compute_yogas(input: ChartInput) -> YogaReport`.
+`id` kararlı bir kimliktir (`"mahapurusha.hamsa"`); görünen ad i18n anahtarıdır (`yogas.name.<grup>.<ad>`, `yogas.group.<YogaGroup>`, `yogas.condition.<kimlik>`, `yogas.relation.<YogaRelation>`). İlişki tipinin adı `YogaRelation`'dır: v1'in `dignity::Relation` tipi (doğal dostluk) aynı crate kökünden ve aynı TS bağlama dosyasından dışa aktarılır. Komut: `compute_yogas(input: ChartInput) -> YogaReport`.
+
+Katalog (kimlik ve grup) ve koşul kimlikleri arayüze IPC ile verilmez: `ui_fixture.rs` ikisini test fikstürüne yazar (`yoga_catalog`, `yoga_conditions`) ve Vitest üç dildeki adları bu listeden denetler. 3.9'un arama yüzeyi kataloğu çalışma zamanında isterse bir `yoga_catalog` komutu o alt projede tanımlanır; çekirdekte `YOGA_CATALOG`, `yoga_rule(id)` ve `YogaRule::matches` bunun için dışa açıktır.
 
 ### Arayüz
 
-`yogas` paneli. Ayar: grup süzgeci. Gruplara ayrılmış liste; her satır: yoga adı, oluşturan grahalar, evler, ilişki türü ("birlikte", "karşılıklı bakış", "değişim"), varsa sağlanan alt koşullar. Satıra gelince grahalar ve evler ortak seçimle tüm panellerde vurgulanır. Boş durum: "Katalogdaki yogalardan hiçbiri oluşmuyor" ve değerlendirilen kural sayısı. Açıklama metni yoktur.
+`yogas` paneli (7 × 14; paletten eklenir, K12). Ayar: grup süzgeci (`group`: `"all"` ya da bir `YogaGroup`; tanınmayan değer "tümü"dür); süzgeç yeniden hesap istemez ve yükleme ile hata durumlarında da görünür. Gruplara ayrılmış liste: grup başına bir tablo (başlığı grup adı), yalnızca kaydı olan gruplar, raporun sırasıyla; sütunlar Yoga, Grahalar, Evler, İlişki ("birlikte", "karşılıklı bakış", "değişim"), Koşullar; boş hücre "—". Graha kısaltmayla yazılır ve tam adıyla okunur; ev numarası "N. ev" diye okunur. Yaklaşık kayıtlar "≈" işaretini ve ekran okuyucu için "yaklaşık" sözünü taşır. Tablolar klavye odağı alan tek bir kaydırma kabındadır ("Oluşan yogalar"). Altta: doğum saati bilinmiyorsa "lagnaya bağlı N kural değerlendirilmedi" açıklaması; "Değerlendirilen kural: N. Oluşan kayıt: M."; yalnızca D1'in değerlendirildiğini ve evlerin rasi evi olduğunu söyleyen satır; "Katalog sürümü: 1". Arayüzün tanımadığı bir grubun kaydı da listelenir; hiçbir kayıt sessizce atılmaz.
+
+Ortak vurgu: ortak seçim deposu tek hedef taşır (UI spec §3.4), bu yüzden satırın tamamı birden vurgulanmaz. Satırdaki her graha ve her ev ayrı bir vurgu düğmesidir; ters yönde, vurgudaki grahayı ya da evi (burç vurgusunda: o burcun lagnadan sayılan evini; doğum saati bilinmiyorsa burç hiçbir satırı işaretlemez) içeren bütün yoga satırları işaretlenir. Bu eşleme gösterimdir (C4).
+
+Boş durum: süzülen grupta kayıt yoksa "Bu grupta oluşan yoga yok: <grup>". Raporun tamamı boş olamaz (sayı yogalarından tam biri her haritada oluşur); "Katalogdaki yogalardan hiçbiri oluşmuyor" metni ve değerlendirilen kural sayısı yalnızca savunma amaçlı çizilir. Açıklama metni yoktur.
 
 ### Test
 
-- **Kural başına el örneği:** her yoga için en az bir oluşan ve bir oluşmayan sentetik konum; iptal kuralı olanlarda ayrıca iptal edilen durum. Fixture kuralın hangi koşulla sağlandığını yazar.
-- **Property:** sayı yogalarından tam biri oluşur; kendrada olmayan graha mahapurusha veremez; Durudhara varsa Sunapha ve Anapha ayrı kayıt olarak dönmez; Kemadruma ile Sunapha/Anapha/Durudhara aynı anda oluşmaz; aynı `id` ve aynı graha kümesi iki kez dönmez; her `id` katalogdadır ve üç dilde adı vardır.
-- **Uçtan uca:** beş `swetest` fixture anında hata yok.
+- **Kural başına el örneği:** her yoga için en az bir oluşan ve bir oluşmayan sentetik konum; iptal kuralı olanlarda ayrıca iptal edilen durum. Fixture kuralın hangi koşulla sağlandığını yazar. Biçim: on beş örnek raporun tamamını yazar (`tests/golden/modules/yogas/`; ikisi doğum saati bilinmeyen); `expected` = `hits` (bütün kayıtlar, katalog sırasıyla), `absent` (örneğin "oluşmayan durum" olarak gösterdiği kurallar), `cancelled`, `evaluated`, `skipped_time_unknown`. "İptal edilen durum": temel koşulu sağlandığı hâlde kendradaki grahayla oluşmayan Kemadruma; Ay'ı lagnadan kendrada olan Shakata; düşüşte olup hiçbir koşulu sağlanmayan graha (kayıt yok). Test, iptal örneğinin temel koşulunu girdiden ayrıca denetler ve 41 kuralın, sekiz koşulun ve üç ilişki türünün örneklerde geçtiğini sabitler. Okuma kuralları ve bağımsız yeniden türetmenin kaydı `yogas/REVIEW.md`'dedir. Tablo olarak yazılabilen kurallar testte elle girilmiş yedi tabloyla durur (karşılıklı bakış, mahapurusha burçları, düşüş burcu, sayı yogası, yogakaraka, değişim sınıfı, lagna isteyen kurallar).
+- **Property:** sayı yogalarından tam biri oluşur; kendrada olmayan graha mahapurusha veremez; Durudhara varsa Sunapha ve Anapha ayrı kayıt olarak dönmez; Kemadruma ile Sunapha/Anapha/Durudhara aynı anda oluşmaz; aynı `id` ve aynı graha kümesi iki kez dönmez; her `id` katalogdadır ve üç dilde adı vardır (ad denetimi fikstürdeki katalogdan, Vitest'te).
+- **Uçtan uca:** beş `swetest` fixture anında hata yok; beşinde de rapor döner (yogalar gün doğumuna bağlı değildir). v1 haritasıyla çapraz denetim: rapor `yogas(&Positions::from(&chart))` ile aynıdır; beş mahapurusha iki yönlü denetlenir (yoga varsa ve ancak varsa graha v1'de yücelmiş, moolatrikonada ya da kendi burcunda ve rasi kendrasındadır); Neecha bhanga kaydındaki graha `Debilitated`'dir; beş anda en az bir mahapurusha ve bir Neecha bhanga vardır; ev sistemi ayarı raporu değiştirmez (K4).
 
 ### Gizlilik, performans, kapsam dışı
 
@@ -858,7 +874,7 @@ Ek kurallar:
 
 ## 17. Riskler ve açık noktalar
 
-- **Varyant seçimleri tartışılabilir.** Shadbala'da yıl/ay lordunun güneş girişinden bulunması (giriş sidereal çerçevede, varası doğum yerinde ölçülür), saptavargaja değerleri, drik balada Merkür ve Jüpiter'in bakışının çeyreğin *üstüne* tam eklenmesi (1,25 kat; öteki okuma 1,00 kat — §7 madde 6; çalışma kâğıdı ile motor aynı okumayı paylaşır, yani kâğıt aritmetiği doğrular, bu seçimi değil), cheshtanın ortalama öğelerle hesabı, sıranın toplama göre verilmesi, özel bakışların ekleme-ve-kesme biçimi; chara dashada padakrama düzeni ve alt dönem sırası; chara karakada varsayılan sekizli şema. Hepsi `method` kimliğiyle görünürdür ve tek fonksiyonda toplanmıştır; beta astrologlarından gelen geri bildirimle ikinci bir yöntem eklenebilir (o zaman K7'ye göre ayar olur).
+- **Varyant seçimleri tartışılabilir.** Shadbala'da yıl/ay lordunun güneş girişinden bulunması (giriş sidereal çerçevede, varası doğum yerinde ölçülür), saptavargaja değerleri, drik balada Merkür ve Jüpiter'in bakışının çeyreğin *üstüne* tam eklenmesi (1,25 kat; öteki okuma 1,00 kat — §7 madde 6; çalışma kâğıdı ile motor aynı okumayı paylaşır, yani kâğıt aritmetiği doğrular, bu seçimi değil), cheshtanın ortalama öğelerle hesabı, sıranın toplama göre verilmesi, özel bakışların ekleme-ve-kesme biçimi; chara dashada padakrama düzeni ve alt dönem sırası; chara karakada varsayılan sekizli şema; yogalarda mahapurushanın yalnızca lagnadan sayılması, Kemadruma'nın iptalleri, Neecha bhanga'nın üç koşulu ve Ay'ın kendisinden sayılmaması, değişim sınıfının değişen evlerle belirlenmesi, Dharma-Karmadhipati'nin ek kayıt olması (ikinci bir okuma gelirse katalog sürümü artar). Hepsi `method` kimliğiyle görünürdür ve tek fonksiyonda toplanmıştır; beta astrologlarından gelen geri bildirimle ikinci bir yöntem eklenebilir (o zaman K7'ye göre ayar olur).
 - **Kuta puan tabloları kaynaktan aktarılacak.** Üç tablo bu belgede hücre hücre yazılı değildir; §9'daki değişmezler ve iki kaynak kuralı planın ilk görevidir. Kaynaklar ayrışırsa seçim dosyada gerekçelendirilir.
 - **Ortalama boylam katsayıları** yayımlanmış tablodan alındı ve ephemeris ile gezegen başına sınırlarla doğrulandı (§7). Jüpiter ve Satürn'de tek bir ±0,05° sınırı tutmaz; iç gezegenlerin güneş merkezli ortalama boylamı yalnızca alt kavuşumlarda dolaylı ölçülür.
 - **`Positions` lagnanın rasi çerçevesindeki derecesini taşımaz.** Shadbala onu Güneş'in iki çerçevedeki farkından türetir (§7 "Çerçeveler"). Başka bir modül de gerek duyarsa §4'e `lagna_deg_in_sign` eklenmesi değerlendirilir.

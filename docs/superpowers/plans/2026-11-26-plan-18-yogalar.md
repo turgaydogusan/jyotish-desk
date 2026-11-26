@@ -71,6 +71,7 @@ Sahibi kararları devretti; muhafazakâr seçenek seçildi ve her karar bir sat�
   | Task 4 | | | 1 | 72 / 677 | |
   | Task 5 | | | | 73 / 689 | |
   | Task 6 | | | | | 18 |
+  | Final inceleme | 276 | 11 | 1 | 73 / 692 | 18 |
 
   Değişmeyenler: `jyotish-core` golden 8; `store` lib 86 (+1 ign.); `jyotish-desk` lib 46, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; görsel 10; yayın betiği testleri 14. `jyotish-core` lib Task 1'de 20 birim testi (`mod.rs` 4, `luminaries.rs` 9, `placement.rs` 7), Task 2'de 8 test (`lords.rs`), Task 3'te 9 test (`mod.rs` 3: rapor ve toplayıcı; proptest 6) kazanır. `modules_golden` iki test kazanır (`yogas_hand_fixtures`, `yogas_fixtures_cover_every_rule`). `jyotish-desk` `modules` tek test olarak durur (süreçte tek SE örneği); Task 4 ona `yogas_checks`'i ekler. Task 4'te Vitest sayısı değişmez (`api.test.ts`'in tablosu büyür). Task 5 bir dosya ve 12 test ekler (`YogasPanel.test.tsx`). Task 6 iki e2e testi ekler.
 - **Taşınan kurallar (Plan 09 C1–C14, Plan 10 C2′, C15–C17), her görevin gereksinimidir:**
