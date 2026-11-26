@@ -1,7 +1,7 @@
 // Gerçek veri fikstürü (app/src-tauri/tests/ui_fixture.rs üretir): Delhi 2000-01-01 17:30
 // için `create_client` dönüşü, ilk 3. seviye dönemin alt dönemleri, "new delhi" atlas araması,
-// an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit, bakış tablosu, Jaimini raporu
-// ve chara dasha. Arayüz hesap yapmadığı için testler bunu çizer.
+// an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit, bakış tablosu, Jaimini raporu,
+// chara dasha ve Shadbala raporu. Arayüz hesap yapmadığı için testler bunu çizer.
 import type {
   CharaDasha,
   CommandError,
@@ -13,6 +13,7 @@ import type {
   OpenedClient,
   PlaceHit,
   PrefsLoad,
+  ShadbalaReport,
   Sign,
   SignDashaPath,
   SignDashaPeriod,
@@ -42,6 +43,8 @@ export interface UiFixture {
   chara_dasha_at: SignDashaPath;
   /** `chara_dasha_children`: transit anındaki alt dönemin (`chara_dasha_at` yolunun ilk iki burcu) 3. seviyesi. */
   chara_dasha_at_children: SignDashaPeriod[];
+  /** `compute_shadbala`, aynı girdiyle: yedi graha, zaman lordları, on iki bhava. */
+  shadbala: ShadbalaReport;
 }
 
 const FIXTURE = JSON.parse(raw) as UiFixture;

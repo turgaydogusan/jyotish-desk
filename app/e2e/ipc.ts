@@ -110,6 +110,8 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
           return [];
         },
         chara_dasha_at: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.chara_dasha_at : null),
+        // Shadbala: fikstürdeki gerçek sonuç; saat bilinmiyorsa Rust `null` döner.
+        compute_shadbala: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.shadbala : null),
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.
         app_info: () => ({ version: "0.9.0", updaterConfigured: true }),

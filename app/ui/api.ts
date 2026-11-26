@@ -86,6 +86,9 @@ export const api = {
   computeCharaDasha: (input: ChartInput) => wrap(() => commands.computeCharaDasha(input)),
   charaDashaChildren: (input: ChartInput, path: Sign[], cycle: number) => wrap(() => commands.charaDashaChildren(input, path, cycle)),
   charaDashaAt: (input: ChartInput, jdUt: number) => wrap(() => commands.charaDashaAt(input, jdUt)),
+  // Shadbala ve Bhava bala: `null` doğum saati bilinmeyen ya da o gün Güneş'in doğmadığı ya da
+  // batmadığı haritadır.
+  computeShadbala: (input: ChartInput) => wrap(() => commands.computeShadbala(input)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

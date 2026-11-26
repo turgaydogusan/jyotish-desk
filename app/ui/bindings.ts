@@ -55,6 +55,12 @@ export const commands = {
 	 *  `null` döner.
 	 */
 	charaDashaAt: (input: ChartInput, jdUt: number | null, options?: InvokeOptions) => typedError<SignDashaPath | null, CommandError>(__TAURI_INVOKE("chara_dasha_at", { input, jdUt }, options)),
+	/**
+	 *  Shadbala ve Bhava bala: yedi grahanın altı gücü, toplamı, gerekli değere oranı ve sırası;
+	 *  zaman lordları; on iki bhavanın gücü. Doğum saati bilinmiyorsa (`time_known == false`) ya da
+	 *  doğum yerinde o gün gün doğumu ya da batımı yoksa `null` döner.
+	 */
+	computeShadbala: (input: ChartInput, options?: InvokeOptions) => typedError<ShadbalaReport | null, CommandError>(__TAURI_INVOKE("compute_shadbala", { input }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -191,6 +197,21 @@ export type AyanamsaSystem = "Lahiri" | "Raman" |
 	t0_jd: number | null,
 	deg: number | null,
 } };
+
+/**  Bir bhavanın gücü, virupa. */
+export type BhavaBala = {
+	/**  1..=12. */
+	house: number,
+	lord: Graha,
+	/**  Bhavadhipati bala: lordun Shadbala toplamı. */
+	lord_bala: number | null,
+	dig: number | null,
+	/**  Negatif olabilir. */
+	drishti: number | null,
+	total: number | null,
+	/**  On iki bhava arasında toplamın sırası: 1 en güçlü. */
+	rank: number,
+};
 
 export type Bhavas = {
 	system: HouseSystem,
@@ -452,6 +473,35 @@ export type GrahaPosition = {
 	house: number,
 	/**  D1 ve D9 burcu aynı (rasi çerçevesinde). */
 	vargottama: boolean,
+};
+
+/**  Bir grahanın Shadbala sonucu, virupa. */
+export type GrahaShadbala = {
+	graha: Graha,
+	sthana: SthanaBala,
+	dig: number | null,
+	temporal: TemporalBala,
+	cheshta: number | null,
+	naisargika: number | null,
+	/**  Negatif olabilir. */
+	drik: number | null,
+	/**  Altı gücün toplamı. */
+	total: number | null,
+	/**  `total / 60`. */
+	rupas: number | null,
+	/**  Klasik gerekli en az değer, virupa. */
+	required: number | null,
+	/**  `total / required`. */
+	ratio: number | null,
+	/**  Yedi graha arasında toplamın sırası: 1 en güçlü. */
+	rank: number,
+	war: GrahaWar | null,
+};
+
+/**  Graha savaşı işareti: `with` karşıdaki graha, `winner` kazanan. Güç aktarımı uygulanmaz. */
+export type GrahaWar = {
+	with: Graha,
+	winner: Graha,
 };
 
 export type HouseSystem = "WholeSign" | 
@@ -748,6 +798,17 @@ export type SearchHit = {
 
 export type SearchMatch = "Name" | "Tag" | "Note";
 
+/**  `compute_shadbala` sonucu. AI yorum paneli için sözleşmedir. */
+export type ShadbalaReport = {
+	/**  `SHADBALA_GRAHAS` sırasında. */
+	grahas: [GrahaShadbala, GrahaShadbala, GrahaShadbala, GrahaShadbala, GrahaShadbala, GrahaShadbala, GrahaShadbala],
+	time_lords: TimeLords,
+	/**  1.–12. bhava. */
+	bhavas: [BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala],
+	method: string,
+	warnings: ChartWarning[],
+};
+
 export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | "Libra" | "Scorpio" | "Sagittarius" | "Capricorn" | "Aquarius" | "Pisces";
 
 /**  Bir grahanın bir burca tam bakışı ve o burçtaki grahalar. */
@@ -776,6 +837,16 @@ export type SignDashaPeriod = {
 	end_jd_ut: number | null,
 	/**  Alt dönemleri istenebilir (`level < MAX_SIGN_DASHA_LEVEL`). */
 	has_children: boolean,
+};
+
+/**  Sthana bala (konum gücü) kalemleri, virupa. */
+export type SthanaBala = {
+	uccha: number | null,
+	saptavargaja: number | null,
+	ojayugma: number | null,
+	kendradi: number | null,
+	drekkana: number | null,
+	total: number | null,
 };
 
 /**  Açılışın ölümcül olmayan durumları; arayüz uyarı bandında gösterir (spec §7). */
@@ -815,9 +886,31 @@ export type TagCount = {
 	charts: number,
 };
 
+/**  Zaman gücü kalemleri, virupa. `ayana` Güneş'te iki katıdır. */
+export type TemporalBala = {
+	day_night: number | null,
+	paksha: number | null,
+	tribhaga: number | null,
+	year_lord: number | null,
+	month_lord: number | null,
+	weekday_lord: number | null,
+	hora_lord: number | null,
+	ayana: number | null,
+	total: number | null,
+};
+
 export type TimeCertainty = "Exact" | "Approx" | 
 /**  Saat bilinmiyor: `BirthData.time` boştur, hesap yerel 12:00 ile yapılır. */
 "Unknown";
+
+/**  Zaman gücünde değer alan beş lord. */
+export type TimeLords = {
+	year: Graha,
+	month: Graha,
+	weekday: Graha,
+	hora: Graha,
+	tribhaga: Graha,
+};
 
 export type Tithi = {
 	/**  1..=30. */

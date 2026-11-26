@@ -1,7 +1,7 @@
 //! Arayüz testlerinin (vitest ve Playwright) gerçek veri fikstürü:
 //! `app/ui/test/fixtures/delhi.json`. Gerçek motor, store ve atlasla üretilir; saat sabit,
 //! UUID'ler sabit dizgiyle değiştirilir. Arayüz kendi haritasını hesaplamadığı için
-//! (spec §4) testler bu dosyadaki `OpenedClient`'ı çizer.
+//! (spec §4) testler bu dosyadaki `OpenedClient`'ı ve modül sonuçlarını çizer.
 //! Güncellemek için: `UPDATE_FIXTURES=1 cargo test -p jyotish-desk --test ui_fixture`.
 //! Denetim sayılarda göreli 1e-9 toleranslıdır: CI derleyicisi ve libm son basamakta
 //! farklı sonuç verebilir. Motoru tek test açar: süreçte yalnızca bir SE örneği olabilir.
@@ -17,7 +17,7 @@ use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
 use jyotish_desk_lib::module_commands::{
     chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
-    compute_drishti_blocking, compute_jaimini_blocking,
+    compute_drishti_blocking, compute_jaimini_blocking, compute_shadbala_blocking,
 };
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
@@ -123,11 +123,15 @@ fn ui_fixture_is_up_to_date() {
     // Transit anındaki alt dönemin 3. seviyesi: dasa şeridinin "pratyantar" görünümü.
     let chara_at_children = chara_dasha_children_blocking(
         &engine,
-        module_input,
+        module_input.clone(),
         chara_at.signs[..2].to_vec(),
         chara_at.cycle,
     )
     .expect("chara dasha children at the transit moment");
+    // Shadbala ve Bhava bala: aynı girdiyle (doğum saati biliniyor, Güneş doğup batıyor).
+    let shadbala = compute_shadbala_blocking(&engine, module_input)
+        .expect("shadbala")
+        .expect("time known and a sunrise");
     // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
     assert_eq!(opened.chart_record.birth, delhi());
     let prefs = store
@@ -149,6 +153,7 @@ fn ui_fixture_is_up_to_date() {
         "chara_dasha_children": { "path": chara_path, "cycle": 1, "periods": chara_children },
         "chara_dasha_at": chara_at,
         "chara_dasha_at_children": chara_at_children,
+        "shadbala": shadbala,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")

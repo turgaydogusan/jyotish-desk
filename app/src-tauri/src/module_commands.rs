@@ -7,7 +7,8 @@ use std::sync::Arc;
 
 use ephemeris::{Engine, SwissEph};
 use jyotish_core::{
-    CharaDasha, ChartInput, DrishtiTable, JaiminiReport, Sign, SignDashaPath, SignDashaPeriod,
+    CharaDasha, ChartInput, DrishtiTable, JaiminiReport, ShadbalaReport, Sign, SignDashaPath,
+    SignDashaPeriod,
 };
 use tauri::State;
 
@@ -133,4 +134,27 @@ pub async fn chara_dasha_at(
 ) -> Result<Option<SignDashaPath>, CommandError> {
     let engine = Arc::clone(&engine);
     blocking(move || chara_dasha_at_blocking(&engine, input, jd_ut)).await
+}
+
+/// `compute_shadbala` komutunun gövdesi; bloklar.
+pub fn compute_shadbala_blocking(
+    engine: &Engine,
+    input: ChartInput,
+) -> Result<Option<ShadbalaReport>, CommandError> {
+    let report =
+        engine.call(move |se: &mut SwissEph| jyotish_core::compute_shadbala(se, &input))??;
+    Ok(report)
+}
+
+/// Shadbala ve Bhava bala: yedi grahanın altı gücü, toplamı, gerekli değere oranı ve sırası;
+/// zaman lordları; on iki bhavanın gücü. Doğum saati bilinmiyorsa (`time_known == false`) ya da
+/// doğum yerinde o gün gün doğumu ya da batımı yoksa `null` döner.
+#[tauri::command]
+#[specta::specta]
+pub async fn compute_shadbala(
+    engine: State<'_, Arc<Engine>>,
+    input: ChartInput,
+) -> Result<Option<ShadbalaReport>, CommandError> {
+    let engine = Arc::clone(&engine);
+    blocking(move || compute_shadbala_blocking(&engine, input)).await
 }

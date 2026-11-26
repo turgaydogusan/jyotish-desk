@@ -4,18 +4,20 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use ephemeris::Engine;
+use ephemeris::{Body, Engine, Ephemeris, SwissEph, Zodiac};
 use jyotish_core::{
-    chara_dasha, co_lords, graha_aspect_signs, house_lord, house_sign, jaimini_report,
-    rashi_drishti_signs, sign_dasha_children, sign_dasha_path_at, sphuta_drishti, AdvancedSettings,
-    CalcSettings, ChartInput, ChartWarning, Graha, KarakaRole, KarakaScheme, Positions, Sign,
-    SignDashaPeriod, Varga, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD,
-    SEVEN_KARAKA_ROLES,
+    chara_dasha, cheshta_from, co_lords, compute_panchang, compute_shadbala_astro,
+    graha_aspect_signs, house_lord, house_sign, jaimini_report, mean_longitudes,
+    rashi_drishti_signs, shadbala, sign_dasha_children, sign_dasha_path_at, sphuta_drishti,
+    sun_entry_before, vara_lord, AdvancedSettings, CalcSettings, ChartInput, ChartWarning, Graha,
+    KarakaRole, KarakaScheme, Positions, Sign, SignDashaPeriod, Varga, ASPECTING_GRAHAS,
+    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS,
+    SHADBALA_METHOD,
 };
 use jyotish_desk_lib::commands::compute_chart_blocking;
 use jyotish_desk_lib::module_commands::{
     chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
-    compute_drishti_blocking, compute_jaimini_blocking,
+    compute_drishti_blocking, compute_jaimini_blocking, compute_shadbala_blocking,
 };
 use serde_json::Value;
 
@@ -58,6 +60,7 @@ fn module_commands_run_on_the_engine_thread_and_map_errors() {
     drishti_checks(&engine, &inputs);
     jaimini_checks(&engine, &inputs);
     chara_dasha_checks(&engine, &inputs);
+    shadbala_checks(&engine, &inputs);
 }
 
 fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
@@ -640,5 +643,373 @@ fn chara_dasha_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     assert!(
         median <= Duration::from_millis(10),
         "chara_dasha_at median {median:?}"
+    );
+}
+
+/// (−180°, 180°] aralığına indirgenmiş açı farkı.
+fn wrap180(x: f64) -> f64 {
+    (x + 180.0).rem_euclid(360.0) - 180.0
+}
+
+/// Ephemeris'ten ölçülen astronomik olgular (ileri modüller spec'i §7 "Astronomik çapraz
+/// denetim" ve "Ortalama boylam katsayıları"), 1900–2100 arasında.
+#[derive(Debug)]
+struct SkyFacts {
+    /// (ad, karşı konumlardaki en küçük cheshta, kavuşumlardaki en büyük cheshta, olay sayısı)
+    outer: Vec<(&'static str, f64, f64, usize)>,
+    /// (ad, alt kavuşumlardaki en küçük cheshta, üst kavuşumlardaki en büyük cheshta, olay
+    /// sayısı, alt kavuşumlarda ortalama boylamın Güneş'in karşısından ortalama farkı)
+    inner: Vec<(&'static str, f64, f64, usize, f64)>,
+    /// (ad, gerçek jeosantrik boylam − ortalama boylam farkının ortalaması)
+    mean_offsets: Vec<(&'static str, f64)>,
+}
+
+fn sky_facts(se: &mut SwissEph) -> SkyFacts {
+    // 1900-01-01 … 2100-01-01 (paketlenen ephemeris dosyalarının içinde).
+    const FROM: f64 = 2_415_020.5;
+    const TO: f64 = 2_488_069.5;
+    fn at(se: &mut SwissEph, t: f64, body: Body) -> (f64, f64) {
+        let p = se.body(t, body, Zodiac::Tropical).expect("body");
+        (p.lon, p.lon_speed)
+    }
+    let mean_of = |name: &str, t: f64| {
+        let m = mean_longitudes(t);
+        match name {
+            "sun" => m.sun,
+            "mercury" => m.mercury,
+            "venus" => m.venus,
+            "mars" => m.mars,
+            "jupiter" => m.jupiter,
+            _ => m.saturn,
+        }
+    };
+
+    // Uzun dönem ortalaması: gerçek − ortalama.
+    let mut mean_offsets = Vec::new();
+    for (name, body) in [
+        ("sun", Body::Sun),
+        ("mars", Body::Mars),
+        ("jupiter", Body::Jupiter),
+        ("saturn", Body::Saturn),
+    ] {
+        let (mut sum, mut n, mut t) = (0.0, 0.0, FROM);
+        while t < TO {
+            sum += wrap180(at(se, t, body).0 - mean_of(name, t));
+            n += 1.0;
+            t += 3.7;
+        }
+        mean_offsets.push((name, sum / n));
+    }
+
+    // Güneş'le kavuşum (`shift` 0) ya da karşı konum (`shift` 180) anları: iki günlük
+    // adımlarla işaret değişimi, sonra ikiye bölme.
+    let events = |se: &mut SwissEph, body: Body, shift: f64| -> Vec<f64> {
+        let gap =
+            |se: &mut SwissEph, t: f64| wrap180(at(se, t, body).0 - at(se, t, Body::Sun).0 - shift);
+        let mut out = Vec::new();
+        let mut t = FROM;
+        let mut prev = gap(se, t);
+        while t < TO {
+            let next_t = t + 2.0;
+            let cur = gap(se, next_t);
+            if prev.abs() < 30.0 && cur.abs() < 30.0 && (prev < 0.0) != (cur < 0.0) {
+                let (mut lo, mut hi) = (t, next_t);
+                for _ in 0..40 {
+                    let mid = 0.5 * (lo + hi);
+                    if (gap(se, mid) < 0.0) == (prev < 0.0) {
+                        lo = mid;
+                    } else {
+                        hi = mid;
+                    }
+                }
+                out.push(0.5 * (lo + hi));
+            }
+            prev = cur;
+            t = next_t;
+        }
+        out
+    };
+
+    let mut outer = Vec::new();
+    for (name, body) in [
+        ("mars", Body::Mars),
+        ("jupiter", Body::Jupiter),
+        ("saturn", Body::Saturn),
+    ] {
+        let cheshta = |se: &mut SwissEph, t: f64| {
+            cheshta_from(mean_of(name, t), at(se, t, body).0, mean_of("sun", t))
+        };
+        let oppositions = events(se, body, 180.0);
+        let conjunctions = events(se, body, 0.0);
+        let low = oppositions
+            .iter()
+            .map(|t| cheshta(se, *t))
+            .fold(f64::MAX, f64::min);
+        let high = conjunctions
+            .iter()
+            .map(|t| cheshta(se, *t))
+            .fold(f64::MIN, f64::max);
+        outer.push((name, low, high, oppositions.len().min(conjunctions.len())));
+    }
+
+    let mut inner = Vec::new();
+    for (name, body) in [("mercury", Body::Mercury), ("venus", Body::Venus)] {
+        let (mut low, mut high) = (f64::MAX, f64::MIN);
+        let (mut inferior, mut offset) = (0usize, 0.0);
+        for t in events(se, body, 0.0) {
+            let (lon, speed) = at(se, t, body);
+            let value = cheshta_from(mean_of("sun", t), lon, mean_of(name, t));
+            // Alt kavuşumda gezegen geri gider; üst kavuşumda ileri.
+            if speed < 0.0 {
+                low = low.min(value);
+                inferior += 1;
+                // Alt kavuşumda güneş merkezli boylam Güneş'in jeosantrik boylamının karşısıdır.
+                offset += wrap180(mean_of(name, t) - at(se, t, Body::Sun).0 - 180.0);
+            } else {
+                high = high.max(value);
+            }
+        }
+        inner.push((name, low, high, inferior, offset / inferior as f64));
+    }
+    SkyFacts {
+        outer,
+        inner,
+        mean_offsets,
+    }
+}
+
+fn shadbala_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    let mut reports = 0;
+    for (id, input) in inputs {
+        let report = compute_shadbala_blocking(engine, input.clone())
+            .unwrap_or_else(|e| panic!("{id}: {}", e.code));
+        let chart = compute_chart_blocking(
+            engine,
+            input.jd_ut,
+            input.lat,
+            input.lon,
+            input.settings.clone(),
+        )
+        .expect("chart");
+        // Doğum saati bilinmiyorsa rapor yoktur (K2).
+        let unknown = ChartInput {
+            time_known: false,
+            ..input.clone()
+        };
+        assert_eq!(
+            compute_shadbala_blocking(engine, unknown).expect("time unknown"),
+            None,
+            "{id}"
+        );
+        let Some(report) = report else {
+            // Rapor ancak gün doğumu ya da batımı yoksa boştur (kutup gecesi ya da gündüzü).
+            assert!(
+                chart
+                    .meta
+                    .warnings
+                    .contains(&ChartWarning::SunriseUnavailable),
+                "{id}: no report although the Sun rises and sets"
+            );
+            continue;
+        };
+        reports += 1;
+        assert_eq!(report.method, SHADBALA_METHOD, "{id}");
+
+        // Çapraz denetim: v1'de golden fixture'larla doğrulanmış haritanın konumlarından ve
+        // toplanan astronomik girdiden aynı rapor çıkar.
+        let (astro, year_entry, month_entry, year_vara, month_vara) = {
+            let (input, chart) = (input.clone(), chart.clone());
+            engine
+                .call(move |se: &mut SwissEph| {
+                    let astro = compute_shadbala_astro(se, &input, &chart)
+                        .expect("astro")
+                        .expect("sunrise and sunset");
+                    let zodiac = Zodiac::Sidereal(input.settings.ayanamsa.sidereal_mode());
+                    let sun = chart.grahas[Graha::Sun as usize].sidereal_lon;
+                    let month_start = (sun / 30.0).floor() * 30.0;
+                    let year = sun_entry_before(se, zodiac, input.jd_ut, 0.0).expect("year entry");
+                    let month = sun_entry_before(se, zodiac, input.jd_ut, month_start)
+                        .expect("month entry");
+                    let sun_at =
+                        |se: &mut SwissEph, t: f64| se.body(t, Body::Sun, zodiac).expect("sun").lon;
+                    let (year_lon, month_lon) = (sun_at(se, year), sun_at(se, month));
+                    // Giriş anının varası, v1'in panchang hesabıyla.
+                    let mut vara = |t: f64| {
+                        compute_panchang(se, t, input.lat, input.lon, &input.settings)
+                            .expect("panchang")
+                            .vara
+                    };
+                    let varas = (vara(year), vara(month));
+                    (
+                        astro,
+                        (year, year_lon),
+                        (month, wrap180(month_lon - month_start)),
+                        varas.0,
+                        varas.1,
+                    )
+                })
+                .expect("engine")
+        };
+        let want = shadbala(&Positions::from(&chart), &astro).expect("lagna");
+        assert_eq!(report.grahas, want.grahas, "{id}");
+        assert_eq!(report.bhavas, want.bhavas, "{id}");
+        assert_eq!(report.time_lords, want.time_lords, "{id}");
+
+        // Yıl girişi: Güneş'in sidereal boylamı 0° ± 1″; giriş doğumdan önce, en çok bir yıl.
+        const ARCSECOND: f64 = 1.0 / 3600.0;
+        assert!(
+            wrap180(year_entry.1).abs() < ARCSECOND,
+            "{id}: Sun at the year entry is at {}",
+            year_entry.1
+        );
+        let back = input.jd_ut - year_entry.0;
+        assert!((0.0..366.5).contains(&back), "{id}: year entry {back} days");
+        assert!(month_entry.1.abs() < ARCSECOND, "{id}: month entry");
+        let back = input.jd_ut - month_entry.0;
+        assert!((0.0..32.5).contains(&back), "{id}: month entry {back} days");
+        assert_eq!(astro.year_entry_weekday, year_vara, "{id}");
+        assert_eq!(astro.month_entry_weekday, month_vara, "{id}");
+        assert_eq!(astro.weekday, chart.panchang.vara, "{id}");
+        assert_eq!(Some(astro.sunrise_jd_ut), chart.panchang.sunrise_jd_ut);
+        assert_eq!(report.time_lords.weekday, vara_lord(chart.panchang.vara));
+        assert_eq!(report.time_lords.year, vara_lord(year_vara), "{id}");
+        assert_eq!(report.time_lords.month, vara_lord(month_vara), "{id}");
+        // Tropikal boylam, ephemeris'in tropikal çerçevedeki değeridir.
+        let jd = input.jd_ut;
+        let tropical_sun = engine
+            .call(move |se: &mut SwissEph| se.body(jd, Body::Sun, Zodiac::Tropical))
+            .expect("engine")
+            .expect("sun")
+            .lon;
+        assert!(
+            wrap180(astro.tropical_lons[0] - tropical_sun).abs() < 1e-6,
+            "{id}: tropical Sun {} vs {tropical_sun}",
+            astro.tropical_lons[0]
+        );
+
+        // Değişmezler gerçek haritalarda da sağlanır.
+        let mut ranks: Vec<u8> = report.grahas.iter().map(|g| g.rank).collect();
+        ranks.sort_unstable();
+        assert_eq!(ranks, [1, 2, 3, 4, 5, 6, 7], "{id}");
+        let mut ranks: Vec<u8> = report.bhavas.iter().map(|b| b.rank).collect();
+        ranks.sort_unstable();
+        assert_eq!(ranks, (1..=12).collect::<Vec<u8>>(), "{id}");
+        for (row, g) in report.grahas.iter().zip(SHADBALA_GRAHAS) {
+            assert_eq!(row.graha, g, "{id}");
+            let t = &row.temporal;
+            assert!((0.0..=60.0).contains(&row.dig), "{id}: {g:?} dig");
+            assert!((0.0..=60.0).contains(&row.cheshta), "{id}: {g:?} cheshta");
+            assert!((0.0..=60.0).contains(&t.day_night), "{id}: {g:?}");
+            assert_eq!(t.year_lord == 15.0, report.time_lords.year == g, "{id}");
+            assert_eq!(t.month_lord == 30.0, report.time_lords.month == g, "{id}");
+            assert_eq!(t.weekday_lord == 45.0, report.time_lords.weekday == g);
+            assert_eq!(t.hora_lord == 60.0, report.time_lords.hora == g, "{id}");
+            assert_eq!(
+                t.tribhaga == 60.0,
+                g == Graha::Jupiter || report.time_lords.tribhaga == g,
+                "{id}"
+            );
+            let total =
+                row.sthana.total + row.dig + t.total + row.cheshta + row.naisargika + row.drik;
+            assert!((row.total - total).abs() < 1e-9, "{id}: {g:?} total");
+        }
+        for b in &report.bhavas {
+            assert_eq!(b.lord, house_lord(chart.lagna.sign, b.house), "{id}");
+            assert_eq!(b.lord_bala, report.grahas[b.lord as usize].total, "{id}");
+        }
+    }
+    // Beş andan biri kutup gecesindedir (Tromsø, Aralık): raporu yoktur.
+    assert_eq!(reports, inputs.len() - 1, "reports for the golden moments");
+
+    // Hatalar `compute_chart` ile aynı kodlara eşlenir; saat bilinmese de denetlenir.
+    let delhi = inputs
+        .iter()
+        .find(|(id, _)| id == "new-delhi-2000-01-01")
+        .expect("delhi fixture")
+        .1
+        .clone();
+    let bad_place = ChartInput {
+        lat: 91.0,
+        time_known: false,
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_shadbala_blocking(engine, bad_place)
+            .unwrap_err()
+            .code,
+        "invalid_location"
+    );
+    let old_settings = ChartInput {
+        settings: CalcSettings {
+            schema_version: 1,
+            ..CalcSettings::default()
+        },
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_shadbala_blocking(engine, old_settings)
+            .unwrap_err()
+            .code,
+        "unsupported_schema_version"
+    );
+
+    // Astronomik çapraz denetim (spec §7): dış gezegen karşı konumdayken cheshta ≥ 55,
+    // kavuşumdayken ≤ 5. İç gezegenlerde alt kavuşumda ≥ 50, üst kavuşumda ≤ 10 (Merkür'ün
+    // yörünge dış merkezliği ortalama boylamı gerçek boylamdan 23°'ye kadar ayırır).
+    let facts = engine.call(sky_facts).expect("engine");
+    eprintln!("{facts:?}");
+    for (name, at_opposition, at_conjunction, count) in &facts.outer {
+        assert!(*count >= 90, "{name}: {count} oppositions and conjunctions");
+        assert!(
+            *at_opposition >= 55.0,
+            "{name}: cheshta {at_opposition} at an opposition"
+        );
+        assert!(
+            *at_conjunction <= 5.0,
+            "{name}: cheshta {at_conjunction} at a conjunction"
+        );
+    }
+    for (name, at_inferior, at_superior, count, offset) in &facts.inner {
+        assert!(*count >= 120, "{name}: {count} inferior conjunctions");
+        assert!(
+            *at_inferior >= 50.0,
+            "{name}: cheshta {at_inferior} at an inferior conjunction"
+        );
+        assert!(
+            *at_superior <= 10.0,
+            "{name}: cheshta {at_superior} at a superior conjunction"
+        );
+        // Güneş merkezli ortalama boylamın denetimi: alt kavuşumlar yörüngeye yayıldığı için
+        // fark ortalamada sıfırdır. Merkür'de örnekleme gürültüsü büyüktür.
+        let limit = if *name == "mercury" { 0.5 } else { 0.05 };
+        assert!(
+            offset.abs() <= limit,
+            "{name}: mean heliocentric longitude is off by {offset}"
+        );
+    }
+    // Ortalama boylam katsayıları (spec §7, §17): gerçek boylamın uzun dönem ortalaması
+    // ortalama boylamdır. Güneş ve Mars ±0,05° içindedir; Jüpiter ve Satürn'de ~900 yıllık
+    // karşılıklı tedirginlik (büyük eşitsizlik) 200 yılda ortalanmaz (D-kararı; ölçüm: +0,055°
+    // ve −0,212°).
+    for (name, offset) in &facts.mean_offsets {
+        let limit = match *name {
+            "jupiter" => 0.1,
+            "saturn" => 0.3,
+            _ => 0.05,
+        };
+        assert!(
+            offset.abs() <= limit,
+            "{name}: long-term mean of true minus mean longitude is {offset}"
+        );
+    }
+
+    // Performans: spec §15 "compute_shadbala ≤ 40 ms" (temel harita, yıl ve ay girişi dahil).
+    let (median, max) = median_of_15(|| {
+        compute_shadbala_blocking(engine, delhi.clone()).expect("shadbala");
+    });
+    eprintln!("compute_shadbala median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(40),
+        "compute_shadbala median {median:?}"
     );
 }
