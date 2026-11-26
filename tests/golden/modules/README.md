@@ -32,9 +32,10 @@ ileri modüller tasarım belgesi §13 (dört katmanlı test stratejisinin ilk ka
 
 `lagna_lon: null` doğum saati bilinmeyen haritadır: lagnaya bağlı her beklenen değer `null` olur.
 
-Ayara bağlı modüller (Jaimini) girdiye `advanced` bloğunu ekler:
+Ayara bağlı modüller (Jaimini, chara dasha) girdiye `advanced` bloğunu ekler:
 `"advanced": {"karaka_scheme": "Eight", "jaimini_co_lords": true}`. Diğer modüllerde bu alan
-yazılmaz.
+yazılmaz. Chara dasha örneklerinde doğum anı ve yıl uzunluğu girdide yoktur: test sabit bir
+doğum anı ve 365,25 günlük yıl kullanır, tarihleri el yıllarının birikimli toplamından kurar.
 
 ## Modüller
 
@@ -43,5 +44,6 @@ yazılmaz.
 | `foundation` | `waxing`, `nature` (dokuz graha), `kuja_dosha`, `house_lords` (12), `houses`, `houses_owned` | 6 |
 | `drishti` | `sign_aspects` (on üç tam bakışın tamamı, tablo sırasıyla), `sphuta` (en az on değer: `from`, `to`, `angle`, `value`) | 4 |
 | `jaimini` | `karakas` (rol sırasında: `role`, `graha`, `effective_deg`, `tie`), `karakamsha` (`atmakaraka`, `sign`, dokuz grahanın `houses_in_d1` ve `houses_in_d9` değeri), `co_lords` (Akrep ve Kova: `lord`, belirleyici ölçüt `step`), `arudhas` (on iki pada: `house`, `sign`, `lord`, `exception`; saat bilinmiyorsa `null`), `argala` (en az iki referans burç: dört çiftin iki graha listesi ve durumu, `third_house_malefic_argala`) | 8 |
+| `chara_dasha` | `forward`, `order` (dasha sırası, lagnadan), `years` (ilk çevrim, `order` sırasında), `second_cycle` (ikinci çevrimde üretilen dashalar: `sign`, `years`), `sub_periods` (ilk iki dashanın alt dönem sırası); saat bilinmiyorsa `expected` `null` | 7 |
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.

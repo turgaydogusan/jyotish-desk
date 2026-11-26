@@ -7,10 +7,11 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use jyotish_core::{
-    argala_rows, arudha_padas, chara_karakas, co_lord_choice, drishti_table, house_lord,
-    houses_owned, jaimini_lord, jaimini_report, karakamsha, kuja_dosha, moon_is_waxing, nature,
-    normalize, AdvancedSettings, ArgalaStatus, Graha, KarakaRole, KujaDosha, Nature, Positions,
-    Sign, ASPECTING_GRAHAS, DRISHTI_METHOD, JAIMINI_METHOD,
+    argala_rows, arudha_padas, chara_dasha, chara_dasha_order, chara_dasha_sign_years,
+    chara_karakas, co_lord_choice, drishti_table, house_lord, houses_owned, jaimini_lord,
+    jaimini_report, karakamsha, kuja_dosha, moon_is_waxing, nature, normalize, sign_dasha_children,
+    AdvancedSettings, ArgalaStatus, Graha, KarakaRole, KujaDosha, Nature, Positions, Sign,
+    SignDashaPeriod, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -19,6 +20,7 @@ use serde::Deserialize;
 const MIN_FOUNDATION: usize = 6;
 const MIN_DRISHTI: usize = 4;
 const MIN_JAIMINI: usize = 8;
+const MIN_CHARA_DASHA: usize = 7;
 /// El hesabı ile motor arasındaki en büyük fark, virupa.
 const VIRUPA_TOL: f64 = 1e-9;
 
@@ -34,7 +36,7 @@ struct Fixture<X> {
 }
 
 /// Sentetik konumlar: sidereal boylamlar, derece. `lagna_lon: null` doğum saati bilinmeyen
-/// haritadır. `advanced` yalnızca ayara bağlı modüllerde (Jaimini) verilir.
+/// haritadır. `advanced` yalnızca ayara bağlı modüllerde (Jaimini, chara dasha) verilir.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
@@ -509,4 +511,271 @@ fn jaimini_fixtures_cover_the_required_cases() {
 /// yerine elle sayım).
 fn house_sign_of(lagna: Sign, house: u8) -> Sign {
     Sign::ALL[(lagna as usize + usize::from(house) - 1) % 12]
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedSecondCycle {
+    sign: Sign,
+    years: u8,
+}
+
+/// Chara dasha el örneği. Doğum saati bilinmeyen haritada `expected` `null`'dır.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CharaDashaExpected {
+    /// Dashalar zodyak sırasıyla mı ilerliyor.
+    forward: bool,
+    /// Dasha sırası, lagna burcundan.
+    order: [Sign; 12],
+    /// İlk çevrimin yılları, `order` sırasında.
+    years: [u8; 12],
+    /// İkinci çevrimde üretilen dashalar, sırasıyla (0 yıllık burçlar ve 120. yıldan sonra
+    /// başlayanlar yoktur).
+    second_cycle: Vec<ExpectedSecondCycle>,
+    /// İlk iki dashanın alt dönem sırası.
+    sub_periods: [[Sign; 12]; 2],
+}
+
+/// El örneklerinde doğum anı ve yıl uzunluğu sabittir; tarihler el yıllarından kurulur.
+const CHARA_BIRTH_JD: f64 = 2_451_545.0;
+const CHARA_YEAR_DAYS: f64 = 365.25;
+
+fn chara_fixtures() -> Vec<(
+    Fixture<Option<CharaDashaExpected>>,
+    Positions,
+    AdvancedSettings,
+)> {
+    load::<Option<CharaDashaExpected>>("chara_dasha", MIN_CHARA_DASHA)
+        .into_iter()
+        .map(|(f, p)| {
+            let advanced = f.input.advanced.unwrap_or_else(|| {
+                panic!("{}: chara dasha fixtures state the advanced settings", f.id)
+            });
+            (f, p, advanced)
+        })
+        .collect()
+}
+
+#[test]
+fn chara_dasha_hand_fixtures() {
+    for (f, p, advanced) in chara_fixtures() {
+        let id = &f.id;
+        let co_lords = advanced.jaimini_co_lords;
+        let got = chara_dasha(&p, co_lords, CHARA_BIRTH_JD, CHARA_YEAR_DAYS);
+        let Some(x) = &f.expected else {
+            assert!(p.lagna_sign.is_none(), "{id}: null only without a lagna");
+            assert_eq!(got, None, "{id}: no dasha without a lagna");
+            continue;
+        };
+        let lagna = p
+            .lagna_sign
+            .unwrap_or_else(|| panic!("{id}: a lagna is required"));
+        let d = got.unwrap_or_else(|| panic!("{id}: a dasha with a lagna"));
+        assert_eq!(d.method, CHARA_DASHA_METHOD, "{id}");
+
+        // Yön, sıra ve yıllar.
+        assert_eq!(d.forward, x.forward, "{id}: direction");
+        assert_eq!(x.order[0], lagna, "{id}: the first dasha is the lagna sign");
+        assert_eq!(chara_dasha_order(lagna), x.order, "{id}: order");
+        assert_eq!(d.years, x.years, "{id}: years");
+        for (&sign, &years) in x.order.iter().zip(&x.years) {
+            assert_eq!(
+                chara_dasha_sign_years(sign, &p, co_lords),
+                years,
+                "{id}: years of {sign:?}"
+            );
+        }
+
+        // Dashalar: ilk çevrimin on iki burcu, sonra ikinci çevrimde üretilenler; tarihler el
+        // yıllarının birikimli toplamından.
+        let mut want: Vec<(u8, Sign, u8)> = x
+            .order
+            .iter()
+            .zip(&x.years)
+            .map(|(&sign, &years)| (1, sign, years))
+            .collect();
+        want.extend(x.second_cycle.iter().map(|c| (2, c.sign, c.years)));
+        let dashas: Vec<&SignDashaPeriod> = d.periods.iter().filter(|q| q.level == 1).collect();
+        assert_eq!(dashas.len(), want.len(), "{id}: dasha count");
+        let mut elapsed = 0.0;
+        for (got, &(cycle, sign, years)) in dashas.iter().zip(&want) {
+            assert_eq!(
+                (got.cycle, got.signs.as_slice()),
+                (cycle, &[sign][..]),
+                "{id}: dasha after {elapsed} years"
+            );
+            let start = CHARA_BIRTH_JD + elapsed * CHARA_YEAR_DAYS;
+            elapsed += f64::from(years);
+            let end = CHARA_BIRTH_JD + elapsed * CHARA_YEAR_DAYS;
+            assert!(
+                (got.start_jd_ut - start).abs() < 1e-6 && (got.end_jd_ut - end).abs() < 1e-6,
+                "{id}: {sign:?} (cycle {cycle}) runs {} – {}, hand value {start} – {end}",
+                got.start_jd_ut,
+                got.end_jd_ut
+            );
+        }
+
+        // İlk iki dashanın alt dönemleri: sıra, on iki eşit parça, 3. seviyede aynı kural.
+        for (i, subs) in x.sub_periods.iter().enumerate() {
+            let dasha_sign = x.order[i];
+            assert_eq!(subs[11], dasha_sign, "{id}: last sub-period");
+            let kids = sign_dasha_children(&d, &[dasha_sign], 1).expect("sub-periods");
+            let signs: Vec<Sign> = kids.iter().map(|k| k.signs[1]).collect();
+            assert_eq!(signs, subs, "{id}: sub-periods of {dasha_sign:?}");
+            let part = f64::from(x.years[i]) * CHARA_YEAR_DAYS / 12.0;
+            for k in &kids {
+                assert!(
+                    (k.end_jd_ut - k.start_jd_ut - part).abs() < 1e-6,
+                    "{id}: {:?} is one twelfth of the dasha",
+                    k.signs
+                );
+            }
+            // 3. seviye: ilk alt dönemin alt dönemleri ondan sonraki burçla başlar (bu, 2.
+            // seviyenin ikinci burcudur) ve kendi burcuyla biter.
+            let third = sign_dasha_children(&d, &[dasha_sign, subs[0]], 1).expect("third level");
+            assert_eq!(third.len(), 12, "{id}");
+            assert_eq!(third[0].signs[2], subs[1], "{id}: third level starts");
+            assert_eq!(third[11].signs[2], subs[0], "{id}: third level ends");
+        }
+    }
+}
+
+/// Elle yazılmış listeler (motorun `counts_forward` ve `sign_lord` fonksiyonları yerine).
+const HAND_FORWARD_GROUP: [Sign; 6] = [
+    Sign::Aries,
+    Sign::Taurus,
+    Sign::Gemini,
+    Sign::Libra,
+    Sign::Scorpio,
+    Sign::Sagittarius,
+];
+/// Tek lordlu on burcun lordu (Akrep ve Kova eş lordludur, burada yoktur).
+const HAND_SINGLE_LORDS: [(Sign, Graha); 10] = [
+    (Sign::Aries, Graha::Mars),
+    (Sign::Taurus, Graha::Venus),
+    (Sign::Gemini, Graha::Mercury),
+    (Sign::Cancer, Graha::Moon),
+    (Sign::Leo, Graha::Sun),
+    (Sign::Virgo, Graha::Mercury),
+    (Sign::Libra, Graha::Venus),
+    (Sign::Sagittarius, Graha::Jupiter),
+    (Sign::Capricorn, Graha::Saturn),
+    (Sign::Pisces, Graha::Jupiter),
+];
+
+/// Zorunlu durumlar (ileri modüller spec'i §6 "Test"): örnekler silinir ya da değiştirilirse
+/// kapsam sessizce daralmasın.
+#[test]
+fn chara_dasha_fixtures_cover_the_required_cases() {
+    let all = chara_fixtures();
+    type Case<'a> = (&'a CharaDashaExpected, &'a Positions, &'a AdvancedSettings);
+    let any = |pred: &dyn Fn(Case) -> bool| {
+        all.iter()
+            .any(|(f, p, a)| f.expected.as_ref().is_some_and(|x| pred((x, p, a))))
+    };
+    assert!(any(&|(x, _, _)| x.forward), "forward direction");
+    assert!(any(&|(x, _, _)| !x.forward), "backward direction");
+    assert!(
+        all.iter().any(|(f, _, _)| f.expected.is_none()),
+        "birth time unknown"
+    );
+
+    // Tek lordlu bir burçta lordun burçtan `offset` burç ötede olduğu ve yılın `years` olduğu
+    // örnek. `offset` 0: kendi burcu; 1: sonraki burç (2. burç); 11: önceki burç (12. burç).
+    let lord_case = |forward_group: bool, offset: usize, years: u8| {
+        any(&|(x, p, _)| {
+            x.order.iter().zip(&x.years).any(|(&sign, &y)| {
+                let Some(&(_, lord)) = HAND_SINGLE_LORDS.iter().find(|(s, _)| *s == sign) else {
+                    return false;
+                };
+                HAND_FORWARD_GROUP.contains(&sign) == forward_group
+                    && p.sign_of(lord) == Sign::ALL[(sign as usize + offset) % 12]
+                    && y == years
+            })
+        })
+    };
+    for forward_group in [true, false] {
+        assert!(
+            lord_case(forward_group, 0, 12),
+            "lord in its own sign (forward group: {forward_group})"
+        );
+    }
+    assert!(
+        lord_case(true, 1, 1),
+        "forward sign, lord in the second: 1 year"
+    );
+    assert!(
+        lord_case(true, 11, 11),
+        "forward sign, lord in the twelfth: 11 years"
+    );
+    assert!(
+        lord_case(false, 1, 11),
+        "reverse sign, lord in the second: 11 years"
+    );
+    assert!(
+        lord_case(false, 11, 1),
+        "reverse sign, lord in the twelfth: 1 year"
+    );
+
+    // Akrep ve Kova'da eş lord seçimi: düğümün seçildiği, graha lordun seçildiği, iki eş
+    // lordun da burcun içinde olduğu (12 yıl) ve ayarın devre dışı olduğu örnekler.
+    let years_of = |x: &CharaDashaExpected, sign: Sign| {
+        x.years[x.order.iter().position(|s| *s == sign).expect("in order")]
+    };
+    for (sign, planet, node) in [
+        (Sign::Scorpio, Graha::Mars, Graha::Ketu),
+        (Sign::Aquarius, Graha::Saturn, Graha::Rahu),
+    ] {
+        for lord in [planet, node] {
+            assert!(
+                any(&|(_, p, a)| a.jaimini_co_lords
+                    && p.sign_of(planet) != p.sign_of(node)
+                    && co_lord_choice(sign, p).is_some_and(|c| c.lord == lord)),
+                "{lord:?} chosen for {sign:?}"
+            );
+        }
+        assert!(
+            any(&|(x, p, a)| a.jaimini_co_lords
+                && p.sign_of(planet) == sign
+                && p.sign_of(node) == sign
+                && years_of(x, sign) == 12),
+            "both co-lords in {sign:?}: 12 years"
+        );
+    }
+    assert!(
+        any(&|(x, p, a)| !a.jaimini_co_lords
+            && p.sign_of(Graha::Mars) == Sign::Scorpio
+            && p.sign_of(Graha::Ketu) != Sign::Scorpio
+            && years_of(x, Sign::Scorpio) == 12),
+        "co-lords switched off: Mars in Scorpio gives 12 years"
+    );
+
+    // İkinci çevrim: 12 yıllık bir burç atlanır ve ondan sonraki bir burç üretilir; lagna
+    // burcunun atlandığı örnek; çevrimin tam 120. yılda ve 120. yıldan sonra bittiği örnekler.
+    assert!(
+        any(&|(x, _, _)| {
+            let skipped = x.years.iter().position(|y| *y == 12).expect("a 12");
+            x.second_cycle
+                .iter()
+                .any(|c| x.order.iter().position(|s| *s == c.sign) > Some(skipped))
+        }),
+        "a sign skipped inside the second cycle"
+    );
+    assert!(
+        any(&|(x, _, _)| x.years[0] == 12 && x.second_cycle[0].sign != x.order[0]),
+        "the lagna sign skipped in the second cycle"
+    );
+    let total = |x: &CharaDashaExpected| {
+        x.years.iter().map(|y| u32::from(*y)).sum::<u32>()
+            + x.second_cycle
+                .iter()
+                .map(|c| u32::from(c.years))
+                .sum::<u32>()
+    };
+    assert!(
+        any(&|(x, _, _)| total(x) == 120),
+        "ends exactly at 120 years"
+    );
+    assert!(any(&|(x, _, _)| total(x) > 120), "ends after 120 years");
 }

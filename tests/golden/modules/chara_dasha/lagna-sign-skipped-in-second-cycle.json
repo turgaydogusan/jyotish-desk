@@ -1,0 +1,40 @@
+{
+  "id": "lagna-sign-skipped-in-second-cycle",
+  "source": "hand",
+  "rule_ref": "Jaimini Upadesha Sutraları, dasha bölümü; padakrama düzeni: düz sayan burçlar Koç, Boğa, İkizler, Terazi, Akrep, Yay; ters sayanlar Yengeç, Aslan, Başak, Oğlak, Kova, Balık; yıl = burçtan lorduna burcun yönünde kapsayıcı sayım − 1, lord kendi burcundaysa 12; eş lordlar BPHS ve Jaimini geleneğindeki altı ölçütle",
+  "derivation": [
+    "Burçlar: Lagna 190° Terazi. Güneş 95° Yengeç 5°, Ay 215° Akrep 5°, Mars 130° Aslan 10°, Merkür 100° Yengeç 10°, Jüpiter 40° Boğa 10°, Venüs 185° Terazi 5°, Satürn 250° Yay 10°, Rahu 340° Balık 10°, Ketu 160° Başak 10°.",
+    "Yön: lagna Terazi; Terazi'den 9. burç İkizler, düz sayan gruptadır: ileri. Sıra: Terazi, Akrep, Yay, Oğlak, Kova, Balık, Koç, Boğa, İkizler, Yengeç, Aslan, Başak.",
+    "Eş lord, Akrep (Mars Aslan'da, Ketu Başak'ta): 1. ölçüt ayırmaz. 2. ölçüt: ikisinin de yanında graha yok (0–0). 3. ölçüt: Mars Aslan'da ne yücelmiş (Oğlak) ne düşmüş (Yengeç). 4. ölçüt: Aslan sabit, Başak çift doğalı; çift doğalı üstündür: Ketu.",
+    "Eş lord, Kova (Satürn Yay'da, Rahu Balık'ta): 1. ölçüt ayırmaz. 2. ölçüt: 0–0. 3. ölçüt: Satürn Yay'da ne yücelmiş (Terazi) ne düşmüş (Koç). 4. ölçüt: Yay ve Balık çift doğalı, eşit. 5. ölçüt: Kova ters sayar; Kova'dan Yay'a Kova 1, Oğlak 2, Yay 3; Kova'dan Balık'a ters yönde 12. Uzak olan Rahu.",
+    "Yıllar (1–6). Terazi (düz), Venüs Terazi'de: 12 yıl. Akrep (düz), lord Ketu Başak'ta: Akrep 1, Yay 2, … Aslan 10, Başak 11; 10 yıl. Yay (düz), Jüpiter Boğa'da: Yay 1, Oğlak 2, Kova 3, Balık 4, Koç 5, Boğa 6; 5 yıl. Oğlak (ters), Satürn Yay'da: Oğlak 1, Yay 2; 1 yıl. Kova (ters), lord Rahu Balık'ta: sayım 12, 11 yıl. Balık (ters), Jüpiter Boğa'da: Balık 1, Kova 2, Oğlak 3, Yay 4, Akrep 5, Terazi 6, Başak 7, Aslan 8, Yengeç 9, İkizler 10, Boğa 11; 10 yıl.",
+    "Yıllar (7–12). Koç (düz), Mars Aslan'da: Koç 1, Boğa 2, İkizler 3, Yengeç 4, Aslan 5; 4 yıl. Boğa (düz), Venüs Terazi'de: Boğa 1 … Terazi 6; 5 yıl. İkizler (düz), Merkür Yengeç'te: İkizler 1, Yengeç 2; 1 yıl. Yengeç (ters), Ay Akrep'te: Yengeç 1, İkizler 2, Boğa 3, Koç 4, Balık 5, Kova 6, Oğlak 7, Yay 8, Akrep 9; 8 yıl. Aslan (ters), Güneş Yengeç'te: Aslan 1, Yengeç 2; 1 yıl. Başak (ters), Merkür Yengeç'te: Başak 1, Aslan 2, Yengeç 3; 2 yıl. Toplam 12 + 10 + 5 + 1 + 11 + 10 + 4 + 5 + 1 + 8 + 1 + 2 = 70.",
+    "İkinci çevrim: Terazi 0 yıl, atlanır (lagna burcu ikinci çevrimde gelmez). Akrep 2 (70→72), Yay 7 (72→79), Oğlak 11 (79→90), Kova 1 (90→91), Balık 2 (91→93), Koç 8 (93→101), Boğa 7 (101→108), İkizler 11 (108→119), Yengeç 4 (119→123; 119 < 120, üretilir). Aslan 123. yılda başlardı: üretilmez.",
+    "Alt dönemler (ileri). Terazi dashası: Akrep, Yay, Oğlak, Kova, Balık, Koç, Boğa, İkizler, Yengeç, Aslan, Başak, Terazi. Akrep dashası: Yay, Oğlak, Kova, Balık, Koç, Boğa, İkizler, Yengeç, Aslan, Başak, Terazi, Akrep."
+  ],
+  "input": {
+    "lagna_lon": 190.0,
+    "grahas": {"Sun": 95.0, "Moon": 215.0, "Mars": 130.0, "Mercury": 100.0, "Jupiter": 40.0, "Venus": 185.0, "Saturn": 250.0, "Rahu": 340.0, "Ketu": 160.0},
+    "advanced": {"karaka_scheme": "Eight", "jaimini_co_lords": true}
+  },
+  "expected": {
+    "forward": true,
+    "order": ["Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo"],
+    "years": [12, 10, 5, 1, 11, 10, 4, 5, 1, 8, 1, 2],
+    "second_cycle": [
+      {"sign": "Scorpio", "years": 2},
+      {"sign": "Sagittarius", "years": 7},
+      {"sign": "Capricorn", "years": 11},
+      {"sign": "Aquarius", "years": 1},
+      {"sign": "Pisces", "years": 2},
+      {"sign": "Aries", "years": 8},
+      {"sign": "Taurus", "years": 7},
+      {"sign": "Gemini", "years": 11},
+      {"sign": "Cancer", "years": 4}
+    ],
+    "sub_periods": [
+      ["Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra"],
+      ["Sagittarius", "Capricorn", "Aquarius", "Pisces", "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio"]
+    ]
+  }
+}

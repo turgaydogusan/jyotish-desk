@@ -1,11 +1,12 @@
 //! Jaimini çekirdeği (ileri modüller spec'i §5): chara karaka, karakamsha, rashi drishti, eş
 //! lordlar, arudha padalar ve argala. Hesap fonksiyonları yalnızca `Positions` görür (K3);
 //! `compute_jaimini` temel haritayı hesaplayıp onlara veren ince toplayıcıdır. Chara dasha
-//! Alt proje 3.3'tedir ve bu modülün `jaimini_lord` ile `counts_forward` fonksiyonlarını
-//! kullanır.
+//! (Alt proje 3.3, spec §6) `chara_dasha` alt modülündedir ve bu modülün `jaimini_lord` ile
+//! `counts_forward` fonksiyonlarını kullanır; kendi komutları vardır ve rapora girmez.
 
 mod argala;
 mod arudha;
+mod chara_dasha;
 mod karaka;
 mod lords;
 mod rashi;
@@ -24,6 +25,13 @@ pub use argala::{
     THIRD_HOUSE_MALEFICS,
 };
 pub use arudha::{arudha_of, arudha_padas, ArudhaPada};
+pub use chara_dasha::{
+    chara_dasha, chara_dasha_forward, chara_dasha_order, chara_dasha_sign_years, chara_dasha_years,
+    compute_chara_dasha, compute_chara_dasha_at, compute_chara_dasha_children, second_cycle_years,
+    sign_dasha_children, sign_dasha_path_at, sign_sequence, sub_period_signs, CharaDasha,
+    SignDashaPath, SignDashaPeriod, CHARA_DASHA_HORIZON_YEARS, CHARA_DASHA_LEVELS,
+    CHARA_DASHA_METHOD, MAX_SIGN_DASHA_LEVEL,
+};
 pub use karaka::{
     chara_karakas, karaka_roles, karakamsha, navamsa_sign, CharaKaraka, KarakaRole, Karakamsha,
     EIGHT_KARAKA_ROLES, KARAKA_TIE_DEG, SEVEN_KARAKA_ROLES,

@@ -1,0 +1,15 @@
+{
+  "id": "time-unknown-no-dasha",
+  "source": "hand",
+  "rule_ref": "Jaimini Upadesha Sutraları, dasha bölümü; padakrama düzeni: düz sayan burçlar Koç, Boğa, İkizler, Terazi, Akrep, Yay; ters sayanlar Yengeç, Aslan, Başak, Oğlak, Kova, Balık; yıl = burçtan lorduna burcun yönünde kapsayıcı sayım − 1, lord kendi burcundaysa 12; eş lordlar BPHS ve Jaimini geleneğindeki altı ölçütle",
+  "derivation": [
+    "Burçlar: lagna yok (doğum saati bilinmiyor). Grahalar `forward-aries-lagna-lord-in-second-and-twelfth` örneğindeki gibidir: Güneş 125° Aslan, Ay 70° İkizler, Mars 40° Boğa, Merkür 160° Başak, Jüpiter 340° Balık, Venüs 15° Koç, Satürn 280° Oğlak, Rahu 100° Yengeç, Ketu 280° Oğlak.",
+    "İlk dasha lagna burcudur ve yön lagnadan 9. burca bağlıdır. Lagna olmadan sıra kurulamaz: chara dasha hesaplanmaz, sonuç boştur."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "grahas": {"Sun": 125.0, "Moon": 70.0, "Mars": 40.0, "Mercury": 160.0, "Jupiter": 340.0, "Venus": 15.0, "Saturn": 280.0, "Rahu": 100.0, "Ketu": 280.0},
+    "advanced": {"karaka_scheme": "Eight", "jaimini_co_lords": true}
+  },
+  "expected": null
+}

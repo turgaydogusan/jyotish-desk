@@ -1,0 +1,35 @@
+{
+  "id": "co-lords-off-backward-cancer-lagna",
+  "source": "hand",
+  "rule_ref": "Jaimini Upadesha Sutraları, dasha bölümü; padakrama düzeni: düz sayan burçlar Koç, Boğa, İkizler, Terazi, Akrep, Yay; ters sayanlar Yengeç, Aslan, Başak, Oğlak, Kova, Balık; yıl = burçtan lorduna burcun yönünde kapsayıcı sayım − 1, lord kendi burcundaysa 12; eş lordlar BPHS ve Jaimini geleneğindeki altı ölçütle",
+  "derivation": [
+    "Burçlar: Lagna 100° Yengeç. Güneş 280° Oğlak 10°, Ay 130° Aslan 10°, Mars 220° Akrep 10°, Merkür 290° Oğlak 20°, Jüpiter 190° Terazi 10°, Venüs 320° Kova 20°, Satürn 310° Kova 10°, Rahu 10° Koç 10°, Ketu 190° Terazi 10°.",
+    "Yön: lagna Yengeç; Yengeç'ten 9. burç Balık, ters sayan gruptadır: geri. Sıra: Yengeç, İkizler, Boğa, Koç, Balık, Kova, Oğlak, Yay, Akrep, Terazi, Başak, Aslan.",
+    "Eş lordlar devre dışı (ayar): Akrep'in lordu Mars, Kova'nın lordu Satürn'dür. Mars Akrep'te: 12 yıl. Satürn Kova'da: 12 yıl. (Ayar açık olsaydı her ikisinde de 1. ölçüt dışarıdaki düğümü seçerdi: Akrep için Ketu Terazi'de, sayım 12, 11 yıl; Kova için Rahu Koç'ta, sayım 11, 10 yıl.)",
+    "Yıllar (1–6). Yengeç (ters), Ay Aslan'da: Yengeç 1, İkizler 2, … Başak 11, Aslan 12; 11 yıl. İkizler (düz), Merkür Oğlak'ta: İkizler 1, Yengeç 2, Aslan 3, Başak 4, Terazi 5, Akrep 6, Yay 7, Oğlak 8; 7 yıl. Boğa (düz), Venüs Kova'da: Boğa 1 … Kova 10; 9 yıl. Koç (düz), Mars Akrep'te: Koç 1 … Akrep 8; 7 yıl. Balık (ters), Jüpiter Terazi'de: Balık 1, Kova 2, Oğlak 3, Yay 4, Akrep 5, Terazi 6; 5 yıl. Kova: 12 yıl.",
+    "Yıllar (7–12). Oğlak (ters), Satürn Kova'da: Oğlak 1, Yay 2, … Balık 11, Kova 12; 11 yıl. Yay (düz), Jüpiter Terazi'de: Yay 1, Oğlak 2, … Başak 10, Terazi 11; 10 yıl. Akrep: 12 yıl. Terazi (düz), Venüs Kova'da: Terazi 1, Akrep 2, Yay 3, Oğlak 4, Kova 5; 4 yıl. Başak (ters), Merkür Oğlak'ta: Başak 1, Aslan 2, Yengeç 3, İkizler 4, Boğa 5, Koç 6, Balık 7, Kova 8, Oğlak 9; 8 yıl. Aslan (ters), Güneş Oğlak'ta: Aslan 1, Yengeç 2, İkizler 3, Boğa 4, Koç 5, Balık 6, Kova 7, Oğlak 8; 7 yıl. Toplam 11 + 7 + 9 + 7 + 5 + 12 + 11 + 10 + 12 + 4 + 8 + 7 = 103.",
+    "İkinci çevrim: Yengeç 1 (103→104), İkizler 5 (104→109), Boğa 3 (109→112), Koç 5 (112→117), Balık 7 (117→124; 117 < 120, üretilir). Kova 0 yıl; Oğlak 124. yılda başlardı: üretilmez.",
+    "Alt dönemler (geri). Yengeç dashası: İkizler, Boğa, Koç, Balık, Kova, Oğlak, Yay, Akrep, Terazi, Başak, Aslan, Yengeç. İkizler dashası: Boğa, Koç, Balık, Kova, Oğlak, Yay, Akrep, Terazi, Başak, Aslan, Yengeç, İkizler."
+  ],
+  "input": {
+    "lagna_lon": 100.0,
+    "grahas": {"Sun": 280.0, "Moon": 130.0, "Mars": 220.0, "Mercury": 290.0, "Jupiter": 190.0, "Venus": 320.0, "Saturn": 310.0, "Rahu": 10.0, "Ketu": 190.0},
+    "advanced": {"karaka_scheme": "Eight", "jaimini_co_lords": false}
+  },
+  "expected": {
+    "forward": false,
+    "order": ["Cancer", "Gemini", "Taurus", "Aries", "Pisces", "Aquarius", "Capricorn", "Sagittarius", "Scorpio", "Libra", "Virgo", "Leo"],
+    "years": [11, 7, 9, 7, 5, 12, 11, 10, 12, 4, 8, 7],
+    "second_cycle": [
+      {"sign": "Cancer", "years": 1},
+      {"sign": "Gemini", "years": 5},
+      {"sign": "Taurus", "years": 3},
+      {"sign": "Aries", "years": 5},
+      {"sign": "Pisces", "years": 7}
+    ],
+    "sub_periods": [
+      ["Gemini", "Taurus", "Aries", "Pisces", "Aquarius", "Capricorn", "Sagittarius", "Scorpio", "Libra", "Virgo", "Leo", "Cancer"],
+      ["Taurus", "Aries", "Pisces", "Aquarius", "Capricorn", "Sagittarius", "Scorpio", "Libra", "Virgo", "Leo", "Cancer", "Gemini"]
+    ]
+  }
+}

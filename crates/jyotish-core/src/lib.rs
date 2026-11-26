@@ -4,7 +4,7 @@
 //! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga,
 //! Vimshottari dasha, panchang, ashtakavarga ve transit (M3). İleri modüllerin ortak temeli
 //! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`. Jaimini
-//! çekirdeği (Alt proje 3.2): `jaimini`.
+//! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`.
 
 pub mod ashtakavarga;
 mod chart;
@@ -48,13 +48,17 @@ pub use error::CoreError;
 pub use graha::{Graha, GrahaPosition};
 pub use houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
 pub use jaimini::{
-    argala_row, argala_rows, argala_status, arudha_of, arudha_padas, chara_karakas, co_lord_choice,
-    co_lords, compute_jaimini, counts_forward, directed_count, graha_rashi_drishti, jaimini_lord,
-    jaimini_report, karaka_roles, karakamsha, navamsa_sign, rashi_drishti_matrix,
-    rashi_drishti_signs, sign_kind, stronger_co_lord, ArgalaPair, ArgalaRow, ArgalaStatus,
-    ArudhaPada, CharaKaraka, CoLordChoice, JaiminiReport, KarakaRole, Karakamsha, SignKind,
-    ARGALA_PAIRS, EIGHT_KARAKA_ROLES, JAIMINI_METHOD, KARAKA_TIE_DEG, SEVEN_KARAKA_ROLES,
-    THIRD_HOUSE_MALEFICS,
+    argala_row, argala_rows, argala_status, arudha_of, arudha_padas, chara_dasha,
+    chara_dasha_forward, chara_dasha_order, chara_dasha_sign_years, chara_dasha_years,
+    chara_karakas, co_lord_choice, co_lords, compute_chara_dasha, compute_chara_dasha_at,
+    compute_chara_dasha_children, compute_jaimini, counts_forward, directed_count,
+    graha_rashi_drishti, jaimini_lord, jaimini_report, karaka_roles, karakamsha, navamsa_sign,
+    rashi_drishti_matrix, rashi_drishti_signs, second_cycle_years, sign_dasha_children,
+    sign_dasha_path_at, sign_kind, sign_sequence, stronger_co_lord, sub_period_signs, ArgalaPair,
+    ArgalaRow, ArgalaStatus, ArudhaPada, CharaDasha, CharaKaraka, CoLordChoice, JaiminiReport,
+    KarakaRole, Karakamsha, SignDashaPath, SignDashaPeriod, SignKind, ARGALA_PAIRS,
+    CHARA_DASHA_HORIZON_YEARS, CHARA_DASHA_LEVELS, CHARA_DASHA_METHOD, EIGHT_KARAKA_ROLES,
+    JAIMINI_METHOD, KARAKA_TIE_DEG, MAX_SIGN_DASHA_LEVEL, SEVEN_KARAKA_ROLES, THIRD_HOUSE_MALEFICS,
 };
 pub use lordship::{house_lord, house_sign, houses_owned};
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};

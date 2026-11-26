@@ -671,3 +671,182 @@ mod jaimini_properties {
         }
     }
 }
+
+mod chara_dasha_properties {
+    use proptest::prelude::*;
+
+    use super::foundation_properties::positions;
+    use crate::jaimini::{
+        chara_dasha, chara_dasha_years, jaimini_lord, second_cycle_years, sign_dasha_children,
+        sign_dasha_path_at, SignDashaPeriod, CHARA_DASHA_HORIZON_YEARS, CHARA_DASHA_METHOD,
+    };
+    use crate::zodiac::Sign;
+
+    /// JD ~2.4e6 civarında f64 çözünürlüğü ~5e-10 gün; 1e-6 gün (~0.09 sn) bol paydır.
+    const TOL_DAYS: f64 = 1e-6;
+
+    fn birth() -> impl Strategy<Value = (f64, f64)> {
+        (
+            2_300_000.0f64..2_500_000.0,
+            prop::sample::select(vec![360.0, 365.2422, 365.25]),
+        )
+    }
+
+    /// Alt dönemler ebeveyni boşluksuz ve örtüşmesiz on iki eşit parçaya böler; sonuncusu
+    /// ebeveynin burcudur ve hiçbir burç yinelenmez.
+    fn check_partition(
+        parent: &SignDashaPeriod,
+        children: &[SignDashaPeriod],
+    ) -> Result<(), TestCaseError> {
+        prop_assert_eq!(children.len(), 12);
+        prop_assert_eq!(children[0].start_jd_ut, parent.start_jd_ut);
+        prop_assert_eq!(children[11].end_jd_ut, parent.end_jd_ut);
+        for w in children.windows(2) {
+            prop_assert_eq!(w[0].end_jd_ut, w[1].start_jd_ut);
+        }
+        let span = parent.end_jd_ut - parent.start_jd_ut;
+        let mut sum = 0.0;
+        let mut seen = [false; 12];
+        for c in children {
+            prop_assert_eq!(c.level, parent.level + 1);
+            prop_assert_eq!(c.cycle, parent.cycle);
+            prop_assert_eq!(&c.signs[..parent.signs.len()], &parent.signs[..]);
+            let d = c.end_jd_ut - c.start_jd_ut;
+            prop_assert!((d - span / 12.0).abs() < TOL_DAYS, "{:?}: {}", c.signs, d);
+            sum += d;
+            seen[c.signs.last().expect("sign").index()] = true;
+        }
+        prop_assert!((sum - span).abs() < TOL_DAYS);
+        prop_assert!(seen.iter().all(|s| *s));
+        prop_assert_eq!(children[11].signs.last(), parent.signs.last());
+        Ok(())
+    }
+
+    proptest! {
+        #[test]
+        fn no_dasha_without_a_lagna(p in positions(), co in any::<bool>(), (jd, year) in birth()) {
+            let d = chara_dasha(&p, co, jd, year);
+            prop_assert_eq!(d.is_some(), p.lagna_sign.is_some());
+        }
+
+        #[test]
+        fn first_cycle_is_a_permutation_from_the_lagna(
+            p in positions(),
+            co in any::<bool>(),
+            (jd, year) in birth(),
+        ) {
+            let Some(lagna) = p.lagna_sign else { return Ok(()); };
+            let d = chara_dasha(&p, co, jd, year).expect("lagna");
+            prop_assert_eq!(d.method.as_str(), CHARA_DASHA_METHOD);
+            let dashas: Vec<&SignDashaPeriod> = d.periods.iter().filter(|q| q.level == 1).collect();
+            let first: Vec<&SignDashaPeriod> =
+                dashas.iter().copied().filter(|q| q.cycle == 1).collect();
+            prop_assert_eq!(first.len(), 12);
+            prop_assert_eq!(first[0].signs[0], lagna);
+            prop_assert_eq!(first[0].start_jd_ut, jd);
+            let mut seen = [false; 12];
+            for (i, q) in first.iter().enumerate() {
+                let sign = q.signs[0];
+                seen[sign.index()] = true;
+                // Sıra tek yönde birer burç ilerler.
+                let step = if d.forward { i } else { 12 - i };
+                prop_assert_eq!(sign, Sign::from_index(lagna.index() + step));
+                // Her süre 1–12 yıldır ve burçtan lorduna sayımdan gelir.
+                let years = d.years[i];
+                prop_assert!((1..=12).contains(&years));
+                let lord_sign = p.sign_of(jaimini_lord(sign, &p, co));
+                prop_assert_eq!(years, chara_dasha_years(sign, lord_sign));
+                prop_assert_eq!(years == 12, lord_sign == sign);
+                let length = q.end_jd_ut - q.start_jd_ut;
+                prop_assert!((length - f64::from(years) * year).abs() < TOL_DAYS);
+            }
+            prop_assert!(seen.iter().all(|s| *s));
+            // İlk çevrim 120 yıla ulaşmaz: on iki dasha her zaman tamdır.
+            let total: u16 = d.years.iter().map(|y| u16::from(*y)).sum();
+            prop_assert!((12..CHARA_DASHA_HORIZON_YEARS).contains(&total), "{}", total);
+        }
+
+        #[test]
+        fn dashas_are_contiguous_and_the_second_cycle_completes_twelve_years(
+            p in positions(),
+            co in any::<bool>(),
+            (jd, year) in birth(),
+        ) {
+            let Some(d) = chara_dasha(&p, co, jd, year) else { return Ok(()); };
+            let dashas: Vec<&SignDashaPeriod> = d.periods.iter().filter(|q| q.level == 1).collect();
+            for w in dashas.windows(2) {
+                prop_assert_eq!(w[0].end_jd_ut, w[1].start_jd_ut);
+                prop_assert!(w[0].cycle <= w[1].cycle);
+            }
+            let order: Vec<Sign> = dashas.iter().filter(|q| q.cycle == 1).map(|q| q.signs[0]).collect();
+            let horizon = jd + f64::from(CHARA_DASHA_HORIZON_YEARS) * year;
+            let mut last_index = None;
+            for q in dashas.iter().filter(|q| q.cycle == 2) {
+                let i = order.iter().position(|s| *s == q.signs[0]).expect("in the first cycle");
+                // Aynı sıra; 0 yıllık burçlar atlanır.
+                prop_assert!(last_index < Some(i));
+                for skipped in last_index.map_or(0, |l: usize| l + 1)..i {
+                    prop_assert_eq!(d.years[skipped], 12);
+                }
+                last_index = Some(i);
+                // İki çevrimde aynı burcun yılları toplamı 12'dir.
+                let years = (q.end_jd_ut - q.start_jd_ut) / year;
+                prop_assert!((years - f64::from(second_cycle_years(d.years[i]))).abs() < 1e-6);
+                prop_assert!((years + f64::from(d.years[i]) - 12.0).abs() < 1e-6);
+                // Başlangıcı 120. yıldan önce olan dasha üretilir.
+                prop_assert!(q.start_jd_ut < horizon - TOL_DAYS);
+            }
+            // Üretim 120. yıla ulaşan ilk dashada durur.
+            let end = dashas.last().expect("dashas").end_jd_ut;
+            prop_assert!(end > horizon - TOL_DAYS);
+        }
+
+        #[test]
+        fn sub_periods_partition_their_parent_at_both_levels(
+            p in positions(),
+            co in any::<bool>(),
+            (jd, year) in birth(),
+            pick in 0usize..24,
+            sub in 0usize..12,
+        ) {
+            let Some(d) = chara_dasha(&p, co, jd, year) else { return Ok(()); };
+            let dashas: Vec<&SignDashaPeriod> = d.periods.iter().filter(|q| q.level == 1).collect();
+            let parent = dashas[pick % dashas.len()];
+            let second = sign_dasha_children(&d, &parent.signs, parent.cycle).unwrap();
+            check_partition(parent, &second)?;
+            // İlk alt dönem dasha burcundan sonraki burçtur (haritanın yönünde).
+            let dasha_sign = parent.signs[0];
+            let step = if d.forward { 1 } else { 11 };
+            prop_assert_eq!(second[0].signs[1], Sign::from_index(dasha_sign.index() + step));
+            let child = &second[sub];
+            let third = sign_dasha_children(&d, &child.signs, child.cycle).unwrap();
+            check_partition(child, &third)?;
+            prop_assert!(third.iter().all(|q| !q.has_children));
+            prop_assert_eq!(third[0].signs[2], Sign::from_index(child.signs[1].index() + step));
+        }
+
+        #[test]
+        fn path_at_names_the_periods_that_contain_the_moment(
+            p in positions(),
+            co in any::<bool>(),
+            (jd, year) in birth(),
+            fraction in 0.0f64..1.0,
+        ) {
+            let Some(d) = chara_dasha(&p, co, jd, year) else { return Ok(()); };
+            let end = d.periods.iter().rfind(|q| q.level == 1).expect("dashas").end_jd_ut;
+            let at = jd + (end - jd) * fraction;
+            let path = sign_dasha_path_at(&d, at).unwrap().expect("inside the produced span");
+            prop_assert_eq!(path.signs.len(), 3);
+            for depth in 1..=3usize {
+                let period = sign_dasha_children(&d, &path.signs[..depth - 1], path.cycle)
+                    .unwrap()
+                    .into_iter()
+                    .find(|q| q.signs == path.signs[..depth])
+                    .expect("on the path");
+                prop_assert!(period.start_jd_ut <= at && at < period.end_jd_ut);
+            }
+            prop_assert_eq!(sign_dasha_path_at(&d, jd - 1.0).unwrap(), None);
+            prop_assert_eq!(sign_dasha_path_at(&d, end).unwrap(), None);
+        }
+    }
+}
