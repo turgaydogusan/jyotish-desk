@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { useHighlight } from "../highlight/store";
@@ -125,4 +126,26 @@ test("shared highlight: a graha marks its row, a sign or a house its column", ()
   // Esc vurguyu kaldırır.
   fireEvent.keyDown(window, { key: "Escape" });
   expect(marked()).toBe(0);
+});
+
+test("in-chart format: a sign or a house marks its box, and the mark does not rely on colour", () => {
+  renderPanel({ format: "chart" });
+  const marked = () => [...document.querySelectorAll<HTMLElement>("li.av-cell.is-highlighted")].map((li) => li.dataset.sign);
+  expect(marked()).toEqual([]);
+  const leo = screen.getByRole("button", { name: "Asl" });
+  fireEvent.click(leo);
+  expect(leo).toHaveAttribute("aria-pressed", "true");
+  expect(marked()).toEqual(["4"]);
+  // 1. ev: lagna burcu İkizler'in kutusu.
+  fireEvent.click(screen.getByRole("button", { name: "pin house 1" }));
+  expect(marked()).toEqual(["2"]);
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(marked()).toEqual([]);
+  // C9: baskı temasında --select beyazdır; kutu çerçeve ve yazı ağırlığıyla da seçilir.
+  const css = readFileSync("ui/panels/panels.css", "utf8");
+  const rule = /\.av-cell\.is-highlighted\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+  expect(rule).toMatch(/background:\s*var\(--select\);/);
+  expect(rule).toMatch(/outline:\s*2px solid var\(--ink-strong\);/);
+  expect(rule).toMatch(/outline-offset:\s*-2px;/);
+  expect(rule).toMatch(/font-weight:\s*var\(--fw-medium\);/);
 });

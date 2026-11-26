@@ -161,9 +161,13 @@
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
+/* Kâğıtta --select beyazdır: vurgulu kutu çerçeve ve yazı ağırlığıyla da seçilir (C9). */
 .av-cell.is-highlighted {
   background: var(--select);
   color: var(--ink-strong);
+  font-weight: var(--fw-medium);
+  outline: 2px solid var(--ink-strong);
+  outline-offset: -2px;
 }
 .av-cell-sign {
   color: var(--text-2);

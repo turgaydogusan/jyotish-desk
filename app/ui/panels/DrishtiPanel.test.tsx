@@ -97,6 +97,26 @@ test("an error is shown in the panel and retry asks again", async () => {
   expect(screen.queryByRole("alert")).toBeNull();
 });
 
+test("retry from the keyboard keeps the focus in the panel while the error box is replaced", async () => {
+  vi.mocked(api.computeDrishti).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
+  const panel: Panel = { id: "dr", kind: "drishti", x: 0, y: 0, w: 6, h: 10, settings: {} };
+  const layout = { schema_version: 1, active_layout_id: "user:t", layouts: [{ id: "user:t", name: "T", builtin: false, panels: [panel] }] };
+  renderWithStores(
+    <section className="panel" tabIndex={0} aria-label="Bakışlar">
+      <DrishtiPanel panel={panel} />
+    </section>,
+    { layout, opened: fixture().opened },
+  );
+  const retry = await screen.findByRole("button", { name: "Yeniden dene" });
+  retry.focus();
+  expect(document.activeElement).toBe(retry);
+  fireEvent.click(retry);
+  await screen.findByRole("table");
+  expect(retry).not.toBeInTheDocument();
+  expect(document.activeElement).not.toBe(document.body);
+  expect(document.activeElement).toBe(screen.getByRole("region", { name: "Bakışlar" }));
+});
+
 test("loading: nothing under a second, then a skeleton, then the table", async () => {
   vi.useFakeTimers();
   try {
