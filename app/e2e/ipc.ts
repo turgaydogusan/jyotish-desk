@@ -11,11 +11,13 @@ export interface IpcOptions {
   session: boolean;
   /** Doğum saati bilinmeyen harita: uyarı ve notlar basılır (baskının en uzun sayfaları). */
   unknownTime?: boolean;
+  /** Uyum: eş haritanın (Ayşe) doğum saati bilinmiyor; `chart_input` `time_known: false` döner. */
+  partnerUnknownTime?: boolean;
 }
 
-export async function mockIpc(page: Page, { session, unknownTime = false }: IpcOptions) {
+export async function mockIpc(page: Page, { session, unknownTime = false, partnerUnknownTime = false }: IpcOptions) {
   await page.addInitScript(
-    ({ fixture, session, unknownTime }) => {
+    ({ fixture, session, unknownTime, partnerUnknownTime }) => {
       if (unknownTime) {
         fixture.opened.chart_record.birth.time = null;
         fixture.opened.chart_record.birth.time_certainty = "Unknown";
@@ -28,6 +30,9 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
       ayse.client = { ...ayse.client, id: 2, uuid: "00000000-0000-4000-8000-000000000003", name: "Ayşe Yılmaz", last_chart_id: 20 };
       ayse.chart_record = { ...ayse.chart_record, id: 20, client_id: 2, uuid: "00000000-0000-4000-8000-000000000004" };
       ayse.recent_notes = [];
+      // Ayşe'nin haritası uyum fikstürünün eş haritasıdır: girdisi ve raporlar fikstürden gelir.
+      const partnerUuid: string = ayse.chart_record.uuid;
+      const isOpenChart = (input: { jd_ut: number }) => input.jd_ut === fixture.opened.chart.jd_ut;
       const opened: Record<number, typeof ayse> = { 1: fixture.opened, 2: ayse };
       const clients = () => [opened[2].client, opened[1].client];
       // Notlar bellek içi; kimlik ve zaman sırayla artar.
@@ -114,6 +119,18 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
         compute_shadbala: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.shadbala : null),
         // Yogalar: fikstürdeki iki gerçek sonuç (doğum saati bilinen ve bilinmeyen girdi).
         compute_yogas: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.yogas : fixture.yogas_time_unknown),
+        // Uyum: eş haritanın girdisi ve kısa kimliği; başka kimlik `null` döner (harita yok).
+        // Rapor yeniden hesaplanmaz, rollerden seçilir: açık harita damat rolündeyse `report`,
+        // gelin rolündeyse `report_swapped`; gelin rolündeki eşin doğum saati bilinmiyorsa
+        // `report_time_unknown`.
+        chart_input: (args) => (args.chartUuid === partnerUuid ? { ...fixture.compat.input, time_known: !partnerUnknownTime } : null),
+        chart_brief: (args) => (args.chartUuid === partnerUuid ? { ...fixture.compat.brief, client_name: ayse.client.name } : null),
+        compute_compat: (args) => {
+          const groom = args.groom as { jd_ut: number; time_known: boolean };
+          const bride = args.bride as { jd_ut: number; time_known: boolean };
+          if (!isOpenChart(groom)) return fixture.compat.report_swapped;
+          return bride.time_known ? fixture.compat.report : fixture.compat.report_time_unknown;
+        },
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.
         app_info: () => ({ version: "0.9.0", updaterConfigured: true }),
@@ -137,7 +154,7 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
         },
       });
     },
-    { fixture: FIXTURE, session, unknownTime },
+    { fixture: FIXTURE, session, unknownTime, partnerUnknownTime },
   );
 }
 

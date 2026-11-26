@@ -92,6 +92,12 @@ export const api = {
   // Yogalar: doğum saati bilinmiyorsa rapor yine döner; lagna isteyen kurallar atlanmış,
   // diğer kayıtlar `approximate` işaretlidir.
   computeYogas: (input: ChartInput) => wrap(() => commands.computeYogas(input)),
+  // Uyum: `groom` damat rolünün, `bride` gelin rolünün girdisidir. Eş haritanın girdisi ve kısa
+  // kimliği store'dan okunur; harita yoksa (silinmiş eş) ikisi de `null` döner. Girdiler doğum
+  // verisidir, eş bağı ilişki bilgisidir: loglanmaz.
+  computeCompat: (groom: ChartInput, bride: ChartInput) => wrap(() => commands.computeCompat(groom, bride)),
+  chartInput: (chartUuid: string) => wrap(() => commands.chartInput(chartUuid)),
+  chartBrief: (chartUuid: string) => wrap(() => commands.chartBrief(chartUuid)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

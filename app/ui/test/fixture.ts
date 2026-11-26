@@ -1,15 +1,19 @@
 // Gerçek veri fikstürü (app/src-tauri/tests/ui_fixture.rs üretir): Delhi 2000-01-01 17:30
 // için `create_client` dönüşü, ilk 3. seviye dönemin alt dönemleri, "new delhi" atlas araması,
 // an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit, bakış tablosu, Jaimini raporu,
-// chara dasha, Shadbala raporu ve yoga raporu (kataloğuyla). Arayüz hesap yapmadığı için testler
-// bunu çizer.
+// chara dasha, Shadbala raporu, yoga raporu (kataloğuyla) ve ikinci bir danışanla uyum raporları.
+// Arayüz hesap yapmadığı için testler bunu çizer.
 import type {
   CharaDasha,
+  ChartBrief,
+  ChartInput,
   CommandError,
   DashaPeriod,
   DrishtiTable,
   Graha,
   JaiminiReport,
+  Kuta,
+  KutaReport,
   MomentPreview,
   OpenedClient,
   PlaceHit,
@@ -56,6 +60,22 @@ export interface UiFixture {
   yoga_catalog: { id: string; group: YogaGroup }[];
   /** Rust `YOGA_CONDITIONS`: alt koşul kimlikleri. */
   yoga_conditions: string[];
+  /**
+   * Uyum: ikinci danışan ("Eş Danışan", İstanbul 1987-03-17) eş haritadır. `input` ve `brief`
+   * store'un `chart_input` ve `chart_brief` dönüşleridir. `report` açık harita damat rolündeyken,
+   * `report_swapped` roller değişmişken, `report_time_unknown` eşin (gelin rolünde) doğum saati
+   * bilinmezken `compute_compat` dönüşüdür.
+   */
+  compat: {
+    partner_uuid: string;
+    brief: ChartBrief;
+    input: ChartInput;
+    report: KutaReport;
+    report_swapped: KutaReport;
+    report_time_unknown: KutaReport;
+  };
+  /** Rust `kuta_class_ids`: her kutanın alabileceği sınıf kimlikleri. */
+  kuta_classes: Record<Kuta, string[]>;
 }
 
 const FIXTURE = JSON.parse(raw) as UiFixture;

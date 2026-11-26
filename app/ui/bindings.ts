@@ -68,6 +68,14 @@ export const commands = {
 	 *  `approximate` işaretiyle döner.
 	 */
 	computeYogas: (input: ChartInput, options?: InvokeOptions) => typedError<YogaReport, CommandError>(__TAURI_INVOKE("compute_yogas", { input }, options)),
+	/**
+	 *  Uyum: Ashtakuta'nın sekiz puanı ve iki tarafın sınıfları, toplam, iki istisna olgusu, iki
+	 *  haritanın Kuja dosha olgusu ve karşılıklı yerleşim. `groom` damat rolünün, `bride` gelin
+	 *  rolünün girdisidir; her harita kendi ayarıyla hesaplanır. Doğum saati bilinmeyen harita
+	 *  (`time_known == false`) raporu `approximate` yapar; Ay'ının o gün nakshatra ya da burç
+	 *  değiştirip değiştirmediği `moon_day_change`'dedir. Girdiler doğum verisidir: loglanmaz.
+	 */
+	computeCompat: (groom: ChartInput, bride: ChartInput, options?: InvokeOptions) => typedError<KutaReport, CommandError>(__TAURI_INVOKE("compute_compat", { groom, bride }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -83,6 +91,17 @@ export const commands = {
 	/**  Kenar çubuğu etiket süzgeci: etiketin tam adıyla (büyük/küçük harf ve NFC duyarsız). */
 	listClientsByTag: (tag: string, limit: number, options?: InvokeOptions) => typedError<Client[], CommandError>(__TAURI_INVOKE("list_clients_by_tag", { tag, limit }, options)),
 	listCharts: (clientId: number, options?: InvokeOptions) => typedError<ChartRecord[], CommandError>(__TAURI_INVOKE("list_charts", { clientId }, options)),
+	/**
+	 *  Bir haritanın modül girdisi (ileri modüller spec'i §9): çözülmüş an, konum, haritanın
+	 *  hesap ayarı ve `time_known`. Ad, not ve yer adı dönmez. Harita yoksa `null` (silinmiş eş).
+	 *  `chart_uuid` bir kayıt kimliğidir, dosya yolu ya da adres değildir (C2′).
+	 */
+	chartInput: (chartUuid: string, options?: InvokeOptions) => typedError<ChartInput | null, CommandError>(__TAURI_INVOKE("chart_input", { chartUuid }, options)),
+	/**
+	 *  Bir haritanın kısa kimliği: danışanın adı ve cinsiyeti, haritanın etiketi ve türü (uyum
+	 *  panelinin başlığı ve ilk rol ataması). Harita yoksa `null`.
+	 */
+	chartBrief: (chartUuid: string, options?: InvokeOptions) => typedError<ChartBrief | null, CommandError>(__TAURI_INVOKE("chart_brief", { chartUuid }, options)),
 	searchClients: (query: string, limit: number, options?: InvokeOptions) => typedError<SearchHit[], CommandError>(__TAURI_INVOKE("search_clients", { query, limit }, options)),
 	addNote: (clientId: number, chartId: number | null, body: string, options?: InvokeOptions) => typedError<Note, CommandError>(__TAURI_INVOKE("add_note", { clientId, chartId, body }, options)),
 	updateNote: (noteId: number, body: string, options?: InvokeOptions) => typedError<Note, CommandError>(__TAURI_INVOKE("update_note", { noteId, body }, options)),
@@ -299,6 +318,18 @@ export type Chart = {
 	panchang: Panchang,
 	/**  Rasi çerçevesindeki burçlardan (`grahas[..7].sign`, `lagna.sign`). */
 	ashtakavarga: Ashtakavarga,
+};
+
+/**
+ *  Bir haritanın panel başlığında gösterilen kısa kimliği: danışanın adı ve cinsiyeti,
+ *  haritanın etiketi ve türü. Doğum verisi, not ve yer taşımaz.
+ */
+export type ChartBrief = {
+	client_name: string,
+	client_gender: Gender | null,
+	/**  Boşsa arayüz harita türünün yerelleştirilmiş adını gösterir. */
+	chart_label: string,
+	chart_kind: ChartKind,
 };
 
 /**
@@ -621,6 +652,59 @@ export type KaranaName =
 /**  Sabit: Amavasya'nın 2. yarısı (karana 60). */
 "Naga";
 
+/**
+ *  Kuja dosha olgusu: Mars ilgili referanstan sayılan 1, 2, 4, 7, 8 ya da 12. rasi evinde mi.
+ *  İptal kuralı uygulanmaz. Yoga (3.5) ve uyum (3.6) modülleri aynı olguyu kullanır.
+ */
+export type KujaDosha = {
+	/**  Doğum saati bilinmiyorsa `None`. */
+	from_lagna: boolean | null,
+	from_moon: boolean,
+	from_venus: boolean,
+};
+
+/**  Sekiz kuta, puan tablosunun sırasıyla (en çok puan 1'den 8'e artar). */
+export type Kuta = "Varna" | "Vashya" | "Tara" | "Yoni" | "GrahaMaitri" | "Gana" | "Bhakoot" | "Nadi";
+
+/**  `compute_compat` sonucu. İkili alanlar `[damat rolü, gelin rolü]` sırasındadır. */
+export type KutaReport = {
+	/**  `Kuta::ALL` sırasında. */
+	scores: [KutaScore, KutaScore, KutaScore, KutaScore, KutaScore, KutaScore, KutaScore, KutaScore],
+	/**  Sekiz puanın toplamı, 0..=36. */
+	total: number | null,
+	/**  Bhakoot 0 iken iki Ay burcunun lordu aynı ya da iki yönlü dost. Puanı değiştirmez. */
+	bhakoot_exception: boolean,
+	/**
+	 *  Nadi 0 iken iki Ay aynı nakshatranın farklı padalarında ya da aynı burcun farklı
+	 *  nakshatralarında. Puanı değiştirmez.
+	 */
+	nadi_exception: boolean,
+	kuja_dosha: [KujaDosha, KujaDosha],
+	/**
+	 *  Önce damat rolünün dokuz grahası (gelin rolünün haritasındaki evleriyle), sonra gelin
+	 *  rolünün dokuz grahası; her yarı `Graha::ALL` sırasında.
+	 */
+	overlay: [OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow, OverlayRow],
+	/**  İki haritadan en az birinin doğum saati bilinmiyor: o haritanın Ay'ı öğle konumundadır. */
+	approximate: boolean,
+	moon_day_change: [MoonDayChange, MoonDayChange],
+	method: string,
+};
+
+/**  İki rol; rapordaki ikili alanların sırası da budur (damat rolü önce). */
+export type KutaRole = "Groom" | "Bride";
+
+/**  Bir kutanın puanı ve iki tarafın sınıfı. */
+export type KutaScore = {
+	kuta: Kuta,
+	score: number | null,
+	max: number | null,
+	/**  Damat rolünün sınıf kimliği (`kuta_class_ids`); görünen ad i18n anahtarıdır. */
+	groom_class: string,
+	/**  Gelin rolünün sınıf kimliği. */
+	bride_class: string,
+};
+
 export type Lagna = {
 	/**  Rasi çerçevesinde boylam. */
 	lon: number | null,
@@ -647,6 +731,15 @@ export type MomentPreview = {
 
 /**  Çözüm uyarıları (atlas `MomentWarning`'in IPC karşılığı; UI spec §5 rozetleri). */
 export type MomentWarning = "TimeUnknownNoon" | "LmtFromLongitude" | "PreTzdbReliability";
+
+/**
+ *  Doğum saati bilinmeyen haritada Ay'ın o yerel gün içinde (öğle ± 12 saat) nakshatra ya da
+ *  burç değiştirip değiştirmediği. Doğum saati bilinen haritada ikisi de `false`'tur.
+ */
+export type MoonDayChange = {
+	nakshatra: boolean,
+	sign: boolean,
+};
 
 export type NewChart = {
 	label: string,
@@ -690,6 +783,24 @@ export type OpenedClient = {
 	chart: Chart,
 	recent_notes: Note[],
 	warnings: StoreWarning[],
+};
+
+/**
+ *  Karşılıklı yerleşimin bir satırı: bir tarafın bir grahası ve diğer tarafın haritasındaki
+ *  rasi evleri.
+ */
+export type OverlayRow = {
+	/**  Grahanın sahibi. */
+	owner: KutaRole,
+	graha: Graha,
+	/**  Grahanın kendi haritasının rasi çerçevesindeki burcu ve burç içi derecesi. */
+	sign: Sign,
+	deg_in_sign: number | null,
+	retrograde: boolean,
+	/**  Diğer tarafın lagnasından sayılan rasi evi; onun doğum saati bilinmiyorsa `None`. */
+	house_from_lagna: number | null,
+	/**  Diğer tarafın Ay'ından sayılan rasi evi. */
+	house_from_moon: number,
 };
 
 export type Paksha = 

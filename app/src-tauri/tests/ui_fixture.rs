@@ -11,21 +11,46 @@ use std::sync::Mutex;
 
 use atlas::Timestamp;
 use ephemeris::Engine;
-use jyotish_core::{ChartInput, YOGA_CATALOG, YOGA_CONDITIONS};
+use jyotish_core::{kuta_class_ids, ChartInput, Kuta, YOGA_CATALOG, YOGA_CONDITIONS};
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
 use jyotish_desk_lib::module_commands::{
     chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
-    compute_drishti_blocking, compute_jaimini_blocking, compute_shadbala_blocking,
-    compute_yogas_blocking,
+    compute_compat_blocking, compute_drishti_blocking, compute_jaimini_blocking,
+    compute_shadbala_blocking, compute_yogas_blocking,
 };
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
-use store::{BirthData, ChartKind, NewChart, NewClient, Place, Store, TimeCertainty, TzChoice};
+use store::{
+    BirthData, ChartKind, Gender, NewChart, NewClient, Place, Store, TimeCertainty, TzChoice,
+};
 
 const CLIENT_UUID: &str = "00000000-0000-4000-8000-000000000001";
 const CHART_UUID: &str = "00000000-0000-4000-8000-000000000002";
+/// Uyum fikstürünün eş haritası (ikinci danışan).
+const PARTNER_CLIENT_UUID: &str = "00000000-0000-4000-8000-000000000011";
+const PARTNER_CHART_UUID: &str = "00000000-0000-4000-8000-000000000012";
+
+/// Eş harita: İstanbul, 1987-03-17 10:00 (deneme verisi; gerçek kişi değildir).
+fn istanbul() -> BirthData {
+    BirthData {
+        date: "1987-03-17".into(),
+        time: Some("10:00:00".into()),
+        time_certainty: TimeCertainty::Exact,
+        place: Place {
+            name: "İstanbul".into(),
+            country: "Türkiye".into(),
+            admin1: "İstanbul".into(),
+            lat: 41.01384,
+            lon: 28.94966,
+            geoname_id: Some(745_044),
+        },
+        tz: TzChoice::Iana("Europe/Istanbul".into()),
+        fold: None,
+        notes: String::new(),
+    }
+}
 
 /// tests/golden/new-delhi-2000-01-01.json: 17:30 IST = JD 2451545.0.
 fn delhi() -> BirthData {
@@ -141,13 +166,60 @@ fn ui_fixture_is_up_to_date() {
         &engine,
         ChartInput {
             time_known: false,
-            ..module_input
+            ..module_input.clone()
         },
     )
     .expect("yogas without a birth time");
     let yoga_catalog: Vec<Value> = YOGA_CATALOG
         .iter()
         .map(|r| json!({ "id": r.id, "group": r.group }))
+        .collect();
+    // Uyum: ikinci danışan eş haritadır. Eşin girdisi ve kısa kimliği store'dan okunur
+    // (arayüzün `chart_input` ve `chart_brief` ile aldığının aynısı). Üç rapor: açık harita
+    // damat rolünde, roller değişmiş, ve eşin doğum saati bilinmiyor (gelin rolünde). Sınıf
+    // kimlikleri: arayüz testleri her birinin üç dilde adı olduğunu bu listeden denetler.
+    let partner = create_client_blocking(
+        &engine,
+        &store,
+        NewClient {
+            name: "Eş Danışan".into(),
+            gender: Some(Gender::Female),
+            chart: NewChart {
+                label: String::new(),
+                kind: ChartKind::Natal,
+                birth: istanbul(),
+            },
+        },
+    )
+    .expect("create the partner");
+    let (partner_input, partner_brief) = {
+        let s = store.lock().expect("store");
+        (
+            s.chart_input(&partner.chart_record.uuid)
+                .expect("chart input")
+                .expect("partner chart"),
+            s.chart_brief(&partner.chart_record.uuid)
+                .expect("chart brief")
+                .expect("partner chart"),
+        )
+    };
+    let compat = compute_compat_blocking(&engine, module_input.clone(), partner_input.clone())
+        .expect("compat");
+    let compat_swapped =
+        compute_compat_blocking(&engine, partner_input.clone(), module_input.clone())
+            .expect("compat with swapped roles");
+    let compat_time_unknown = compute_compat_blocking(
+        &engine,
+        module_input.clone(),
+        ChartInput {
+            time_known: false,
+            ..partner_input.clone()
+        },
+    )
+    .expect("compat with an unknown birth time");
+    let kuta_classes: serde_json::Map<String, Value> = Kuta::ALL
+        .into_iter()
+        .map(|k| (format!("{k:?}"), json!(kuta_class_ids(k))))
         .collect();
     // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
     assert_eq!(opened.chart_record.birth, delhi());
@@ -175,11 +247,22 @@ fn ui_fixture_is_up_to_date() {
         "yogas_time_unknown": yogas_time_unknown,
         "yoga_catalog": yoga_catalog,
         "yoga_conditions": YOGA_CONDITIONS,
+        "compat": {
+            "partner_uuid": partner.chart_record.uuid,
+            "brief": partner_brief,
+            "input": partner_input,
+            "report": compat,
+            "report_swapped": compat_swapped,
+            "report_time_unknown": compat_time_unknown,
+        },
+        "kuta_classes": kuta_classes,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")
         .replace(&opened.client.uuid, CLIENT_UUID)
         .replace(&opened.chart_record.uuid, CHART_UUID)
+        .replace(&partner.client.uuid, PARTNER_CLIENT_UUID)
+        .replace(&partner.chart_record.uuid, PARTNER_CHART_UUID)
         + "\n";
 
     let path = root.join("../ui/test/fixtures/delhi.json");

@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use ephemeris::{Engine, SwissEph};
 use jyotish_core::{
-    CharaDasha, ChartInput, DrishtiTable, JaiminiReport, ShadbalaReport, Sign, SignDashaPath,
-    SignDashaPeriod, YogaReport,
+    CharaDasha, ChartInput, DrishtiTable, JaiminiReport, KutaReport, ShadbalaReport, Sign,
+    SignDashaPath, SignDashaPeriod, YogaReport,
 };
 use tauri::State;
 
@@ -181,4 +181,31 @@ pub async fn compute_yogas(
 ) -> Result<YogaReport, CommandError> {
     let engine = Arc::clone(&engine);
     blocking(move || compute_yogas_blocking(&engine, input)).await
+}
+
+/// `compute_compat` komutunun gövdesi; bloklar.
+pub fn compute_compat_blocking(
+    engine: &Engine,
+    groom: ChartInput,
+    bride: ChartInput,
+) -> Result<KutaReport, CommandError> {
+    let report = engine
+        .call(move |se: &mut SwissEph| jyotish_core::compute_compat(se, &groom, &bride))??;
+    Ok(report)
+}
+
+/// Uyum: Ashtakuta'nın sekiz puanı ve iki tarafın sınıfları, toplam, iki istisna olgusu, iki
+/// haritanın Kuja dosha olgusu ve karşılıklı yerleşim. `groom` damat rolünün, `bride` gelin
+/// rolünün girdisidir; her harita kendi ayarıyla hesaplanır. Doğum saati bilinmeyen harita
+/// (`time_known == false`) raporu `approximate` yapar; Ay'ının o gün nakshatra ya da burç
+/// değiştirip değiştirmediği `moon_day_change`'dedir. Girdiler doğum verisidir: loglanmaz.
+#[tauri::command]
+#[specta::specta]
+pub async fn compute_compat(
+    engine: State<'_, Arc<Engine>>,
+    groom: ChartInput,
+    bride: ChartInput,
+) -> Result<KutaReport, CommandError> {
+    let engine = Arc::clone(&engine);
+    blocking(move || compute_compat_blocking(&engine, groom, bride)).await
 }

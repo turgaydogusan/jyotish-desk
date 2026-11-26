@@ -14,8 +14,8 @@ use jyotish_desk_lib::client_commands::{
 };
 use serde_json::{json, Map};
 use store::{
-    AppPrefs, BirthData, ChartKind, Layout, NewChart, NewClient, Panel, PanelLayout, Place, Store,
-    TimeCertainty, TzChoice, ViewState,
+    AppPrefs, BirthData, ChartKind, CompatRoles, Layout, NewChart, NewClient, Panel, PanelLayout,
+    Place, Store, TimeCertainty, TzChoice, ViewState,
 };
 
 /// tests/golden/new-delhi-2000-01-01.json: 17:30 IST = JD 2451545.0.
@@ -225,6 +225,55 @@ fn open_client_round_trips_and_is_fast() {
         vs.chara_expanded_path
     );
     assert_eq!(restored.view_state.panel_layout, vs2.panel_layout);
+
+    // Uyum panelinin eş bağı (ileri modüller spec'i §9) haritayla birlikte saklanır ve geri
+    // yüklenir; eşin modül girdisi store'dan okunur ve ad taşımaz. Eş harita silinince bağ
+    // temizlenir ve geç gelen bir görünüm kaydı onu geri getirmez.
+    let partner_uuid = event.chart_record.uuid.clone();
+    let vs3 = ViewState {
+        compat_partner_uuid: Some(partner_uuid.clone()),
+        compat_roles: CompatRoles::OpenIsBride,
+        ..vs2.clone()
+    };
+    store
+        .lock()
+        .unwrap()
+        .save_view_state(chart_id, &vs3)
+        .expect("save the partner link");
+    let linked = restore_session_blocking(&engine, &store)
+        .expect("restore")
+        .expect("a session");
+    assert_eq!(linked.view_state, vs3);
+    let partner_input = store
+        .lock()
+        .unwrap()
+        .chart_input(&partner_uuid)
+        .expect("chart input")
+        .expect("the partner chart exists");
+    assert_eq!(
+        (partner_input.jd_ut, partner_input.lat, partner_input.lon),
+        (event.chart.jd_ut, event.chart.geo_lat, event.chart.geo_lon)
+    );
+    assert_eq!(partner_input.settings, event.chart.meta.settings);
+    assert!(partner_input.time_known);
+    store
+        .lock()
+        .unwrap()
+        .delete_chart(event.chart_record.id)
+        .expect("delete the partner chart");
+    assert_eq!(
+        store.lock().unwrap().chart_input(&partner_uuid).unwrap(),
+        None
+    );
+    store
+        .lock()
+        .unwrap()
+        .save_view_state(chart_id, &vs3)
+        .expect("a late save after the delete");
+    let unlinked = restore_session_blocking(&engine, &store)
+        .expect("restore")
+        .expect("a session");
+    assert_eq!(unlinked.view_state, vs2);
 
     // Harita olmadan düzen kaydı (`save_panel_layout`/`load_panel_layout` gövdeleri).
     let alone = PanelLayout {

@@ -7,11 +7,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
+use jyotish_core::ChartInput;
 use serde::Serialize;
 use specta::Type;
 use store::{
-    AppPrefs, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note, PanelLayout,
-    PrefsLoad, SearchHit, Store, TagCount,
+    AppPrefs, ChartBrief, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note,
+    PanelLayout, PrefsLoad, SearchHit, Store, TagCount,
 };
 use tauri::{AppHandle, State, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, FilePath};
@@ -330,6 +331,29 @@ pub async fn list_charts(
     client_id: u32,
 ) -> Result<Vec<ChartRecord>, CommandError> {
     with_store(&store, move |s| s.charts_of(client_id)).await
+}
+
+/// Bir haritanın modül girdisi (ileri modüller spec'i §9): çözülmüş an, konum, haritanın
+/// hesap ayarı ve `time_known`. Ad, not ve yer adı dönmez. Harita yoksa `null` (silinmiş eş).
+/// `chart_uuid` bir kayıt kimliğidir, dosya yolu ya da adres değildir (C2′).
+#[tauri::command]
+#[specta::specta]
+pub async fn chart_input(
+    store: State<'_, StoreState>,
+    chart_uuid: String,
+) -> Result<Option<ChartInput>, CommandError> {
+    with_store(&store, move |s| s.chart_input(&chart_uuid)).await
+}
+
+/// Bir haritanın kısa kimliği: danışanın adı ve cinsiyeti, haritanın etiketi ve türü (uyum
+/// panelinin başlığı ve ilk rol ataması). Harita yoksa `null`.
+#[tauri::command]
+#[specta::specta]
+pub async fn chart_brief(
+    store: State<'_, StoreState>,
+    chart_uuid: String,
+) -> Result<Option<ChartBrief>, CommandError> {
+    with_store(&store, move |s| s.chart_brief(&chart_uuid)).await
 }
 
 #[tauri::command]

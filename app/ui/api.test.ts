@@ -35,6 +35,9 @@ vi.mock("./bindings", () => ({
     charaDashaAt: vi.fn(),
     computeShadbala: vi.fn(),
     computeYogas: vi.fn(),
+    computeCompat: vi.fn(),
+    chartInput: vi.fn(),
+    chartBrief: vi.fn(),
     searchPlaces: vi.fn(),
     previewMoment: vi.fn(),
     getAppPrefs: vi.fn(),
@@ -121,6 +124,9 @@ test("every wrapper forwards its arguments to the command of the same name", asy
     ["charaDashaAt", [{ jd_ut: 1, time_known: true }, 2451545.5]],
     ["computeShadbala", [{ jd_ut: 1, time_known: true }]],
     ["computeYogas", [{ jd_ut: 1, time_known: false }]],
+    ["computeCompat", [{ jd_ut: 1, time_known: true }, { jd_ut: 2, time_known: false }]],
+    ["chartInput", ["00000000-0000-4000-8000-000000000012"]],
+    ["chartBrief", ["00000000-0000-4000-8000-000000000012"]],
     ["searchPlaces", ["delhi", 8]],
     ["previewMoment", [{ date: "2000-01-01" }]],
     ["getAppPrefs", []],
@@ -165,6 +171,7 @@ test("every string argument of a command is a known, non-path one (found by type
     }
   }
   expect(found.sort()).toEqual(
-    ["addNote.body", "installUpdate.version", "listClientsByTag.tag", "searchClients.query", "searchPlaces.query", "setChartTags.tags", "updateClient.name", "updateNote.body"].sort(),
+    // `chartUuid` bir kayıt kimliğidir (Rust'ta UUID olarak denetlenir), yol ya da adres değildir.
+    ["addNote.body", "chartBrief.chartUuid", "chartInput.chartUuid", "installUpdate.version", "listClientsByTag.tag", "searchClients.query", "searchPlaces.query", "setChartTags.tags", "updateClient.name", "updateNote.body"].sort(),
   );
 });

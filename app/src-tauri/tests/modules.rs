@@ -5,21 +5,22 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use ephemeris::{Body, Engine, Ephemeris, SwissEph, Zodiac};
+use jyotish_core::kuta::{gana_of, nadi_of, varna_of, yoni_of};
 use jyotish_core::{
     chara_dasha, cheshta_from, co_lords, compute_panchang, compute_shadbala_astro,
-    graha_aspect_signs, house_lord, house_sign, jaimini_report, kuja_dosha, mean_longitudes,
-    rashi_drishti_signs, shadbala, sign_dasha_children, sign_dasha_path_at, sphuta_drishti,
-    sun_entry_before, vara_lord, yoga_rule, yogas, AdvancedSettings, CalcSettings, ChartInput,
-    ChartWarning, Dignity, Graha, HouseSystem, KarakaRole, KarakaScheme, Positions, Sign,
-    SignDashaPeriod, Varga, YogaGroup, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD,
-    JAIMINI_METHOD, MAX_SUNRISE_GAP_DAYS, SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS, SHADBALA_METHOD,
-    YOGA_CATALOG, YOGA_CATALOG_VERSION,
+    graha_aspect_signs, house_lord, house_sign, jaimini_report, kuja_dosha, kuta_report,
+    mean_longitudes, rashi_drishti_signs, shadbala, sign_dasha_children, sign_dasha_path_at,
+    sphuta_drishti, sun_entry_before, vara_lord, yoga_rule, yogas, AdvancedSettings, CalcSettings,
+    Chart, ChartInput, ChartWarning, Dignity, Graha, HouseSystem, KarakaRole, KarakaScheme, Kuta,
+    KutaRole, MoonDayChange, Positions, Sign, SignDashaPeriod, Varga, YogaGroup, ASPECTING_GRAHAS,
+    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, KUTA_METHOD, MAX_SUNRISE_GAP_DAYS,
+    SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS, SHADBALA_METHOD, YOGA_CATALOG, YOGA_CATALOG_VERSION,
 };
 use jyotish_desk_lib::commands::compute_chart_blocking;
 use jyotish_desk_lib::module_commands::{
     chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
-    compute_drishti_blocking, compute_jaimini_blocking, compute_shadbala_blocking,
-    compute_yogas_blocking,
+    compute_compat_blocking, compute_drishti_blocking, compute_jaimini_blocking,
+    compute_shadbala_blocking, compute_yogas_blocking,
 };
 use serde_json::Value;
 
@@ -64,6 +65,7 @@ fn module_commands_run_on_the_engine_thread_and_map_errors() {
     chara_dasha_checks(&engine, &inputs);
     shadbala_checks(&engine, &inputs);
     yogas_checks(&engine, &inputs);
+    compat_checks(&engine, &inputs);
 }
 
 fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
@@ -1278,5 +1280,325 @@ fn yogas_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     assert!(
         median <= Duration::from_millis(10),
         "compute_yogas median {median:?}"
+    );
+}
+
+fn compat_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    let chart_of = |input: &ChartInput| -> Chart {
+        compute_chart_blocking(
+            engine,
+            input.jd_ut,
+            input.lat,
+            input.lon,
+            input.settings.clone(),
+        )
+        .expect("chart")
+    };
+    // Beş golden anının her sıralı çifti (kendisiyle eşleşme dahil): 25 rapor.
+    let (mut zero_bhakoot, mut zero_nadi) = (0, 0);
+    for (groom_id, groom) in inputs {
+        for (bride_id, bride) in inputs {
+            let id = format!("{groom_id} × {bride_id}");
+            let report = compute_compat_blocking(engine, groom.clone(), bride.clone())
+                .unwrap_or_else(|e| panic!("{id}: {}", e.code));
+            assert_eq!(report.method, KUTA_METHOD, "{id}");
+            assert!(!report.approximate, "{id}");
+            assert_eq!(
+                report.moon_day_change,
+                [MoonDayChange::default(); 2],
+                "{id}"
+            );
+
+            // Çapraz denetim: v1'de golden fixture'larla doğrulanmış iki haritanın
+            // konumlarından aynı rapor çıkar.
+            let (g, b) = (chart_of(groom), chart_of(bride));
+            assert_eq!(
+                report,
+                kuta_report(&Positions::from(&g), &Positions::from(&b)),
+                "{id}"
+            );
+            // v1 olgularıyla çapraz denetim: sınıflar v1 haritasının Ay'ından (burç, nakshatra)
+            // okunur; Bhakoot sınıfı Ay burcunun adıdır.
+            let moon = |c: &Chart| c.grahas[Graha::Moon as usize].clone();
+            let (gm, bm) = (moon(&g), moon(&b));
+            let score = |kuta: Kuta| &report.scores[kuta as usize];
+            assert_eq!(
+                (
+                    score(Kuta::Bhakoot).groom_class.as_str(),
+                    score(Kuta::Bhakoot).bride_class.as_str()
+                ),
+                (
+                    format!("{:?}", gm.sign).as_str(),
+                    format!("{:?}", bm.sign).as_str()
+                ),
+                "{id}"
+            );
+            assert_eq!(
+                score(Kuta::Varna).groom_class,
+                varna_of(gm.sign).id(),
+                "{id}"
+            );
+            assert_eq!(
+                score(Kuta::Yoni).groom_class,
+                yoni_of(gm.nakshatra).id(),
+                "{id}"
+            );
+            assert_eq!(
+                score(Kuta::Yoni).bride_class,
+                yoni_of(bm.nakshatra).id(),
+                "{id}"
+            );
+            assert_eq!(
+                score(Kuta::Gana).bride_class,
+                gana_of(bm.nakshatra).id(),
+                "{id}"
+            );
+            assert_eq!(
+                score(Kuta::Nadi).groom_class,
+                nadi_of(gm.nakshatra).id(),
+                "{id}"
+            );
+            assert_eq!(
+                score(Kuta::Nadi).bride_class,
+                nadi_of(bm.nakshatra).id(),
+                "{id}"
+            );
+            // Bhakoot 0 ↔ v1 burçlarının karşılıklı sayımı 2/12, 5/9 ya da 6/8.
+            let count = bm.sign.house_from(gm.sign);
+            assert_eq!(
+                score(Kuta::Bhakoot).score == 0.0,
+                [2, 12, 5, 9, 6, 8].contains(&count),
+                "{id}: count {count}"
+            );
+            zero_bhakoot += usize::from(score(Kuta::Bhakoot).score == 0.0);
+            zero_nadi += usize::from(score(Kuta::Nadi).score == 0.0);
+
+            // Değişmezler gerçek haritalarda da sağlanır.
+            let sum: f64 = report.scores.iter().map(|s| s.score).sum();
+            assert_eq!(report.total, sum, "{id}");
+            assert!((0.0..=36.0).contains(&report.total), "{id}");
+            let swapped = compute_compat_blocking(engine, bride.clone(), groom.clone())
+                .expect("swapped roles");
+            for kuta in [
+                Kuta::Nadi,
+                Kuta::Bhakoot,
+                Kuta::Yoni,
+                Kuta::GrahaMaitri,
+                Kuta::Tara,
+            ] {
+                assert_eq!(
+                    score(kuta).score,
+                    swapped.scores[kuta as usize].score,
+                    "{id}: {kuta:?}"
+                );
+            }
+            assert_eq!(
+                report.kuja_dosha,
+                [swapped.kuja_dosha[1], swapped.kuja_dosha[0]],
+                "{id}"
+            );
+            if groom_id == bride_id {
+                // Aynı Ay: nadi 0, yoni 4, bhakoot 7, maitri 5; toplam 28; istisna yok.
+                assert_eq!(
+                    [Kuta::Nadi, Kuta::Yoni, Kuta::Bhakoot, Kuta::GrahaMaitri]
+                        .map(|k| score(k).score),
+                    [0.0, 4.0, 7.0, 5.0],
+                    "{id}"
+                );
+                assert_eq!(report.total, 28.0, "{id}");
+                assert!(!report.nadi_exception && !report.bhakoot_exception, "{id}");
+            }
+
+            // Kuja dosha 3.1'in olgusudur; karşılıklı yerleşim v1 haritalarının burçlarından
+            // ve retro işaretinden okunur, evler diğer haritanın lagna burcundan sayılır.
+            assert_eq!(
+                report.kuja_dosha,
+                [
+                    kuja_dosha(&Positions::from(&g)),
+                    kuja_dosha(&Positions::from(&b))
+                ],
+                "{id}"
+            );
+            for (i, row) in report.overlay.iter().enumerate() {
+                let (owner, own, other) = if i < 9 {
+                    (KutaRole::Groom, &g, &b)
+                } else {
+                    (KutaRole::Bride, &b, &g)
+                };
+                let v1 = &own.grahas[i % 9];
+                assert_eq!((row.owner, row.graha), (owner, v1.graha), "{id}");
+                assert_eq!(
+                    (row.sign, row.deg_in_sign, row.retrograde),
+                    (v1.sign, v1.deg_in_sign, v1.retrograde),
+                    "{id}: {:?}",
+                    v1.graha
+                );
+                assert_eq!(
+                    row.house_from_lagna,
+                    Some(v1.sign.house_from(other.lagna.sign)),
+                    "{id}"
+                );
+                assert_eq!(
+                    row.house_from_moon,
+                    v1.sign.house_from(other.grahas[Graha::Moon as usize].sign),
+                    "{id}"
+                );
+            }
+        }
+    }
+    assert!(zero_bhakoot >= 1, "no zero bhakoot among the golden pairs");
+    // Beş haritanın kendisiyle eşleşmesi nadi 0 verir.
+    assert!(zero_nadi >= 5);
+
+    let delhi = inputs
+        .iter()
+        .find(|(id, _)| id == "new-delhi-2000-01-01")
+        .expect("delhi fixture")
+        .1
+        .clone();
+    let istanbul = inputs
+        .iter()
+        .find(|(id, _)| id == "istanbul-1987-03-17")
+        .expect("istanbul fixture")
+        .1
+        .clone();
+    let base = compute_compat_blocking(engine, delhi.clone(), istanbul.clone()).expect("report");
+
+    // Evler rasi evidir (K4): ev sistemi ayarı raporu değiştirmez.
+    for house_system in [HouseSystem::Sripati, HouseSystem::Placidus] {
+        let with = |input: &ChartInput| ChartInput {
+            settings: CalcSettings {
+                house_system,
+                ..input.settings.clone()
+            },
+            ..input.clone()
+        };
+        assert_eq!(
+            compute_compat_blocking(engine, with(&delhi), with(&istanbul)).expect("house system"),
+            base,
+            "{house_system:?}"
+        );
+    }
+
+    // Doğum saati bilinmeyen harita: rapor yaklaşıktır, o haritanın lagnasına bağlı değerler
+    // boştur, puanlar değişmez (aynı an), ve Ay'ın o gün içindeki değişimi v1 haritasının
+    // gün başındaki ve sonundaki Ay'ıyla aynıdır.
+    for (id, input) in inputs {
+        let unknown = ChartInput {
+            time_known: false,
+            ..input.clone()
+        };
+        let report = compute_compat_blocking(engine, delhi.clone(), unknown.clone())
+            .unwrap_or_else(|e| panic!("{id}: {}", e.code));
+        let known =
+            compute_compat_blocking(engine, delhi.clone(), input.clone()).expect("time known");
+        assert!(report.approximate, "{id}");
+        assert_eq!(report.scores, known.scores, "{id}");
+        assert_eq!(report.total, known.total, "{id}");
+        assert_eq!(report.kuja_dosha[0], known.kuja_dosha[0], "{id}");
+        assert_eq!(report.kuja_dosha[1].from_lagna, None, "{id}");
+        assert_eq!(
+            report.kuja_dosha[1].from_moon, known.kuja_dosha[1].from_moon,
+            "{id}"
+        );
+        // Damat rolünün grahaları gelin rolünün (bilinmeyen) lagnasından sayılamaz; tersi sayılır.
+        assert!(
+            report.overlay[..9]
+                .iter()
+                .all(|r| r.house_from_lagna.is_none()),
+            "{id}"
+        );
+        assert!(
+            report.overlay[9..]
+                .iter()
+                .all(|r| r.house_from_lagna.is_some()),
+            "{id}"
+        );
+        for (a, b) in report.overlay.iter().zip(&known.overlay) {
+            assert_eq!(
+                (a.sign, a.house_from_moon),
+                (b.sign, b.house_from_moon),
+                "{id}"
+            );
+        }
+        let moon_at = |offset: f64| {
+            let chart = chart_of(&ChartInput {
+                jd_ut: input.jd_ut + offset,
+                ..input.clone()
+            });
+            let moon = &chart.grahas[Graha::Moon as usize];
+            (moon.nakshatra, moon.sign)
+        };
+        let (start, end) = (moon_at(-0.5), moon_at(0.5));
+        assert_eq!(
+            report.moon_day_change,
+            [
+                MoonDayChange::default(),
+                MoonDayChange {
+                    nakshatra: start.0 != end.0,
+                    sign: start.1 != end.1
+                }
+            ],
+            "{id}"
+        );
+        // Rol değişince olgu da yer değiştirir.
+        let swapped = compute_compat_blocking(engine, unknown, delhi.clone()).expect("swapped");
+        assert_eq!(
+            swapped.moon_day_change[0], report.moon_day_change[1],
+            "{id}"
+        );
+        assert_eq!(swapped.moon_day_change[1], MoonDayChange::default(), "{id}");
+    }
+
+    // Hatalar `compute_chart` ile aynı kodlara eşlenir, hangi haritadan gelirse gelsin;
+    // parametreler danışan verisi taşımaz.
+    let bad_place = ChartInput {
+        lat: 91.0,
+        time_known: false,
+        ..delhi.clone()
+    };
+    for (groom, bride) in [(&bad_place, &istanbul), (&istanbul, &bad_place)] {
+        assert_eq!(
+            compute_compat_blocking(engine, groom.clone(), bride.clone())
+                .unwrap_err()
+                .code,
+            "invalid_location"
+        );
+    }
+    let old_settings = ChartInput {
+        settings: CalcSettings {
+            schema_version: 1,
+            ..CalcSettings::default()
+        },
+        ..delhi.clone()
+    };
+    assert_eq!(
+        compute_compat_blocking(engine, istanbul.clone(), old_settings)
+            .unwrap_err()
+            .code,
+        "unsupported_schema_version"
+    );
+
+    // Performans: spec §15 "compute_compat ≤ 20 ms" (iki temel harita dahil). En pahalı
+    // durum iki haritanın da doğum saatinin bilinmemesidir (altı harita hesabı).
+    let (median, max) = median_of_15(|| {
+        compute_compat_blocking(engine, delhi.clone(), istanbul.clone()).expect("compat");
+    });
+    eprintln!("compute_compat median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(20),
+        "compute_compat median {median:?}"
+    );
+    let unknown = |input: &ChartInput| ChartInput {
+        time_known: false,
+        ..input.clone()
+    };
+    let (median, max) = median_of_15(|| {
+        compute_compat_blocking(engine, unknown(&delhi), unknown(&istanbul)).expect("compat");
+    });
+    eprintln!("compute_compat (both times unknown) median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(20),
+        "compute_compat (both times unknown) median {median:?}"
     );
 }
