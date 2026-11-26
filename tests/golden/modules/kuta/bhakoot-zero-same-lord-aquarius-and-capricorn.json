@@ -1,0 +1,57 @@
+{
+  "id": "bhakoot-zero-same-lord-aquarius-and-capricorn",
+  "source": "hand",
+  "rule_ref": "Kuzey Hint Ashtakuta'sı, 36 puanlık sistem (muhurta ve evlilik uyumu derlemeleri; alıntı yapılmaz); ileri modüller spec'i §9",
+  "derivation": [
+    "Bhakoot 0 ve Bhakoot istisnası: Kova ve Oğlak'ın lordu Satürn (Oğlak'ın ilk yarısı: vashya dört ayaklı).",
+    "Damat rolünün Ay'ı 310°: Kova 10°00′; 310 × 3/10 = 93 → pada dizini 93 → 24. nakshatra (Shatabhisha), 2. pada.",
+    "Gelin rolünün Ay'ı 281°: Oğlak 11°00′; 281 × 3/10 = 84.3 → pada dizini 84 → 22. nakshatra (Shravana), 1. pada.",
+    "Varna: shudra – vaishya; damat rolünün sınıfı daha altta → 0.",
+    "Vashya: human – quadruped; tablo [damat][gelin] → 1.",
+    "Tara: gelinin nakshatrasından (22) damadınkine (24) sayım 3 → 3. tara (uygunsuz); damadınkinden gelininkine sayım 26 → 8. tara (uygun) → 1½.",
+    "Yoni: horse – monkey → 3.",
+    "Graha maitri: Saturn – Saturn; aynı lord → 5.",
+    "Gana: rakshasa – deva; tablo [damat][gelin] → 1.",
+    "Bhakoot: damadın burcu Kova, gelinin burcu Oğlak; gelinin burcu damadınkinden sayınca 12., ters yönde 2. → karşılıklı sayım 2/12 → 0.",
+    "Nadi: adi – antya → 8.",
+    "Toplam: 0 + 1 + 1½ + 3 + 5 + 1 + 0 + 8 = 19½.",
+    "Bhakoot istisnası: puan 0; lordlar Saturn ve Saturn: aynı lord → var.",
+    "Nadi istisnası: puan 0 değil → yok.",
+    "Damat rolünün Kuja dosha olgusu: Mars'ın burcu Aslan; lagnadan 8. ev, Ay'dan 7. ev, Venüs'ten 12. ev; dosha evleri 1, 2, 4, 7, 8, 12.",
+    "Gelin rolünün Kuja dosha olgusu: Mars'ın burcu Koç; lagnadan 12. ev, Ay'dan 4. ev, Venüs'ten 4. ev; dosha evleri 1, 2, 4, 7, 8, 12.",
+    "Karşılıklı yerleşim, damat rolünün grahaları: diğer tarafın lagna burcu Boğa, Ay burcu Oğlak; grahanın burcu ve bu iki burçtan sayısı (lagnadan/Ay'dan): Güneş Terazi 6/10; Ay Kova 10/2; Mars Aslan 4/8; Merkür Terazi 6/10; Jüpiter Balık 11/3; Venüs Başak 5/9; Satürn Yengeç 3/7; Rahu Yay 8/12; Ketu İkizler 2/6.",
+    "Karşılıklı yerleşim, gelin rolünün grahaları: diğer tarafın lagna burcu Oğlak, Ay burcu Kova; grahanın burcu ve bu iki burçtan sayısı (lagnadan/Ay'dan): Güneş Kova 2/1; Ay Oğlak 1/12; Mars Koç 4/3; Merkür Kova 2/1; Jüpiter İkizler 6/5; Venüs Oğlak 1/12; Satürn Yay 12/11; Rahu Aslan 8/7; Ketu Kova 2/1."
+  ],
+  "input": {
+    "lagna_lon": 280.0,
+    "grahas": {"Sun": 190.0, "Moon": 310.0, "Mars": 130.0, "Mercury": 200.0, "Jupiter": 340.0, "Venus": 160.0, "Saturn": 100.0, "Rahu": 250.0, "Ketu": 70.0},
+    "bride": {
+      "lagna_lon": 40.0,
+      "grahas": {"Sun": 300.0, "Moon": 281.0, "Mars": 10.0, "Mercury": 310.0, "Jupiter": 70.0, "Venus": 280.0, "Saturn": 250.0, "Rahu": 130.0, "Ketu": 310.0}
+    }
+  },
+  "expected": {
+    "scores": [
+      {"kuta": "Varna", "score": 0.0, "groom_class": "shudra", "bride_class": "vaishya"},
+      {"kuta": "Vashya", "score": 1.0, "groom_class": "human", "bride_class": "quadruped"},
+      {"kuta": "Tara", "score": 1.5, "groom_class": "3", "bride_class": "8"},
+      {"kuta": "Yoni", "score": 3.0, "groom_class": "horse", "bride_class": "monkey"},
+      {"kuta": "GrahaMaitri", "score": 5.0, "groom_class": "Saturn", "bride_class": "Saturn"},
+      {"kuta": "Gana", "score": 1.0, "groom_class": "rakshasa", "bride_class": "deva"},
+      {"kuta": "Bhakoot", "score": 0.0, "groom_class": "Aquarius", "bride_class": "Capricorn"},
+      {"kuta": "Nadi", "score": 8.0, "groom_class": "adi", "bride_class": "antya"}
+    ],
+    "total": 19.5,
+    "bhakoot_exception": true,
+    "nadi_exception": false,
+    "kuja_dosha": [
+      {"from_lagna": true, "from_moon": true, "from_venus": true},
+      {"from_lagna": true, "from_moon": true, "from_venus": true}
+    ],
+    "overlay": {
+      "groom": [[6, 10], [10, 2], [4, 8], [6, 10], [11, 3], [5, 9], [3, 7], [8, 12], [2, 6]],
+      "bride": [[2, 1], [1, 12], [4, 3], [2, 1], [6, 5], [1, 12], [12, 11], [8, 7], [2, 1]]
+    },
+    "approximate": false
+  }
+}

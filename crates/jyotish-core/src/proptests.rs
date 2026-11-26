@@ -1320,3 +1320,140 @@ mod yoga_properties {
         }
     }
 }
+
+mod kuta_properties {
+    use proptest::prelude::*;
+
+    use super::foundation_properties::positions;
+    use crate::graha::Graha;
+    use crate::kuta::{
+        kuta_class_ids, kuta_report, kuta_scores, Kuta, KutaRole, MoonDayChange, MoonPoint,
+        KUTA_METHOD, KUTA_TOTAL_MAX,
+    };
+    use crate::nature::kuja_dosha;
+    use crate::zodiac::{Sign, PADA_SPAN_DEG};
+
+    proptest! {
+        #[test]
+        fn total_is_the_sum_of_eight_bounded_scores(groom in positions(), bride in positions()) {
+            let r = kuta_report(&groom, &bride);
+            let mut sum = 0.0;
+            for (i, s) in r.scores.iter().enumerate() {
+                prop_assert_eq!(s.kuta, Kuta::ALL[i]);
+                prop_assert_eq!(s.max, s.kuta.max());
+                prop_assert!((0.0..=s.max).contains(&s.score), "{:?}: {}", s.kuta, s.score);
+                // Puanlar ½'nin katıdır.
+                prop_assert_eq!((s.score * 2.0).fract(), 0.0);
+                let ids = kuta_class_ids(s.kuta);
+                prop_assert!(ids.contains(&s.groom_class) && ids.contains(&s.bride_class));
+                sum += s.score;
+            }
+            prop_assert_eq!(r.total, sum);
+            prop_assert!((0.0..=KUTA_TOTAL_MAX).contains(&r.total));
+            // Tara'da iki yön birden uygunsuz olamaz: en az 1½.
+            prop_assert!(r.scores[Kuta::Tara as usize].score >= 1.5);
+            prop_assert_eq!(r.method.as_str(), KUTA_METHOD);
+            prop_assert_eq!(r.moon_day_change, [MoonDayChange::default(); 2]);
+        }
+
+        #[test]
+        fn nadi_bhakoot_yoni_maitri_and_tara_do_not_change_when_roles_swap(
+            groom in positions(),
+            bride in positions(),
+        ) {
+            let (a, b) = (kuta_report(&groom, &bride), kuta_report(&bride, &groom));
+            for kuta in [Kuta::Nadi, Kuta::Bhakoot, Kuta::Yoni, Kuta::GrahaMaitri, Kuta::Tara] {
+                let (x, y) = (&a.scores[kuta as usize], &b.scores[kuta as usize]);
+                prop_assert_eq!(x.score, y.score, "{:?}", kuta);
+                // Sınıflar yer değiştirir.
+                prop_assert_eq!(&x.groom_class, &y.bride_class);
+                prop_assert_eq!(&x.bride_class, &y.groom_class);
+            }
+            // İstisnalar bakışımlı koşullardır; Kuja dosha ve yerleşim yarıları yer değiştirir.
+            prop_assert_eq!(a.bhakoot_exception, b.bhakoot_exception);
+            prop_assert_eq!(a.nadi_exception, b.nadi_exception);
+            prop_assert_eq!(a.kuja_dosha, [b.kuja_dosha[1], b.kuja_dosha[0]]);
+            prop_assert_eq!(a.approximate, b.approximate);
+            for i in 0..9 {
+                let (x, y) = (&a.overlay[i], &b.overlay[i + 9]);
+                prop_assert_eq!((x.owner, y.owner), (KutaRole::Groom, KutaRole::Bride));
+                prop_assert_eq!(
+                    (x.graha, x.sign, x.house_from_lagna, x.house_from_moon),
+                    (y.graha, y.sign, y.house_from_lagna, y.house_from_moon)
+                );
+            }
+        }
+
+        #[test]
+        fn the_same_moon_scores_nadi_0_yoni_4_bhakoot_7_maitri_5(
+            pada in 0u32..108,
+            offset_a in 0.01f64..0.99,
+            offset_b in 0.01f64..0.99,
+        ) {
+            // Aynı nakshatranın aynı padasında iki ayrı boylam.
+            let at = |offset: f64| (f64::from(pada) + offset) * PADA_SPAN_DEG;
+            let (g, b) = (MoonPoint::at(at(offset_a)), MoonPoint::at(at(offset_b)));
+            prop_assert_eq!((g.nakshatra, g.pada), (b.nakshatra, b.pada));
+            let scores = kuta_scores(&g, &b);
+            let score = |kuta: Kuta| scores[kuta as usize].score;
+            prop_assert_eq!(score(Kuta::Nadi), 0.0);
+            prop_assert_eq!(score(Kuta::Yoni), 4.0);
+            prop_assert_eq!(score(Kuta::Bhakoot), 7.0);
+            prop_assert_eq!(score(Kuta::GrahaMaitri), 5.0);
+            prop_assert_eq!(score(Kuta::Tara), 3.0);
+            prop_assert_eq!(score(Kuta::Gana), 6.0);
+            prop_assert_eq!(score(Kuta::Varna), 1.0);
+            // Bir pada tek bir burçtadır, ama 15° bir pada sınırı değildir (13°20′–16°40′
+            // padasının içindedir): Yay ve Oğlak'ta aynı padadaki iki Ay ayrı vashya
+            // gruplarına düşebilir. O durumda vashya 1, diğer her durumda 2'dir.
+            let same_half = (g.deg_in_sign < 15.0) == (b.deg_in_sign < 15.0);
+            let split_sign = matches!(g.sign, Sign::Sagittarius | Sign::Capricorn);
+            let vashya = if split_sign && !same_half { 1.0 } else { 2.0 };
+            prop_assert_eq!(score(Kuta::Vashya), vashya);
+            prop_assert_eq!(scores.iter().map(|s| s.score).sum::<f64>(), 26.0 + vashya);
+        }
+
+        #[test]
+        fn exceptions_only_come_with_a_zero_and_the_overlay_counts_whole_sign_houses(
+            groom in positions(),
+            bride in positions(),
+        ) {
+            let r = kuta_report(&groom, &bride);
+            if r.bhakoot_exception {
+                prop_assert_eq!(r.scores[Kuta::Bhakoot as usize].score, 0.0);
+                // Aynı lord ya da iki yönlü dost: graha maitri 5'tir.
+                prop_assert_eq!(r.scores[Kuta::GrahaMaitri as usize].score, 5.0);
+            }
+            if r.nadi_exception {
+                prop_assert_eq!(r.scores[Kuta::Nadi as usize].score, 0.0);
+                let (g, b) = (MoonPoint::of(&groom), MoonPoint::of(&bride));
+                prop_assert!((g.nakshatra, g.pada) != (b.nakshatra, b.pada));
+            }
+            prop_assert_eq!(r.kuja_dosha, [kuja_dosha(&groom), kuja_dosha(&bride)]);
+            prop_assert_eq!(
+                r.approximate,
+                groom.lagna_sign.is_none() || bride.lagna_sign.is_none()
+            );
+            for (i, row) in r.overlay.iter().enumerate() {
+                let (own, other) = if i < 9 { (&groom, &bride) } else { (&bride, &groom) };
+                prop_assert_eq!(row.graha, Graha::ALL[i % 9]);
+                prop_assert_eq!(row.sign, own.sign_of(row.graha));
+                prop_assert!((1..=12).contains(&row.house_from_moon));
+                prop_assert_eq!(row.house_from_lagna.is_some(), other.lagna_sign.is_some());
+                // Lagnadan ve Ay'dan sayım aynı burcu gösterir: fark, Ay'ın lagnadan evidir.
+                if let (Some(from_lagna), Some(moon_house)) =
+                    (row.house_from_lagna, other.house_of(Graha::Moon))
+                {
+                    prop_assert_eq!(
+                        (from_lagna + 12 - moon_house) % 12 + 1,
+                        row.house_from_moon
+                    );
+                }
+            }
+            // Bir tarafın Ay'ı kendi Ay'ından değil, diğerinin Ay'ından sayılır: iki Ay aynı
+            // burçtaysa 1. ev.
+            let same = groom.sign_of(Graha::Moon) == bride.sign_of(Graha::Moon);
+            prop_assert_eq!(r.overlay[Graha::Moon as usize].house_from_moon == 1, same);
+        }
+    }
+}

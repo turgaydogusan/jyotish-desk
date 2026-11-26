@@ -9,11 +9,12 @@ use std::path::PathBuf;
 use jyotish_core::{
     argala_rows, arudha_padas, chara_dasha, chara_dasha_order, chara_dasha_sign_years,
     chara_karakas, co_lord_choice, drishti_table, house_lord, houses_owned, jaimini_lord,
-    jaimini_report, karakamsha, kuja_dosha, moon_is_waxing, nature, normalize, shadbala,
-    sign_dasha_children, yoga_rule, yogas, AdvancedSettings, ArgalaStatus, Graha, GrahaWar,
-    KarakaRole, KujaDosha, Nature, Positions, ShadbalaAstro, Sign, SignDashaPeriod, TimeLords,
-    YogaRelation, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD,
-    SHADBALA_GRAHAS, SHADBALA_METHOD, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS,
+    jaimini_report, karakamsha, kuja_dosha, kuta_class_ids, kuta_report, moon_is_waxing, nature,
+    normalize, shadbala, sign_dasha_children, yoga_rule, yogas, AdvancedSettings, ArgalaStatus,
+    Graha, GrahaWar, KarakaRole, KujaDosha, Kuta, KutaRole, MoonDayChange, MoonPoint, Nature,
+    Positions, ShadbalaAstro, Sign, SignDashaPeriod, TimeLords, YogaRelation, ASPECTING_GRAHAS,
+    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, KUTA_METHOD, SHADBALA_GRAHAS,
+    SHADBALA_METHOD, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -25,6 +26,7 @@ const MIN_JAIMINI: usize = 8;
 const MIN_CHARA_DASHA: usize = 7;
 const MIN_SHADBALA: usize = 4;
 const MIN_YOGAS: usize = 15;
+const MIN_KUTA: usize = 8;
 /// El hesabı ile motor arasındaki en büyük fark, virupa.
 const VIRUPA_TOL: f64 = 1e-9;
 /// Shadbala çalışma kâğıdının toleransı, virupa (ileri modüller spec'i §7 "Test").
@@ -44,7 +46,8 @@ struct Fixture<X> {
 /// Sentetik konumlar: sidereal boylamlar, derece. `lagna_lon: null` doğum saati bilinmeyen
 /// haritadır. `advanced` yalnızca ayara bağlı modüllerde (Jaimini, chara dasha) verilir;
 /// `astro` (saf hesabın astronomik girdisi) ve `lats` (ekliptik enlemler; yazılmayan graha 0°)
-/// yalnızca Shadbala örneklerinde.
+/// yalnızca Shadbala örneklerinde; `bride` (gelin rolünün haritası) yalnızca uyum örneklerinde:
+/// orada üst düzeydeki `lagna_lon` ve `grahas` damat rolünün haritasıdır.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
@@ -56,6 +59,26 @@ struct Input {
     lats: Option<BTreeMap<Graha, f64>>,
     #[serde(default)]
     astro: Option<ShadbalaAstro>,
+    #[serde(default)]
+    bride: Option<PartnerInput>,
+}
+
+/// Uyum örneklerinde ikinci harita (gelin rolü): aynı biçimde sentetik konumlar.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PartnerInput {
+    lagna_lon: Option<f64>,
+    grahas: BTreeMap<Graha, f64>,
+}
+
+impl PartnerInput {
+    fn positions(&self, id: &str) -> Positions {
+        assert_eq!(self.grahas.len(), 9, "{id}: all nine grahas of the bride");
+        Positions::synthetic(
+            self.lagna_lon,
+            std::array::from_fn(|i| self.grahas[&Graha::ALL[i]]),
+        )
+    }
 }
 
 impl Input {
@@ -1249,5 +1272,214 @@ fn yogas_fixtures_cover_every_rule() {
             "{}",
             f.id
         );
+    }
+}
+
+/// Bir kutanın beklenen puanı ve iki tarafın sınıf kimliği (`max` kutanın sırasından gelir).
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedKuta {
+    kuta: Kuta,
+    score: f64,
+    groom_class: String,
+    bride_class: String,
+}
+
+/// Karşılıklı yerleşim: her tarafın dokuz grahası (`Graha::ALL` sırasında) için
+/// `[diğer tarafın lagnasından ev | null, diğer tarafın Ay'ından ev]`.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedOverlay {
+    groom: Vec<(Option<u8>, u8)>,
+    bride: Vec<(Option<u8>, u8)>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct KutaExpected {
+    /// Sekiz kuta, tablo sırasıyla.
+    scores: Vec<ExpectedKuta>,
+    total: f64,
+    bhakoot_exception: bool,
+    nadi_exception: bool,
+    /// `[damat rolü, gelin rolü]`.
+    kuja_dosha: [KujaDosha; 2],
+    overlay: ExpectedOverlay,
+    approximate: bool,
+}
+
+/// Uyum örnekleri: damat rolünün konumları, gelin rolünün konumları.
+fn kuta_fixtures() -> Vec<(Fixture<KutaExpected>, Positions, Positions)> {
+    load::<KutaExpected>("kuta", MIN_KUTA)
+        .into_iter()
+        .map(|(f, groom)| {
+            let bride = f
+                .input
+                .bride
+                .as_ref()
+                .unwrap_or_else(|| panic!("{}: kuta fixtures need the bride block", f.id))
+                .positions(&f.id);
+            (f, groom, bride)
+        })
+        .collect()
+}
+
+#[test]
+fn kuta_hand_fixtures() {
+    for (f, groom, bride) in kuta_fixtures() {
+        let id = &f.id;
+        let x = &f.expected;
+        let r = kuta_report(&groom, &bride);
+        assert_eq!(r.method, KUTA_METHOD, "{id}");
+        assert_eq!(x.scores.len(), 8, "{id}: eight kutas");
+        for (i, (got, want)) in r.scores.iter().zip(&x.scores).enumerate() {
+            assert_eq!(want.kuta, Kuta::ALL[i], "{id}: fixture order");
+            assert_eq!(got.kuta, want.kuta, "{id}");
+            assert_eq!(got.score, want.score, "{id}: {:?}", want.kuta);
+            assert_eq!(got.max, (i + 1) as f64, "{id}: {:?} max", want.kuta);
+            assert_eq!(got.groom_class, want.groom_class, "{id}: {:?}", want.kuta);
+            assert_eq!(got.bride_class, want.bride_class, "{id}: {:?}", want.kuta);
+            for class in [&want.groom_class, &want.bride_class] {
+                assert!(
+                    kuta_class_ids(want.kuta).contains(class),
+                    "{id}: {:?} class {class}",
+                    want.kuta
+                );
+            }
+        }
+        // Toplam, el örneğindeki sekiz kalemin toplamıdır (½ katları: tam eşitlik).
+        assert_eq!(
+            x.total,
+            x.scores.iter().map(|s| s.score).sum::<f64>(),
+            "{id}"
+        );
+        assert_eq!(r.total, x.total, "{id}: total");
+        assert_eq!(r.bhakoot_exception, x.bhakoot_exception, "{id}: bhakoot");
+        assert_eq!(r.nadi_exception, x.nadi_exception, "{id}: nadi");
+        assert_eq!(r.kuja_dosha, x.kuja_dosha, "{id}: kuja dosha");
+        assert_eq!(r.approximate, x.approximate, "{id}: approximate");
+        assert_eq!(
+            x.approximate,
+            groom.lagna_sign.is_none() || bride.lagna_sign.is_none(),
+            "{id}"
+        );
+        // Saf hesap Ay'ın gün içindeki değişimini bilmez; onu toplayıcı doldurur.
+        assert_eq!(r.moon_day_change, [MoonDayChange::default(); 2], "{id}");
+        // Karşılıklı yerleşim: 9 + 9 satır.
+        assert_eq!(
+            (x.overlay.groom.len(), x.overlay.bride.len()),
+            (9, 9),
+            "{id}"
+        );
+        let want_rows = x.overlay.groom.iter().chain(&x.overlay.bride);
+        for (i, (row, want)) in r.overlay.iter().zip(want_rows).enumerate() {
+            let (owner, own) = if i < 9 {
+                (KutaRole::Groom, &groom)
+            } else {
+                (KutaRole::Bride, &bride)
+            };
+            let graha = Graha::ALL[i % 9];
+            assert_eq!((row.owner, row.graha), (owner, graha), "{id}");
+            assert_eq!(row.sign, own.sign_of(graha), "{id}: {graha:?}");
+            assert_eq!(
+                (row.house_from_lagna, row.house_from_moon),
+                *want,
+                "{id}: {owner:?} {graha:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn kuta_fixtures_cover_the_required_cases() {
+    let all = kuta_fixtures();
+    let score = |f: &Fixture<KutaExpected>, kuta: Kuta| f.expected.scores[kuta as usize].score;
+    // Her kuta en az bir örnekte en çok puanını, en az bir örnekte en düşük puanını alır.
+    // Tara'nın en düşük puanı 1½'dir: iki yön birden uygunsuz olamaz.
+    for kuta in Kuta::ALL {
+        let min = if kuta == Kuta::Tara { 1.5 } else { 0.0 };
+        assert!(
+            all.iter().any(|(f, ..)| score(f, kuta) == kuta.max()),
+            "{kuta:?}: no fixture with the maximum"
+        );
+        assert!(
+            all.iter().any(|(f, ..)| score(f, kuta) == min),
+            "{kuta:?}: no fixture with the minimum"
+        );
+    }
+    // Yarım puanlı kalemler: vashya ½, graha maitri ½.
+    assert!(all.iter().any(|(f, ..)| score(f, Kuta::Vashya) == 0.5));
+    assert!(all.iter().any(|(f, ..)| score(f, Kuta::GrahaMaitri) == 0.5));
+    // Toplamın iki ucu: 36 ve 2½ (108 × 108 pada çiftinin en düşüğü).
+    assert!(all.iter().any(|(f, ..)| f.expected.total == 36.0));
+    assert!(all.iter().any(|(f, ..)| f.expected.total == 2.5));
+    // İstisnalar: var; puan 0 iken yok.
+    let x = |f: &Fixture<KutaExpected>| (f.expected.bhakoot_exception, f.expected.nadi_exception);
+    assert!(all.iter().any(|(f, ..)| x(f).0), "bhakoot exception");
+    assert!(all.iter().any(|(f, ..)| x(f).1), "nadi exception");
+    assert!(all
+        .iter()
+        .any(|(f, ..)| score(f, Kuta::Bhakoot) == 0.0 && !x(f).0));
+    assert!(all
+        .iter()
+        .any(|(f, ..)| score(f, Kuta::Nadi) == 0.0 && !x(f).1));
+    // Nadi istisnasının iki yolu: aynı nakshatranın farklı padaları; aynı burcun farklı
+    // nakshatraları.
+    let moons = |g: &Positions, b: &Positions| (MoonPoint::of(g), MoonPoint::of(b));
+    assert!(all.iter().any(|(f, g, b)| {
+        let (g, b) = moons(g, b);
+        x(f).1 && g.nakshatra == b.nakshatra && g.pada != b.pada
+    }));
+    assert!(all.iter().any(|(f, g, b)| {
+        let (g, b) = moons(g, b);
+        x(f).1 && g.nakshatra != b.nakshatra && g.sign == b.sign
+    }));
+    // Aynı Ay (aynı nakshatra, aynı pada): nadi 0, yoni 4, bhakoot 7, maitri 5; istisna yok.
+    assert!(all.iter().any(|(f, g, b)| {
+        let (g, b) = moons(g, b);
+        (g.nakshatra, g.pada) == (b.nakshatra, b.pada)
+            && score(f, Kuta::Nadi) == 0.0
+            && score(f, Kuta::Yoni) == 4.0
+            && score(f, Kuta::Bhakoot) == 7.0
+            && score(f, Kuta::GrahaMaitri) == 5.0
+            && !x(f).1
+    }));
+    // Vashya'nın bölünen iki burcunun dört yarısı da örneklerde geçer.
+    let half = |sign: Sign, first: bool| {
+        all.iter().any(|(_, g, b)| {
+            [MoonPoint::of(g), MoonPoint::of(b)]
+                .iter()
+                .any(|m| m.sign == sign && (m.deg_in_sign < 15.0) == first)
+        })
+    };
+    for sign in [Sign::Sagittarius, Sign::Capricorn] {
+        assert!(half(sign, true) && half(sign, false), "{sign:?} halves");
+    }
+    // Doğum saati bilinmeyen harita: bir örnekte damat rolünde, bir örnekte gelin rolünde.
+    assert!(all
+        .iter()
+        .any(|(_, g, b)| g.lagna_sign.is_none() && b.lagna_sign.is_some()));
+    assert!(all
+        .iter()
+        .any(|(_, g, b)| g.lagna_sign.is_some() && b.lagna_sign.is_none()));
+    // Kuja dosha: üç referansın her biri en az bir haritada var ve en az birinde yok.
+    let doshas: Vec<KujaDosha> = all
+        .iter()
+        .flat_map(|(f, ..)| f.expected.kuja_dosha)
+        .collect();
+    for (name, read) in [
+        (
+            "lagna",
+            (|d: &KujaDosha| d.from_lagna) as fn(&KujaDosha) -> Option<bool>,
+        ),
+        ("moon", |d: &KujaDosha| Some(d.from_moon)),
+        ("venus", |d: &KujaDosha| Some(d.from_venus)),
+    ] {
+        for want in [true, false] {
+            assert!(
+                doshas.iter().any(|d| read(d) == Some(want)),
+                "kuja dosha from {name}: {want}"
+            );
+        }
     }
 }

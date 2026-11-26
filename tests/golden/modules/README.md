@@ -53,6 +53,7 @@ doğum anı ve 365,25 günlük yıl kullanır, tarihleri el yıllarının biriki
 | `chara_dasha` | `forward`, `order` (dasha sırası, lagnadan), `years` (ilk çevrim, `order` sırasında), `second_cycle` (ikinci çevrimde üretilen dashalar: `sign`, `years`), `sub_periods` (ilk iki dashanın alt dönem sırası); saat bilinmiyorsa `expected` `null` | 7 |
 | `shadbala` | `grahas` (yedi graha: sthana balanın beş kalemi ve `sthana`, `dig`, zaman gücünün sekiz kalemi ve `temporal`, `cheshta`, `naisargika`, `drik`, `total`, `rank`, `war`), `time_lords`, `bhavas` (on iki bhava: `house`, `lord`, `lord_bala`, `dig`, `drishti`, `total`, `rank`); saat bilinmiyorsa `expected` `null` | 4 |
 | `yogas` | `hits` (raporun bütün kayıtları, katalog sırasıyla: `id`, `grahas`, `houses`, `relations`, `conditions`), `absent` (bu örneğin "oluşmayan durum" olarak gösterdiği kurallar), `cancelled` (iptal örnekleri), `evaluated`, `skipped_time_unknown` | 15 |
+| `kuta` | `scores` (sekiz kuta, tablo sırasıyla: `kuta`, `score`, `groom_class`, `bride_class`), `total`, `bhakoot_exception`, `nadi_exception`, `kuja_dosha` (`[damat rolü, gelin rolü]`), `overlay` (`groom` ve `bride`: dokuzar satır `[diğer tarafın lagnasından ev ya da null, Ay'ından ev]`), `approximate` | 8 |
 
 Shadbala örnekleri çalışma kâğıdıdır (tasarım belgesi §7 "Test"): `shadbala/WORKSHEET.md` her
 kalemin aritmetiğini adım adım yazar, JSON dosyaları aynı girdiyi ve sonuçları taşır. Tolerans
@@ -67,5 +68,14 @@ oluşmayan Kemadruma ve Shakata'yı, bir de düşüş burcunda olup hiçbir koş
 az bir örnekte `absent` sayıldığını ve üç iptal durumunun bulunduğunu sabitler. `lagna_lon: null`
 örneklerinde lagna isteyen 17 kural değerlendirilmez ve `houses` boştur. Tasarım belgesinin açık
 bıraktığı yerlerdeki okuma kuralları ve bağımsız gözden geçirmenin kaydı `yogas/REVIEW.md`'dedir.
+
+Uyum örnekleri (tasarım belgesi §9 "Test") iki harita taşır: üst düzeydeki `lagna_lon` ve
+`grahas` damat rolünün haritasıdır, girdideki `bride` bloğu (aynı iki alan) gelin rolünün
+haritasıdır; diğer modüllerde `bride` yazılmaz. Her örnek raporun tamamını yazar ve toplamı
+`derivation`'da adım adım kurar. Ayrı bir test her kutanın en çok ve en düşük puanının, iki
+istisnanın (var ve yok), vashyanın bölünen iki burcunun dört yarısının ve doğum saati bilinmeyen
+haritanın iki rolde de örneklerde bulunduğunu sabitler. Okuma kuralları, motorun üç puan tablosu,
+tabloların basılı kaynaklarla karşılaştırma kaydı ve bağımsız gözden geçirmenin kaydı
+`kuta/REVIEW.md`'dedir.
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.

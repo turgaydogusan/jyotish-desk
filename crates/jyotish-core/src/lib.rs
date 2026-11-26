@@ -64,6 +64,10 @@ pub use jaimini::{
     CHARA_DASHA_HORIZON_YEARS, CHARA_DASHA_LEVELS, CHARA_DASHA_METHOD, EIGHT_KARAKA_ROLES,
     JAIMINI_METHOD, KARAKA_TIE_DEG, MAX_SIGN_DASHA_LEVEL, SEVEN_KARAKA_ROLES, THIRD_HOUSE_MALEFICS,
 };
+pub use kuta::{
+    compute_compat, kuta_class_ids, kuta_report, kuta_scores, Kuta, KutaReport, KutaRole,
+    KutaScore, MoonDayChange, MoonPoint, OverlayRow, KUTA_METHOD, KUTA_TOTAL_MAX,
+};
 pub use lordship::{house_lord, house_sign, houses_owned};
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};
 pub use panchang::{
