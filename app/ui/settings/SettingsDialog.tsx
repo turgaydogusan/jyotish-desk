@@ -16,6 +16,7 @@ import {
   ayanamsaKey,
   DASHA_YEARS,
   HOUSE_SYSTEMS,
+  KARAKA_SCHEMES,
   NODES,
   ORB_KEYS,
   parseOrb,
@@ -264,6 +265,33 @@ export function SettingsDialog({ onClose, debounceMs = SAVE_DEBOUNCE_MS }: { onC
                 </div>
               );
             })}
+          </fieldset>
+          <fieldset className={`settings-advanced${differs("advanced") ? " settings-row--differs" : ""}`}>
+            <legend>
+              {t("settings.field.advanced")} {mark("advanced")}
+            </legend>
+            <div className="settings-row">
+              <label htmlFor={`${id}-karaka_scheme`}>{t("settings.karakaScheme")}</label>
+              <select
+                id={`${id}-karaka_scheme`}
+                value={draft.advanced.karaka_scheme}
+                onChange={(e) => change({ ...draft, advanced: { ...draft.advanced, karaka_scheme: e.target.value as CalcSettings["advanced"]["karaka_scheme"] } })}
+              >
+                {KARAKA_SCHEMES.map((k) => (
+                  <option key={k} value={k}>
+                    {t(`settings.karakaSchemes.${k}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="settings-check">
+              <input
+                type="checkbox"
+                checked={draft.advanced.jaimini_co_lords}
+                onChange={(e) => change({ ...draft, advanced: { ...draft.advanced, jaimini_co_lords: e.target.checked } })}
+              />
+              {t("settings.jaiminiCoLords")}
+            </label>
           </fieldset>
         </div>
       )}

@@ -221,3 +221,51 @@ test("a pending edit is written when the page hides or unloads", async () => {
   await waitFor(() => expect(api.saveCalcSettings).toHaveBeenCalledTimes(2));
   expect(vi.mocked(api.saveCalcSettings).mock.calls[1][1].node).toBe("Mean");
 });
+
+test("the karaka scheme and the co-lord rule are edited in the advanced group and saved with the chart", async () => {
+  vi.mocked(api.saveCalcSettings).mockResolvedValue(okChart());
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />);
+  const group = screen.getByRole("group", { name: "İleri modül ayarları" });
+  const scheme = screen.getByLabelText("Chara karaka şeması");
+  const coLords = screen.getByRole("checkbox", { name: "Jaimini eş lordları (Akrep: Mars ve Ketu; Kova: Satürn ve Rahu)" });
+  expect(group).toContainElement(scheme);
+  expect(group).toContainElement(coLords);
+  expect(scheme).toHaveDisplayValue("Sekiz karaka (Rahu dahil)");
+  expect(coLords).toBeChecked();
+  fireEvent.change(scheme, { target: { value: "Seven" } });
+  await waitFor(() => expect(api.saveCalcSettings).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.saveCalcSettings).mock.calls[0][1].advanced).toEqual({ karaka_scheme: "Seven", jaimini_co_lords: true });
+  expect(scheme).toHaveDisplayValue("Yedi karaka (Rahu hariç)");
+  fireEvent.click(coLords);
+  await waitFor(() => expect(api.saveCalcSettings).toHaveBeenCalledTimes(2));
+  expect(vi.mocked(api.saveCalcSettings).mock.calls[1][1].advanced).toEqual({ karaka_scheme: "Seven", jaimini_co_lords: false });
+  // Grup varsayılandan ayrıldığını metinle söyler (renk tek başına değil).
+  expect(group).toHaveTextContent("varsayılandan farklı");
+  // Diğer alanlar değişmez.
+  expect(vi.mocked(api.saveCalcSettings).mock.calls[1][1].node).toBe(fixture().opened.calc_settings.node);
+});
+
+test("an advanced difference is marked on its group and reset restores both fields", async () => {
+  vi.mocked(api.saveCalcSettings).mockResolvedValue(okChart());
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />, {
+    opened: openedWith({ advanced: { karaka_scheme: "Seven", jaimini_co_lords: false } }),
+  });
+  expect(screen.getAllByText("varsayılandan farklı")).toHaveLength(1);
+  expect(screen.getByRole("group", { name: "İleri modül ayarları varsayılandan farklı" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Chara karaka şeması")).toHaveDisplayValue("Yedi karaka (Rahu hariç)");
+  fireEvent.click(screen.getByRole("button", { name: "Varsayılana döndür" }));
+  await waitFor(() => expect(api.saveCalcSettings).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.saveCalcSettings).mock.calls[0][1].advanced).toEqual({ karaka_scheme: "Eight", jaimini_co_lords: true });
+  await waitFor(() => expect(screen.queryByText("varsayılandan farklı")).toBeNull());
+  expect(screen.getByRole("checkbox", { name: /Jaimini eş lordları/ })).toBeChecked();
+});
+
+test("without an open chart the advanced fields edit the defaults for new charts", async () => {
+  vi.mocked(api.setAppPrefs).mockResolvedValue({ status: "ok", data: null });
+  renderWithStores(<SettingsDialog onClose={() => {}} debounceMs={0} />, { opened: null });
+  fireEvent.click(screen.getByRole("checkbox", { name: /Jaimini eş lordları/ }));
+  await waitFor(() => expect(api.setAppPrefs).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.setAppPrefs).mock.calls[0][0].calc_settings.advanced).toEqual({ karaka_scheme: "Eight", jaimini_co_lords: false });
+  expect(api.saveCalcSettings).not.toHaveBeenCalled();
+  expect(screen.queryByText("varsayılandan farklı")).toBeNull();
+});

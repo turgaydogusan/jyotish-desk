@@ -41,3 +41,16 @@
   width: 5rem;
   font-variant-numeric: tabular-nums;
 }
+
+.settings-advanced {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  padding: 8px;
+}
+
+.settings-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

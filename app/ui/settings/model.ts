@@ -11,6 +11,8 @@ export const HOUSE_SYSTEMS = ["WholeSign", "Sripati", "Placidus"] as const satis
 export const SUNRISE_DEFS = ["DiskCenterNoRefraction", "UpperLimbRefracted"] as const satisfies readonly CalcSettings["sunrise_def"][];
 /** Seçilebilir Vimshottari yıl uzunlukları (gün): Julian yılı, savana yılı, tropik yıl. */
 export const DASHA_YEARS = [365.25, 360, 365.2422] as const;
+/** Chara karaka şemaları (`advanced.karaka_scheme`): sekizli şemada Rahu da karaka olur. */
+export const KARAKA_SCHEMES = ["Eight", "Seven"] as const satisfies readonly CalcSettings["advanced"]["karaka_scheme"][];
 export const ORB_KEYS = ["moon", "mars", "mercury", "mercury_retro", "jupiter", "venus", "venus_retro", "saturn"] as const satisfies readonly (keyof CombustionOrbs)[];
 export type OrbKey = (typeof ORB_KEYS)[number];
 
