@@ -55,4 +55,4 @@ tarihini ve bulduğu farkları yazar.
 
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
-| | | |
+| Plan 18 Task 3 gözden geçiren ajanı (motoru ve örnekleri yazan dışında); son incelemede yeniden koşuldu | 2026-11-26 | 15/15 örnek, 185 kayıt (kimlik, grahalar, evler, ilişkiler, koşullar, sıra, `evaluated`, `skipped_time_unknown`): fark yok. Gözden geçiren 41 kuralı tasarım belgesi §8 ve yukarıdaki okuma kurallarından, başka bir dilde ve kendi tablolarıyla (burç lordları, yücelme ve düşüş burçları, tam bakışlar, K6 sınıfı, burç türleri) yeniden yazdı; her örnekte yalnızca `input`'tan başladı ve motoru çalıştırmadı. `absent` listelerindeki hiçbir kural oluşmuyor; dört iptal örneğinin temel koşulu sağlanıyor. Testlerdeki elle yazılmış yedi tablo Task 1 ve Task 2 gözden geçirmelerinde satır satır yeniden türetildi (fark yok). Sınır: gözden geçiren aynı görevde motorun kaynağını da inceledi ve aynı okuma kurallarını paylaşır; bu kayıt kuralların uygulanışını doğrular, okuma seçimlerini (tasarım belgesi §17) değil. |
