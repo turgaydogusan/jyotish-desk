@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ipcCalls, mockIpc } from "./ipc";
+import { FIXTURE, ipcCalls, mockIpc } from "./ipc";
 
 test("birth entry: empty state, atlas place by keyboard, preview, save opens the chart", async ({ page }) => {
   await mockIpc(page, { session: false });
@@ -683,4 +683,118 @@ test("yogas with an unknown birth time: lagna rules are skipped and the rest is 
   await expect(yogas.locator("tbody tr")).toHaveCount(6);
   await expect(yogas.locator('tbody tr th span[aria-hidden="true"]')).toHaveText(["≈", "≈", "≈", "≈", "≈", "≈"]);
   await expect(yogas.locator('tr[data-yoga="dosha.kuja"]').locator("th, td")).toHaveText(["≈yaklaşık Kuja dosha", "Ma", "—", "—", "Venüs'ten"]);
+});
+
+test("compat: a palette panel; a partner from the picker, the kuta table, swapped roles and the partner ring", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async () => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill("uyum");
+    await palette.getByRole("option", { name: /Uyum panelini aç\/kapat/ }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  type Input = { jd_ut: number; time_known: boolean };
+  const compatCalls = async () => (await ipcCalls(page, "compute_compat")) as { groom: Input; bride: Input }[];
+  type Saved = { viewState: { compat_partner_uuid: string | null; compat_roles: string; panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: Record<string, unknown> }[] }[] } } };
+  const lastSaved = async () => (await ipcCalls(page, "save_view_state")).at(-1) as Saved | undefined;
+  const PARTNER_CHART = "00000000-0000-4000-8000-000000000004";
+
+  await toggle();
+  const compat = page.getByRole("region", { name: "Uyum" });
+  await expect(compat).toBeFocused();
+  await expect(compat).toBeInViewport();
+  // Eş seçilmemiş: tek eylemli boş durum; hiçbir uyum komutu çağrılmaz (ileri modüller spec'i K1).
+  await expect(compat.getByText("Uyum için bir eş harita seçin.")).toBeVisible();
+  await expect(compat.getByRole("button")).toHaveText(["Eş harita seç"]);
+  for (const cmd of ["compute_compat", "chart_input", "chart_brief"]) expect(await ipcCalls(page, cmd)).toHaveLength(0);
+
+  // Eş seçici: klavyeyle arama; tek haritalı danışan doğrudan eş olur.
+  await compat.getByRole("button", { name: "Eş harita seç" }).click();
+  const picker = page.getByRole("dialog", { name: "Eş harita seç" });
+  await picker.getByRole("combobox", { name: "Danışan ara" }).fill("ayşe");
+  await expect(picker.getByRole("option")).toHaveText(["Ayşe Yılmaz"]);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  const scores = compat.getByRole("table", { name: "Ashtakuta puanları" });
+  await expect(scores.locator("tbody tr")).toHaveCount(8);
+  await expect(scores.locator('tr[data-kuta="Tara"]').locator("th, td")).toHaveText(["Tara", "2 · Sampat", "9 · Parama mitra", "3 / 3"]);
+  await expect(scores.locator("tfoot tr").locator("th, td")).toHaveText(["Toplam", "19 / 36"]);
+  await expect(compat.locator(".compat-people div")).toHaveText(["1. kişi (damat rolü)Örnek Danışan · Doğum haritası", "2. kişi (gelin rolü)Ayşe Yılmaz · Doğum haritası"]);
+  await expect(compat.locator(".compat-facts li")).toHaveCount(3);
+  await expect(compat.getByRole("table", { name: "Karşılıklı yerleşim" }).locator("tbody tr")).toHaveCount(9);
+  // Eşin girdisi kimlikle okunur; rapor bir kez, damat rolü açık harita olarak istenir.
+  expect(await ipcCalls(page, "chart_input")).toEqual([{ chartUuid: PARTNER_CHART }]);
+  expect(await ipcCalls(page, "chart_brief")).toEqual([{ chartUuid: PARTNER_CHART }]);
+  const first = await compatCalls();
+  expect(first).toHaveLength(1);
+  expect(first[0].groom).toMatchObject({ jd_ut: 2451545, time_known: true });
+  expect(first[0].bride).toMatchObject({ jd_ut: FIXTURE.compat.input.jd_ut, time_known: true });
+  // Eş bağı haritanın görünüm kaydına yazılır.
+  await expect.poll(async () => [(await lastSaved())?.viewState.compat_partner_uuid, (await lastSaved())?.viewState.compat_roles]).toEqual([PARTNER_CHART, "OpenIsGroom"]);
+
+  // Ortak vurgu: yerleşim tablosundaki graha haritadaki grahayı vurgular.
+  await compat.getByRole("table", { name: "Karşılıklı yerleşim" }).getByRole("button", { name: "Jüpiter" }).click();
+  await expect(page.locator('svg [data-graha="Jupiter"]').first()).toHaveClass(/chart-planet--highlight/);
+  await expect(compat.locator('tr[data-graha="Jupiter"]')).toHaveClass(/is-highlighted/);
+  await page.keyboard.press("Escape");
+
+  // Roller değişir: rapor iki girdi yer değiştirerek yeniden istenir; eş yeniden okunmaz.
+  await compat.getByRole("button", { name: "Rolleri değiştir" }).click();
+  await expect(scores.locator("tfoot tr").locator("th, td")).toHaveText(["Toplam", "21 / 36"]);
+  await expect(compat.locator(".compat-people div").first()).toHaveText("1. kişi (damat rolü)Ayşe Yılmaz · Doğum haritası");
+  const second = await compatCalls();
+  expect(second).toHaveLength(2);
+  expect(second[1].groom.jd_ut).toBe(FIXTURE.compat.input.jd_ut);
+  expect(await ipcCalls(page, "chart_input")).toHaveLength(1);
+  await expect.poll(async () => (await lastSaved())?.viewState.compat_roles).toBe("OpenIsBride");
+
+  // Harita panelinde eş halkası: eşin dokuz grahası D1'in dış halkasına yazılır.
+  const d1 = page.getByRole("region", { name: /^Harita/ }).first();
+  await d1.getByRole("checkbox", { name: "Eş halkası" }).check();
+  await expect(d1.locator(".chart-transit")).toHaveCount(9);
+  await expect(d1.getByText(/^Eş \(Ayşe Yılmaz\): /)).toHaveCount(1);
+  // İki halka aynı anda açık olamaz.
+  await d1.getByRole("checkbox", { name: "Transit halkası" }).check();
+  await expect(d1.getByRole("checkbox", { name: "Eş halkası" })).not.toBeChecked();
+  await expect(d1.getByText(/^Eş \(/)).toHaveCount(0);
+
+  // Panel düzenle birlikte kaydedilir; aynı komut paneli kaldırır ve odak gövdeye düşmez.
+  await expect
+    .poll(async () => {
+      const layout = (await lastSaved())?.viewState.panel_layout;
+      return layout?.layouts.find((l) => l.id === layout.active_layout_id)?.panels.map((p) => p.kind);
+    })
+    .toContain("compat");
+  await toggle();
+  await expect(compat).toHaveCount(0);
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+});
+
+test("compat with a partner whose birth time is unknown: the report is marked approximate and the Moon changes are named", async ({ page }) => {
+  await mockIpc(page, { session: true, partnerUnknownTime: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await palette.getByRole("combobox").fill("uyum");
+  await palette.getByRole("option", { name: /Uyum panelini aç\/kapat/ }).click();
+  const compat = page.getByRole("region", { name: "Uyum" });
+  await compat.getByRole("button", { name: "Eş harita seç" }).click();
+  // Boş aramada son açılan danışanlar listelenir; fareyle seçim.
+  await page.getByRole("dialog", { name: "Eş harita seç" }).getByRole("option", { name: "Ayşe Yılmaz" }).click();
+  await expect(compat.getByRole("table", { name: "Ashtakuta puanları" })).toBeVisible();
+  // Girdi `time_known: false` ile gider: lagnaya bağlı değerleri Rust boş döner (K2).
+  const calls = (await ipcCalls(page, "compute_compat")) as { bride: { time_known: boolean } }[];
+  expect(calls.map((c) => c.bride.time_known)).toEqual([false]);
+  await expect(compat.locator(".compat-approx")).toHaveText(/^≈yaklaşık Doğum saati bilinmeyen haritada Ay öğle konumundadır/);
+  await expect(compat.locator(".compat-people div").nth(1)).toHaveText("2. kişi (gelin rolü)≈yaklaşık Ayşe Yılmaz · Doğum haritası");
+  await expect(compat.locator(".compat-warning")).toHaveText(/^Ayşe Yılmaz: Ay o gün nakshatra değiştiriyor;.*Ayşe Yılmaz: Ay o gün burç değiştiriyor;/);
+  // Eşin lagnası yok: açık haritanın grahaları ondan sayılamaz.
+  const sun = compat.getByRole("table", { name: "Karşılıklı yerleşim" }).locator('tr[data-graha="Sun"]');
+  await expect(sun.locator("th, td")).toHaveText(["Gü", "lagnadan — · Ay'dan 4", "lagnadan 10 · Ay'dan 6"]);
+  await expect(compat.locator('.compat-facts li[data-fact="kuja-Bride"]')).toHaveText("Kuja dosha, Ayşe Yılmaz: lagnadan bilinmiyor, Ay'dan var, Venüs'ten var.");
 });
