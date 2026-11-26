@@ -443,6 +443,48 @@ test("an unreadable partner can still be changed or unlinked", async () => {
   await waitFor(() => expect(persistence.saved.at(-1)?.viewState.compat_partner_uuid).toBeNull());
 });
 
+test("picking from the empty state a partner that cannot be read still leaves the focus on the change button", async () => {
+  pickable(PARTNER);
+  vi.mocked(api.chartInput).mockResolvedValue(failure);
+  renderPanel(fixture().opened);
+  const pick = screen.getByRole("button", { name: "Eş harita seç" });
+  pick.focus();
+  fireEvent.click(pick);
+  fireEvent.click(await within(screen.getByRole("dialog")).findByRole("option", { name: "Mehmet Kaya" }));
+  // Eş okunamadı: hata kutusu ve araç çubuğu gelir; odak gövdede durmaz.
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Eşi değiştir" }));
+});
+
+test("a new partner that fails to read: the retry shows no earlier partner and asks for no report, the actions stay", async () => {
+  pickable(OTHER);
+  renderPanel();
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  expect(api.computeCompat).toHaveBeenCalledTimes(1);
+  // Yeni eşin okuması düşer; yeniden denemede okuma bekletilir.
+  vi.mocked(api.chartInput).mockResolvedValueOnce(failure);
+  fireEvent.click(screen.getByRole("button", { name: "Eşi değiştir" }));
+  fireEvent.click(await within(screen.getByRole("dialog")).findByRole("option", { name: "Mehmet Kaya" }));
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  expect(people()).toHaveLength(0);
+  const change = screen.getByRole("button", { name: "Eşi değiştir" });
+  let resolve!: (r: Result<ReturnType<typeof fixture>["compat"]["brief"] | null>) => void;
+  vi.mocked(api.chartBrief).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
+  await waitFor(() => expect(api.chartBrief).toHaveBeenCalledTimes(3));
+  // Önceki eş artık bağlı değildir: adı başlığa geri gelmez; bağ çözülebilir durur.
+  expect(people()).toHaveLength(0);
+  expect(screen.queryByRole("table")).toBeNull();
+  expect(screen.getByRole("button", { name: "Eşi değiştir" })).toBe(change);
+  expect(screen.getByRole("button", { name: "Eşi çıkar" })).toBeInTheDocument();
+  // Rapor yalnızca okunmuş eşle istenir.
+  expect(api.computeCompat).toHaveBeenCalledTimes(1);
+  await act(async () => resolve(ok(fixture().compat.brief)));
+  await screen.findByRole("table", { name: "Ashtakuta puanları" });
+  expect(people()).toHaveLength(2);
+  expect(vi.mocked(api.chartInput).mock.calls.map((c) => c[0])).toEqual([PARTNER, OTHER, OTHER]);
+});
+
 test("an unknown house is read as unknown, not only drawn as a dash", async () => {
   vi.mocked(api.computeCompat).mockImplementation(async () => ok(fixture().compat.report_time_unknown));
   renderPanel();

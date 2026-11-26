@@ -63,7 +63,9 @@ function Compat({ opened }: { opened: OpenedClient }) {
   const [wantFocus, setWantFocus] = useState<"pick" | "change" | null>(null);
   const { partner, report } = compat;
   const empty = partner === null && !compat.loading && compat.error === null;
-  const linked = compat.partnerUuid !== null && (partner !== null || compat.error !== null);
+  // Bağ varsa araç çubuğu hep yerindedir (eş okunurken, okunamazken ve yeniden denenirken de):
+  // bağ her durumda değiştirilebilir ya da çözülebilir ve odaklı düğme DOM'dan gitmez.
+  const linked = compat.partnerUuid !== null;
   useEffect(() => {
     if (wantFocus === null || picking) return;
     const target = wantFocus === "pick" ? pickButton.current : changeButton.current;
@@ -72,7 +74,7 @@ function Compat({ opened }: { opened: OpenedClient }) {
     const active = document.activeElement;
     if (active === null || active === document.body || active.matches("main[tabindex]")) target.focus({ preventScroll: true });
     setWantFocus(null);
-  }, [wantFocus, picking, empty, partner]);
+  }, [wantFocus, picking, empty, linked]);
   const picker = picking && (
     <PartnerPicker
       openChartId={opened.chart_record.id}

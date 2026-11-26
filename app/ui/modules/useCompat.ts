@@ -4,7 +4,7 @@
 // Arayüzde hesap yoktur (C4) ve rapor saklanmaz (K1). Eş harita silinmişse bağ kaldırılır:
 // silinen bir danışanı gösteren ilişki bilgisi geç gelen bir kayıtla geri yazılmaz. Girdiler ve
 // eş bağı kişisel veridir: loglanmaz.
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { api, type Result } from "../api";
 import type { ChartBrief, ChartInput, CommandError, CompatRoles, Gender, KutaReport, KutaRole, OpenedClient } from "../bindings";
 import { useSession } from "../session/store";
@@ -22,7 +22,7 @@ export interface CompatPartner {
 export interface CompatState {
   /**
    * Bağ var ve eş harita okundu. Eş yeniden okunurken (eş değişti, kayıt sayacı arttı) aynı açık
-   * harita için son okunan eş tutulur; başlık ve araç çubuğu kaybolmaz, odak düşmez (`loading`).
+   * harita için son okunan eş tutulur; başlık kaybolmaz (`loading`). Okuma hata verdiyse boştur.
    */
   partner: CompatPartner | null;
   /** Açık haritanın görünüm kaydındaki eş bağı; eş okunamasa da bağ varsa çözülebilir. */
@@ -72,12 +72,18 @@ export function useCompat(opened: OpenedClient | null, enabled = true): CompatSt
   const partnerKey = active && partnerUuid !== null ? JSON.stringify([opened.chart_record.id, partnerUuid, revision]) : null;
   const lookup = useModule(partnerKey, () => loadPartner(partnerUuid as string));
   // `useModule` anahtar değişince `data`yı boşaltır: aynı harita için son iyi eş, yeni okuma
-  // sürerken gösterilir. Rapor yine yalnızca okunmuş eşle istenir.
+  // sürerken gösterilir. Okuma hata verirse son iyi eş bırakılır: yeniden denemede artık bağlı
+  // olmayan bir eşin adı geri gelmez. Rapor yine yalnızca okunmuş eşle istenir. Son iyi eş
+  // render sırasında ayarlanan durumdur (ref'e render'da yazılmaz).
   const settledPartner = lookup.data ?? null;
-  const lastPartner = useRef<{ chartId: number; partner: CompatPartner } | null>(null);
-  if (partnerKey === null) lastPartner.current = null;
-  else if (settledPartner !== null) lastPartner.current = { chartId: (opened as OpenedClient).chart_record.id, partner: settledPartner };
-  const partner = settledPartner ?? (lookup.loading && lastPartner.current?.chartId === opened?.chart_record.id ? (lastPartner.current?.partner ?? null) : null);
+  const chartId = opened?.chart_record.id ?? null;
+  const [last, setLast] = useState<{ chartId: number; partner: CompatPartner } | null>(null);
+  if (partnerKey === null || chartId === null || lookup.error !== null) {
+    if (last !== null) setLast(null);
+  } else if (settledPartner !== null && last?.partner !== settledPartner) {
+    setLast({ chartId, partner: settledPartner });
+  }
+  const partner = settledPartner ?? (lookup.loading && last !== null && last.chartId === chartId ? last.partner : null);
   const missing = partnerKey !== null && !lookup.loading && lookup.error === null && lookup.data === null;
 
   const { setCompatPartner } = view;
