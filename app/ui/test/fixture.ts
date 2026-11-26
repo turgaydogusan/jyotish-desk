@@ -1,7 +1,7 @@
 // Gerçek veri fikstürü (app/src-tauri/tests/ui_fixture.rs üretir): Delhi 2000-01-01 17:30
 // için `create_client` dönüşü, ilk 3. seviye dönemin alt dönemleri, "new delhi" atlas araması,
-// an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit ve bakış tablosu. Arayüz hesap yapmadığı için testler bunu çizer.
-import type { CommandError, DashaPeriod, DrishtiTable, Graha, MomentPreview, OpenedClient, PlaceHit, PrefsLoad, TransitView } from "../bindings";
+// an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit, bakış tablosu ve Jaimini raporu. Arayüz hesap yapmadığı için testler bunu çizer.
+import type { CommandError, DashaPeriod, DrishtiTable, Graha, JaiminiReport, MomentPreview, OpenedClient, PlaceHit, PrefsLoad, TransitView } from "../bindings";
 import raw from "./fixtures/delhi.json?raw";
 
 export interface UiFixture {
@@ -16,6 +16,8 @@ export interface UiFixture {
   prefs: PrefsLoad;
   /** `compute_drishti`, açık haritanın girdisiyle (`time_known: true`). */
   drishti: DrishtiTable;
+  /** `compute_jaimini`, aynı girdiyle (varsayılan ayarlar: sekizli şema, eş lordlar açık). */
+  jaimini: JaiminiReport;
 }
 
 const FIXTURE = JSON.parse(raw) as UiFixture;

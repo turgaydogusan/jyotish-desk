@@ -31,6 +31,12 @@ export const commands = {
 	 *  `jd_ut`, konum ve ayarlarıdır; `time_known` doğum saatinin bilinip bilinmediğidir.
 	 */
 	computeDrishti: (input: ChartInput, options?: InvokeOptions) => typedError<DrishtiTable, CommandError>(__TAURI_INVOKE("compute_drishti", { input }, options)),
+	/**
+	 *  Jaimini çekirdeği: chara karaka, karakamsha, rashi drishti, arudha padalar ve argala.
+	 *  Karaka şeması ve eş lord kuralı `input.settings.advanced`'ten okunur. Doğum saati
+	 *  bilinmiyorsa (`time_known == false`) padalar `null` döner.
+	 */
+	computeJaimini: (input: ChartInput, options?: InvokeOptions) => typedError<JaiminiReport, CommandError>(__TAURI_INVOKE("compute_jaimini", { input }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -110,6 +116,45 @@ export type AppPrefs = {
 	calc_settings: CalcSettings,
 };
 
+export type ArgalaPair = {
+	argala_house: number,
+	virodha_house: number,
+	/**  Argala evindeki grahalar, `Graha::ALL` sırasında (dokuz graha da sayılır). */
+	argala_grahas: Graha[],
+	/**  Engel evindeki grahalar, `Graha::ALL` sırasında. */
+	virodha_grahas: Graha[],
+	status: ArgalaStatus,
+};
+
+export type ArgalaRow = {
+	reference: Sign,
+	/**  `ARGALA_PAIRS` sırasında. */
+	pairs: [ArgalaPair, ArgalaPair, ArgalaPair, ArgalaPair],
+	third_house_malefic_argala: boolean,
+};
+
+export type ArgalaStatus = 
+/**  Argala evinde graha yok. */
+"None" | 
+/**  Argala tarafında daha çok graha var. */
+"Stands" | 
+/**  İki tarafta eşit sayıda graha var. */
+"Contested" | 
+/**  Engel tarafında daha çok graha var. */
+"Obstructed";
+
+/**  Bir evin padası. A1 Arudha Lagna (AL), A12 Upapada (UL) diye de anılır. */
+export type ArudhaPada = {
+	/**  Ev, 1..=12. */
+	house: number,
+	/**  Padanın düştüğü burç. */
+	sign: Sign,
+	/**  Evin hesapta kullanılan lordu (Akrep ve Kova'da seçilen eş lord). */
+	lord: Graha,
+	/**  İstisna uygulandı: hesaplanan burç evin kendisi ya da 7. burcuydu. */
+	exception: boolean,
+};
+
 /**  Spec §5 `Ashtakavarga`. Burç sütunları Koç'tan (0) Balık'a (11). */
 export type Ashtakavarga = {
 	/**  `ASHTAKAVARGA_GRAHAS` sırasında yedi BAV. */
@@ -162,6 +207,16 @@ export type CalcSettings = {
 	combustion_orbs: CombustionOrbs,
 	sunrise_def: SunriseDef,
 	advanced: AdvancedSettings,
+};
+
+/**  Bir rolün grahası. */
+export type CharaKaraka = {
+	role: KarakaRole,
+	graha: Graha,
+	/**  Sıralamada kullanılan derece: burç içi derece, [0, 30); Rahu için 30 − derece, (0, 30]. */
+	effective_deg: number | null,
+	/**  Etkin derecesi sıradaki komşusuyla 1″ içinde eşit. */
+	tie: boolean,
 };
 
 /**  M3 haritası (spec §5): vargalar, Vimshottari, panchang ve ashtakavarga dahil. */
@@ -405,8 +460,48 @@ export type ImportWarningCode =
 /**  JHD: saat dilimi ofseti ile boylam 60°'den fazla uyuşmuyor; işaret kuralı şüpheli. */
 "JhdOffsetLongitudeMismatch";
 
+/**
+ *  `compute_jaimini` sonucu. AI yorum paneli için sözleşmedir: alan adları değişirse AI
+ *  paketleyicisi de değişir.
+ */
+export type JaiminiReport = {
+	/**  Kullanılan karaka şeması (`settings.advanced.karaka_scheme`). */
+	scheme: KarakaScheme,
+	/**  Eş lordlar kullanıldı mı (`settings.advanced.jaimini_co_lords`). */
+	co_lords: boolean,
+	method: string,
+	/**  8 (`Eight`) ya da 7 (`Seven`) kayıt, rol sırasında. */
+	karakas: CharaKaraka[],
+	karakamsha: Karakamsha,
+	/**  `rashi_drishti[from][to]`, `Sign::ALL` sırasında. */
+	rashi_drishti: [([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]), ([boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean])],
+	/**  27 kayıt: `Graha::ALL` sırasında, her graha için üç hedef burç ve oradaki grahalar. */
+	graha_rashi_drishti: SignAspect[],
+	/**  A1…A12; doğum saati bilinmiyorsa `None`. */
+	arudhas: [ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada, ArudhaPada] | null,
+	/**  On iki referans burç: lagna burcundan sıralı; doğum saati bilinmiyorsa Koç'tan. */
+	argala: [ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow, ArgalaRow],
+	warnings: ChartWarning[],
+};
+
+export type KarakaRole = "Atma" | "Amatya" | "Bhratri" | "Matri" | "Pitri" | "Putra" | "Gnati" | "Dara";
+
 /**  Chara karaka şeması (ileri modüller spec'i §5): sekizli şemada Rahu da karaka olur. */
 export type KarakaScheme = "Eight" | "Seven";
+
+/**  Karakamsha: Atmakaraka'nın navamsa burcu ve grahaların ondan ev sayıları. */
+export type Karakamsha = {
+	atmakaraka: Graha,
+	/**  Atmakaraka'nın navamsa (D9) burcu. */
+	sign: Sign,
+	/**
+	 *  Karakamsha rasi haritasına taşınmış: her grahanın D1 burcunun karakamshadan ev sayısı,
+	 *  `Graha::ALL` sırasında.
+	 */
+	houses_in_d1: [number, number, number, number, number, number, number, number, number],
+	/**  Swamsha: her grahanın D9 burcunun karakamshadan ev sayısı, `Graha::ALL` sırasında. */
+	houses_in_d9: [number, number, number, number, number, number, number, number, number],
+};
 
 export type Karana = {
 	/**  1..=60 (yarım tithi sırası). */

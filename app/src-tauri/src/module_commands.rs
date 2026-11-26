@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use ephemeris::{Engine, SwissEph};
-use jyotish_core::{ChartInput, DrishtiTable};
+use jyotish_core::{ChartInput, DrishtiTable, JaiminiReport};
 use tauri::State;
 
 use crate::client_commands::blocking;
@@ -32,4 +32,27 @@ pub async fn compute_drishti(
 ) -> Result<DrishtiTable, CommandError> {
     let engine = Arc::clone(&engine);
     blocking(move || compute_drishti_blocking(&engine, input)).await
+}
+
+/// `compute_jaimini` komutunun gövdesi; bloklar.
+pub fn compute_jaimini_blocking(
+    engine: &Engine,
+    input: ChartInput,
+) -> Result<JaiminiReport, CommandError> {
+    let report =
+        engine.call(move |se: &mut SwissEph| jyotish_core::compute_jaimini(se, &input))??;
+    Ok(report)
+}
+
+/// Jaimini çekirdeği: chara karaka, karakamsha, rashi drishti, arudha padalar ve argala.
+/// Karaka şeması ve eş lord kuralı `input.settings.advanced`'ten okunur. Doğum saati
+/// bilinmiyorsa (`time_known == false`) padalar `null` döner.
+#[tauri::command]
+#[specta::specta]
+pub async fn compute_jaimini(
+    engine: State<'_, Arc<Engine>>,
+    input: ChartInput,
+) -> Result<JaiminiReport, CommandError> {
+    let engine = Arc::clone(&engine);
+    blocking(move || compute_jaimini_blocking(&engine, input)).await
 }

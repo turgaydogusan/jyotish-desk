@@ -30,6 +30,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::dasha_children,
             commands::print_window,
             module_commands::compute_drishti,
+            module_commands::compute_jaimini,
             client_commands::open_client,
             client_commands::restore_session,
             client_commands::create_client,
