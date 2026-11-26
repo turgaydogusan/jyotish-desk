@@ -242,3 +242,11 @@
   padding: 0;
   list-style: none;
 }
+.yoga-table + .yoga-table {
+  margin-top: 8px;
+}
+.yoga-table caption {
+  text-align: left;
+  padding: 6px 6px 2px;
+  font-weight: var(--fw-medium);
+}

@@ -17,6 +17,7 @@ import { PanchangPanel } from "./PanchangPanel";
 import { ShadbalaPanel } from "./ShadbalaPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
+import { YogasPanel } from "./YogasPanel";
 
 export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   chart: { titleKey: "panel.chart", subtitle: (p) => chartVarga(p.settings), component: ChartPanel },
@@ -37,6 +38,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   // Shadbala ve Bhava bala (Plan 17).
   shadbala: { titleKey: "panel.shadbala", component: ShadbalaPanel },
   bhava_bala: { titleKey: "panel.bhava_bala", component: BhavaBalaPanel },
+  // Yogalar (Plan 18).
+  yogas: { titleKey: "panel.yogas", component: YogasPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };
