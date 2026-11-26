@@ -3,9 +3,10 @@
 //! iki bhavanın gücü. Kaynak: BPHS'nin graha gücü ve bhava gücü bölümleri. Birim virupadır
 //! (60 virupa = 1 rupa).
 //!
-//! Hesap fonksiyonları ephemeris görmez (K3): yalnızca `Positions` ve `ShadbalaAstro` alır.
-//! Ek A: üçüncü güç yalnızca "zaman gücü" (`temporal`) adıyla anılır.
+//! Hesap fonksiyonları ephemeris görmez (K3): `shadbala` yalnızca `Positions` ve
+//! `ShadbalaAstro` alır. Ek A: üçüncü güç yalnızca "zaman gücü" (`temporal`) adıyla anılır.
 
+mod bhava;
 mod cheshta;
 mod sthana;
 mod temporal;
@@ -20,6 +21,7 @@ use crate::panchang::Vara;
 use crate::positions::Positions;
 use crate::zodiac::{angular_distance, normalize};
 
+pub use bhava::{bhava_balas, bhava_dig_bala, bhava_midpoint, bhava_sign_kind, BhavaSignKind};
 pub use cheshta::{
     cheshta_bala, cheshta_from, circular_midpoint, mean_longitudes, MeanLongitudes, MEAN_JUPITER,
     MEAN_MARS, MEAN_MERCURY, MEAN_SATURN, MEAN_SUN, MEAN_VENUS,
@@ -305,6 +307,72 @@ pub fn graha_war(graha: Graha, positions: &Positions) -> Option<GrahaWar> {
     })
 }
 
+/// Toplamların sırası: en büyük 1. Eşit toplamlarda dizide önce gelen öndedir.
+pub(crate) fn ranks<const N: usize>(totals: [f64; N]) -> [u8; N] {
+    let mut order: [usize; N] = std::array::from_fn(|i| i);
+    // `sort_by` kararlıdır: eşitler dizi sırasını korur.
+    order.sort_by(|a, b| totals[*b].total_cmp(&totals[*a]));
+    let mut out = [0u8; N];
+    for (rank, index) in order.into_iter().enumerate() {
+        out[index] = rank as u8 + 1;
+    }
+    out
+}
+
+/// Saf hesap: konumlardan ve astronomik girdiden Shadbala ve Bhava bala. Lagna yoksa (doğum
+/// saati bilinmiyor) ya da `astro` tutarsızsa `None`. `warnings` boştur; toplayıcı doldurur.
+pub fn shadbala(positions: &Positions, astro: &ShadbalaAstro) -> Option<ShadbalaReport> {
+    let lagna_lon = positions.lagna_lon?;
+    if !astro.is_consistent() {
+        return None;
+    }
+    let lords = time_lords(astro);
+    let mut rows = Vec::with_capacity(7);
+    for graha in SHADBALA_GRAHAS {
+        let sthana = sthana_bala(graha, positions)?;
+        let dig = dig_bala(
+            graha,
+            positions.point(graha).sidereal_lon,
+            lagna_lon,
+            astro.mc_lon,
+        );
+        let temporal = temporal_bala(graha, positions, astro, &lords);
+        let cheshta = cheshta_bala(graha, positions, astro);
+        let naisargika = naisargika_bala(graha);
+        let drik = drik_bala(graha, positions);
+        let total = sthana.total + dig + temporal.total + cheshta + naisargika + drik;
+        let required = required_bala(graha);
+        rows.push(GrahaShadbala {
+            graha,
+            sthana,
+            dig,
+            temporal,
+            cheshta,
+            naisargika,
+            drik,
+            total,
+            rupas: total / VIRUPAS_PER_RUPA,
+            required,
+            ratio: total / required,
+            rank: 0,
+            war: graha_war(graha, positions),
+        });
+    }
+    let order = ranks(std::array::from_fn::<f64, 7, _>(|i| rows[i].total));
+    for (row, rank) in rows.iter_mut().zip(order) {
+        row.rank = rank;
+    }
+    let grahas: [GrahaShadbala; 7] = rows.try_into().ok()?;
+    let bhavas = bhava_balas(positions, &grahas)?;
+    Some(ShadbalaReport {
+        grahas,
+        time_lords: lords,
+        bhavas,
+        method: SHADBALA_METHOD.to_owned(),
+        warnings: Vec::new(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -315,6 +383,28 @@ mod tests {
 
     fn sky(lons: [f64; 9]) -> Positions {
         Positions::synthetic(Some(0.0), lons)
+    }
+
+    fn astro() -> ShadbalaAstro {
+        ShadbalaAstro {
+            jd_ut: 0.5,
+            sunrise_jd_ut: 0.25,
+            sunset_jd_ut: 0.75,
+            next_sunrise_jd_ut: 1.25,
+            mc_lon: 270.0,
+            tropical_lons: [34.0, 124.0, 244.0, 89.0, 274.0, 64.0, 324.0],
+            mean: MeanLongitudes {
+                sun: 30.0,
+                mercury: 200.0,
+                venus: 100.0,
+                mars: 240.0,
+                jupiter: 270.0,
+                saturn: 320.0,
+            },
+            weekday: Vara::Sunday,
+            year_entry_weekday: Vara::Thursday,
+            month_entry_weekday: Vara::Friday,
+        }
     }
 
     fn close(a: f64, b: f64) -> bool {
@@ -463,5 +553,92 @@ mod tests {
         assert_eq!(graha_war(Mars, &p).map(|w| w.with), Some(Jupiter));
         assert_eq!(graha_war(Mercury, &p).map(|w| w.with), Some(Jupiter));
         assert_eq!(graha_war(Jupiter, &p).map(|w| w.with), Some(Mercury));
+    }
+
+    #[test]
+    fn ranks_order_by_total_and_keep_array_order_on_ties() {
+        assert_eq!(ranks([10.0, 30.0, 20.0]), [3, 1, 2]);
+        assert_eq!(ranks([5.0, 5.0, 7.0, 5.0]), [2, 3, 1, 4]);
+        assert_eq!(ranks([-1.0, -3.0]), [1, 2]);
+    }
+
+    #[test]
+    fn report_sums_the_six_strengths_and_ranks_grahas_and_bhavas() {
+        let p = sky(BASE);
+        let a = astro();
+        let r = shadbala(&p, &a).expect("lagna and astro");
+        assert_eq!(r.method, SHADBALA_METHOD);
+        assert!(r.warnings.is_empty());
+        assert_eq!(r.time_lords, time_lords(&a));
+        let mut seen = [false; 7];
+        for (row, g) in r.grahas.iter().zip(SHADBALA_GRAHAS) {
+            assert_eq!(row.graha, g);
+            let sum = row.sthana.total
+                + row.dig
+                + row.temporal.total
+                + row.cheshta
+                + row.naisargika
+                + row.drik;
+            assert!(close(row.total, sum), "{g:?}");
+            assert!(close(row.rupas, row.total / 60.0), "{g:?}");
+            assert_eq!(row.required, required_bala(g));
+            assert!(close(row.ratio, row.total / row.required), "{g:?}");
+            assert_eq!(row.sthana, sthana_bala(g, &p).expect("lagna"));
+            assert_eq!(row.war, None);
+            seen[usize::from(row.rank) - 1] = true;
+        }
+        assert!(seen.iter().all(|s| *s), "ranks are a permutation of 1..=7");
+        // Sıra toplamı izler.
+        for a in &r.grahas {
+            for b in &r.grahas {
+                if a.total > b.total {
+                    assert!(a.rank < b.rank, "{:?} before {:?}", a.graha, b.graha);
+                }
+            }
+        }
+        // Bhavalar: lordun toplamı + dig + drishti; sıra 1..=12.
+        let mut seen = [false; 12];
+        for (i, b) in r.bhavas.iter().enumerate() {
+            assert_eq!(usize::from(b.house), i + 1);
+            assert_eq!(b.lord_bala, r.grahas[b.lord as usize].total);
+            assert!(close(b.total, b.lord_bala + b.dig + b.drishti));
+            seen[usize::from(b.rank) - 1] = true;
+        }
+        assert!(seen.iter().all(|s| *s), "bhava ranks are a permutation");
+        // Lagna Koç 0°: 1. bhava dört ayaklı (güçsüz bhava 4; 90° uzakta) → 30; 8. bhava Akrep
+        // (güçsüz bhava 1; 210° → kısa yay 150°) → 50.
+        assert_eq!(r.bhavas[0].dig, 30.0);
+        assert_eq!(r.bhavas[7].dig, 50.0);
+    }
+
+    #[test]
+    fn no_report_without_a_lagna_or_with_inconsistent_times() {
+        let p = sky(BASE);
+        assert_eq!(shadbala(&p.clone().without_lagna(), &astro()), None);
+        // Doğum, sonraki gün doğumundan sonra.
+        let late = ShadbalaAstro {
+            jd_ut: 1.3,
+            ..astro()
+        };
+        assert!(!late.is_consistent());
+        assert_eq!(shadbala(&p, &late), None);
+        // Batış doğuştan önce.
+        let no_day = ShadbalaAstro {
+            sunset_jd_ut: 0.2,
+            ..astro()
+        };
+        assert_eq!(shadbala(&p, &no_day), None);
+        let nan = ShadbalaAstro {
+            mc_lon: f64::NAN,
+            ..astro()
+        };
+        assert_eq!(shadbala(&p, &nan), None);
+        assert!(astro().is_consistent());
+        // Doğum tam gün doğumunda: tutarlı.
+        let at_rise = ShadbalaAstro {
+            jd_ut: 0.25,
+            ..astro()
+        };
+        assert!(at_rise.is_consistent());
     }
 }

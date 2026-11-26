@@ -1,0 +1,52 @@
+{
+  "id": "day-birth-at-noon-near-full-moon",
+  "source": "hand",
+  "rule_ref": "BPHS, graha gücü ve bhava gücü bölümleri; ileri modüller tasarım belgesi §7",
+  "derivation": [
+    "Adım adım aritmetik: WORKSHEET.md, \"Örnek 1 — öğle doğumu, dolunaya yakın Ay, Merkür kötücül\".",
+    "Güneş: 278,6667 + 28,3333 + 264,3191 + 46,4929 + 60 + 8,875 = 686,6869 virupa = 11,4448 rupa; gerekli 390; oran 1,7607; sıra 1.",
+    "Ay: 156,6667 + 34,6667 + 145,2051 + 53,6667 + 51,4286 + 36,625 = 478,2587 virupa = 7,971 rupa; gerekli 360; oran 1,3285; sıra 6.",
+    "Mars: 274,3333 + 53,3333 + 107,8074 + 26 + 17,1429 + 68,25 = 546,8669 virupa = 9,1144 rupa; gerekli 300; oran 1,8229; sıra 4.",
+    "Merkür: 199 + 54,6667 + 117,8352 + 19,8333 + 25,7143 + -5,25 = 411,7995 virupa = 6,8633 rupa; gerekli 420; oran 0,9805; sıra 7.",
+    "Jüpiter: 239,3333 + 30,3333 + 243,5972 + 30 + 34,2857 + 11,5 = 589,0496 virupa = 9,8175 rupa; gerekli 390; oran 1,5104; sıra 2.",
+    "Venüs: 192 + 25 + 151,0564 + 28 + 42,8571 + 75,125 = 514,0385 virupa = 8,5673 rupa; gerekli 330; oran 1,5577; sıra 5.",
+    "Satürn: 298,6667 + 57,3333 + 54,8593 + 58,5 + 8,5714 + 76,125 = 554,0557 virupa = 9,2343 rupa; gerekli 300; oran 1,8469; sıra 3.",
+    "Sıra (büyükten küçüğe): 8, 10, 5, 12, 11, 9, 1, 7, 4, 2, 3, 6."
+  ],
+  "input": {
+    "lagna_lon": 8.0,
+    "grahas": {"Sun": 11.0, "Moon": 172.0, "Mars": 296.0, "Mercury": 24.0, "Jupiter": 97.0, "Venus": 351.0, "Saturn": 196.0, "Rahu": 47.0, "Ketu": 227.0},
+    "astro": {
+      "jd_ut": 0.5, "sunrise_jd_ut": 0.25, "sunset_jd_ut": 0.75, "next_sunrise_jd_ut": 1.25, "mc_lon": 276.0,
+      "tropical_lons": [35.0, 196.0, 320.0, 48.0, 121.0, 15.0, 220.0],
+      "mean": {"sun": 33.0, "mercury": 100.0, "venus": 300.0, "mars": 310.0, "jupiter": 125.0, "saturn": 215.0},
+      "weekday": "Sunday", "year_entry_weekday": "Thursday", "month_entry_weekday": "Tuesday"
+    }
+  },
+  "expected": {
+    "grahas": {
+      "Sun": {"uccha": 59.6667, "saptavargaja": 144, "ojayugma": 15, "kendradi": 60, "drekkana": 0, "sthana": 278.6667, "dig": 28.3333, "day_night": 60.0, "paksha": 6.3333, "tribhaga": 60, "year_lord": 0, "month_lord": 0, "weekday_lord": 45, "hora_lord": 0, "ayana": 92.9857, "temporal": 264.3191, "cheshta": 46.4929, "naisargika": 60.0, "drik": 8.875, "total": 686.6869, "rank": 1, "war": null},
+      "Moon": {"uccha": 13.6667, "saptavargaja": 83, "ojayugma": 30, "kendradi": 15, "drekkana": 15, "sthana": 156.6667, "dig": 34.6667, "day_night": 0.0, "paksha": 107.3333, "tribhaga": 0, "year_lord": 0, "month_lord": 0, "weekday_lord": 0, "hora_lord": 0, "ayana": 37.8718, "temporal": 145.2051, "cheshta": 53.6667, "naisargika": 51.4286, "drik": 36.625, "total": 478.2587, "rank": 6, "war": null},
+      "Mars": {"uccha": 59.3333, "saptavargaja": 140, "ojayugma": 15, "kendradi": 60, "drekkana": 0, "sthana": 274.3333, "dig": 53.3333, "day_night": 0.0, "paksha": 6.3333, "tribhaga": 0, "year_lord": 0, "month_lord": 30, "weekday_lord": 0, "hora_lord": 60, "ayana": 11.474, "temporal": 107.8074, "cheshta": 26.0, "naisargika": 17.1429, "drik": 68.25, "total": 546.8669, "rank": 4, "war": null},
+      "Mercury": {"uccha": 13.0, "saptavargaja": 111, "ojayugma": 15, "kendradi": 60, "drekkana": 0, "sthana": 199.0, "dig": 54.6667, "day_night": 60, "paksha": 6.3333, "tribhaga": 0, "year_lord": 0, "month_lord": 0, "weekday_lord": 0, "hora_lord": 0, "ayana": 51.5019, "temporal": 117.8352, "cheshta": 19.8333, "naisargika": 25.7143, "drik": -5.25, "total": 411.7995, "rank": 7, "war": null},
+      "Jupiter": {"uccha": 59.3333, "saptavargaja": 105, "ojayugma": 0, "kendradi": 60, "drekkana": 15, "sthana": 239.3333, "dig": 30.3333, "day_night": 60.0, "paksha": 53.6667, "tribhaga": 60, "year_lord": 15, "month_lord": 0, "weekday_lord": 0, "hora_lord": 0, "ayana": 54.9305, "temporal": 243.5972, "cheshta": 30.0, "naisargika": 34.2857, "drik": 11.5, "total": 589.0496, "rank": 2, "war": null},
+      "Venus": {"uccha": 58.0, "saptavargaja": 74, "ojayugma": 30, "kendradi": 15, "drekkana": 15, "sthana": 192.0, "dig": 25.0, "day_night": 60.0, "paksha": 53.6667, "tribhaga": 0, "year_lord": 0, "month_lord": 0, "weekday_lord": 0, "hora_lord": 0, "ayana": 37.3897, "temporal": 151.0564, "cheshta": 28.0, "naisargika": 42.8571, "drik": 75.125, "total": 514.0385, "rank": 5, "war": null},
+      "Saturn": {"uccha": 58.6667, "saptavargaja": 135, "ojayugma": 30, "kendradi": 60, "drekkana": 15, "sthana": 298.6667, "dig": 57.3333, "day_night": 0.0, "paksha": 6.3333, "tribhaga": 0, "year_lord": 0, "month_lord": 0, "weekday_lord": 0, "hora_lord": 0, "ayana": 48.526, "temporal": 54.8593, "cheshta": 58.5, "naisargika": 8.5714, "drik": 76.125, "total": 554.0557, "rank": 3, "war": null}
+    },
+    "time_lords": {"year": "Jupiter", "month": "Mars", "weekday": "Sun", "hora": "Mars", "tribhaga": "Sun"},
+    "bhavas": [
+      {"house": 1, "lord": "Mars", "lord_bala": 546.8669, "dig": 30.0, "drishti": 13.375, "total": 590.2419, "rank": 7},
+      {"house": 2, "lord": "Venus", "lord_bala": 514.0385, "dig": 20.0, "drishti": -14.375, "total": 519.6635, "rank": 10},
+      {"house": 3, "lord": "Mercury", "lord_bala": 411.7995, "dig": 40.0, "drishti": 2.375, "total": 454.1745, "rank": 11},
+      {"house": 4, "lord": "Moon", "lord_bala": 478.2587, "dig": 60.0, "drishti": 11.375, "total": 549.6337, "rank": 9},
+      {"house": 5, "lord": "Sun", "lord_bala": 686.6869, "dig": 10.0, "drishti": -1.25, "total": 695.4369, "rank": 3},
+      {"house": 6, "lord": "Mercury", "lord_bala": 411.7995, "dig": 10.0, "drishti": 26.25, "total": 448.0495, "rank": 12},
+      {"house": 7, "lord": "Venus", "lord_bala": 514.0385, "dig": 0.0, "drishti": 70.0, "total": 584.0385, "rank": 8},
+      {"house": 8, "lord": "Mars", "lord_bala": 546.8669, "dig": 50.0, "drishti": 110.75, "total": 707.6169, "rank": 1},
+      {"house": 9, "lord": "Jupiter", "lord_bala": 589.0496, "dig": 20.0, "drishti": 33.5, "total": 642.5496, "rank": 6},
+      {"house": 10, "lord": "Saturn", "lord_bala": 554.0557, "dig": 60.0, "drishti": 83.375, "total": 697.4307, "rank": 2},
+      {"house": 11, "lord": "Saturn", "lord_bala": 554.0557, "dig": 40.0, "drishti": 56.25, "total": 650.3057, "rank": 5},
+      {"house": 12, "lord": "Jupiter", "lord_bala": 589.0496, "dig": 20.0, "drishti": 78.875, "total": 687.9246, "rank": 4}
+    ]
+  }
+}

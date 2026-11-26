@@ -850,3 +850,288 @@ mod chara_dasha_properties {
         }
     }
 }
+
+mod shadbala_properties {
+    use proptest::prelude::*;
+
+    use super::foundation_properties::positions;
+    use crate::graha::Graha;
+    use crate::lordship::house_lord;
+    use crate::nature::{nature, Nature};
+    use crate::panchang::Vara;
+    use crate::positions::Positions;
+    use crate::shadbala::{
+        ayana_bala, bhava_dig_bala, bhava_sign_kind, cheshta_from, day_night_bala, dig_bala,
+        drik_bala, graha_war, hora_index, hora_lord, naisargika_bala, paksha_bala, required_bala,
+        shadbala, uccha_bala, vara_lord, MeanLongitudes, ShadbalaAstro, GRAHA_WAR_ORB_DEG,
+        SHADBALA_GRAHAS, SHADBALA_METHOD, WAR_GRAHAS,
+    };
+    use crate::zodiac::{angular_distance, Sign};
+
+    const TOL: f64 = 1e-9;
+
+    fn vara() -> impl Strategy<Value = Vara> {
+        (0usize..7).prop_map(|i| Vara::ALL[i])
+    }
+
+    /// Tutarlı bir astronomik girdi: doğuş, gündüz uzunluğu, doğuşlar arası süre ve doğumun
+    /// gün içindeki yeri.
+    fn astro() -> impl Strategy<Value = ShadbalaAstro> {
+        (
+            (0.0f64..1.0, 0.05f64..0.95, 0.97f64..1.03, 0.0f64..0.999_999),
+            0.0f64..360.0,
+            proptest::array::uniform7(0.0f64..360.0),
+            proptest::array::uniform6(0.0f64..360.0),
+            (vara(), vara(), vara()),
+        )
+            .prop_map(
+                |((rise, day, span, at), mc, tropical, mean, (weekday, year, month))| {
+                    ShadbalaAstro {
+                        jd_ut: rise + span * at,
+                        sunrise_jd_ut: rise,
+                        sunset_jd_ut: rise + span * day,
+                        next_sunrise_jd_ut: rise + span,
+                        mc_lon: mc,
+                        tropical_lons: tropical,
+                        mean: MeanLongitudes {
+                            sun: mean[0],
+                            mercury: mean[1],
+                            venus: mean[2],
+                            mars: mean[3],
+                            jupiter: mean[4],
+                            saturn: mean[5],
+                        },
+                        weekday,
+                        year_entry_weekday: year,
+                        month_entry_weekday: month,
+                    }
+                },
+            )
+    }
+
+    fn graha7() -> impl Strategy<Value = Graha> {
+        (0usize..7).prop_map(|i| SHADBALA_GRAHAS[i])
+    }
+
+    /// Tam bir graha `value` alır, diğerleri 0.
+    fn one_lord(values: [f64; 7], value: f64) -> bool {
+        values.iter().filter(|v| **v == value).count() == 1
+            && values.iter().filter(|v| **v == 0.0).count() == 6
+    }
+
+    proptest! {
+        #[test]
+        fn uccha_of_opposite_points_adds_to_sixty(g in graha7(), lon in 0.0f64..360.0) {
+            let (a, b) = (uccha_bala(g, lon), uccha_bala(g, lon + 180.0));
+            prop_assert!((0.0..=60.0).contains(&a));
+            prop_assert!((a + b - 60.0).abs() < TOL, "{} + {}", a, b);
+        }
+
+        #[test]
+        fn dig_of_opposite_points_adds_to_sixty(
+            g in graha7(),
+            lon in 0.0f64..360.0,
+            lagna in 0.0f64..360.0,
+            mc in 0.0f64..360.0,
+        ) {
+            let (a, b) = (dig_bala(g, lon, lagna, mc), dig_bala(g, lon + 180.0, lagna, mc));
+            prop_assert!((0.0..=60.0).contains(&a));
+            prop_assert!((a + b - 60.0).abs() < TOL, "{} + {}", a, b);
+        }
+
+        #[test]
+        fn day_and_night_strong_grahas_add_to_sixty(m in 0.0f64..=12.0) {
+            for day in [Graha::Sun, Graha::Jupiter, Graha::Venus] {
+                for night in [Graha::Moon, Graha::Mars, Graha::Saturn] {
+                    let (a, b) = (day_night_bala(day, m), day_night_bala(night, m));
+                    prop_assert!((0.0..=60.0).contains(&a) && (0.0..=60.0).contains(&b));
+                    prop_assert!((a + b - 60.0).abs() < TOL);
+                }
+            }
+            prop_assert_eq!(day_night_bala(Graha::Mercury, m), 60.0);
+        }
+
+        #[test]
+        fn benefic_and_malefic_paksha_add_to_sixty(p in positions()) {
+            // Jüpiter her zaman iyicil, Satürn her zaman kötücüldür.
+            let (b, m) = (paksha_bala(Graha::Jupiter, &p), paksha_bala(Graha::Saturn, &p));
+            prop_assert!((b + m - 60.0).abs() < TOL, "{} + {}", b, m);
+            let moon = paksha_bala(Graha::Moon, &p);
+            prop_assert!((0.0..=120.0).contains(&moon));
+            prop_assert!((moon - 2.0 * b).abs() < TOL);
+            for g in SHADBALA_GRAHAS {
+                if g == Graha::Moon {
+                    continue;
+                }
+                let want = match nature(g, &p) {
+                    Nature::Benefic => b,
+                    Nature::Malefic => m,
+                };
+                prop_assert!((paksha_bala(g, &p) - want).abs() < TOL, "{:?}", g);
+            }
+        }
+
+        #[test]
+        fn ayana_stays_in_range_and_mirrors_across_the_equator(lon in 0.0f64..360.0) {
+            // Aynı boylamda kuzeyde güçlenen ile güneyde güçlenenin toplamı 60'tır.
+            let (north, south) = (ayana_bala(Graha::Sun, lon), ayana_bala(Graha::Moon, lon));
+            prop_assert!((north + south - 60.0).abs() < TOL);
+            for g in SHADBALA_GRAHAS {
+                let v = ayana_bala(g, lon);
+                prop_assert!((0.6875 - TOL..=59.3125 + TOL).contains(&v), "{:?} {}", g, v);
+            }
+            prop_assert!(ayana_bala(Graha::Mercury, lon) >= 30.0 - TOL);
+        }
+
+        #[test]
+        fn cheshta_stays_in_range_and_opposite_apexes_add_to_sixty(
+            slow in 0.0f64..360.0,
+            true_lon in 0.0f64..360.0,
+            apex in 0.0f64..360.0,
+        ) {
+            let (a, b) = (
+                cheshta_from(slow, true_lon, apex),
+                cheshta_from(slow, true_lon, apex + 180.0),
+            );
+            prop_assert!((0.0..=60.0).contains(&a));
+            prop_assert!((a + b - 60.0).abs() < 1e-6, "{} + {}", a, b);
+        }
+
+        #[test]
+        fn the_twenty_fifth_hora_is_the_next_day_lord(i in 0usize..7, a in astro()) {
+            let today = vara_lord(Vara::ALL[i]);
+            let tomorrow = vara_lord(Vara::ALL[(i + 1) % 7]);
+            prop_assert_eq!(hora_lord(today, 0), today);
+            prop_assert_eq!(hora_lord(today, 24), tomorrow);
+            prop_assert!(hora_index(&a) < 24);
+        }
+
+        #[test]
+        fn war_is_mutual_and_only_within_the_orb(p in positions(), near in 0.0f64..2.0) {
+            // Venüs'ü Mars'ın `near` derece ilerisine koy: savaş olasılığı yüksek olsun.
+            let mut lons: [f64; 9] = std::array::from_fn(|i| p.grahas[i].sidereal_lon);
+            lons[Graha::Venus as usize] = lons[Graha::Mars as usize] + near;
+            let p = Positions::synthetic(p.lagna_lon, lons);
+            for g in Graha::ALL {
+                let Some(war) = graha_war(g, &p) else { continue; };
+                prop_assert!(WAR_GRAHAS.contains(&g) && WAR_GRAHAS.contains(&war.with));
+                prop_assert!(war.with != g);
+                prop_assert!(war.winner == g || war.winner == war.with);
+                let gap = angular_distance(
+                    p.point(g).sidereal_lon,
+                    p.point(war.with).sidereal_lon,
+                );
+                prop_assert!(gap <= GRAHA_WAR_ORB_DEG);
+                // Karşı taraf da savaştadır (kendi en yakınıyla).
+                prop_assert!(graha_war(war.with, &p).is_some());
+            }
+            for g in [Graha::Sun, Graha::Moon, Graha::Rahu, Graha::Ketu] {
+                prop_assert_eq!(graha_war(g, &p), None);
+            }
+        }
+
+        #[test]
+        fn report_needs_a_lagna_and_every_item_is_in_its_range(p in positions(), a in astro()) {
+            let report = shadbala(&p, &a);
+            prop_assert_eq!(report.is_some(), p.lagna_sign.is_some());
+            let Some(r) = report else { return Ok(()); };
+            let lagna = p.lagna_sign.expect("lagna");
+            prop_assert_eq!(r.method.as_str(), SHADBALA_METHOD);
+            prop_assert!(r.warnings.is_empty());
+
+            let mut ranks = [false; 7];
+            for (row, g) in r.grahas.iter().zip(SHADBALA_GRAHAS) {
+                prop_assert_eq!(row.graha, g);
+                let s = &row.sthana;
+                prop_assert!((0.0..=60.0).contains(&s.uccha));
+                prop_assert!((14.0..=225.0).contains(&s.saptavargaja), "{}", s.saptavargaja);
+                prop_assert!([0.0, 15.0, 30.0].contains(&s.ojayugma));
+                prop_assert!([15.0, 30.0, 60.0].contains(&s.kendradi));
+                prop_assert!([0.0, 15.0].contains(&s.drekkana));
+                let sum = s.uccha + s.saptavargaja + s.ojayugma + s.kendradi + s.drekkana;
+                prop_assert!((s.total - sum).abs() < TOL);
+                prop_assert!((0.0..=60.0).contains(&row.dig));
+                let t = &row.temporal;
+                prop_assert!((0.0..=60.0).contains(&t.day_night));
+                let paksha_max = if g == Graha::Moon { 120.0 } else { 60.0 };
+                prop_assert!((0.0..=paksha_max).contains(&t.paksha));
+                let ayana_max = if g == Graha::Sun { 120.0 } else { 60.0 };
+                prop_assert!((0.0..=ayana_max).contains(&t.ayana));
+                let sum = t.day_night + t.paksha + t.tribhaga + t.year_lord + t.month_lord
+                    + t.weekday_lord + t.hora_lord + t.ayana;
+                prop_assert!((t.total - sum).abs() < TOL);
+                prop_assert!((0.0..=60.0).contains(&row.cheshta));
+                prop_assert_eq!(row.naisargika, naisargika_bala(g));
+                // Altı bakış: her biri ±15; Merkür ve Jüpiter'in tamamı en çok 60'ar.
+                prop_assert!((-90.0..=210.0).contains(&row.drik), "{}", row.drik);
+                prop_assert_eq!(row.drik, drik_bala(g, &p));
+                let total = s.total + row.dig + t.total + row.cheshta + row.naisargika + row.drik;
+                prop_assert!((row.total - total).abs() < TOL);
+                prop_assert!((row.rupas * 60.0 - row.total).abs() < 1e-6);
+                prop_assert_eq!(row.required, required_bala(g));
+                prop_assert!((row.ratio * row.required - row.total).abs() < 1e-6);
+                prop_assert_eq!(row.war, graha_war(g, &p));
+                prop_assert!((1..=7).contains(&row.rank));
+                ranks[usize::from(row.rank) - 1] = true;
+            }
+            prop_assert!(ranks.iter().all(|x| *x), "ranks are a permutation of 1..=7");
+            for x in &r.grahas {
+                for y in &r.grahas {
+                    if x.total > y.total {
+                        prop_assert!(x.rank < y.rank);
+                    }
+                }
+            }
+
+            // Tribhaga: Jüpiter her zaman 60; diğer altı grahadan tam biri 60, ötekiler 0.
+            let pick = |f: fn(&crate::shadbala::TemporalBala) -> f64| -> [f64; 7] {
+                std::array::from_fn(|i| f(&r.grahas[i].temporal))
+            };
+            let tribhaga = pick(|t| t.tribhaga);
+            prop_assert_eq!(tribhaga[Graha::Jupiter as usize], 60.0);
+            prop_assert!(r.time_lords.tribhaga != Graha::Jupiter);
+            let others = tribhaga
+                .iter()
+                .enumerate()
+                .filter(|(i, v)| *i != Graha::Jupiter as usize && **v == 60.0)
+                .count();
+            prop_assert_eq!(others, 1);
+            prop_assert!(tribhaga.iter().all(|v| *v == 0.0 || *v == 60.0));
+            // Yıl, ay, gün ve saat lordu: tam bir graha 15, 30, 45 ve 60 alır.
+            prop_assert!(one_lord(pick(|t| t.year_lord), 15.0));
+            prop_assert!(one_lord(pick(|t| t.month_lord), 30.0));
+            prop_assert!(one_lord(pick(|t| t.weekday_lord), 45.0));
+            prop_assert!(one_lord(pick(|t| t.hora_lord), 60.0));
+            prop_assert_eq!(r.time_lords.weekday, vara_lord(a.weekday));
+            prop_assert_eq!(r.time_lords.year, vara_lord(a.year_entry_weekday));
+            prop_assert_eq!(r.time_lords.month, vara_lord(a.month_entry_weekday));
+
+            // Bhavalar.
+            let mut ranks = [false; 12];
+            for (i, b) in r.bhavas.iter().enumerate() {
+                let house = i as u8 + 1;
+                prop_assert_eq!(b.house, house);
+                prop_assert_eq!(b.lord, house_lord(lagna, house));
+                prop_assert_eq!(b.lord_bala, r.grahas[b.lord as usize].total);
+                prop_assert!([0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0].contains(&b.dig));
+                // Yedi bakış: her biri ±15; Merkür ve Jüpiter'in tamamı en çok 60'ar.
+                prop_assert!((-105.0..=225.0).contains(&b.drishti), "{}", b.drishti);
+                prop_assert!((b.total - (b.lord_bala + b.dig + b.drishti)).abs() < TOL);
+                prop_assert!((1..=12).contains(&b.rank));
+                ranks[usize::from(b.rank) - 1] = true;
+            }
+            prop_assert!(ranks.iter().all(|x| *x), "bhava ranks are a permutation of 1..=12");
+        }
+
+        #[test]
+        fn bhava_dig_of_opposite_houses_adds_to_sixty(
+            sign in 0usize..12,
+            deg in 0.0f64..30.0,
+            house in 1u8..=6,
+        ) {
+            let kind = bhava_sign_kind(Sign::from_index(sign), deg);
+            prop_assert_eq!(bhava_dig_bala(kind.powerless_house(), kind), 0.0);
+            prop_assert_eq!(bhava_dig_bala(house, kind) + bhava_dig_bala(house + 6, kind), 60.0);
+        }
+    }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "time-unknown-no-report",
+  "source": "hand",
+  "rule_ref": "İleri modüller tasarım belgesi K2 ve §7 (veri modeli)",
+  "derivation": [
+    "Lagna yok (doğum saati bilinmiyor).",
+    "Kendradi bala, dig bala, gündüz–gece gücü, tribhaga, saat lordu ve bhava bala doğum saatine bağlıdır.",
+    "K2: lagnaya bağlı çıktı gizlenmez, hesaplanmaz → rapor yok (null)."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "grahas": {"Sun": 11.0, "Moon": 172.0, "Mars": 296.0, "Mercury": 24.0, "Jupiter": 97.0, "Venus": 351.0, "Saturn": 196.0, "Rahu": 47.0, "Ketu": 227.0},
+    "astro": {
+      "jd_ut": 0.5, "sunrise_jd_ut": 0.25, "sunset_jd_ut": 0.75, "next_sunrise_jd_ut": 1.25, "mc_lon": 276.0,
+      "tropical_lons": [35.0, 196.0, 320.0, 48.0, 121.0, 15.0, 220.0],
+      "mean": {"sun": 33.0, "mercury": 100.0, "venus": 300.0, "mars": 310.0, "jupiter": 125.0, "saturn": 215.0},
+      "weekday": "Sunday", "year_entry_weekday": "Thursday", "month_entry_weekday": "Tuesday"
+    }
+  },
+  "expected": null
+}

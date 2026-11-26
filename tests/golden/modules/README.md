@@ -32,6 +32,12 @@ ileri modüller tasarım belgesi §13 (dört katmanlı test stratejisinin ilk ka
 
 `lagna_lon: null` doğum saati bilinmeyen haritadır: lagnaya bağlı her beklenen değer `null` olur.
 
+Shadbala örnekleri girdiye iki alan daha ekler: `astro` (saf hesabın astronomik girdisi:
+doğum anı, gün doğumu, batımı ve sonraki gün doğumu gün kesri olarak; MC'nin sidereal boylamı;
+yedi grahanın tropikal boylamı; ortalama boylamlar; doğum gününün ve iki güneş girişinin
+varası) ve isteğe bağlı `lats` (ekliptik enlemler; yazılmayan graha 0°'dir). Diğer modüllerde
+bu alanlar yazılmaz.
+
 Ayara bağlı modüller (Jaimini, chara dasha) girdiye `advanced` bloğunu ekler:
 `"advanced": {"karaka_scheme": "Eight", "jaimini_co_lords": true}`. Diğer modüllerde bu alan
 yazılmaz. Chara dasha örneklerinde doğum anı ve yıl uzunluğu girdide yoktur: test sabit bir
@@ -45,5 +51,12 @@ doğum anı ve 365,25 günlük yıl kullanır, tarihleri el yıllarının biriki
 | `drishti` | `sign_aspects` (on üç tam bakışın tamamı, tablo sırasıyla), `sphuta` (en az on değer: `from`, `to`, `angle`, `value`) | 4 |
 | `jaimini` | `karakas` (rol sırasında: `role`, `graha`, `effective_deg`, `tie`), `karakamsha` (`atmakaraka`, `sign`, dokuz grahanın `houses_in_d1` ve `houses_in_d9` değeri), `co_lords` (Akrep ve Kova: `lord`, belirleyici ölçüt `step`), `arudhas` (on iki pada: `house`, `sign`, `lord`, `exception`; saat bilinmiyorsa `null`), `argala` (en az iki referans burç: dört çiftin iki graha listesi ve durumu, `third_house_malefic_argala`) | 8 |
 | `chara_dasha` | `forward`, `order` (dasha sırası, lagnadan), `years` (ilk çevrim, `order` sırasında), `second_cycle` (ikinci çevrimde üretilen dashalar: `sign`, `years`), `sub_periods` (ilk iki dashanın alt dönem sırası); saat bilinmiyorsa `expected` `null` | 7 |
+
+| `shadbala` | `grahas` (yedi graha: sthana balanın beş kalemi ve `sthana`, `dig`, zaman gücünün sekiz kalemi ve `temporal`, `cheshta`, `naisargika`, `drik`, `total`, `rank`, `war`), `time_lords`, `bhavas` (on iki bhava: `house`, `lord`, `lord_bala`, `dig`, `drishti`, `total`, `rank`); saat bilinmiyorsa `expected` `null` | 4 |
+
+Shadbala örnekleri çalışma kâğıdıdır (tasarım belgesi §7 "Test"): `shadbala/WORKSHEET.md` her
+kalemin aritmetiğini adım adım yazar, JSON dosyaları aynı girdiyi ve sonuçları taşır. Tolerans
+0,01 virupadır. Kâğıdı, motoru yazan dışında bir gözden geçiren kuraldan yeniden hesaplar ve
+kâğıdın başındaki tabloya adını yazar.
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.

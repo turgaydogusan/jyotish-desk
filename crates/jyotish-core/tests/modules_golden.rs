@@ -9,9 +9,10 @@ use std::path::PathBuf;
 use jyotish_core::{
     argala_rows, arudha_padas, chara_dasha, chara_dasha_order, chara_dasha_sign_years,
     chara_karakas, co_lord_choice, drishti_table, house_lord, houses_owned, jaimini_lord,
-    jaimini_report, karakamsha, kuja_dosha, moon_is_waxing, nature, normalize, sign_dasha_children,
-    AdvancedSettings, ArgalaStatus, Graha, KarakaRole, KujaDosha, Nature, Positions, Sign,
-    SignDashaPeriod, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD,
+    jaimini_report, karakamsha, kuja_dosha, moon_is_waxing, nature, normalize, shadbala,
+    sign_dasha_children, AdvancedSettings, ArgalaStatus, Graha, GrahaWar, KarakaRole, KujaDosha,
+    Nature, Positions, ShadbalaAstro, Sign, SignDashaPeriod, TimeLords, ASPECTING_GRAHAS,
+    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, SHADBALA_GRAHAS, SHADBALA_METHOD,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -21,8 +22,11 @@ const MIN_FOUNDATION: usize = 6;
 const MIN_DRISHTI: usize = 4;
 const MIN_JAIMINI: usize = 8;
 const MIN_CHARA_DASHA: usize = 7;
+const MIN_SHADBALA: usize = 4;
 /// El hesabı ile motor arasındaki en büyük fark, virupa.
 const VIRUPA_TOL: f64 = 1e-9;
+/// Shadbala çalışma kâğıdının toleransı, virupa (ileri modüller spec'i §7 "Test").
+const WORKSHEET_TOL: f64 = 0.01;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -36,7 +40,9 @@ struct Fixture<X> {
 }
 
 /// Sentetik konumlar: sidereal boylamlar, derece. `lagna_lon: null` doğum saati bilinmeyen
-/// haritadır. `advanced` yalnızca ayara bağlı modüllerde (Jaimini, chara dasha) verilir.
+/// haritadır. `advanced` yalnızca ayara bağlı modüllerde (Jaimini, chara dasha) verilir;
+/// `astro` (saf hesabın astronomik girdisi) ve `lats` (ekliptik enlemler; yazılmayan graha 0°)
+/// yalnızca Shadbala örneklerinde.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
@@ -44,15 +50,23 @@ struct Input {
     grahas: BTreeMap<Graha, f64>,
     #[serde(default)]
     advanced: Option<AdvancedSettings>,
+    #[serde(default)]
+    lats: Option<BTreeMap<Graha, f64>>,
+    #[serde(default)]
+    astro: Option<ShadbalaAstro>,
 }
 
 impl Input {
     fn positions(&self, id: &str) -> Positions {
         assert_eq!(self.grahas.len(), 9, "{id}: all nine grahas are required");
-        Positions::synthetic(
+        let mut positions = Positions::synthetic(
             self.lagna_lon,
             std::array::from_fn(|i| self.grahas[&Graha::ALL[i]]),
-        )
+        );
+        for (graha, lat) in self.lats.iter().flatten() {
+            positions.grahas[*graha as usize].lat = *lat;
+        }
+        positions
     }
 }
 
@@ -778,4 +792,224 @@ fn chara_dasha_fixtures_cover_the_required_cases() {
         "ends exactly at 120 years"
     );
     assert!(any(&|(x, _, _)| total(x) > 120), "ends after 120 years");
+}
+
+/// Bir grahanın çalışma kâğıdındaki satırı: bütün kalemler, virupa.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedGrahaBala {
+    uccha: f64,
+    saptavargaja: f64,
+    ojayugma: f64,
+    kendradi: f64,
+    drekkana: f64,
+    sthana: f64,
+    dig: f64,
+    day_night: f64,
+    paksha: f64,
+    tribhaga: f64,
+    year_lord: f64,
+    month_lord: f64,
+    weekday_lord: f64,
+    hora_lord: f64,
+    ayana: f64,
+    temporal: f64,
+    cheshta: f64,
+    naisargika: f64,
+    drik: f64,
+    total: f64,
+    rank: u8,
+    war: Option<GrahaWar>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedBhavaBala {
+    house: u8,
+    lord: Graha,
+    lord_bala: f64,
+    dig: f64,
+    drishti: f64,
+    total: f64,
+    rank: u8,
+}
+
+/// Shadbala el örneği (çalışma kâğıdı). Doğum saati bilinmeyen haritada `expected` `null`'dır.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ShadbalaExpected {
+    grahas: BTreeMap<Graha, ExpectedGrahaBala>,
+    time_lords: TimeLords,
+    bhavas: Vec<ExpectedBhavaBala>,
+}
+
+fn shadbala_fixtures() -> Vec<(Fixture<Option<ShadbalaExpected>>, Positions, ShadbalaAstro)> {
+    load::<Option<ShadbalaExpected>>("shadbala", MIN_SHADBALA)
+        .into_iter()
+        .map(|(mut f, p)| {
+            let astro = f
+                .input
+                .astro
+                .take()
+                .unwrap_or_else(|| panic!("{}: shadbala fixtures state the astro block", f.id));
+            (f, p, astro)
+        })
+        .collect()
+}
+
+#[test]
+fn shadbala_hand_fixtures() {
+    for (f, p, astro) in shadbala_fixtures() {
+        let id = &f.id;
+        assert!(astro.is_consistent(), "{id}: astro block");
+        let got = shadbala(&p, &astro);
+        let Some(x) = &f.expected else {
+            assert!(p.lagna_sign.is_none(), "{id}: null only without a lagna");
+            assert_eq!(got, None, "{id}: no report without a lagna");
+            continue;
+        };
+        let r = got.unwrap_or_else(|| panic!("{id}: a report with a lagna"));
+        assert_eq!(r.method, SHADBALA_METHOD, "{id}");
+        assert_eq!(r.time_lords, x.time_lords, "{id}: time lords");
+        assert_eq!(x.grahas.len(), 7, "{id}: seven grahas");
+        let near = |got: f64, want: f64, what: &str| {
+            assert!(
+                (got - want).abs() <= WORKSHEET_TOL,
+                "{id}: {what}: engine {got}, worksheet {want}"
+            );
+        };
+        for (row, g) in r.grahas.iter().zip(SHADBALA_GRAHAS) {
+            let w = &x.grahas[&g];
+            let item = |name: &str| format!("{g:?} {name}");
+            near(row.sthana.uccha, w.uccha, &item("uccha"));
+            near(
+                row.sthana.saptavargaja,
+                w.saptavargaja,
+                &item("saptavargaja"),
+            );
+            near(row.sthana.ojayugma, w.ojayugma, &item("ojayugma"));
+            near(row.sthana.kendradi, w.kendradi, &item("kendradi"));
+            near(row.sthana.drekkana, w.drekkana, &item("drekkana"));
+            near(row.sthana.total, w.sthana, &item("sthana"));
+            near(row.dig, w.dig, &item("dig"));
+            near(row.temporal.day_night, w.day_night, &item("day_night"));
+            near(row.temporal.paksha, w.paksha, &item("paksha"));
+            near(row.temporal.tribhaga, w.tribhaga, &item("tribhaga"));
+            near(row.temporal.year_lord, w.year_lord, &item("year_lord"));
+            near(row.temporal.month_lord, w.month_lord, &item("month_lord"));
+            near(
+                row.temporal.weekday_lord,
+                w.weekday_lord,
+                &item("weekday_lord"),
+            );
+            near(row.temporal.hora_lord, w.hora_lord, &item("hora_lord"));
+            near(row.temporal.ayana, w.ayana, &item("ayana"));
+            near(row.temporal.total, w.temporal, &item("temporal"));
+            near(row.cheshta, w.cheshta, &item("cheshta"));
+            near(row.naisargika, w.naisargika, &item("naisargika"));
+            near(row.drik, w.drik, &item("drik"));
+            near(row.total, w.total, &item("total"));
+            assert_eq!(row.rank, w.rank, "{id}: rank of {g:?}");
+            assert_eq!(row.war, w.war, "{id}: war of {g:?}");
+        }
+        assert_eq!(x.bhavas.len(), 12, "{id}: twelve bhavas");
+        for (b, w) in r.bhavas.iter().zip(&x.bhavas) {
+            let item = |name: &str| format!("bhava {} {name}", w.house);
+            assert_eq!((b.house, b.lord), (w.house, w.lord), "{id}: bhava lord");
+            near(b.lord_bala, w.lord_bala, &item("lord_bala"));
+            near(b.dig, w.dig, &item("dig"));
+            near(b.drishti, w.drishti, &item("drishti"));
+            near(b.total, w.total, &item("total"));
+            assert_eq!(b.rank, w.rank, "{id}: rank of bhava {}", w.house);
+        }
+    }
+}
+
+/// Çalışma kâğıdının kapsaması gereken durumlar (ileri modüller spec'i §7 "Test": en az üç
+/// sentetik girdi): örnekler silinir ya da değiştirilirse kapsam sessizce daralmasın. Denetim
+/// motorun fonksiyonlarını değil, örneklerin girdisini ve el değerlerini okur.
+#[test]
+fn shadbala_fixtures_cover_the_required_cases() {
+    let all = shadbala_fixtures();
+    let full: Vec<(&ShadbalaExpected, &Positions, &ShadbalaAstro)> = all
+        .iter()
+        .filter_map(|(f, p, a)| f.expected.as_ref().map(|x| (x, p, a)))
+        .collect();
+    assert!(full.len() >= 3, "{} worked examples", full.len());
+    assert!(
+        all.iter().any(|(f, _, _)| f.expected.is_none()),
+        "birth time unknown"
+    );
+    let any = |pred: &dyn Fn(&ShadbalaExpected, &Positions, &ShadbalaAstro) -> bool| {
+        full.iter().any(|(x, p, a)| pred(x, p, a))
+    };
+    // Gündüz ve gece doğumu; öğleye uzaklığın 12 saati aştığı (şafaktan önce) doğum.
+    assert!(any(&|_, _, a| a.jd_ut < a.sunset_jd_ut), "day birth");
+    assert!(any(&|_, _, a| a.jd_ut >= a.sunset_jd_ut), "night birth");
+    assert!(
+        any(&|_, _, a| {
+            let noon = 0.5 * (a.sunrise_jd_ut + a.sunset_jd_ut);
+            (a.jd_ut - noon) * 24.0 > 12.0
+        }),
+        "more than twelve hours after noon"
+    );
+    // Büyüyen ve küçülen Ay (Ay − Güneş uzanımı 180°'nin altında ve üstünde).
+    let elongation = |p: &Positions| {
+        normalize(p.point(Graha::Moon).sidereal_lon - p.point(Graha::Sun).sidereal_lon)
+    };
+    assert!(any(&|_, p, _| elongation(p) < 180.0), "waxing Moon");
+    assert!(any(&|_, p, _| elongation(p) > 180.0), "waning Moon");
+    // Graha savaşı: enlemle kazanılan ve eşit enlemli.
+    let war = |equal_lat: bool| {
+        any(&|x, p, _| {
+            x.grahas.iter().any(|(g, row)| {
+                row.war
+                    .is_some_and(|w| (p.point(*g).lat == p.point(w.with).lat) == equal_lat)
+            })
+        })
+    };
+    assert!(war(false), "a war decided by latitude");
+    assert!(war(true), "a war between equal latitudes");
+    assert!(
+        any(&|x, _, _| x.grahas.values().all(|row| row.war.is_none())),
+        "an example without a war"
+    );
+    // Negatif drik bala; moolatrikona (D1'de 45 puan ancak toplam ≥ 45 ile görünür); her
+    // kendradi değeri; bhava dig balanın uç değerleri.
+    assert!(
+        any(&|x, _, _| x.grahas.values().any(|row| row.drik < 0.0)),
+        "a negative drik bala"
+    );
+    for value in [15.0, 30.0, 60.0] {
+        assert!(
+            any(&|x, _, _| x.grahas.values().any(|row| row.kendradi == value)),
+            "kendradi {value}"
+        );
+    }
+    for value in [0.0, 60.0] {
+        assert!(
+            any(&|x, _, _| x.bhavas.iter().any(|b| b.dig == value)),
+            "bhava dig {value}"
+        );
+    }
+    // Akrep lagna (güçsüz bhavası kendisi) ve Yay ya da Oğlak'ın bölünen yarıları.
+    assert!(
+        any(&|_, p, _| p.lagna_sign == Some(Sign::Scorpio)),
+        "Scorpio lagna"
+    );
+    assert!(
+        any(&|_, p, _| p.lagna_sign == Some(Sign::Sagittarius)),
+        "Sagittarius lagna"
+    );
+    // Oranı 1'in altında ve üstünde olan grahalar (gerekli değer el tablosundan).
+    let required = [390.0, 360.0, 300.0, 420.0, 390.0, 330.0, 300.0];
+    let ratio = |above: bool| {
+        any(&|x, _, _| {
+            SHADBALA_GRAHAS
+                .iter()
+                .zip(required)
+                .any(|(g, need)| (x.grahas[g].total >= need) == above)
+        })
+    };
+    assert!(ratio(true) && ratio(false), "ratios on both sides of one");
 }
