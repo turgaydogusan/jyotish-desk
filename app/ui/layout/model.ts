@@ -1,7 +1,7 @@
 // Pano düzeni veri modeli (spec §3.2). Kalıcı biçim `ViewState.panel_layout` ile aynıdır;
 // M4'teki store komutu gelene kadar localStorage'da tutulur (bkz. persistence.ts).
 
-/** Panel kataloğu: v1 (UI spec §3.3) ve ileri modül panelleri (ileri modüller spec'i §4, §5). */
+/** Panel kataloğu: v1 (UI spec §3.3) ve ileri modül panelleri (ileri modüller spec'i §4, §5, §7). */
 export const PANEL_KINDS = [
   "chart",
   "graha_table",
@@ -16,6 +16,7 @@ export const PANEL_KINDS = [
   "jaimini_karakas",
   "arudha",
   "argala",
+  "shadbala",
 ] as const;
 export type KnownPanelKind = (typeof PANEL_KINDS)[number];
 
@@ -31,6 +32,8 @@ export const MODULE_PANELS = [
   { kind: "jaimini_karakas", w: 5, h: 14 },
   { kind: "arudha", w: 4, h: 12 },
   { kind: "argala", w: 6, h: 9 },
+  // Shadbala ve Bhava bala (Plan 17).
+  { kind: "shadbala", w: 8, h: 12 },
 ] as const satisfies readonly { kind: KnownPanelKind; w: number; h: number }[];
 export type ModulePanelKind = (typeof MODULE_PANELS)[number]["kind"];
 

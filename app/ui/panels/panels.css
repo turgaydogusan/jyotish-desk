@@ -218,3 +218,23 @@
   margin: 4px 0 0;
   font-weight: var(--fw-medium);
 }
+.bala-scroll {
+  overflow-x: auto;
+}
+.bala-scroll caption {
+  text-align: left;
+  padding: 6px 6px 2px;
+  color: var(--text-2);
+}
+.bala-war {
+  color: var(--text-2);
+  font-weight: var(--fw-regular);
+}
+.bala-lords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}

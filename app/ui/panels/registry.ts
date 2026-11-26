@@ -13,6 +13,7 @@ import { DrishtiPanel } from "./DrishtiPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { PanchangPanel } from "./PanchangPanel";
+import { ShadbalaPanel } from "./ShadbalaPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
 
@@ -32,6 +33,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   jaimini_karakas: { titleKey: "panel.jaimini_karakas", component: JaiminiKarakasPanel },
   arudha: { titleKey: "panel.arudha", component: ArudhaPanel },
   argala: { titleKey: "panel.argala", component: ArgalaPanel },
+  // Shadbala ve Bhava bala (Plan 17).
+  shadbala: { titleKey: "panel.shadbala", component: ShadbalaPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };
