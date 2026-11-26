@@ -66,6 +66,7 @@ Sahibi kararları devretti; muhafazakâr seçenek seçildi ve her karar bir sat�
   | Task 4 | | | | | 69 / 638 | |
   | Task 5 | | | | | 70 / 649 | |
   | Task 6 | | | | | | 15 |
+  | Final inceleme | | | | | 70 / 653 | 15 |
 
   Değişmeyenler: `jyotish-core` golden 8; `jyotish-desk` lib 46, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; görsel 10; yayın betiği testleri 14. `jyotish-core` lib Task 1'de 18 test kazanır (13 birim testi, 5 proptest); `modules_golden` iki test kazanır (`chara_dasha_hand_fixtures`, `chara_dasha_fixtures_cover_the_required_cases`). `jyotish-desk` `modules` tek test olarak durur (süreçte tek SE örneği); Task 2 ona `chara_dasha_checks`'i ekler. `jyotish-desk` lib 46 olarak durur (Task 3 var olan bir testi büyütür).
 - **Taşınan kurallar (Plan 09 C1–C14, Plan 10 C2′, C15–C17), her görevin gereksinimidir:**

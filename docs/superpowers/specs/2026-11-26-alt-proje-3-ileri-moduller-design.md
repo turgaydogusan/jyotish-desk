@@ -29,7 +29,7 @@ Her karar gerekçesiyle kayıtlıdır; alt projelerin hepsini bağlar.
 - **K9 — Başka yazılım çıktısı fixture olmaz.** Bu modüllerde referans değerler klasik kuraldan elle türetilir (§13). Gerekçe: clean-room; ayrıca bu teknikler yazılımdan yazılıma varyant farkı taşır, başka programla aynı sonucu vermek doğruluk ölçütü değildir.
 - **K10 — Baskı düzeni eklenmez.** Dört baskı düzeni (UI spec §7) değişmez. Modül baskıları ayrı bir işin konusudur.
 - **K11 — Panel dili.** Klasik terimler üç dilde aynı transliterasyonla yazılır, yanında kısa çeviri etiketi olabilir ("Uccha bala · yücelme gücü"). Etiket bir addır, yorum değildir.
-- **K12 — Modül panelleri paletten eklenir ve çıkarılır.** Her modül paneli için komut paletinde "… panelini aç/kapat" komutu vardır (yalnızca harita açıkken). Panel etkin düzenin altına, sola, kendi varsayılan boyutuyla eklenir ve odak ona geçer; aynı komut paneli çıkarır, odak gövdeye düşmez. Hazır düzenlere modül paneli eklenmez; kısayol atanmaz. Her alt proje panelini `MODULE_PANELS` listesine ekler. Gerekçe: v1'de panel ekleme yüzeyi yoktur (yalnızca notlar için `⌘⇧N`); genel bir panel kataloğu beta geri bildirimine bırakılmıştır.
+- **K12 — Modül panelleri paletten eklenir ve çıkarılır.** Her modül paneli için komut paletinde "… panelini aç/kapat" komutu vardır (yalnızca harita açıkken). Panel etkin düzenin altına, sola, kendi varsayılan boyutuyla eklenir ve odak ona geçer; aynı komut paneli çıkarır, odak gövdeye düşmez. Hazır düzenlere modül paneli eklenmez; kısayol atanmaz. Yeni panel türü getiren her alt proje panelini `MODULE_PANELS` listesine ekler (3.3 panel türü getirmez: var olan iki dasa paneline `system` ayarını ekler). Gerekçe: v1'de panel ekleme yüzeyi yoktur (yalnızca notlar için `⌘⇧N`); genel bir panel kataloğu beta geri bildirimine bırakılmıştır.
 
 ## 3. Alt projeler, sıra ve bağımlılıklar
 
@@ -233,10 +233,10 @@ Burç temelli Jaimini dashası, padakrama düzeni (20. yüzyıl Jaimini yorum ge
 
 - **Burç grupları.** §5 "Sayım yönü"ndeki iki gruptur (`counts_forward`, `directed_count`; 3.2'de tanımlıdır). Düz sayan: Koç, Boğa, İkizler, Terazi, Akrep, Yay. Ters sayan: Yengeç, Aslan, Başak, Oğlak, Kova, Balık.
 - **Dasha sırası.** İlk dasha lagna burcudur. Lagnadan 9. burç düz sayan gruptaysa dashalar zodyak sırasıyla, ters sayan gruptaysa ters sırayla ilerler. On iki burç birer kez gelir.
-- **Dasha süresi.** Dasha burcu düz sayan gruptaysa burçtan lorduna ileri, değilse geri doğru kapsayıcı sayılır; yıl = sayım − 1. Lord kendi burcundaysa 12 yıl. Akrep ve Kova için lord `stronger_co_lord` ile seçilir; iki eş lord da burcun içindeyse 12 yıl. Yücelme ve düşüş için ±1 yıl düzeltmesi uygulanmaz.
-- **İkinci çevrim.** On iki dasha bittikten sonra aynı sırayla ikinci çevrim gelir; her burcun süresi `12 − ilk çevrimdeki yıl`dır, 0 yıllık burçlar atlanır. Üretim doğumdan 120 yıl sonrasını geçen ilk dashada durur.
-- **Alt dönemler.** Her dönem on iki eşit parçaya bölünür. Sıra harita düzeyindeki yönle aynıdır; ilk alt dönem dasha burcundan sonraki burç, sonuncusu dasha burcunun kendisidir. Aynı kural 3. seviyeye de uygulanır. En çok 3 seviye.
-- **Başlangıç.** Doğumda ilk dasha tam süresiyle başlar (bakiye hesabı yoktur). Yıl uzunluğu `settings.dasha_year`'dır.
+- **Dasha süresi.** Dasha burcu düz sayan gruptaysa burçtan lorduna ileri, değilse geri doğru kapsayıcı sayılır; yıl = sayım − 1. Lord kendi burcundaysa 12 yıl. Akrep ve Kova için lord `jaimini_lord(sign, positions, co_lords)` ile seçilir: `jaimini_co_lords` açıkken `stronger_co_lord`'un seçtiği lord, kapalıyken Mars ve Satürn (K7; `stronger_co_lord` tek başına ayara bakmaz). İki eş lord da burcun içindeyse seçilen lord burcun içindedir ve süre 12 yıldır; bu ayrı bir kural değil, seçimin sonucudur. Yücelme ve düşüş için ±1 yıl düzeltmesi uygulanmaz.
+- **İkinci çevrim.** On iki dasha bittikten sonra aynı sırayla ikinci çevrim gelir; her burcun süresi `12 − ilk çevrimdeki yıl`dır, 0 yıllık burçlar atlanır. İkinci çevrimin bir dashası, başlangıcı doğumdan sonraki 120. yıldan önceyse (birikimli tamsayı yıl `< 120`) bütün süresiyle üretilir; tam 120. yılda başlayacak dasha ve sonrakiler üretilmez. İlk çevrimin on iki dashası her zaman üretilir (toplamı 120 yıla ulaşamaz).
+- **Alt dönemler.** Her dönem on iki eşit parçaya bölünür. Sıra harita düzeyindeki yönle aynıdır; ilk alt dönem dasha burcundan sonraki burç, sonuncusu dasha burcunun kendisidir. Aynı kural 3. seviyeye de uygulanır. En çok 3 seviye. Sınırlar `ebeveynin başlangıcı + süre × k / 12`'dir; son alt dönemin bitişi ebeveynin bitişine tam eşittir.
+- **Başlangıç.** Doğumda ilk dasha tam süresiyle başlar (bakiye hesabı yoktur). Yıl uzunluğu `settings.dasha_year`'dır; dasha sınırları `doğum anı + birikimli tamsayı yıl × dasha_year` ile hesaplanır (boşluk ve örtüşme olmaz).
 - Doğum saati bilinmiyorsa chara dasha hesaplanmaz (lagnaya bağlı).
 
 ### Veri modeli ve IPC
@@ -247,27 +247,39 @@ pub struct SignDashaPeriod { pub signs: Vec<Sign>, pub level: u8, pub cycle: u8,
 pub struct CharaDasha { pub forward: bool, pub years: [u8; 12],        // lagnadan dasha sırasıyla
                         pub periods: Vec<SignDashaPeriod>,              // 2 seviye
                         pub method: String }
+pub struct SignDashaPath { pub cycle: u8, pub signs: Vec<Sign> }       // bir anın dönem yolu; açık dalın yolu
 ```
 
-Komutlar: `compute_chara_dasha(input: ChartInput) -> Option<CharaDasha>`, `chara_dasha_children(input: ChartInput, path: Vec<Sign>, cycle: u8) -> Vec<SignDashaPeriod>`.
+`periods` iki çevrimin 1. ve 2. seviyesini ön-sırada taşır (her dashanın ardından on iki alt dönemi; `cycle` çevrimi ayırır); 3. seviye istenerek alınır. `years` yalnızca ilk çevrimin yıllarıdır. `CharaDasha` `warnings` alanı taşımaz: temel haritanın `LowPrecision` uyarısı harita başlığından okunur (K8'in bu modüldeki karşılığı).
+
+Komutlar:
+
+- `compute_chara_dasha(input: ChartInput) -> Option<CharaDasha>`.
+- `chara_dasha_children(input: ChartInput, path: Vec<Sign>, cycle: u8) -> Vec<SignDashaPeriod>`: boş `path` o çevrimin dashalarını, bir burç on iki alt dönemi, iki burç on iki 3. seviye dönemi verir; `cycle` 1 ya da 2'dir.
+- `chara_dasha_at(input: ChartInput, jd_ut: f64) -> Option<SignDashaPath>`: anı içeren dönemlerin yolu (çevrim ve üç burç); an üretilen dönemlerin dışındaysa `None`. Şeridin "güncel dönem"i buradan gelir: arayüz tarih karşılaştırmaz.
+
+Geçersiz çevrim, üç burçluk yol ve o çevrimde üretilmemiş dönem `invalid_dasha_input` (`cycle` | `path`), sonlu olmayan an `invalid_dasha_input` (`jd_ut`) hatasıdır; yeni hata kodu yoktur. Doğum saati bilinmiyorsa `compute_chara_dasha` ve `chara_dasha_at` `None`, `chara_dasha_children` boş liste döner (K2); ayar, an ve konum denetimi saat bilinmese de yapılır.
 
 ### Arayüz
 
 - `dasha_tree` ve `dasha_strip` panellerinin `system` ayarı `vimshottari | chara` olur. Chara seçiliyken satırlar graha yerine burç kısaltması taşır; ikinci çevrim satırları "2." önekiyle ayrılır.
-- Ağaç başlığında yön ("ileri" / "geri") ve on iki burcun yıl dizisi küçük bir satırda gösterilir.
-- Dönem seçimi transit tarihini v1'deki gibi sürer (UI spec §3.4).
-- `ViewState.dasha_expanded_path` sistem başına ayrı tutulur (toleranslı ayrıştırma; eski kayıt Vimshottari yolu sayılır).
+- Ağaç başlığında yön ("ileri" / "geri") ve on iki burcun yıl dizisi küçük bir satırda gösterilir; ağacın altında yöntem kimliği satırı durur. 3. seviye yalnızca açık yol için istenir ve son seviyedir. Doğum saati bilinmiyorsa ağaç ve şerit yerine tek satır açıklama çıkar; sistem seçicisi yükleme, hata ve "saat bilinmiyor" durumlarında da görünür.
+- Şerit: seviye adları Vimshottari şeridiyle aynıdır (maha / antar / pratyantar = 1. / 2. / 3. seviye). "Maha" iki çevrimin dashalarını tek şeritte gösterir; "antar" anın dashasının on iki alt dönemini, "pratyantar" anın alt döneminin 3. seviyesini (istenerek yüklenir) gösterir. Güncel dönem `chara_dasha_at`'in yoludur ve "transit anında" metniyle işaretlenir. An üretilen dönemlerin dışındaysa şerit yerine bir satır ileti çıkar.
+- Dönem seçimi transit tarihini v1'deki gibi sürer: yalnızca şeritteki seçim sürer; ağaçta tıklama dalı açar ya da kapatır (v1 ağacı da böyledir; UI spec §3.4 ile fark ayrı bir iştir).
+- Şeritte bir dönem seçilince yeni anın yolu (ve 3. seviyesi) istenirken son çizilen şerit yerinde durur (`aria-busy`); iskelet yalnızca gösterilecek eski şerit yokken çizilir. Seçilen düğme odağını yitirmez; odaktaki dönem şeritten çıkarsa odak güncel döneme, şerit yoksa panel çerçevesine geçer (Plan 16 final incelemesinin kararı).
+- Açık dal sistem başına ayrı tutulur: Vimshottari yolu `ViewState.dasha_expanded_path`'te durur, chara yolu kardeş alan `chara_expanded_path: { cycle, signs }`'tedir (çevrim 1 ya da 2, en çok 3 burç). Şema sürümü değişmez; ayrıştırma toleranslıdır; bu alanı taşımayan eski kayıt Vimshottari yolu sayılır ve chara yolu boş okunur.
 
 ### Test
 
 - **El örnekleri:** en az 6 sentetik harita; her biri yönü, on iki yılı ve ilk iki dashanın alt dönem sırasını kural adımlarıyla verir. Zorunlu durumlar: ileri ve geri yön, lordu kendi burcunda (12 yıl), lordu 2. ve 12. burçta (1 yıl ve 11 yıl iki grup için), Akrep ve Kova'da eş lord seçimi, ikinci çevrimde atlanan burç.
 - **Property:** her süre 1–12 yıl; ilk çevrim on iki burcun permütasyonudur ve lagnadan başlar; dönemler boşluksuz ardışıktır; alt dönemlerin toplamı ebeveyne eşittir; son alt dönem ebeveyn burcudur; iki çevrimde aynı burcun yılları toplamı 12'dir.
 - **Çapraz denetim:** yılları üreten fonksiyonun yanında, aynı kuralı tablo arayarak (12 burç × 12 lord konumu, elle yazılmış 144 hücre) veren ikinci bir test yardımcısı; ikisi her girdide eşit olmalıdır.
+- **El örneği biçimi:** `expected` `forward`, `order`, `years`, `second_cycle` (üretilen dashalar: burç ve yıl) ve `sub_periods` (ilk iki dasha) taşır; doğum saati bilinmeyen örnekte `expected` `null`'dır. Doğum anı ve yıl uzunluğu girdide yoktur: test sabit bir an ve 365,25 günlük yıl kullanır. "Lordu 2. ve 12. burçta" zodyak sırasıyla sonraki ve önceki burçtur: düz sayan burçta 1 ve 11 yıl, ters sayan burçta 11 ve 1 yıl (dört durum).
 
 ### Gizlilik, performans, kapsam dışı
 
-- Gizlilik: §14. Kalıcı veri: yalnızca panel ayarı.
-- Performans: ≤ 10 ms; alt dönemler ≤ 5 ms.
+- Gizlilik: §14. Kalıcı veri: panel ayarı (`system`) ve haritanın görünüm kaydındaki chara yolu; dasha sonucu saklanmaz.
+- Performans: ≤ 10 ms; alt dönemler ≤ 5 ms; `chara_dasha_at` ≤ 10 ms.
 - Kapsam dışı: diğer chara dasha varyantları, ±1 yıl düzeltmesi, sthira/shoola/narayana ve diğer burç dashaları, Yogini ve koşullu nakshatra dashaları.
 
 ---
@@ -794,7 +806,8 @@ Ek kurallar:
 
 | Komut | Bütçe |
 |---|---|
-| `compute_drishti`, `compute_jaimini`, `compute_chara_dasha`, `compute_yogas` | ≤ 10 ms |
+| `compute_drishti`, `compute_jaimini`, `compute_chara_dasha`, `chara_dasha_at`, `compute_yogas` | ≤ 10 ms |
+| `chara_dasha_children` | ≤ 5 ms |
 | `compute_prashna_facts` | ≤ 15 ms |
 | `compute_compat` | ≤ 20 ms |
 | `compute_shadbala` | ≤ 40 ms |
