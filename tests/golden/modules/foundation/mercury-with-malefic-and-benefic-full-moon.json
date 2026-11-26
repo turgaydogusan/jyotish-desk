@@ -1,0 +1,25 @@
+{
+  "id": "mercury-with-malefic-and-benefic-full-moon",
+  "source": "hand",
+  "rule_ref": "BPHS, graha nitelikleri bölümü (doğal sınıf); evler lagna burcundan bütün burç sayımı; Kuja dosha: Mars 1, 2, 4, 7, 8, 12",
+  "derivation": [
+    "Burçlar: Güneş 100° Yengeç, Ay 280° Oğlak, Mars 250° Yay, Merkür 65° İkizler, Jüpiter 85° İkizler, Venüs 130° Aslan, Satürn 62° İkizler, Rahu 10° Koç, Ketu 190° Terazi. Lagna 250° Yay.",
+    "Ay: uzanım = 280 − 100 = 180°; büyüme aralığı [0°, 180°) olduğundan tam 180° küçülen yarıya aittir, kötücül.",
+    "Merkür İkizler'de Satürn (kötücül) ve Jüpiter (iyicil) ile: iyicil bulunduğundan iyicil.",
+    "Kuja dosha: Mars Yay'da. Yay'dan Yay 1. ev: var. Oğlak'tan Yay 12. ev: var. Aslan'dan sayım Aslan 1, Başak 2, Terazi 3, Akrep 4, Yay 5: yok.",
+    "Ev lordları, Yay lagna (evler Yay, Oğlak, Kova, Balık, Koç, Boğa, İkizler, Yengeç, Aslan, Başak, Terazi, Akrep): Jüpiter, Satürn, Satürn, Jüpiter, Mars, Venüs, Merkür, Ay, Güneş, Merkür, Venüs, Mars.",
+    "Evler, Yay'dan: Yengeç 8, Oğlak 2, Yay 1, İkizler 7, İkizler 7, Aslan 9, İkizler 7, Koç 5, Terazi 11."
+  ],
+  "input": {
+    "lagna_lon": 250.0,
+    "grahas": {"Sun": 100.0, "Moon": 280.0, "Mars": 250.0, "Mercury": 65.0, "Jupiter": 85.0, "Venus": 130.0, "Saturn": 62.0, "Rahu": 10.0, "Ketu": 190.0}
+  },
+  "expected": {
+    "waxing": false,
+    "nature": {"Sun": "Malefic", "Moon": "Malefic", "Mars": "Malefic", "Mercury": "Benefic", "Jupiter": "Benefic", "Venus": "Benefic", "Saturn": "Malefic", "Rahu": "Malefic", "Ketu": "Malefic"},
+    "kuja_dosha": {"from_lagna": true, "from_moon": true, "from_venus": false},
+    "house_lords": ["Jupiter", "Saturn", "Saturn", "Jupiter", "Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars"],
+    "houses": {"Sun": 8, "Moon": 2, "Mars": 1, "Mercury": 7, "Jupiter": 7, "Venus": 9, "Saturn": 7, "Rahu": 5, "Ketu": 11},
+    "houses_owned": {"Sun": [9], "Moon": [8], "Mars": [5, 12], "Mercury": [7, 10], "Jupiter": [1, 4], "Venus": [6, 11], "Saturn": [2, 3], "Rahu": [], "Ketu": []}
+  }
+}

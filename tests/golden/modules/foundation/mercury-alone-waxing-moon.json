@@ -1,0 +1,25 @@
+{
+  "id": "mercury-alone-waxing-moon",
+  "source": "hand",
+  "rule_ref": "BPHS, graha nitelikleri bölümü (doğal sınıf); evler lagna burcundan bütün burç sayımı; Kuja dosha: Mars 1, 2, 4, 7, 8, 12",
+  "derivation": [
+    "Burçlar: Güneş 280° Oğlak, Ay 40° Boğa, Mars 100° Yengeç, Merkür 340° Balık, Jüpiter 130° Aslan, Venüs 310° Kova, Satürn 190° Terazi, Rahu 70° İkizler, Ketu 250° Yay. Lagna 15° Koç.",
+    "Ay: uzanım = 40 − 280 = −240 ≡ 120°; 0° ≤ 120° < 180° olduğundan büyüyor, iyicil.",
+    "Merkür Balık'ta yalnız: aynı burçta kötücül yok, iyicil.",
+    "Kuja dosha: Mars Yengeç'te. Koç'tan Yengeç 4. ev: var. Ay'ın burcu Boğa'dan Yengeç 3. ev: yok. Venüs'ün burcu Kova'dan sayım Kova 1, Balık 2, Koç 3, Boğa 4, İkizler 5, Yengeç 6: yok.",
+    "Ev lordları, Koç lagna (evler Koç…Balık): Mars, Venüs, Merkür, Ay, Güneş, Merkür, Venüs, Mars, Jüpiter, Satürn, Satürn, Jüpiter.",
+    "Evler, Koç'tan: Oğlak 10, Boğa 2, Yengeç 4, Balık 12, Aslan 5, Kova 11, Terazi 7, İkizler 3, Yay 9."
+  ],
+  "input": {
+    "lagna_lon": 15.0,
+    "grahas": {"Sun": 280.0, "Moon": 40.0, "Mars": 100.0, "Mercury": 340.0, "Jupiter": 130.0, "Venus": 310.0, "Saturn": 190.0, "Rahu": 70.0, "Ketu": 250.0}
+  },
+  "expected": {
+    "waxing": true,
+    "nature": {"Sun": "Malefic", "Moon": "Benefic", "Mars": "Malefic", "Mercury": "Benefic", "Jupiter": "Benefic", "Venus": "Benefic", "Saturn": "Malefic", "Rahu": "Malefic", "Ketu": "Malefic"},
+    "kuja_dosha": {"from_lagna": true, "from_moon": false, "from_venus": false},
+    "house_lords": ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"],
+    "houses": {"Sun": 10, "Moon": 2, "Mars": 4, "Mercury": 12, "Jupiter": 5, "Venus": 11, "Saturn": 7, "Rahu": 3, "Ketu": 9},
+    "houses_owned": {"Sun": [5], "Moon": [4], "Mars": [1, 8], "Mercury": [3, 6], "Jupiter": [9, 12], "Venus": [2, 7], "Saturn": [10, 11], "Rahu": [], "Ketu": []}
+  }
+}

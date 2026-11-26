@@ -351,3 +351,74 @@ mod ashtakavarga_properties {
         }
     }
 }
+
+/// İleri modüllerin ortak temeli (Alt proje 3.1): doğal sınıf, lordluk, Kuja dosha.
+mod foundation_properties {
+    use proptest::prelude::*;
+
+    use crate::graha::Graha;
+    use crate::lordship::{house_lord, house_sign, houses_owned};
+    use crate::nature::{kuja_dosha, moon_is_waxing, nature, Nature, KUJA_DOSHA_HOUSES};
+    use crate::positions::Positions;
+    use crate::zodiac::Sign;
+
+    fn positions() -> impl Strategy<Value = Positions> {
+        (
+            proptest::option::of(0.0f64..360.0),
+            proptest::array::uniform9(0.0f64..360.0),
+        )
+            .prop_map(|(lagna, lons)| Positions::synthetic(lagna, lons))
+    }
+
+    proptest! {
+        #[test]
+        fn natural_class_rules_hold(p in positions()) {
+            for g in [Graha::Jupiter, Graha::Venus] {
+                prop_assert_eq!(nature(g, &p), Nature::Benefic);
+            }
+            for g in [Graha::Sun, Graha::Mars, Graha::Saturn, Graha::Rahu, Graha::Ketu] {
+                prop_assert_eq!(nature(g, &p), Nature::Malefic);
+            }
+            let moon = if moon_is_waxing(&p) { Nature::Benefic } else { Nature::Malefic };
+            prop_assert_eq!(nature(Graha::Moon, &p), moon);
+            // Merkür: aynı burçta kötücül varken iyicil yoksa kötücül, değilse iyicil.
+            let sign = p.sign_of(Graha::Mercury);
+            let others: Vec<Nature> = p
+                .occupants(sign)
+                .into_iter()
+                .filter(|&g| g != Graha::Mercury)
+                .map(|g| nature(g, &p))
+                .collect();
+            let want = if others.contains(&Nature::Malefic) && !others.contains(&Nature::Benefic) {
+                Nature::Malefic
+            } else {
+                Nature::Benefic
+            };
+            prop_assert_eq!(nature(Graha::Mercury, &p), want);
+        }
+
+        #[test]
+        fn houses_and_kuja_dosha_follow_the_sign_count(p in positions()) {
+            let k = kuja_dosha(&p);
+            prop_assert_eq!(k.from_lagna.is_some(), p.lagna_sign.is_some());
+            let mars_from = |s: Sign| KUJA_DOSHA_HOUSES.contains(&p.house_from(Graha::Mars, s));
+            prop_assert_eq!(k.from_moon, mars_from(p.sign_of(Graha::Moon)));
+            prop_assert_eq!(k.from_venus, mars_from(p.sign_of(Graha::Venus)));
+            if let Some(lagna) = p.lagna_sign {
+                prop_assert_eq!(k.from_lagna, Some(mars_from(lagna)));
+                for g in Graha::ALL {
+                    let h = p.house_of(g).unwrap();
+                    prop_assert!((1..=12).contains(&h));
+                    prop_assert_eq!(house_sign(lagna, h), p.sign_of(g));
+                }
+                for h in 1..=12u8 {
+                    prop_assert!(houses_owned(lagna, house_lord(lagna, h)).contains(&h));
+                }
+            } else {
+                for g in Graha::ALL {
+                    prop_assert_eq!(p.house_of(g), None);
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "mercury-with-sun-only",
+  "source": "hand",
+  "rule_ref": "BPHS, graha nitelikleri bölümü (doğal sınıf); evler lagna burcundan bütün burç sayımı; Kuja dosha: Mars 1, 2, 4, 7, 8, 12",
+  "derivation": [
+    "Burçlar: Güneş 155° Başak, Ay 130° Aslan, Mars 280° Oğlak, Merkür 170° Başak, Jüpiter 20° Koç, Venüs 190° Terazi, Satürn 310° Kova, Rahu 40° Boğa, Ketu 220° Akrep. Lagna 100° Yengeç.",
+    "Ay: uzanım = 130 − 155 = −25 ≡ 335°; 180°'den büyük olduğundan küçülüyor, kötücül.",
+    "Merkür Başak'ta yalnızca Güneş'le birlikte: kötücül var, iyicil yok; kötücül.",
+    "Kuja dosha: Mars Oğlak'ta. Yengeç'ten Oğlak 7. ev: var. Aslan'dan sayım Aslan 1, Başak 2, Terazi 3, Akrep 4, Yay 5, Oğlak 6: yok. Terazi'den sayım Terazi 1, Akrep 2, Yay 3, Oğlak 4: var.",
+    "Ev lordları, Yengeç lagna (evler Yengeç, Aslan, Başak, Terazi, Akrep, Yay, Oğlak, Kova, Balık, Koç, Boğa, İkizler): Ay, Güneş, Merkür, Venüs, Mars, Jüpiter, Satürn, Satürn, Jüpiter, Mars, Venüs, Merkür.",
+    "Evler, Yengeç'ten: Başak 3, Aslan 2, Oğlak 7, Başak 3, Koç 10, Terazi 4, Kova 8, Boğa 11, Akrep 5."
+  ],
+  "input": {
+    "lagna_lon": 100.0,
+    "grahas": {"Sun": 155.0, "Moon": 130.0, "Mars": 280.0, "Mercury": 170.0, "Jupiter": 20.0, "Venus": 190.0, "Saturn": 310.0, "Rahu": 40.0, "Ketu": 220.0}
+  },
+  "expected": {
+    "waxing": false,
+    "nature": {"Sun": "Malefic", "Moon": "Malefic", "Mars": "Malefic", "Mercury": "Malefic", "Jupiter": "Benefic", "Venus": "Benefic", "Saturn": "Malefic", "Rahu": "Malefic", "Ketu": "Malefic"},
+    "kuja_dosha": {"from_lagna": true, "from_moon": false, "from_venus": true},
+    "house_lords": ["Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter", "Mars", "Venus", "Mercury"],
+    "houses": {"Sun": 3, "Moon": 2, "Mars": 7, "Mercury": 3, "Jupiter": 10, "Venus": 4, "Saturn": 8, "Rahu": 11, "Ketu": 5},
+    "houses_owned": {"Sun": [2], "Moon": [1], "Mars": [5, 10], "Mercury": [3, 12], "Jupiter": [6, 9], "Venus": [4, 11], "Saturn": [7, 8], "Rahu": [], "Ketu": []}
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "time-unknown-mercury-with-waxing-moon-and-rahu",
+  "source": "hand",
+  "rule_ref": "BPHS, graha nitelikleri bölümü (doğal sınıf); evler lagna burcundan bütün burç sayımı; Kuja dosha: Mars 1, 2, 4, 7, 8, 12",
+  "derivation": [
+    "Burçlar: Güneş 10° Koç, Ay 70° İkizler, Mars 345° Balık, Merkür 80° İkizler, Jüpiter 200° Terazi, Venüs 125° Aslan, Satürn 130° Aslan, Rahu 75° İkizler, Ketu 255° Yay. Doğum saati bilinmiyor: lagna yok.",
+    "Ay: uzanım = 70 − 10 = 60°; büyüyor, iyicil.",
+    "Merkür İkizler'de büyüyen Ay (iyicil) ve Rahu (kötücül) ile: iyicil bulunduğundan iyicil.",
+    "Kuja dosha: Mars Balık'ta. Lagna yok: lagnadan değer boş. İkizler'den sayım İkizler 1, Yengeç 2, Aslan 3, Başak 4, Terazi 5, Akrep 6, Yay 7, Oğlak 8, Kova 9, Balık 10: yok. Aslan'dan sayım Aslan 1, Başak 2, Terazi 3, Akrep 4, Yay 5, Oğlak 6, Kova 7, Balık 8: var.",
+    "Lagna olmadığından ev lordları, evler ve lordluk listeleri boştur."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "grahas": {"Sun": 10.0, "Moon": 70.0, "Mars": 345.0, "Mercury": 80.0, "Jupiter": 200.0, "Venus": 125.0, "Saturn": 130.0, "Rahu": 75.0, "Ketu": 255.0}
+  },
+  "expected": {
+    "waxing": true,
+    "nature": {"Sun": "Malefic", "Moon": "Benefic", "Mars": "Malefic", "Mercury": "Benefic", "Jupiter": "Benefic", "Venus": "Benefic", "Saturn": "Malefic", "Rahu": "Malefic", "Ketu": "Malefic"},
+    "kuja_dosha": {"from_lagna": null, "from_moon": false, "from_venus": true},
+    "house_lords": null,
+    "houses": null,
+    "houses_owned": null
+  }
+}

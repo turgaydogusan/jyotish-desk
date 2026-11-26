@@ -2,7 +2,8 @@
 //! trait'i üzerinden erişir; I/O, Tauri ve atlas bağımlılığı yoktur.
 //!
 //! Kapsam: ayanamsa, grahalar, lagna, bhavalar, nakshatra, dignity, yanma (M2), 16 varga,
-//! Vimshottari dasha, panchang, ashtakavarga ve transit (M3).
+//! Vimshottari dasha, panchang, ashtakavarga ve transit (M3). İleri modüllerin ortak temeli
+//! (Alt proje 3.1): `positions` (ortak girdi), `lordship` ve `nature`.
 
 pub mod ashtakavarga;
 mod chart;
@@ -14,7 +15,10 @@ mod error;
 mod fake;
 mod graha;
 mod houses;
+pub mod lordship;
+pub mod nature;
 pub mod panchang;
+pub mod positions;
 #[cfg(test)]
 mod proptests;
 pub mod settings;
@@ -36,11 +40,14 @@ pub use dignity::{dignity, Dignity, Relation};
 pub use error::CoreError;
 pub use graha::{Graha, GrahaPosition};
 pub use houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
+pub use lordship::{house_lord, house_sign, houses_owned};
+pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};
 pub use panchang::{
     compute_panchang, elongation, karana_name, karana_no, local_weekday, nitya_yoga_no, paksha,
     tithi_no, Karana, KaranaName, NityaYoga, Paksha, Panchang, PanchangNakshatra, Tithi, Vara,
     END_BISECTIONS, END_SEARCH_DAYS, KARANA_SPAN_DEG, SUNRISE_WINDOW_DAYS, TITHI_SPAN_DEG,
 };
+pub use positions::{compute_positions, ChartInput, GrahaPoint, Positions};
 pub use settings::{
     AdvancedSettings, AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, KarakaScheme,
     NodeKind, SunriseDef, ZodiacMode, CALC_SETTINGS_SCHEMA_VERSION, JD_UT_RANGE,
