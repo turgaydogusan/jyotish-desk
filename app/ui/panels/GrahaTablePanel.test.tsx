@@ -106,6 +106,16 @@ test("the karaka column shows each graha's role from the Jaimini report; Ketu an
   expect([...lagna.querySelectorAll("td")].map((c) => c.textContent)).toEqual(["İki", ""]);
 });
 
+test("unknown birth time: the Moon's karaka role is marked approximate, the other roles are not", async () => {
+  renderTable({ columns: ["sign"], karaka: true }, unknownTimeOpened());
+  const moon = () => document.querySelector('[data-karaka="Moon"]')!;
+  await waitFor(() => expect(moon()).toHaveTextContent("≈yaklaşık AK Atmakaraka"));
+  expect(vi.mocked(api.computeJaimini).mock.calls[0][0].time_known).toBe(false);
+  expect(moon().querySelector('[title="yaklaşık"]')).toHaveAttribute("aria-hidden", "true");
+  expect(document.querySelector('[data-karaka="Sun"]')).toHaveTextContent(/^MK Matrikaraka$/);
+  expect(document.querySelector('[data-karaka="Ketu"]')!.querySelector('[title="yaklaşık"]')).toBeNull();
+});
+
 test("the karaka checkbox writes settings.karaka and leaves settings.columns alone", async () => {
   const { persistence } = renderTable({ columns: ["sign", "house"] });
   const summary = screen.getByText("Sütunlar", { selector: "summary" });

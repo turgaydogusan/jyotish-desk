@@ -139,11 +139,12 @@ export function GrahaTablePanel({ panel }: PanelProps) {
                 ))}
                 {karakaOn && (
                   <td data-karaka={g.graha}>
+                    {/* Ay'ın rolü yaklaşık dereceden çıkar: Ay'ın diğer hücreleri gibi "≈" taşır (K2). */}
                     {roles.has(g.graha) && (
-                      <>
+                      <Approx on={approx} label={t("table.approx")}>
                         <abbr title={roles.get(g.graha)!.name}>{roles.get(g.graha)!.short}</abbr>
                         <span className="visually-hidden"> {roles.get(g.graha)!.name}</span>
-                      </>
+                      </Approx>
                     )}
                   </td>
                 )}

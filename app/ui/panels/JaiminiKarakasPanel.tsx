@@ -104,7 +104,7 @@ function Karakas({ report, opened }: { report: JaiminiReport; opened: OpenedClie
       {anyTie && <p className="panel-message">{t("jaimini.tieLegend", { mark: TIE_MARK })}</p>}
       {hasRahu && <p className="panel-message">{t("jaimini.rahuLegend")}</p>}
       <p className="jaimini-karakamsha">
-        {t("jaimini.karakamsha")}:{" "}
+        {t("jaimini.karakamshaLabel")}{" "}
         <Approx on={unknown} label={t("table.approx")}>
           <PinButton target={{ type: "sign", sign: kmSign }}>{t(`sign.${kmSign}`)}</PinButton>
         </Approx>{" "}

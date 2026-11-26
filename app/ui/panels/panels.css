@@ -88,6 +88,14 @@
   gap: 6px;
   color: var(--text-2);
 }
+.chart-ring-toggle.is-off {
+  opacity: 0.6;
+}
+.chart-toolbar-hint {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-table);
+}
 .graha-table-panel {
   display: flex;
   flex-direction: column;

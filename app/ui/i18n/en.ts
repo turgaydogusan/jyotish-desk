@@ -133,7 +133,7 @@ export const en: Messages = {
     tie: "equal degree",
     tieLegend: "{{mark}} equal to its neighbour in rank within 1″; the order follows the exact value.",
     rahuLegend: "Rahu's effective degree is measured from the end of its sign (30° − degree).",
-    karakamsha: "Karakamsha",
+    karakamshaLabel: "Karakamsha:",
     karakamshaOf: "Atmakaraka {{graha}}, navamsa sign",
     housesCaption: "Houses of the grahas from the karakamsha: rasi (D1) and navamsa (D9)",
     d1: "D1 house",

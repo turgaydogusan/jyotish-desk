@@ -34,7 +34,8 @@ export function ChartPanel({ panel }: PanelProps) {
   const varga = chartVarga(panel.settings);
   const style = isChartStyle(panel.settings.style) ? panel.settings.style : "north";
   const ringOn = panel.settings.transit_ring === true;
-  const ringDrawn = ringOn && varga === "D1";
+  const ringOff = varga !== "D1";
+  const ringDrawn = ringOn && !ringOff;
   const marksOn = panel.settings.arudha_marks === true;
   const unknown = opened !== null && timeUnknown(opened);
   // Padalar lagnaya bağlıdır: saat bilinmiyorsa istenmez (Rust zaten boş döner, K2).
@@ -82,37 +83,36 @@ export function ChartPanel({ panel }: PanelProps) {
             </option>
           ))}
         </select>
-        <label className="chart-ring-toggle">
+        {/* Kapalı kutu yerel `disabled` değildir: odaklanır, nedeni görünür ve `aria-describedby`
+            ile bağlıdır; tıklamak ayarı değiştirmez (Plan 11 D22'nin kalıbı). */}
+        <label className={ringOff ? "chart-ring-toggle is-off" : "chart-ring-toggle"}>
           <input
             type="checkbox"
             checked={ringOn}
-            disabled={varga !== "D1"}
-            aria-describedby={varga !== "D1" ? `${id}-ring` : undefined}
-            onChange={(e) => setPanelSettings(panel.id, { transit_ring: e.target.checked })}
+            aria-disabled={ringOff || undefined}
+            aria-describedby={ringOff ? `${id}-ring` : undefined}
+            onChange={(e) => !ringOff && setPanelSettings(panel.id, { transit_ring: e.target.checked })}
           />
           {t("chart.transitRing")}
         </label>
-        {varga !== "D1" && (
-          <span id={`${id}-ring`} className="visually-hidden">
-            {t("chart.transitRingOnlyD1")}
-          </span>
-        )}
-        <label className="chart-ring-toggle">
+        <label className={marksOff !== null ? "chart-ring-toggle is-off" : "chart-ring-toggle"}>
           <input
             type="checkbox"
             checked={marksOn}
-            disabled={marksOff !== null}
+            aria-disabled={marksOff !== null || undefined}
             aria-describedby={marksOff !== null ? `${id}-marks` : undefined}
-            onChange={(e) => setPanelSettings(panel.id, { arudha_marks: e.target.checked })}
+            onChange={(e) => marksOff === null && setPanelSettings(panel.id, { arudha_marks: e.target.checked })}
           />
           {t("chart.arudhaMarks")}
         </label>
-        {marksOff !== null && (
-          <span id={`${id}-marks`} className="visually-hidden">
-            {t(`chart.${marksOff}`)}
-          </span>
-        )}
       </div>
+      {(ringOff || marksOff !== null) && (
+        <p className="chart-toolbar-hint">
+          {ringOff && <span id={`${id}-ring`}>{t("chart.transitRingOnlyD1")}</span>}
+          {ringOff && marksOff !== null && " "}
+          {marksOff !== null && <span id={`${id}-marks`}>{t(`chart.${marksOff}`)}</span>}
+        </p>
+      )}
       {jaimini.error && <PanelError error={jaimini.error} onRetry={jaimini.retry} />}
       {unknown && (
         <p className="panel-notice" role="note">

@@ -132,7 +132,7 @@ export const tr = {
     tie: "eşit derece",
     tieLegend: "{{mark}} sıradaki komşusuyla 1″ içinde eşit derece; sıra tam değerle belirlenir.",
     rahuLegend: "Rahu'nun etkin derecesi burcun sonundan ölçülür (30° − derece).",
-    karakamsha: "Karakamsha",
+    karakamshaLabel: "Karakamsha:",
     karakamshaOf: "Atmakaraka {{graha}}, navamsa burcu",
     housesCaption: "Grahaların karakamshadan ev sayıları: rasi (D1) ve navamsa (D9)",
     d1: "D1 evi",

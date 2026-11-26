@@ -375,8 +375,16 @@ test("jaimini panels: karakas, arudha padas and argala come from one command; ch
   await d1.getByRole("checkbox", { name: "Arudha padalar" }).check();
   await expect(d1.locator(".chart-mark")).toHaveCount(12);
   await expect(d1.locator('[data-mark="AL"]')).toHaveAttribute("data-house", "10");
-  // D9 panelinde işaret kutusu kapalıdır.
-  await expect(page.getByRole("region", { name: "Harita D9" }).getByRole("checkbox", { name: "Arudha padalar" })).toBeDisabled();
+  // D9 panelinde işaret kutusu kapalıdır: odaklanır, nedeni görünür, tıklamak bir şey yazmaz.
+  const d9 = page.getByRole("region", { name: "Harita D9" });
+  const d9Marks = d9.getByRole("checkbox", { name: "Arudha padalar" });
+  await expect(d9Marks).toHaveAttribute("aria-disabled", "true");
+  await expect(d9.getByText("Arudha padalar yalnızca D1'de yazılır.")).toBeVisible();
+  await d9Marks.focus();
+  await page.keyboard.press("Space");
+  await expect(d9Marks).toBeFocused();
+  await expect(d9Marks).not.toBeChecked();
+  await expect(d9.locator(".chart-mark")).toHaveCount(0);
 
   // Bakışlar panelinde rashi türü aynı raporu okur; graha bakışı istenmez.
   await toggle("bakış", /Bakışlar panelini aç\/kapat/);
