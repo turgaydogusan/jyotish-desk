@@ -1,0 +1,52 @@
+{
+  "id": "three-exalted-mahapurushas-seven-signs",
+  "source": "hand",
+  "rule_ref": "BPHS'nin yoga bölümleri (Pancha Mahapurusha, Ay ve Güneş yogaları, raja ve dhana yogaları, nabhasa yogaları) ve klasik yoga derlemeleri; ileri modüller tasarım belgesi §8 (alıntı yapılmaz)",
+  "derivation": [
+    "Lagna 10° Koç. Burçlar ve lagna burcundan sayılan evler: Güneş 125° Aslan (5. ev); Ay 320° Kova (11. ev); Mars 298° Oğlak (10. ev); Merkür 165° Başak (6. ev); Jüpiter 95° Yengeç (4. ev); Venüs 72° İkizler (3. ev); Satürn 200° Terazi (7. ev); Rahu 33° Boğa (2. ev); Ketu 213° Akrep (8. ev).",
+    "Ev lordları (Koç lagna): 1 Mars, 2 Venüs, 3 Merkür, 4 Ay, 5 Güneş, 6 Merkür, 7 Venüs, 8 Mars, 9 Jüpiter, 10 Satürn, 11 Satürn, 12 Jüpiter.",
+    "Doğal sınıf (K6): Ay'ın Güneş'ten uzanımı 195°: küçülüyor, kötücül. Merkür'ün burcundaki diğer grahalar: boş; Merkür iyicil.",
+    "Mahapurusha (lagnadan kendra 1, 4, 7, 10). Ruchaka: Mars Oğlak (yücelme burcu), 10. ev (kendra) → oluşur. Bhadra: Merkür Başak (kendi burcu ve yücelme burcu), 6. ev (kendra değil) → yok. Hamsa: Jüpiter Yengeç (yücelme burcu), 4. ev (kendra) → oluşur. Malavya: Venüs İkizler (kendi ya da yücelme burcu değil), 3. ev (kendra değil) → yok. Shasha: Satürn Terazi (yücelme burcu), 7. ev (kendra) → oluşur.",
+    "Ay'ın yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Balık: boş; 12. burç Oğlak: Mars → Anapha oluşur; diğer ikisi yok.",
+    "Kemadruma: Ay'ın burcunda sayılan graha: boş; Ay'dan 4., 7. ve 10. evlerde: boş; lagnadan kendralarda: Mars, Jüpiter, Satürn → Kemadruma yok.",
+    "Gajakesari: Jüpiter Ay'dan 6. evde (kendra değil) → yok. Chandra-Mangala: Ay Kova, Mars Oğlak → yok.",
+    "Adhi: Ay'dan evler: Merkür 8, Jüpiter 6, Venüs 5 → üçü birden 6, 7 ya da 8 değil: yok.",
+    "Shakata: Ay Jüpiter'den 8. evde (6, 8 ya da 12); Ay lagnadan 11. evde (kendra değil) → oluşur.",
+    "Amala: lagnadan 10. burç Oğlak: Mars kötücül (kötücül var, sağlamaz); Ay'dan 10. burç Akrep: Ketu kötücül (kötücül var, sağlamaz) → yok.",
+    "Vasumati (upachaya 3, 6, 10, 11): lagnadan Merkür 6, Jüpiter 4, Venüs 3 (üçü birden upachaya değil); Ay'dan Merkür 8, Jüpiter 6, Venüs 5 (üçü birden upachaya değil) → yok.",
+    "Güneş'in yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Başak: Merkür; 12. burç Yengeç: Jüpiter → Ubhayachari oluşur; diğer ikisi yok. Budha-Aditya: Güneş Aslan, Merkür Başak → yok.",
+    "İlişkili çiftler (yedi graha; birlikte = aynı burç, karşılıklı bakış = iki yönlü tam bakış, değişim = birbirinin burcunda): Güneş–Ay (karşılıklı bakış); Mars–Jüpiter (karşılıklı bakış).",
+    "Kendra–trikona: kendra lordları 1 Mars, 4 Ay, 7 Venüs, 10 Satürn; trikona lordları 1 Mars, 5 Güneş, 9 Jüpiter. İlişkili çiftlerden bir kendra lordu ile bir trikona lordu olanlar: Güneş–Ay (evler 4, 5); Mars–Jüpiter (evler 1, 9).",
+    "Dharma-Karmadhipati: 9. lord Jüpiter, 10. lord Satürn: ilişkili değil → yok. Yogakaraka (lagna dışında bir kendranın ve bir trikonanın lordu): Koç lagnada yok.",
+    "Dhana: 1 Mars, 2 Venüs, 5 Güneş, 9 Jüpiter, 11 Satürn. İlişkili çiftlerden iki lordu da bu kümeden olan ve 2. ya da 11. lordu içerenler: yok.",
+    "Değişim (sınıfı değişen iki ev belirler: 6, 8 ya da 12 varsa Dainya; yoksa 3 varsa 3. ev lordu değişimi; yoksa Maha): değişen çift yok.",
+    "Viparita raja (lord 6., 8. ya da 12. evde): 6. lord Merkür 6. evde → Harsha oluşur; 8. lord Mars 10. evde → Sarala yok; 12. lord Jüpiter 4. evde → Vimala yok.",
+    "Neecha bhanga: düşüş burcunda graha yok → yok.",
+    "Nabhasa: yedi grahanın burçları İkizler, Yengeç, Aslan, Başak, Terazi, Oğlak, Kova: 7 farklı burç → Vallaki. Burç türleri: yürük, sabit, çift doğalı → tek tür değil: ashraya yogası yok.",
+    "Kuja dosha (1, 2, 4, 7, 8, 12): Mars lagnadan 10., Ay'dan 12., Venüs'ten 8. evde → oluşur: from_moon, from_venus.",
+    "Oluşmayan örnek olarak işaretlenenler (`absent`): mahapurusha.bhadra, mahapurusha.malavya, lunar.sunapha, lunar.durudhara, lunar.kemadruma, lunar.gajakesari, lunar.chandra_mangala, solar.budha_aditya, raja.dharma_karmadhipati, raja.yogakaraka, dhana.dhana, exchange.maha, exchange.third_lord, exchange.dainya, viparita.sarala, viparita.vimala, neecha_bhanga.neecha_bhanga, nabhasa_count.dama, nabhasa_ashraya.rajju, nabhasa_ashraya.musala, nabhasa_ashraya.nala."
+  ],
+  "input": {
+    "lagna_lon": 10.0,
+    "grahas": {"Sun": 125.0, "Moon": 320.0, "Mars": 298.0, "Mercury": 165.0, "Jupiter": 95.0, "Venus": 72.0, "Saturn": 200.0, "Rahu": 33.0, "Ketu": 213.0}
+  },
+  "expected": {
+    "hits": [
+      {"id": "mahapurusha.ruchaka", "grahas": ["Mars"], "houses": [10], "relations": [], "conditions": ["exaltation"]},
+      {"id": "mahapurusha.hamsa", "grahas": ["Jupiter"], "houses": [4], "relations": [], "conditions": ["exaltation"]},
+      {"id": "mahapurusha.shasha", "grahas": ["Saturn"], "houses": [7], "relations": [], "conditions": ["exaltation"]},
+      {"id": "lunar.anapha", "grahas": ["Moon", "Mars"], "houses": [10, 11], "relations": [], "conditions": []},
+      {"id": "lunar.shakata", "grahas": ["Moon", "Jupiter"], "houses": [4, 11], "relations": [], "conditions": []},
+      {"id": "solar.ubhayachari", "grahas": ["Sun", "Mercury", "Jupiter"], "houses": [4, 5, 6], "relations": [], "conditions": []},
+      {"id": "raja.kendra_trikona", "grahas": ["Sun", "Moon"], "houses": [4, 5], "relations": ["MutualAspect"], "conditions": []},
+      {"id": "raja.kendra_trikona", "grahas": ["Mars", "Jupiter"], "houses": [1, 9], "relations": ["MutualAspect"], "conditions": []},
+      {"id": "viparita.harsha", "grahas": ["Mercury"], "houses": [6], "relations": [], "conditions": []},
+      {"id": "nabhasa_count.vallaki", "grahas": ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"], "houses": [3, 4, 5, 6, 7, 10, 11], "relations": [], "conditions": []},
+      {"id": "dosha.kuja", "grahas": ["Mars"], "houses": [10], "relations": [], "conditions": ["from_moon", "from_venus"]}
+    ],
+    "absent": ["mahapurusha.bhadra", "mahapurusha.malavya", "lunar.sunapha", "lunar.durudhara", "lunar.kemadruma", "lunar.gajakesari", "lunar.chandra_mangala", "solar.budha_aditya", "raja.dharma_karmadhipati", "raja.yogakaraka", "dhana.dhana", "exchange.maha", "exchange.third_lord", "exchange.dainya", "viparita.sarala", "viparita.vimala", "neecha_bhanga.neecha_bhanga", "nabhasa_count.dama", "nabhasa_ashraya.rajju", "nabhasa_ashraya.musala", "nabhasa_ashraya.nala"],
+    "cancelled": [],
+    "evaluated": 41,
+    "skipped_time_unknown": 0
+  }
+}

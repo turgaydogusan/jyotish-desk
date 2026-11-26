@@ -1135,3 +1135,188 @@ mod shadbala_properties {
         }
     }
 }
+
+mod yoga_properties {
+    use proptest::prelude::*;
+
+    use super::foundation_properties::positions;
+    use crate::graha::Graha;
+    use crate::positions::Positions;
+    use crate::yogas::{
+        is_exchange, yoga_relations, yoga_rule, yogas, YogaGroup, YogaHit, YogaRelation,
+        KENDRA_HOUSES, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS, YOGA_GRAHAS,
+    };
+
+    fn ids(hits: &[YogaHit], prefix: &str) -> Vec<String> {
+        hits.iter()
+            .filter(|h| h.id.starts_with(prefix))
+            .map(|h| h.id.clone())
+            .collect()
+    }
+
+    fn has(hits: &[YogaHit], id: &str) -> bool {
+        hits.iter().any(|h| h.id == id)
+    }
+
+    /// Kimliğin katalogdaki sırası.
+    fn catalog_index(id: &str) -> usize {
+        YOGA_CATALOG
+            .iter()
+            .position(|r| r.id == id)
+            .unwrap_or_else(|| panic!("{id} is not in the catalog"))
+    }
+
+    proptest! {
+        #[test]
+        fn exactly_one_count_yoga_and_at_most_one_ashraya_yoga(p in positions()) {
+            let report = yogas(&p);
+            prop_assert_eq!(ids(&report.hits, "nabhasa_count.").len(), 1);
+            prop_assert!(ids(&report.hits, "nabhasa_ashraya.").len() <= 1);
+            // Tek burçta toplanan yedi graha (Gola) her zaman bir ashraya yogası da verir.
+            if has(&report.hits, "nabhasa_count.gola") {
+                prop_assert_eq!(ids(&report.hits, "nabhasa_ashraya.").len(), 1);
+            }
+        }
+
+        #[test]
+        fn mahapurusha_needs_a_kendra_and_a_strong_sign(p in positions()) {
+            for h in yogas(&p).hits.iter().filter(|h| h.group == YogaGroup::Mahapurusha) {
+                prop_assert_eq!(h.grahas.len(), 1);
+                let house = p.house_of(h.grahas[0]);
+                prop_assert!(house.is_some_and(|x| KENDRA_HOUSES.contains(&x)));
+                prop_assert_eq!(&h.houses, &vec![house.unwrap()]);
+                prop_assert!(!h.conditions.is_empty());
+            }
+        }
+
+        #[test]
+        fn flank_yogas_exclude_each_other_and_kemadruma(p in positions()) {
+            let report = yogas(&p);
+            let moon: Vec<String> = ["lunar.sunapha", "lunar.anapha", "lunar.durudhara"]
+                .into_iter()
+                .filter(|id| has(&report.hits, id))
+                .map(str::to_owned)
+                .collect();
+            prop_assert!(moon.len() <= 1, "{:?}", moon);
+            let sun = ["solar.vesi", "solar.vasi", "solar.ubhayachari"]
+                .into_iter()
+                .filter(|id| has(&report.hits, id))
+                .count();
+            prop_assert!(sun <= 1);
+            if has(&report.hits, "lunar.kemadruma") {
+                prop_assert!(moon.is_empty(), "{:?}", moon);
+                // Jüpiter Ay'dan kendradaysa Kemadruma oluşamaz.
+                prop_assert!(!has(&report.hits, "lunar.gajakesari"));
+            }
+        }
+
+        #[test]
+        fn hits_are_unique_ordered_and_well_formed(p in positions()) {
+            let report = yogas(&p);
+            prop_assert_eq!(report.catalog_version, YOGA_CATALOG_VERSION);
+            prop_assert_eq!(
+                (report.evaluated + report.skipped_time_unknown) as usize,
+                YOGA_CATALOG.len()
+            );
+            let lagna = p.lagna_sign.is_some();
+            prop_assert_eq!(report.skipped_time_unknown, if lagna { 0 } else { 17 });
+            let mut seen: Vec<(&str, &[Graha])> = Vec::new();
+            let mut last = 0;
+            for h in &report.hits {
+                // Her kimlik katalogdadır; kayıtlar katalog sırasındadır.
+                let rule = yoga_rule(&h.id);
+                prop_assert!(rule.is_some(), "{} is not in the catalog", h.id);
+                let rule = rule.unwrap();
+                prop_assert_eq!(h.group, rule.group);
+                let index = catalog_index(&h.id);
+                prop_assert!(index >= last);
+                last = index;
+                // Aynı kimlik ve aynı graha kümesi iki kez dönmez.
+                let key = (h.id.as_str(), h.grahas.as_slice());
+                prop_assert!(!seen.contains(&key), "{:?} twice", key);
+                seen.push(key);
+                // Grahalar ve evler sıralı ve yinelemesizdir; düğümler hiçbir kayıtta yoktur.
+                prop_assert!(!h.grahas.is_empty());
+                prop_assert!(h.grahas.windows(2).all(|w| w[0] < w[1]));
+                prop_assert!(h.grahas.iter().all(|g| !g.is_node()));
+                prop_assert!(h.houses.windows(2).all(|w| w[0] < w[1]));
+                prop_assert!(h.houses.iter().all(|x| (1..=12).contains(x)));
+                prop_assert!(h.conditions.iter().all(|c| YOGA_CONDITIONS.contains(&c.as_str())));
+                // Lagnasız konumda lagna isteyen kural dönmez; her kayıt yaklaşıktır, ev taşımaz.
+                prop_assert_eq!(h.approximate, !lagna);
+                if !lagna {
+                    prop_assert!(!rule.needs_lagna);
+                    prop_assert!(h.houses.is_empty());
+                    prop_assert!(!h.conditions.iter().any(|c| c == "from_lagna"));
+                }
+            }
+        }
+
+        #[test]
+        fn relation_based_hits_carry_the_relations_of_their_pair(p in positions()) {
+            let report = yogas(&p);
+            for h in &report.hits {
+                match h.group {
+                    YogaGroup::Raja if h.id != "raja.yogakaraka" => {
+                        prop_assert_eq!(h.grahas.len(), 2);
+                        let relations = yoga_relations(h.grahas[0], h.grahas[1], &p);
+                        prop_assert!(!relations.is_empty());
+                        prop_assert_eq!(&h.relations, &relations);
+                    }
+                    YogaGroup::Dhana => {
+                        prop_assert_eq!(&h.relations, &yoga_relations(h.grahas[0], h.grahas[1], &p));
+                        prop_assert!(h.houses.iter().any(|x| [2, 11].contains(x)));
+                    }
+                    YogaGroup::Exchange => {
+                        prop_assert!(is_exchange(h.grahas[0], h.grahas[1], &p));
+                        prop_assert_eq!(&h.relations, &vec![YogaRelation::Exchange]);
+                        prop_assert_eq!(h.houses.len(), 2);
+                    }
+                    _ => {}
+                }
+            }
+            // Dharma-Karmadhipati kaydı varsa aynı çift kendra–trikona kaydı olarak da döner.
+            for h in report.hits.iter().filter(|h| h.id == "raja.dharma_karmadhipati") {
+                prop_assert!(report
+                    .hits
+                    .iter()
+                    .any(|k| k.id == "raja.kendra_trikona" && k.grahas == h.grahas));
+            }
+            // Değişen her çift tam bir değişim sınıfında döner.
+            if p.lagna_sign.is_some() {
+                let exchanging = YOGA_GRAHAS
+                    .into_iter()
+                    .enumerate()
+                    .flat_map(|(i, a)| YOGA_GRAHAS[i + 1..].iter().map(move |&b| (a, b)))
+                    .filter(|&(a, b)| is_exchange(a, b, &p))
+                    .count();
+                let listed = report
+                    .hits
+                    .iter()
+                    .filter(|h| h.group == YogaGroup::Exchange)
+                    .count();
+                prop_assert_eq!(listed, exchanging);
+            }
+        }
+
+        #[test]
+        fn dropping_the_lagna_keeps_the_lagna_free_rules(p in positions()) {
+            // Lagnasız rapor, lagnalı rapordaki lagnadan bağımsız kayıtları aynı grahalarla taşır.
+            let without = yogas(&p.clone().without_lagna());
+            let with: Positions = p;
+            for h in &yogas(&with).hits {
+                let free = [YogaGroup::Solar, YogaGroup::NabhasaCount, YogaGroup::NabhasaAshraya]
+                    .contains(&h.group)
+                    || ["lunar.sunapha", "lunar.anapha", "lunar.durudhara", "lunar.gajakesari",
+                        "lunar.chandra_mangala", "lunar.adhi"].contains(&h.id.as_str());
+                if free {
+                    prop_assert!(
+                        without.hits.iter().any(|w| w.id == h.id && w.grahas == h.grahas),
+                        "{} is missing without a lagna",
+                        h.id
+                    );
+                }
+            }
+        }
+    }
+}

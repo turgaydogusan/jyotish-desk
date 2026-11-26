@@ -14,13 +14,15 @@ mod placement;
 pub use lords::{exchange_kind, ExchangeKind, DHANA_HOUSES};
 pub use placement::occupied_sign_count;
 
+use ephemeris::Ephemeris;
 use serde::{Deserialize, Serialize};
 
 use crate::dignity::own_signs;
 use crate::drishti::{graha_aspect_signs, ASPECTING_GRAHAS};
 use crate::graha::Graha;
-use crate::positions::Positions;
+use crate::positions::{compute_positions, ChartInput, Positions};
 use crate::zodiac::Sign;
+use crate::CoreError;
 
 /// Kural kataloğunun sürümü: bir kural eklenince, çıkınca ya da koşulu değişince artar.
 pub const YOGA_CATALOG_VERSION: u32 = 1;
@@ -311,6 +313,78 @@ pub static YOGA_CATALOG: &[YogaRule] = &[
     rule("dosha.kuja", YogaGroup::Dosha, false, placement::kuja),
 ];
 
+/// Oluşan bir yoga: bir kuralın bir eşleşmesi.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct YogaHit {
+    /// Kararlı kimlik (`"mahapurusha.hamsa"`); görünen ad i18n anahtarıdır.
+    pub id: String,
+    pub group: YogaGroup,
+    /// Yogayı oluşturan grahalar, `Graha::ALL` sırasında.
+    pub grahas: Vec<Graha>,
+    /// Lagnadan sayılan ilgili evler, artan sırada; doğum saati bilinmiyorsa boş.
+    pub houses: Vec<u8>,
+    /// İki grahanın ilişkisine dayanan kurallarda ilişki türleri; diğerlerinde boş.
+    pub relations: Vec<YogaRelation>,
+    /// Sağlanan alt koşul kimlikleri (`YOGA_CONDITIONS`); alt koşulu olmayan kurallarda boş.
+    pub conditions: Vec<String>,
+    /// Doğum saati bilinmiyor: konumlar yaklaşıktır (Ay'ın burcu gün içinde değişebilir) ve
+    /// lagnaya bağlı seçenekler değerlendirilmemiştir.
+    pub approximate: bool,
+}
+
+/// `compute_yogas` sonucu.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct YogaReport {
+    pub catalog_version: u32,
+    /// Katalog sırasıyla; bir kuralın birden çok eşleşmesi graha sırasıyla.
+    pub hits: Vec<YogaHit>,
+    /// Değerlendirilen kural sayısı.
+    pub evaluated: u32,
+    /// Doğum saati bilinmediği için değerlendirilmeyen (lagna isteyen) kural sayısı.
+    pub skipped_time_unknown: u32,
+}
+
+/// Saf hesap: konumlardan yoga raporu. Lagna yoksa (doğum saati bilinmiyor) lagna isteyen
+/// kurallar atlanır ve sayılır; diğer kuralların eşleşmeleri `approximate` işaretiyle döner.
+pub fn yogas(positions: &Positions) -> YogaReport {
+    let has_lagna = positions.lagna_sign.is_some();
+    let mut hits = Vec::new();
+    let (mut evaluated, mut skipped) = (0, 0);
+    for rule in YOGA_CATALOG {
+        if rule.needs_lagna && !has_lagna {
+            skipped += 1;
+            continue;
+        }
+        evaluated += 1;
+        hits.extend(rule.matches(positions).into_iter().map(|m| YogaHit {
+            id: rule.id.to_owned(),
+            group: rule.group,
+            grahas: m.grahas,
+            houses: m.houses,
+            relations: m.relations,
+            conditions: m.conditions.into_iter().map(str::to_owned).collect(),
+            approximate: !has_lagna,
+        }));
+    }
+    YogaReport {
+        catalog_version: YOGA_CATALOG_VERSION,
+        hits,
+        evaluated,
+        skipped_time_unknown: skipped,
+    }
+}
+
+/// `compute_yogas` komutunun hesabı: temel harita, konumlar, yoga raporu. Ayar, an ve konum
+/// denetimi `compute_chart`'ınkidir; `input.time_known` yanlışsa lagna isteyen kurallar atlanır.
+pub fn compute_yogas<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    input: &ChartInput,
+) -> Result<YogaReport, CoreError> {
+    Ok(yogas(&compute_positions(eph, input)?))
+}
+
 /// Katalogdaki kural; kimlik bilinmiyorsa `None`.
 pub fn yoga_rule(id: &str) -> Option<&'static YogaRule> {
     YOGA_CATALOG.iter().find(|r| r.id == id)
@@ -518,5 +592,135 @@ mod tests {
         );
         assert!(in_houses_from(&p, Sun, Sign::Taurus, &KENDRA_HOUSES));
         assert!(!in_houses_from(&p, Sun, Sign::Taurus, &TRIKONA_HOUSES));
+    }
+
+    /// Koç lagna; Güneş Aslan (5), Ay Kova (11), Mars Oğlak (10), Merkür Başak (6), Jüpiter
+    /// Yengeç (4), Venüs İkizler (3), Satürn Terazi (7), Rahu Boğa, Ketu Akrep. El örneği
+    /// `three-exalted-mahapurushas-seven-signs` ile aynı burçlar.
+    const SEVEN_SIGNS: [usize; 9] = [4, 10, 9, 5, 3, 2, 6, 1, 7];
+
+    #[test]
+    fn report_lists_hits_in_catalog_order_and_counts_the_rules() {
+        let report = yogas(&chart(Some(0), SEVEN_SIGNS));
+        assert_eq!(report.catalog_version, YOGA_CATALOG_VERSION);
+        assert_eq!((report.evaluated, report.skipped_time_unknown), (41, 0));
+        let ids: Vec<&str> = report.hits.iter().map(|h| h.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            [
+                "mahapurusha.ruchaka",
+                "mahapurusha.hamsa",
+                "mahapurusha.shasha",
+                "lunar.anapha",
+                "lunar.shakata",
+                "solar.ubhayachari",
+                "raja.kendra_trikona",
+                "raja.kendra_trikona",
+                "viparita.harsha",
+                "nabhasa_count.vallaki",
+                "dosha.kuja",
+            ]
+        );
+        let ruchaka = &report.hits[0];
+        assert_eq!(ruchaka.group, YogaGroup::Mahapurusha);
+        assert_eq!(ruchaka.grahas, [Mars]);
+        assert_eq!(ruchaka.houses, [10]);
+        assert_eq!(ruchaka.conditions, [COND_EXALTATION]);
+        assert!(ruchaka.relations.is_empty());
+        assert!(report.hits.iter().all(|h| !h.approximate));
+        // Bir kuralın iki eşleşmesi graha sırasıyla: Güneş–Ay, sonra Mars–Jüpiter.
+        assert_eq!(report.hits[6].grahas, [Sun, Moon]);
+        assert_eq!(report.hits[7].grahas, [Mars, Jupiter]);
+        assert_eq!(report.hits[7].relations, [YogaRelation::MutualAspect]);
+    }
+
+    #[test]
+    fn without_a_lagna_seventeen_rules_are_skipped_and_the_rest_is_approximate() {
+        let report = yogas(&chart(None, SEVEN_SIGNS));
+        assert_eq!((report.evaluated, report.skipped_time_unknown), (24, 17));
+        let ids: Vec<&str> = report.hits.iter().map(|h| h.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            [
+                "lunar.anapha",
+                "solar.ubhayachari",
+                "nabhasa_count.vallaki",
+                "dosha.kuja"
+            ]
+        );
+        for h in &report.hits {
+            assert!(h.approximate, "{}", h.id);
+            assert!(h.houses.is_empty(), "{}", h.id);
+        }
+        // Kuja dosha lagnasız konumda yalnızca Ay ve Venüs referanslarını taşır.
+        assert_eq!(report.hits[3].conditions, [COND_FROM_MOON, COND_FROM_VENUS]);
+        // Lagna isteyen kural lagnasız konumda eşleşme vermez.
+        for r in YOGA_CATALOG.iter().filter(|r| r.needs_lagna) {
+            assert!(r.matches(&chart(None, SEVEN_SIGNS)).is_empty(), "{}", r.id);
+        }
+    }
+
+    #[test]
+    fn collector_follows_time_known_the_rasi_frame_and_the_chart_errors() {
+        use crate::chart::compute_chart;
+        use crate::fake::FakeEph;
+        use crate::settings::{CalcSettings, ZodiacMode};
+
+        let input = |settings: CalcSettings, time_known: bool| ChartInput {
+            jd_ut: 2_451_545.0,
+            lat: 41.0,
+            lon: 29.0,
+            settings,
+            time_known,
+        };
+        let mut eph = FakeEph::default();
+        let s = CalcSettings::default();
+        let chart = compute_chart(&mut eph, 2_451_545.0, 41.0, 29.0, &s).unwrap();
+        let known = compute_yogas(&mut eph, &input(s.clone(), true)).unwrap();
+        assert_eq!(known, yogas(&Positions::from(&chart)));
+        assert_eq!((known.evaluated, known.skipped_time_unknown), (41, 0));
+        let unknown = compute_yogas(&mut eph, &input(s.clone(), false)).unwrap();
+        assert_eq!(unknown, yogas(&Positions::from(&chart).without_lagna()));
+        assert_eq!((unknown.evaluated, unknown.skipped_time_unknown), (24, 17));
+        assert!(unknown.hits.iter().all(|h| h.approximate));
+        // FakeEph: Güneş ve Merkür tropikal 10° ve 20°, ayanamsa 24° → ikisi de sidereal Balık.
+        let budha_aditya = |r: &YogaReport| r.hits.iter().any(|h| h.id == "solar.budha_aditya");
+        assert!(budha_aditya(&known) && budha_aditya(&unknown));
+
+        // Rasi çerçevesi ayarı izler (K5). Sidereal: Jüpiter 226° Akrep, lagna 46° Boğa: 7. ev
+        // ama kendi burcu değil → Hamsa yok. Tropikal rasi: Jüpiter 250° Yay (kendi burcu),
+        // lagna 70° İkizler: 7. ev → Hamsa.
+        let hamsa = |r: &YogaReport| r.hits.iter().find(|h| h.id == "mahapurusha.hamsa").cloned();
+        assert_eq!(hamsa(&known), None);
+        let tropical = CalcSettings {
+            zodiac: ZodiacMode::TropicalRasiSiderealNakshatra,
+            ..CalcSettings::default()
+        };
+        let report = compute_yogas(&mut eph, &input(tropical, true)).unwrap();
+        let hit = hamsa(&report).expect("Hamsa in the tropical rasi frame");
+        assert_eq!(hit.houses, [7]);
+        assert_eq!(hit.conditions, [COND_OWN_SIGN]);
+
+        // Hatalar temel haritanınkidir; saat bilinmese de denetlenir.
+        let mut bad = input(s, false);
+        bad.lat = 91.0;
+        assert_eq!(
+            compute_yogas(&mut eph, &bad),
+            Err(CoreError::InvalidLocation {
+                lat: 91.0,
+                lon: 29.0
+            })
+        );
+        let old = CalcSettings {
+            schema_version: 1,
+            ..CalcSettings::default()
+        };
+        assert_eq!(
+            compute_yogas(&mut eph, &input(old, true)),
+            Err(CoreError::UnsupportedSchemaVersion {
+                found: 1,
+                supported: 2
+            })
+        );
     }
 }

@@ -1,0 +1,51 @@
+{
+  "id": "neecha-bhanga-by-dispositor-aspect-only",
+  "source": "hand",
+  "rule_ref": "BPHS'nin yoga bölümleri (Pancha Mahapurusha, Ay ve Güneş yogaları, raja ve dhana yogaları, nabhasa yogaları) ve klasik yoga derlemeleri; ileri modüller tasarım belgesi §8 (alıntı yapılmaz)",
+  "derivation": [
+    "Lagna 45° Boğa. Burçlar ve lagna burcundan sayılan evler: Güneş 177° Başak (5. ev); Ay 96° Yengeç (3. ev); Mars 161° Başak (5. ev); Merkür 153° Başak (5. ev); Jüpiter 229° Akrep (7. ev); Venüs 188° Terazi (6. ev); Satürn 16° Koç (12. ev); Rahu 343° Balık (11. ev); Ketu 163° Başak (5. ev).",
+    "Ev lordları (Boğa lagna): 1 Venüs, 2 Merkür, 3 Ay, 4 Güneş, 5 Merkür, 6 Venüs, 7 Mars, 8 Jüpiter, 9 Satürn, 10 Satürn, 11 Jüpiter, 12 Mars.",
+    "Doğal sınıf (K6): Ay'ın Güneş'ten uzanımı 279°: küçülüyor, kötücül. Merkür'ün burcundaki diğer grahalar: Güneş, Mars, Ketu; Merkür kötücül.",
+    "Mahapurusha (lagnadan kendra 1, 4, 7, 10). Ruchaka: Mars Başak (kendi ya da yücelme burcu değil), 5. ev (kendra değil) → yok. Bhadra: Merkür Başak (kendi burcu ve yücelme burcu), 5. ev (kendra değil) → yok. Hamsa: Jüpiter Akrep (kendi ya da yücelme burcu değil), 7. ev (kendra) → yok. Malavya: Venüs Terazi (kendi burcu), 6. ev (kendra değil) → yok. Shasha: Satürn Koç (kendi ya da yücelme burcu değil), 12. ev (kendra değil) → yok.",
+    "Ay'ın yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Aslan: boş; 12. burç İkizler: boş → üçü de yok.",
+    "Kemadruma: Ay'ın burcunda sayılan graha: boş; Ay'dan 4., 7. ve 10. evlerde: Venüs, Satürn; lagnadan kendralarda: Jüpiter → temel koşul sağlanıyor ama kendradaki graha iptal eder → Kemadruma yok.",
+    "Gajakesari: Jüpiter Ay'dan 5. evde (kendra değil) → yok. Chandra-Mangala: Ay Yengeç, Mars Başak → yok.",
+    "Adhi: Ay'dan evler: Merkür 3, Jüpiter 5, Venüs 4 → üçü birden 6, 7 ya da 8 değil: yok.",
+    "Shakata: Ay Jüpiter'den 9. evde (6, 8 ya da 12 değil); Ay lagnadan 3. evde (kendra değil) → yok.",
+    "Amala: lagnadan 10. burç Kova: boş; Ay'dan 10. burç Koç: Satürn kötücül (kötücül var, sağlamaz) → yok.",
+    "Vasumati (upachaya 3, 6, 10, 11): lagnadan Merkür 5, Jüpiter 7, Venüs 6 (üçü birden upachaya değil); Ay'dan Merkür 3, Jüpiter 5, Venüs 4 (üçü birden upachaya değil) → yok.",
+    "Güneş'in yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Terazi: Venüs; 12. burç Aslan: boş → Vesi oluşur; diğer ikisi yok. Budha-Aditya: Güneş Başak, Merkür Başak → birlikte, oluşur.",
+    "İlişkili çiftler (yedi graha; birlikte = aynı burç, karşılıklı bakış = iki yönlü tam bakış, değişim = birbirinin burcunda): Güneş–Mars (birlikte); Güneş–Merkür (birlikte); Mars–Merkür (birlikte); Venüs–Satürn (karşılıklı bakış).",
+    "Kendra–trikona: kendra lordları 1 Venüs, 4 Güneş, 7 Mars, 10 Satürn; trikona lordları 1 Venüs, 5 Merkür, 9 Satürn. İlişkili çiftlerden bir kendra lordu ile bir trikona lordu olanlar: Güneş–Merkür (evler 4, 5); Mars–Merkür (evler 5, 7); Venüs–Satürn (evler 1, 9, 10).",
+    "Dharma-Karmadhipati: 9. ve 10. lord aynı graha (Satürn) → yok. Yogakaraka (lagna dışında bir kendranın ve bir trikonanın lordu): Satürn (9 ve 10. evlerin lordu).",
+    "Dhana: 1 Venüs, 2 Merkür, 5 Merkür, 9 Satürn, 11 Jüpiter. İlişkili çiftlerden iki lordu da bu kümeden olan ve 2. ya da 11. lordu içerenler: yok.",
+    "Değişim (sınıfı değişen iki ev belirler: 6, 8 ya da 12 varsa Dainya; yoksa 3 varsa 3. ev lordu değişimi; yoksa Maha): değişen çift yok.",
+    "Viparita raja (lord 6., 8. ya da 12. evde): 6. lord Venüs 6. evde → Harsha oluşur; 8. lord Jüpiter 7. evde → Sarala yok; 12. lord Mars 5. evde → Vimala yok.",
+    "Neecha bhanga: Satürn düşüş burcunda (Koç). (1) Burcun lordu Mars: lagnadan 5., Ay'dan 3. → kendrada değil. (2) O burçta yücelen Güneş: lagnadan 5., Ay'dan 3. → kendrada değil. (3) Dispozitör Mars (Başak): Koç oradan 8. burç, tam bakış var → oluşur: dispositor_aspect.",
+    "Nabhasa: yedi grahanın burçları Koç, Yengeç, Başak, Terazi, Akrep: 5 farklı burç → Pasha. Burç türleri: yürük, sabit, çift doğalı → tek tür değil: ashraya yogası yok.",
+    "Kuja dosha (1, 2, 4, 7, 8, 12): Mars lagnadan 5., Ay'dan 3., Venüs'ten 12. evde → oluşur: from_venus.",
+    "Oluşmayan örnek olarak işaretlenenler (`absent`): lunar.amala, lunar.vasumati, raja.dharma_karmadhipati, dhana.dhana, exchange.dainya, viparita.sarala."
+  ],
+  "input": {
+    "lagna_lon": 45.0,
+    "grahas": {"Sun": 177.0, "Moon": 96.0, "Mars": 161.0, "Mercury": 153.0, "Jupiter": 229.0, "Venus": 188.0, "Saturn": 16.0, "Rahu": 343.0, "Ketu": 163.0}
+  },
+  "expected": {
+    "hits": [
+      {"id": "solar.vesi", "grahas": ["Sun", "Venus"], "houses": [5, 6], "relations": [], "conditions": []},
+      {"id": "solar.budha_aditya", "grahas": ["Sun", "Mercury"], "houses": [5], "relations": ["Conjunction"], "conditions": []},
+      {"id": "raja.kendra_trikona", "grahas": ["Sun", "Mercury"], "houses": [4, 5], "relations": ["Conjunction"], "conditions": []},
+      {"id": "raja.kendra_trikona", "grahas": ["Mars", "Mercury"], "houses": [5, 7], "relations": ["Conjunction"], "conditions": []},
+      {"id": "raja.kendra_trikona", "grahas": ["Venus", "Saturn"], "houses": [1, 9, 10], "relations": ["MutualAspect"], "conditions": []},
+      {"id": "raja.yogakaraka", "grahas": ["Saturn"], "houses": [9, 10], "relations": [], "conditions": []},
+      {"id": "viparita.harsha", "grahas": ["Venus"], "houses": [6], "relations": [], "conditions": []},
+      {"id": "neecha_bhanga.neecha_bhanga", "grahas": ["Saturn"], "houses": [12], "relations": [], "conditions": ["dispositor_aspect"]},
+      {"id": "nabhasa_count.pasha", "grahas": ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"], "houses": [3, 5, 6, 7, 12], "relations": [], "conditions": []},
+      {"id": "dosha.kuja", "grahas": ["Mars"], "houses": [5], "relations": [], "conditions": ["from_venus"]}
+    ],
+    "absent": ["lunar.amala", "lunar.vasumati", "raja.dharma_karmadhipati", "dhana.dhana", "exchange.dainya", "viparita.sarala"],
+    "cancelled": [],
+    "evaluated": 41,
+    "skipped_time_unknown": 0
+  }
+}

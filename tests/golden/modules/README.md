@@ -58,4 +58,15 @@ kalemin aritmetiğini adım adım yazar, JSON dosyaları aynı girdiyi ve sonuç
 0,01 virupadır. Kâğıdı, motoru yazan dışında bir gözden geçiren kuraldan yeniden hesaplar ve
 kâğıdın başındaki tabloya adını yazar.
 
+| `yogas` | `hits` (raporun bütün kayıtları, katalog sırasıyla: `id`, `grahas`, `houses`, `relations`, `conditions`), `absent` (bu örneğin "oluşmayan durum" olarak gösterdiği kurallar), `cancelled` (iptal örnekleri), `evaluated`, `skipped_time_unknown` | 15 |
+
+Yoga örnekleri (tasarım belgesi §8 "Test") raporun tamamını yazar: her örnekte katalogdaki 41
+kuralın hepsi `derivation`'da sırayla değerlendirilir. `absent`, o örneğin "oluşmayan durum"
+olarak gösterdiği kuralları sayar; `cancelled`, temel koşulu sağlandığı hâlde iptal kuralıyla
+oluşmayan Kemadruma ve Shakata'yı, bir de düşüş burcunda olup hiçbir koşulu sağlanmayan grahayı
+(Neecha bhanga kaydı yok) gösterir. Ayrı bir test her kuralın en az bir örnekte oluştuğunu, en
+az bir örnekte `absent` sayıldığını ve üç iptal durumunun bulunduğunu sabitler. `lagna_lon: null`
+örneklerinde lagna isteyen 17 kural değerlendirilmez ve `houses` boştur. Tasarım belgesinin açık
+bıraktığı yerlerdeki okuma kuralları ve bağımsız gözden geçirmenin kaydı `yogas/REVIEW.md`'dedir.
+
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.

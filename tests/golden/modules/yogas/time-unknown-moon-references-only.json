@@ -1,0 +1,37 @@
+{
+  "id": "time-unknown-moon-references-only",
+  "source": "hand",
+  "rule_ref": "BPHS'nin yoga bölümleri (Pancha Mahapurusha, Ay ve Güneş yogaları, raja ve dhana yogaları, nabhasa yogaları) ve klasik yoga derlemeleri; ileri modüller tasarım belgesi §8 (alıntı yapılmaz)",
+  "derivation": [
+    "Doğum saati bilinmiyor: lagna yok, evler sayılmaz. Burçlar: Güneş 312° Kova; Ay 3° Koç; Mars 166° Başak; Merkür 328° Kova; Jüpiter 67° İkizler; Venüs 290° Oğlak; Satürn 219° Akrep; Rahu 212° Akrep; Ketu 32° Boğa.",
+    "Lagna isteyen 17 kural değerlendirilmez (beş mahapurusha, Kemadruma, Shakata, üç raja, dhana, üç değişim, üç viparita); diğer 24 kural değerlendirilir ve sonuçları yaklaşıktır.",
+    "Doğal sınıf (K6): Ay'ın Güneş'ten uzanımı 51°: büyüyor, iyicil. Merkür'ün burcundaki diğer grahalar: Güneş; Merkür kötücül.",
+    "Ay'ın yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Boğa: boş; 12. burç Balık: boş → üçü de yok.",
+    "Gajakesari: Jüpiter Ay'dan 3. evde (kendra değil) → yok. Chandra-Mangala: Ay Koç, Mars Başak → yok.",
+    "Adhi: Ay'dan evler: Merkür 11, Jüpiter 3, Venüs 10 → üçü birden 6, 7 ya da 8 değil: yok.",
+    "Amala: Ay'dan 10. burç Oğlak: Venüs iyicil (sağlar) → oluşur.",
+    "Vasumati (upachaya 3, 6, 10, 11): Ay'dan Merkür 11, Jüpiter 3, Venüs 10 (üçü de upachaya) → oluşur.",
+    "Güneş'in yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Balık: boş; 12. burç Oğlak: Venüs → Vasi oluşur; diğer ikisi yok. Budha-Aditya: Güneş Kova, Merkür Kova → birlikte, oluşur.",
+    "Neecha bhanga: düşüş burcunda graha yok → yok.",
+    "Nabhasa: yedi grahanın burçları Koç, İkizler, Başak, Akrep, Oğlak, Kova: 6 farklı burç → Dama. Burç türleri: yürük, sabit, çift doğalı → tek tür değil: ashraya yogası yok.",
+    "Kuja dosha (1, 2, 4, 7, 8, 12): Mars Ay'dan 6., Venüs'ten 9. evde → üç referanstan da yok.",
+    "Oluşmayan örnek olarak işaretlenenler (`absent`): lunar.durudhara, lunar.gajakesari, lunar.chandra_mangala, neecha_bhanga.neecha_bhanga, nabhasa_count.vallaki, nabhasa_ashraya.rajju, dosha.kuja."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "grahas": {"Sun": 312.0, "Moon": 3.0, "Mars": 166.0, "Mercury": 328.0, "Jupiter": 67.0, "Venus": 290.0, "Saturn": 219.0, "Rahu": 212.0, "Ketu": 32.0}
+  },
+  "expected": {
+    "hits": [
+      {"id": "lunar.amala", "grahas": ["Venus"], "houses": [], "relations": [], "conditions": ["from_moon"]},
+      {"id": "lunar.vasumati", "grahas": ["Mercury", "Jupiter", "Venus"], "houses": [], "relations": [], "conditions": ["from_moon"]},
+      {"id": "solar.vasi", "grahas": ["Sun", "Venus"], "houses": [], "relations": [], "conditions": []},
+      {"id": "solar.budha_aditya", "grahas": ["Sun", "Mercury"], "houses": [], "relations": ["Conjunction"], "conditions": []},
+      {"id": "nabhasa_count.dama", "grahas": ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"], "houses": [], "relations": [], "conditions": []}
+    ],
+    "absent": ["lunar.durudhara", "lunar.gajakesari", "lunar.chandra_mangala", "neecha_bhanga.neecha_bhanga", "nabhasa_count.vallaki", "nabhasa_ashraya.rajju", "dosha.kuja"],
+    "cancelled": [],
+    "evaluated": 24,
+    "skipped_time_unknown": 17
+  }
+}

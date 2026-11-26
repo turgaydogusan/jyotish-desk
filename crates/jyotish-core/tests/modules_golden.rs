@@ -10,9 +10,10 @@ use jyotish_core::{
     argala_rows, arudha_padas, chara_dasha, chara_dasha_order, chara_dasha_sign_years,
     chara_karakas, co_lord_choice, drishti_table, house_lord, houses_owned, jaimini_lord,
     jaimini_report, karakamsha, kuja_dosha, moon_is_waxing, nature, normalize, shadbala,
-    sign_dasha_children, AdvancedSettings, ArgalaStatus, Graha, GrahaWar, KarakaRole, KujaDosha,
-    Nature, Positions, ShadbalaAstro, Sign, SignDashaPeriod, TimeLords, ASPECTING_GRAHAS,
-    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, SHADBALA_GRAHAS, SHADBALA_METHOD,
+    sign_dasha_children, yoga_rule, yogas, AdvancedSettings, ArgalaStatus, Graha, GrahaWar,
+    KarakaRole, KujaDosha, Nature, Positions, ShadbalaAstro, Sign, SignDashaPeriod, TimeLords,
+    YogaRelation, ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD,
+    SHADBALA_GRAHAS, SHADBALA_METHOD, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -23,6 +24,7 @@ const MIN_DRISHTI: usize = 4;
 const MIN_JAIMINI: usize = 8;
 const MIN_CHARA_DASHA: usize = 7;
 const MIN_SHADBALA: usize = 4;
+const MIN_YOGAS: usize = 15;
 /// El hesabı ile motor arasındaki en büyük fark, virupa.
 const VIRUPA_TOL: f64 = 1e-9;
 /// Shadbala çalışma kâğıdının toleransı, virupa (ileri modüller spec'i §7 "Test").
@@ -1030,4 +1032,168 @@ fn shadbala_fixtures_cover_the_required_cases() {
         })
     };
     assert!(ratio(true) && ratio(false), "ratios on both sides of one");
+}
+
+/// Bir yoga kaydı: `YogaHit`'in `group` ve `approximate` dışındaki alanları (grup katalogdan,
+/// yaklaşık işareti lagnanın yokluğundan gelir; test ikisini de ayrıca denetler).
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct ExpectedYoga {
+    id: String,
+    grahas: Vec<Graha>,
+    houses: Vec<u8>,
+    relations: Vec<YogaRelation>,
+    conditions: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct YogasExpected {
+    /// Raporun bütün kayıtları, katalog sırasıyla.
+    hits: Vec<ExpectedYoga>,
+    /// Bu örneğin "oluşmayan durum" olarak gösterdiği kurallar (gerekçesi `derivation`'da).
+    absent: Vec<String>,
+    /// İptal örnekleri: temel koşulu sağlanan ama iptal kuralıyla oluşmayan Kemadruma ve
+    /// Shakata; hiçbir koşulu sağlanmayan düşüşteki graha (Neecha bhanga kaydı yok).
+    cancelled: Vec<String>,
+    evaluated: u32,
+    skipped_time_unknown: u32,
+}
+
+/// İptal kuralı olan yogalar (ileri modüller spec'i §8 "Kararlar").
+const CANCEL_RULES: [&str; 3] = [
+    "lunar.kemadruma",
+    "lunar.shakata",
+    "neecha_bhanga.neecha_bhanga",
+];
+
+#[test]
+fn yogas_hand_fixtures() {
+    for (f, p) in load::<YogasExpected>("yogas", MIN_YOGAS) {
+        let id = &f.id;
+        let x = &f.expected;
+        let report = yogas(&p);
+        assert_eq!(report.catalog_version, YOGA_CATALOG_VERSION, "{id}");
+        assert_eq!(report.evaluated, x.evaluated, "{id}: evaluated");
+        assert_eq!(
+            report.skipped_time_unknown, x.skipped_time_unknown,
+            "{id}: skipped"
+        );
+        let got: Vec<ExpectedYoga> = report
+            .hits
+            .iter()
+            .map(|h| ExpectedYoga {
+                id: h.id.clone(),
+                grahas: h.grahas.clone(),
+                houses: h.houses.clone(),
+                relations: h.relations.clone(),
+                conditions: h.conditions.clone(),
+            })
+            .collect();
+        assert_eq!(got.len(), x.hits.len(), "{id}: hit count, got {got:#?}");
+        for (g, want) in got.iter().zip(&x.hits) {
+            assert_eq!(g, want, "{id}");
+        }
+        for h in &report.hits {
+            let rule = yoga_rule(&h.id).unwrap_or_else(|| panic!("{id}: {} unknown", h.id));
+            assert_eq!(h.group, rule.group, "{id}: {}", h.id);
+            // Doğum saati bilinmiyorsa her kayıt yaklaşıktır ve ev taşımaz.
+            assert_eq!(h.approximate, p.lagna_sign.is_none(), "{id}: {}", h.id);
+            assert!(p.lagna_sign.is_some() || h.houses.is_empty(), "{id}");
+        }
+        // "Oluşmayan" ve "iptal" örnekleri katalogdadır, değerlendirilmiştir ve raporda yoktur.
+        for absent in x.absent.iter().chain(&x.cancelled) {
+            let rule = yoga_rule(absent).unwrap_or_else(|| panic!("{id}: {absent} unknown"));
+            assert!(
+                p.lagna_sign.is_some() || !rule.needs_lagna,
+                "{id}: {absent} is skipped, not absent, without a lagna"
+            );
+            assert!(
+                report.hits.iter().all(|h| &h.id != absent),
+                "{id}: {absent} is marked absent but the report lists it"
+            );
+        }
+        for cancelled in &x.cancelled {
+            assert!(
+                CANCEL_RULES.contains(&cancelled.as_str()),
+                "{id}: {cancelled} has no cancellation rule"
+            );
+        }
+    }
+}
+
+/// Spec §8 "Test": her yoga için en az bir oluşan ve bir oluşmayan örnek; iptal kuralı olanlarda
+/// ayrıca iptal edilen durum. Örnek silinirse ya da zayıflatılırsa bu test düşer.
+#[test]
+fn yogas_fixtures_cover_every_rule() {
+    let all = load::<YogasExpected>("yogas", MIN_YOGAS);
+    let formed = |rule: &str| {
+        all.iter()
+            .any(|(f, _)| f.expected.hits.iter().any(|h| h.id == rule))
+    };
+    let absent = |rule: &str| {
+        all.iter()
+            .any(|(f, _)| f.expected.absent.iter().any(|a| a == rule))
+    };
+    let cancelled = |rule: &str| {
+        all.iter()
+            .any(|(f, _)| f.expected.cancelled.iter().any(|a| a == rule))
+    };
+    assert_eq!(YOGA_CATALOG.len(), 41);
+    for rule in YOGA_CATALOG {
+        assert!(formed(rule.id), "{}: no fixture where it forms", rule.id);
+        assert!(
+            absent(rule.id),
+            "{}: no fixture where it is absent",
+            rule.id
+        );
+    }
+    for rule in CANCEL_RULES {
+        assert!(cancelled(rule), "{rule}: no cancelled case");
+    }
+    // Her alt koşul ve her ilişki türü en az bir örnekte geçer.
+    for condition in YOGA_CONDITIONS {
+        assert!(
+            all.iter().any(|(f, _)| f
+                .expected
+                .hits
+                .iter()
+                .any(|h| h.conditions.iter().any(|c| c == condition))),
+            "condition {condition}"
+        );
+    }
+    for relation in [
+        YogaRelation::Conjunction,
+        YogaRelation::MutualAspect,
+        YogaRelation::Exchange,
+    ] {
+        assert!(
+            all.iter().any(|(f, _)| f
+                .expected
+                .hits
+                .iter()
+                .any(|h| h.relations.contains(&relation))),
+            "relation {relation:?}"
+        );
+    }
+    // Bir kayıtta birden çok ilişki; iki koşulu birden taşıyan mahapurusha (Merkür Başak'ta).
+    assert!(all
+        .iter()
+        .any(|(f, _)| f.expected.hits.iter().any(|h| h.relations.len() > 1)));
+    assert!(all.iter().any(|(f, _)| f
+        .expected
+        .hits
+        .iter()
+        .any(|h| h.id == "mahapurusha.bhadra" && h.conditions.len() == 2)));
+    // Doğum saati bilinmeyen örnekler: 17 kural atlanır, 24 kural değerlendirilir.
+    let unknown: Vec<_> = all.iter().filter(|(_, p)| p.lagna_sign.is_none()).collect();
+    assert!(unknown.len() >= 2, "time-unknown fixtures");
+    for (f, _) in unknown {
+        assert_eq!(
+            (f.expected.evaluated, f.expected.skipped_time_unknown),
+            (24, 17),
+            "{}",
+            f.id
+        );
+    }
 }

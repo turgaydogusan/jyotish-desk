@@ -1,0 +1,39 @@
+{
+  "id": "time-unknown-gola-and-rajju-in-capricorn",
+  "source": "hand",
+  "rule_ref": "BPHS'nin yoga bölümleri (Pancha Mahapurusha, Ay ve Güneş yogaları, raja ve dhana yogaları, nabhasa yogaları) ve klasik yoga derlemeleri; ileri modüller tasarım belgesi §8 (alıntı yapılmaz)",
+  "derivation": [
+    "Doğum saati bilinmiyor: lagna yok, evler sayılmaz. Burçlar: Güneş 282° Oğlak; Ay 295° Oğlak; Mars 273° Oğlak; Merkür 288° Oğlak; Jüpiter 277° Oğlak; Venüs 299° Oğlak; Satürn 291° Oğlak; Rahu 10° Koç; Ketu 190° Terazi.",
+    "Lagna isteyen 17 kural değerlendirilmez (beş mahapurusha, Kemadruma, Shakata, üç raja, dhana, üç değişim, üç viparita); diğer 24 kural değerlendirilir ve sonuçları yaklaşıktır.",
+    "Doğal sınıf (K6): Ay'ın Güneş'ten uzanımı 13°: büyüyor, iyicil. Merkür'ün burcundaki diğer grahalar: Güneş, Ay, Mars, Jüpiter, Venüs, Satürn; Merkür iyicil.",
+    "Ay'ın yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Kova: boş; 12. burç Yay: boş → üçü de yok.",
+    "Gajakesari: Jüpiter Ay'dan 1. evde (kendra) → oluşur. Chandra-Mangala: Ay Oğlak, Mars Oğlak → birlikte, oluşur.",
+    "Adhi: Ay'dan evler: Merkür 1, Jüpiter 1, Venüs 1 → üçü birden 6, 7 ya da 8 değil: yok.",
+    "Amala: Ay'dan 10. burç Terazi: Ketu kötücül (kötücül var, sağlamaz) → yok.",
+    "Vasumati (upachaya 3, 6, 10, 11): Ay'dan Merkür 1, Jüpiter 1, Venüs 1 (üçü birden upachaya değil) → yok.",
+    "Güneş'in yanları (sayılan grahalar Mars, Merkür, Jüpiter, Venüs, Satürn): 2. burç Kova: boş; 12. burç Yay: boş → üçü de yok. Budha-Aditya: Güneş Oğlak, Merkür Oğlak → birlikte, oluşur.",
+    "Neecha bhanga: Jüpiter düşüş burcunda (Oğlak). (1) Burcun lordu Satürn: Ay'dan 1. → kendrada. (2) O burçta yücelen Mars: Ay'dan 1. → kendrada. (3) Dispozitör Satürn (Oğlak): Oğlak oradan 1. burç, tam bakış yok → oluşur: sign_lord_in_kendra, exalted_graha_in_kendra.",
+    "Nabhasa: yedi grahanın burçları Oğlak: 1 farklı burç → Gola. Burç türleri: yürük → hepsi yürük: Rajju oluşur.",
+    "Kuja dosha (1, 2, 4, 7, 8, 12): Mars Ay'dan 1., Venüs'ten 1. evde → oluşur: from_moon, from_venus.",
+    "Oluşmayan örnek olarak işaretlenenler (`absent`): lunar.sunapha, lunar.adhi, lunar.amala, lunar.vasumati, solar.vesi, nabhasa_count.yuga, nabhasa_ashraya.musala, nabhasa_ashraya.nala."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "grahas": {"Sun": 282.0, "Moon": 295.0, "Mars": 273.0, "Mercury": 288.0, "Jupiter": 277.0, "Venus": 299.0, "Saturn": 291.0, "Rahu": 10.0, "Ketu": 190.0}
+  },
+  "expected": {
+    "hits": [
+      {"id": "lunar.gajakesari", "grahas": ["Moon", "Jupiter"], "houses": [], "relations": [], "conditions": []},
+      {"id": "lunar.chandra_mangala", "grahas": ["Moon", "Mars"], "houses": [], "relations": ["Conjunction"], "conditions": []},
+      {"id": "solar.budha_aditya", "grahas": ["Sun", "Mercury"], "houses": [], "relations": ["Conjunction"], "conditions": []},
+      {"id": "neecha_bhanga.neecha_bhanga", "grahas": ["Jupiter"], "houses": [], "relations": [], "conditions": ["sign_lord_in_kendra", "exalted_graha_in_kendra"]},
+      {"id": "nabhasa_count.gola", "grahas": ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"], "houses": [], "relations": [], "conditions": []},
+      {"id": "nabhasa_ashraya.rajju", "grahas": ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"], "houses": [], "relations": [], "conditions": []},
+      {"id": "dosha.kuja", "grahas": ["Mars"], "houses": [], "relations": [], "conditions": ["from_moon", "from_venus"]}
+    ],
+    "absent": ["lunar.sunapha", "lunar.adhi", "lunar.amala", "lunar.vasumati", "solar.vesi", "nabhasa_count.yuga", "nabhasa_ashraya.musala", "nabhasa_ashraya.nala"],
+    "cancelled": [],
+    "evaluated": 24,
+    "skipped_time_unknown": 17
+  }
+}

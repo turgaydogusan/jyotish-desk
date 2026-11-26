@@ -92,9 +92,10 @@ pub use varga::{
     all_vargas, is_vargottama, varga_chart, varga_position, Varga, VargaChart, VargaPlacement,
 };
 pub use yogas::{
-    exchange_kind, is_exchange, is_mutual_aspect, occupied_sign_count, yoga_relations, yoga_rule,
-    ExchangeKind, YogaGroup, YogaMatch, YogaRelation, YogaRule, COUNTED_GRAHAS, DHANA_HOUSES,
-    DUSTHANA_HOUSES, KENDRA_HOUSES, TRIKONA_HOUSES, UPACHAYA_HOUSES, YOGA_CATALOG,
-    YOGA_CATALOG_VERSION, YOGA_CONDITIONS, YOGA_GRAHAS,
+    compute_yogas, exchange_kind, is_exchange, is_mutual_aspect, occupied_sign_count,
+    yoga_relations, yoga_rule, yogas, ExchangeKind, YogaGroup, YogaHit, YogaMatch, YogaRelation,
+    YogaReport, YogaRule, COUNTED_GRAHAS, DHANA_HOUSES, DUSTHANA_HOUSES, KENDRA_HOUSES,
+    TRIKONA_HOUSES, UPACHAYA_HOUSES, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS,
+    YOGA_GRAHAS,
 };
 pub use zodiac::{angular_distance, deg_in_sign, nakshatra_pada, normalize, Sign};
