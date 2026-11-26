@@ -4,7 +4,7 @@
 // dasha yoluna `useViewStore` ile ulaşır; birbirini çağırmaz.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
 import type { Graha, ViewState } from "../bindings";
-import type { Layout, LayoutState, Panel } from "../layout/model";
+import type { Layout, LayoutState, ModulePanelKind, Panel } from "../layout/model";
 import { activeLayout, newId, normalizeState, type LayoutAction } from "../layout/reducer";
 import { toViewState, type ViewModel } from "./model";
 import { matchShortcut } from "../shortcuts";
@@ -25,6 +25,8 @@ export interface LayoutStore {
   resetBuiltin(id: string): void;
   updatePanels(panels: Panel[]): void;
   toggleNotes(): void;
+  /** İleri modül panelini etkin düzene ekler; düzende varsa kaldırır. */
+  togglePanel(kind: ModulePanelKind): void;
   /** Etkin düzendeki bir panelin ayarlarına `patch`'i ekler (varga, biçim, sütunlar). */
   setPanelSettings(panelId: string, patch: Record<string, unknown>): void;
 }
@@ -138,6 +140,7 @@ export function ViewStateProvider({
       resetBuiltin: (id) => layoutDispatch({ type: "resetBuiltin", id }),
       updatePanels: (panels) => layoutDispatch({ type: "updatePanels", panels }),
       toggleNotes: () => layoutDispatch({ type: "toggleNotes", panelId: newId("notes") }),
+      togglePanel: (kind) => layoutDispatch({ type: "togglePanel", kind, panelId: newId(kind) }),
       setPanelSettings: (panelId, patch) => layoutDispatch({ type: "setPanelSettings", panelId, patch }),
     };
     const view: ViewStore = {

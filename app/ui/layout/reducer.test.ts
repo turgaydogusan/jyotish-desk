@@ -1,5 +1,5 @@
 import { hasOverlap } from "./grid";
-import { BUILTIN_LAYOUT_IDS, builtinLayout, defaultLayoutState, MAX_LAYOUTS, type LayoutState } from "./model";
+import { BUILTIN_LAYOUT_IDS, builtinLayout, defaultLayoutState, MAX_LAYOUTS, MAX_PANELS, type LayoutState } from "./model";
 import { activeLayout, layoutReducer, newId, NOTES_PANEL, normalizeState } from "./reducer";
 
 const { interview, research, transit } = BUILTIN_LAYOUT_IDS;
@@ -102,6 +102,41 @@ test("toggleNotes removes notes when present and adds a 4-column panel on the ri
   expect(hasOverlap(panels)).toBe(false);
   // Sağ üstteki D9 haritası notların altına itildi.
   expect(panels.find((p) => p.id === "d9")!.y).toBe(NOTES_PANEL.h);
+});
+
+test("togglePanel adds a module panel below the layout without moving the others and removes it again", () => {
+  const before = activeLayout(defaultLayoutState()).panels;
+  const bottom = Math.max(...before.map((p) => p.y + p.h));
+  let s = layoutReducer(defaultLayoutState(), { type: "togglePanel", kind: "drishti", panelId: "dr1" });
+  let panels = activeLayout(s).panels;
+  expect(panels.slice(0, before.length)).toEqual(before);
+  expect(panels.at(-1)).toEqual({ id: "dr1", kind: "drishti", x: 0, y: bottom, w: 6, h: 10, settings: {} });
+  expect(hasOverlap(panels)).toBe(false);
+  // İkinci panel öncekinin altına gelir.
+  s = layoutReducer(s, { type: "togglePanel", kind: "panchang", panelId: "pa1" });
+  panels = activeLayout(s).panels;
+  expect(panels.at(-1)).toMatchObject({ id: "pa1", kind: "panchang", x: 0, y: bottom + 10, w: 4, h: 9 });
+  expect(hasOverlap(panels)).toBe(false);
+  // Aynı tür yeniden istenince kaldırılır; diğer paneller yerinde durur.
+  s = layoutReducer(s, { type: "togglePanel", kind: "drishti", panelId: "dr2" });
+  panels = activeLayout(s).panels;
+  expect(panels.some((p) => p.kind === "drishti")).toBe(false);
+  expect(panels.find((p) => p.id === "pa1")).toMatchObject({ x: 0, y: bottom + 10 });
+  // Yalnızca etkin düzen değişir.
+  expect(s.layouts[1]).toEqual(defaultLayoutState().layouts[1]);
+});
+
+test("togglePanel adds to an empty layout at the top and does nothing at the panel limit or on a duplicate id", () => {
+  const empty = layoutReducer(defaultLayoutState(), { type: "updatePanels", panels: [] });
+  const added = layoutReducer(empty, { type: "togglePanel", kind: "ashtakavarga", panelId: "av" });
+  expect(activeLayout(added).panels).toEqual([{ id: "av", kind: "ashtakavarga", x: 0, y: 0, w: 6, h: 11, settings: {} }]);
+  const full = layoutReducer(defaultLayoutState(), {
+    type: "updatePanels",
+    panels: Array.from({ length: MAX_PANELS }, (_, i) => ({ id: `n${i}`, kind: "notes", x: 0, y: i * 4, w: 3, h: 4, settings: {} })),
+  });
+  expect(layoutReducer(full, { type: "togglePanel", kind: "drishti", panelId: "dr" })).toEqual(full);
+  const state = defaultLayoutState();
+  expect(layoutReducer(state, { type: "togglePanel", kind: "drishti", panelId: "d1" })).toEqual(state);
 });
 
 test("normalizeState fixes stored geometry", () => {

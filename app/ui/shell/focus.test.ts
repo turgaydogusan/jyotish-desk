@@ -1,4 +1,4 @@
-import { leaveNotes, leaveSidebar, MAIN_ID } from "./focus";
+import { leaveNotes, leavePanel, leaveSidebar, MAIN_ID } from "./focus";
 
 afterEach(() => (document.body.innerHTML = ""));
 
@@ -19,4 +19,20 @@ test("leaving the sidebar moves focus to its toggle", () => {
   document.querySelector("input")!.focus();
   leaveSidebar();
   expect(document.activeElement).toBe(document.querySelector("button"));
+});
+
+test("leaving a module panel moves focus to main only when focus is inside a panel of that kind", () => {
+  document.body.innerHTML = `<main id="${MAIN_ID}" tabindex="-1"><section class="panel" data-kind="drishti" tabindex="0"><button>Gü</button></section><section class="panel" data-kind="panchang" tabindex="0"></section></main>`;
+  const main = document.getElementById(MAIN_ID);
+  const inside = document.querySelector("button")!;
+  inside.focus();
+  leavePanel("panchang");
+  expect(document.activeElement).toBe(inside);
+  leavePanel("drishti");
+  expect(document.activeElement).toBe(main);
+  // Panelin kendisi odaktayken de.
+  const frame = document.querySelector<HTMLElement>('[data-kind="panchang"]')!;
+  frame.focus();
+  leavePanel("panchang");
+  expect(document.activeElement).toBe(main);
 });

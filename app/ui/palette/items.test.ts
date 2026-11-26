@@ -20,8 +20,10 @@ test("local items keep command, chart, layout, varga order and are filtered by t
     layoutLabel: (l) => l.id,
     vargas: [{ varga: "D9", label: "D9 Navamsa" }],
     commands: [{ command: "newChart", label: "Yeni harita" }],
+    panels: [{ kind: "drishti", label: "Bakışlar panelini aç/kapat" }],
   };
-  expect(localItems(src, "", "tr").map((i) => i.kind)).toEqual(["command", "chart", "layout", "layout", "layout", "varga"]);
+  expect(localItems(src, "", "tr").map((i) => i.kind)).toEqual(["command", "panel", "chart", "layout", "layout", "layout", "varga"]);
+  expect(localItems(src, "bakış", "tr")).toEqual([{ kind: "panel", key: "panel:drishti", label: "Bakışlar panelini aç/kapat", panelKind: "drishti" }]);
   expect(localItems(src, "harita", "tr").map((i) => i.key)).toEqual(["command:newChart", `chart:${chart.id}`]);
   expect(localItems(src, "navamsa", "tr")).toEqual([{ kind: "varga", key: "varga:D9", label: "D9 Navamsa", varga: "D9" }]);
 });

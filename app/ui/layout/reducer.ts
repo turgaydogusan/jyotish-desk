@@ -1,6 +1,6 @@
 // Düzen durumu için saf reducer. Kimlikler eylemle gelir; reducer rastgelelik üretmez.
 import { movePanel, normalizePanels } from "./grid";
-import { builtinLayout, MAX_LAYOUTS, type Layout, type LayoutState, type Panel } from "./model";
+import { builtinLayout, MAX_LAYOUTS, MAX_PANELS, MODULE_PANELS, type Layout, type LayoutState, type ModulePanelKind, type Panel } from "./model";
 
 export type LayoutAction =
   | { type: "select"; id: string }
@@ -12,6 +12,7 @@ export type LayoutAction =
   | { type: "resetBuiltin"; id: string }
   | { type: "updatePanels"; panels: Panel[] }
   | { type: "toggleNotes"; panelId: string }
+  | { type: "togglePanel"; kind: ModulePanelKind; panelId: string }
   | { type: "setPanelSettings"; panelId: string; patch: Record<string, unknown> };
 
 /** Notlar paneli düzende yoksa sağa 4 sütun genişliğinde eklenir (spec §3.2). */
@@ -100,6 +101,19 @@ export function layoutReducer(state: LayoutState, action: LayoutAction): LayoutS
         const notes: Panel = { id: action.panelId, kind: "notes", ...NOTES_PANEL, settings: {} };
         // Notlar sağ üste sabitlenir; çakışan paneller aşağı itilir.
         return { ...l, panels: movePanel([...l.panels, notes], notes.id, NOTES_PANEL.x, NOTES_PANEL.y) };
+      });
+    case "togglePanel":
+      return mapLayout(state, state.active_layout_id, (l) => {
+        if (l.panels.some((p) => p.kind === action.kind)) {
+          // Kaldırırken diğer paneller yerinde durur (notlar gibi).
+          return { ...l, panels: l.panels.filter((p) => p.kind !== action.kind) };
+        }
+        const size = MODULE_PANELS.find((m) => m.kind === action.kind);
+        // Sınırda panel eklenmez (Rust fazlasını okumaz).
+        if (!size || l.panels.length >= MAX_PANELS || l.panels.some((p) => p.id === action.panelId)) return l;
+        // Yeni panel düzenin altına, sola eklenir: hiçbir paneli yerinden oynatmaz.
+        const y = Math.max(0, ...l.panels.map((p) => p.y + p.h));
+        return { ...l, panels: [...l.panels, { id: action.panelId, kind: action.kind, x: 0, y, w: size.w, h: size.h, settings: {} }] };
       });
   }
 }

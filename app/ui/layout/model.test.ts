@@ -1,11 +1,14 @@
+import { GRID_COLUMNS, minSize } from "./grid";
 import {
   BUILTIN_LAYOUT_IDS,
   builtinLayout,
+  builtinLayouts,
   defaultLayoutState,
   isKnownPanelKind,
   LAYOUT_SCHEMA_VERSION,
   MAX_LAYOUTS,
   MAX_PANELS,
+  MODULE_PANELS,
   PANEL_KINDS,
   parseLayoutState,
   serializeLayoutState,
@@ -21,7 +24,7 @@ function overlaps(a: Panel, b: Panel) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-test("catalog has the seven v1 panel kinds", () => {
+test("catalog has the seven v1 panel kinds and the three foundation module panels", () => {
   expect(PANEL_KINDS).toEqual([
     "chart",
     "graha_table",
@@ -30,9 +33,25 @@ test("catalog has the seven v1 panel kinds", () => {
     "transit_table",
     "notes",
     "birth_info",
+    "panchang",
+    "ashtakavarga",
+    "drishti",
   ]);
   expect(isKnownPanelKind("chart")).toBe(true);
+  expect(isKnownPanelKind("drishti")).toBe(true);
   expect(isKnownPanelKind("yoga_list")).toBe(false);
+});
+
+test("module panels are known kinds, listed once, with a size the grid accepts", () => {
+  expect(MODULE_PANELS.map((m) => m.kind)).toEqual(["panchang", "ashtakavarga", "drishti"]);
+  for (const m of MODULE_PANELS) {
+    expect(isKnownPanelKind(m.kind)).toBe(true);
+    expect(m.w).toBeGreaterThanOrEqual(minSize(m.kind).w);
+    expect(m.h).toBeGreaterThanOrEqual(minSize(m.kind).h);
+    expect(m.w).toBeLessThanOrEqual(GRID_COLUMNS);
+  }
+  // Hazır düzenler değişmedi: modül panelleri paletten eklenir.
+  for (const l of builtinLayouts()) expect(l.panels.some((p) => MODULE_PANELS.some((m) => m.kind === p.kind))).toBe(false);
 });
 
 test("default state has the three builtin layouts with interview active", () => {

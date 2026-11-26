@@ -12,6 +12,12 @@ export function leaveSidebar() {
   }
 }
 
+/** Bir modül paneli düzenden kaldırılmadan önce: odak o paneldeyse ana bölgeye geçer. */
+export function leavePanel(kind: string) {
+  const panel = document.activeElement?.closest<HTMLElement>(".panel");
+  if (panel?.dataset.kind === kind) document.getElementById(MAIN_ID)?.focus();
+}
+
 /** Notlar paneli kapanmadan önce (`⌘⇧N`): odak paneldeyse ana bölgeye geçer. */
 export function leaveNotes() {
   if (document.activeElement?.closest(".notes-panel")) document.getElementById(MAIN_ID)?.focus();

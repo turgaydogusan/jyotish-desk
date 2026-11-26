@@ -6,6 +6,7 @@ import { api } from "../api";
 import type { CommandError } from "../bindings";
 import { BirthForm } from "../birth/BirthForm";
 import { Sidebar } from "../clients/Sidebar";
+import type { ModulePanelKind } from "../layout/model";
 import type { PaletteItem } from "../palette/items";
 import { Palette } from "../palette/Palette";
 import { Dashboard } from "../dashboard/Dashboard";
@@ -14,7 +15,7 @@ import { matchShortcut } from "../shortcuts";
 import { useLayoutStore } from "../view/store";
 import { applyTheme, loadThemePref, saveThemePref, type ThemePref } from "../theme/theme";
 import { EmptyState } from "./EmptyState";
-import { leaveNotes, leaveSidebar, MAIN_ID } from "./focus";
+import { leaveNotes, leavePanel, leaveSidebar, MAIN_ID } from "./focus";
 import { HelpDialog } from "./HelpDialog";
 import { NoticeBar, useNotices } from "./notices";
 import { loadSidebarOpen, saveSidebarOpen } from "./sidebarPref";
@@ -59,6 +60,23 @@ export function Shell() {
     setPrintError(null);
     const r = await api.printWindow();
     if (r.status === "error") setPrintError(r.error);
+  };
+  // Paletten eklenen panel düzenin altına gelir; çizildikten sonra odak ona taşınır (görünür
+  // alana da kaydırır). Kaldırmada odak paneldeyse ana bölgeye geçer.
+  const [addedPanel, setAddedPanel] = useState<ModulePanelKind | null>(null);
+  useEffect(() => {
+    if (addedPanel === null) return;
+    document.querySelector<HTMLElement>(`.panel[data-kind="${addedPanel}"]`)?.focus();
+    setAddedPanel(null);
+  }, [addedPanel]);
+  const toggleModulePanel = (kind: ModulePanelKind) => {
+    if (layout.active.panels.some((p) => p.kind === kind)) {
+      leavePanel(kind);
+      layout.togglePanel(kind);
+    } else {
+      layout.togglePanel(kind);
+      setAddedPanel(kind);
+    }
   };
   const { push } = useNotices();
   // Açılışta güncelleme denetimi yalnızca kullanıcı tercihi açtıysa yapılır (Plan 13 D1) ve
@@ -141,6 +159,9 @@ export function Shell() {
         const panel = layout.active.panels.find((p) => p.kind === "chart");
         return panel && layout.setPanelSettings(panel.id, { varga: item.varga });
       }
+      case "panel":
+        // Notlar gibi: baskı görünümünde (pano yokken) yok sayılır.
+        return printView ? undefined : toggleModulePanel(item.panelKind);
       case "command":
         if (item.command === "newChart" || item.command === "addChart" || item.command === "editChart") {
           return setForm(item.command === "newChart" ? "new" : item.command === "addChart" ? "add" : "edit");

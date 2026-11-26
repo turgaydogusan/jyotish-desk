@@ -11,6 +11,7 @@ import { api } from "../api";
 import type { ChartRecord, CommandError, SearchHit } from "../bindings";
 import { VARGA_NAMES, VARGAS } from "../chart/adapter";
 import { errorMessage } from "../i18n/errors";
+import { MODULE_PANELS } from "../layout/model";
 import { useSession } from "../session/store";
 import { Dialog } from "../shell/Dialog";
 import { layoutLabel } from "../shell/LayoutPicker";
@@ -111,6 +112,8 @@ export function Palette({ onClose, onRun }: PaletteProps) {
         layoutLabel: (l) => layoutLabel(t, l),
         vargas: opened && hasChartPanel ? VARGAS.map((v) => ({ varga: v, label: `${v} ${VARGA_NAMES[v]}` })) : [],
         commands,
+        // Paneller de notlar gibi yalnızca harita açıkken panoda görünür.
+        panels: opened ? MODULE_PANELS.map((m) => ({ kind: m.kind, label: t("palette.togglePanel", { name: t(`panel.${m.kind}`) }) })) : [],
       },
       query,
       i18n.language,

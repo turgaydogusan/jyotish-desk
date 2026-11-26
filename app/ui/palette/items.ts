@@ -1,8 +1,8 @@
-// Komut paletinin öğeleri (UI spec §4: danışan, harita, varga, düzen ve komut tek arama
+// Komut paletinin öğeleri (UI spec §4: danışan, harita, varga, düzen, panel ve komut tek arama
 // kutusunda). Danışanlar Rust'ta aranır (`search_clients`); diğer öğeler arayüzün kendi
 // listeleridir ve burada metinle süzülür. Süzme bir dizgi karşılaştırmasıdır, hesap değildir.
 import type { ChartRecord, SearchHit, Varga } from "../bindings";
-import type { Layout } from "../layout/model";
+import type { Layout, ModulePanelKind } from "../layout/model";
 
 export type PaletteCommand = "newChart" | "addChart" | "editChart" | "settings" | "print" | "toggleNotes" | "sidebar" | "help" | "about";
 
@@ -11,7 +11,8 @@ export type PaletteItem =
   | { kind: "chart"; key: string; label: string; detail: string; clientId: number; chartId: number }
   | { kind: "layout"; key: string; label: string; layoutId: string }
   | { kind: "varga"; key: string; label: string; varga: Varga }
-  | { kind: "command"; key: string; label: string; command: PaletteCommand };
+  | { kind: "command"; key: string; label: string; command: PaletteCommand }
+  | { kind: "panel"; key: string; label: string; panelKind: ModulePanelKind };
 
 /** Büyük/küçük harf ve aksan duyarsız karşılaştırma anahtarı ("Navāmsa" → "navamsa"). */
 export function foldText(text: string, locale: string): string {
@@ -37,12 +38,15 @@ export interface LocalSources {
   /** Etkin düzende harita paneli yoksa varga öğesi gösterilmez. */
   vargas: readonly { varga: Varga; label: string }[];
   commands: readonly { command: PaletteCommand; label: string }[];
+  /** Etkin düzene eklenip kaldırılabilen paneller (Plan 14 D9). */
+  panels: readonly { kind: ModulePanelKind; label: string }[];
 }
 
-/** Arayüzün kendi öğeleri, sorguyla süzülmüş: komutlar, haritalar, düzenler, vargalar. */
+/** Arayüzün kendi öğeleri, sorguyla süzülmüş: komutlar, paneller, haritalar, düzenler, vargalar. */
 export function localItems(src: LocalSources, query: string, locale: string): PaletteItem[] {
   const out: PaletteItem[] = [
     ...src.commands.map((c): PaletteItem => ({ kind: "command", key: `command:${c.command}`, label: c.label, command: c.command })),
+    ...src.panels.map((p): PaletteItem => ({ kind: "panel", key: `panel:${p.kind}`, label: p.label, panelKind: p.kind })),
     ...src.charts.map(
       (c): PaletteItem => ({ kind: "chart", key: `chart:${c.id}`, label: src.chartLabel(c), detail: c.birth.date, clientId: c.client_id, chartId: c.id }),
     ),

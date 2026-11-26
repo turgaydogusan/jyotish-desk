@@ -175,6 +175,52 @@ test("closing the notes panel from inside it moves focus to main, by shortcut an
   expect(document.activeElement).toBe(main);
 });
 
+test("the palette adds a module panel below the layout and focuses it; again removes it and focus goes to main", async () => {
+  renderApp();
+  const panel = () => screen.queryByRole("region", { name: "Bakışlar" });
+  expect(panel()).toBeNull();
+  const run = async () => {
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+    fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "bakış" } });
+    const option = await within(palette).findByRole("option", { name: /Bakışlar panelini aç\/kapat/ });
+    expect(option.firstChild).toHaveTextContent("Panel");
+    fireEvent.click(option);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  };
+  await run();
+  // Görüşme düzeninin altı (satır 18): 6 × 10, solda.
+  expect(panel()).toHaveAttribute("data-y", "18");
+  expect(panel()).toHaveAttribute("data-x", "0");
+  expect(panel()).toHaveAttribute("data-w", "6");
+  await waitFor(() => expect(panel()).toHaveFocus());
+  // Diğer paneller yerinde.
+  expect(screen.getByRole("region", { name: "Harita D1" })).toHaveAttribute("data-y", "0");
+  await run();
+  expect(panel()).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("main"));
+});
+
+test("module panel commands are offered only with an open chart and are ignored in print view", async () => {
+  const { unmount } = renderApp({ opened: null });
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  let palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  await waitFor(() => expect(within(palette).getAllByRole("option").length).toBeGreaterThan(0));
+  expect(within(palette).queryByRole("option", { name: /panelini aç\/kapat/ })).toBeNull();
+  unmount();
+  renderApp();
+  fireEvent.keyDown(window, { key: "p", metaKey: true });
+  printToolbar();
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "panchang" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /Panchang panelini aç\/kapat/ }));
+  // Önizleme kapatılınca düzen değişmemiş olur.
+  fireEvent.click(screen.getByRole("button", { name: "Panoya dön" }));
+  expect(screen.getByRole("region", { name: "Harita D1" })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Panchang" })).toBeNull();
+});
+
 test("Cmd+Shift+N works from a text field and is ignored on key repeat, during composition and in print view", () => {
   renderApp();
   const notes = () => screen.queryByRole("region", { name: "Notlar" });
