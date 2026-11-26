@@ -507,4 +507,12 @@ test("chara dasha: the system selector in the dasha tree and strip; each system 
   await expect(strip.locator('[aria-current="true"]')).toHaveAttribute("data-sign", "Pisces");
   await items.first().click();
   await expect.poll(async () => JSON.stringify((await ipcCalls(page, "transits_at")).at(-1))).toContain('"Jd":2451545');
+  // The strip stays and the chosen period keeps the focus (the mocked transit view keeps its
+  // moment, so the path is not asked again here; CharaDashaStrip.test.tsx covers the re-request).
+  await items.nth(1).focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(async () => JSON.stringify((await ipcCalls(page, "transits_at")).at(-1))).toContain('"Jd":2453736.5');
+  await expect(items).toHaveCount(20);
+  await expect(items.nth(1)).toBeFocused();
+  await expect(strip.getByRole("list")).not.toHaveAttribute("aria-busy");
 });
