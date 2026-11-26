@@ -443,6 +443,7 @@ export const fr: Messages = {
     invalid_dasha_input: "Requête de dasha invalide : {{field}}.",
     panchang_search: "Limite du panchang introuvable ({{what}}).",
     invalid_transit_input: "Requête de transit invalide : {{field}}.",
+    invalid_muhurta_input: "Requête de muhurta invalide : {{field}}.",
     atlas_unavailable: "La recherche de lieux est indisponible ({{reason}}). Vous pouvez saisir la latitude, la longitude et le fuseau à la main.",
     atlas_sqlite: "L’atlas des lieux est illisible ({{detail}}).",
     atlas_io: "Le fichier de l’atlas est illisible ({{detail}}).",

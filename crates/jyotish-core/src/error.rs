@@ -23,4 +23,8 @@ pub enum CoreError {
     PanchangSearch(&'static str),
     #[error("invalid transit input: {0}")]
     InvalidTransitInput(&'static str),
+    /// Zaman çizelgesi, gün panchangı ya da muhurta araması girdisi geçersiz; alan adını taşır
+    /// (değer taşımaz).
+    #[error("invalid muhurta input: {0}")]
+    InvalidMuhurtaInput(&'static str),
 }

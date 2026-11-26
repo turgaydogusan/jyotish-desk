@@ -443,6 +443,7 @@ export const en: Messages = {
     invalid_dasha_input: "Invalid dasha request: {{field}}.",
     panchang_search: "Panchang boundary not found ({{what}}).",
     invalid_transit_input: "Invalid transit request: {{field}}.",
+    invalid_muhurta_input: "Invalid muhurta request: {{field}}.",
     atlas_unavailable: "Place search is unavailable ({{reason}}). You can enter latitude, longitude and time zone by hand.",
     atlas_sqlite: "The place atlas could not be read ({{detail}}).",
     atlas_io: "The place atlas file could not be read ({{detail}}).",

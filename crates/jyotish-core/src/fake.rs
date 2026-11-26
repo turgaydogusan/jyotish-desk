@@ -16,8 +16,10 @@ pub(crate) struct FakeEph {
     /// (cisim, tropikal boylam, boylam hızı °/gün)
     pub positions: Vec<(Body, f64, f64)>,
     pub ayanamsa: f64,
-    /// Tropikal lagna.
+    /// Tropikal lagna (`epoch` anında).
     pub asc: f64,
+    /// Lagnanın hızı, °/gün; 0 ise lagna sabittir. Zaman çizelgesi testleri 360 verir.
+    pub asc_speed: f64,
     pub precision: Precision,
     /// Yalnızca bu cisimler `Moshier` hassasiyetinde döner (`precision` ne olursa olsun).
     pub moshier_bodies: Vec<Body>,
@@ -56,6 +58,7 @@ impl Default for FakeEph {
             ],
             ayanamsa: 24.0,
             asc: 70.0,
+            asc_speed: 0.0,
             precision: Precision::SwissEph,
             moshier_bodies: Vec::new(),
             porphyry_fallback: false,
@@ -122,14 +125,14 @@ impl Ephemeris for FakeEph {
 
     fn houses(
         &mut self,
-        _jd_ut: f64,
+        jd_ut: f64,
         _geo_lat: f64,
         _geo_lon: f64,
         system: HouseSystem,
         zodiac: Zodiac,
     ) -> Result<Houses, EphError> {
         self.last_house_system = Some(system);
-        let asc = self.in_frame(self.asc, zodiac);
+        let asc = self.in_frame(self.asc + self.asc_speed * (jd_ut - self.epoch), zodiac);
         let cusps: [f64; 12] = std::array::from_fn(|i| normalize(asc + 30.0 * i as f64));
         Ok(Houses {
             cusps,

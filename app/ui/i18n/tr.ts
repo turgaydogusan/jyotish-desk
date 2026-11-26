@@ -442,6 +442,7 @@ export const tr = {
     invalid_dasha_input: "Dasa isteği geçersiz: {{field}}.",
     panchang_search: "Panchang sınırı bulunamadı ({{what}}).",
     invalid_transit_input: "Transit isteği geçersiz: {{field}}.",
+    invalid_muhurta_input: "Muhurta isteği geçersiz: {{field}}.",
     atlas_unavailable: "Yer araması kullanılamıyor ({{reason}}). Enlem, boylam ve saat dilimini elle girebilirsiniz.",
     atlas_sqlite: "Yer atlası okunamadı ({{detail}}).",
     atlas_io: "Yer atlası dosyası okunamadı ({{detail}}).",

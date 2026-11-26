@@ -207,7 +207,7 @@ const SUNRISE_NEAR_START_DAYS: f64 = 1.0;
 /// Pencerede taranan en çok doğuş (güvenlik sınırı).
 const MAX_SUNRISE_STEPS: usize = 4;
 /// Bulunan doğuşun ardından bir sonrakini aramak için atlanan süre (≈ 14 dk).
-const RISE_STEP_DAYS: f64 = 0.01;
+pub(crate) const RISE_STEP_DAYS: f64 = 0.01;
 /// Gün batımı gün doğumundan sonra bu süre içinde olmalıdır; değilse yok sayılır.
 const MAX_DAYLIGHT_DAYS: f64 = 1.0;
 /// Gün doğumu yoksa günün başladığı yerel ortalama saat: 06:00 = 0.25 gün.

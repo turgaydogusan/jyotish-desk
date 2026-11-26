@@ -6,6 +6,7 @@
 //! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`. Jaimini
 //! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`. Shadbala ve Bhava bala
 //! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`. Uyum (Alt proje 3.6): `kuta`.
+//! Muhurta (Alt proje 3.7): `timeline` (aralık dizileri).
 
 pub mod ashtakavarga;
 mod chart;
@@ -28,6 +29,7 @@ pub mod positions;
 mod proptests;
 pub mod settings;
 pub mod shadbala;
+pub mod timeline;
 pub mod transit;
 pub mod varga;
 pub mod yogas;
@@ -91,6 +93,11 @@ pub use shadbala::{
     MeanLongitudes, ShadbalaAstro, ShadbalaReport, SthanaBala, TemporalBala, TimeLords,
     GRAHA_WAR_ORB_DEG, HORA_CYCLE, MAX_SUNRISE_GAP_DAYS, SAPTAVARGA, SHADBALA_GRAHAS,
     SHADBALA_METHOD, VIRUPAS_PER_RUPA, WAR_GRAHAS,
+};
+pub use timeline::{
+    combust_series, graha_motion_series, graha_nakshatra_series, graha_sign_series, karana_series,
+    lagna_sign_at, lagna_sign_series, nakshatra_series, nitya_yoga_series, sun_days, tithi_series,
+    vara_series, Interval, Motion, NakshatraPada, SunDay, STATION_GRAHAS, TIMELINE_RESOLUTION_DAYS,
 };
 pub use transit::{compute_transits, TransitGraha, TransitSnapshot};
 pub use varga::{

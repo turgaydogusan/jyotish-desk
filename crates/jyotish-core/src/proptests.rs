@@ -1457,3 +1457,106 @@ mod kuta_properties {
         }
     }
 }
+
+mod timeline_properties {
+    use ephemeris::Body;
+    use proptest::prelude::*;
+
+    use crate::fake::FakeEph;
+    use crate::graha::Graha;
+    use crate::settings::CalcSettings;
+    use crate::timeline::{
+        graha_sign_series, karana_series, lagna_sign_series, nakshatra_series, nitya_yoga_series,
+        tithi_series, vara_series, Interval,
+    };
+
+    const JD: f64 = 2_451_545.0;
+
+    /// Gerçekçi hızlarla sahte gök: Güneş, Ay, Jüpiter, Venüs ve dönen lagna rastgele yerlerde
+    /// başlar (tropikal boylamlar; hızlar °/gün).
+    #[derive(Debug, Clone)]
+    pub(super) struct Sky {
+        sun: (f64, f64),
+        moon: (f64, f64),
+        asc: f64,
+        jupiter: f64,
+        venus: f64,
+    }
+
+    impl Sky {
+        pub(super) fn eph(&self) -> FakeEph {
+            FakeEph {
+                asc: self.asc,
+                asc_speed: 360.98,
+                ..FakeEph::default()
+            }
+            .with(Body::Sun, self.sun.0, self.sun.1)
+            .with(Body::Moon, self.moon.0, self.moon.1)
+            .with(Body::Jupiter, self.jupiter, 0.08)
+            .with(Body::Venus, self.venus, 1.2)
+        }
+    }
+
+    pub(super) fn sky() -> impl Strategy<Value = Sky> {
+        (
+            (0.0f64..360.0, 0.95f64..1.02),
+            (0.0f64..360.0, 11.8f64..15.4),
+            0.0f64..360.0,
+            0.0f64..360.0,
+            0.0f64..360.0,
+        )
+            .prop_map(|(sun, moon, asc, jupiter, venus)| Sky {
+                sun,
+                moon,
+                asc,
+                jupiter,
+                venus,
+            })
+    }
+
+    fn check_partition<T: PartialEq + std::fmt::Debug>(
+        series: &[Interval<T>],
+        from: f64,
+        to: f64,
+    ) -> Result<(), TestCaseError> {
+        prop_assert!(!series.is_empty());
+        prop_assert_eq!(series[0].start_jd_ut, from);
+        prop_assert_eq!(series[series.len() - 1].end_jd_ut, to);
+        for w in series.windows(2) {
+            prop_assert_eq!(w[0].end_jd_ut, w[1].start_jd_ut);
+            prop_assert!(w[0].value != w[1].value);
+        }
+        for i in series {
+            prop_assert!(i.start_jd_ut < i.end_jd_ut);
+        }
+        Ok(())
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(48))]
+
+        #[test]
+        fn every_series_splits_the_span_without_gaps(
+            sky in sky(),
+            start in 0.0f64..400.0,
+            days in 0.01f64..12.0,
+        ) {
+            let mut eph = sky.eph();
+            let s = CalcSettings::default();
+            let (from, to) = (JD + start, JD + start + days);
+            check_partition(&tithi_series(&mut eph, &s, from, to).unwrap(), from, to)?;
+            check_partition(&karana_series(&mut eph, &s, from, to).unwrap(), from, to)?;
+            check_partition(&nakshatra_series(&mut eph, &s, from, to).unwrap(), from, to)?;
+            check_partition(&nitya_yoga_series(&mut eph, &s, from, to).unwrap(), from, to)?;
+            check_partition(&vara_series(&mut eph, &s, 41.0, 29.0, from, to).unwrap(), from, to)?;
+            check_partition(
+                &lagna_sign_series(&mut eph, &s, 41.0, 29.0, from, to).unwrap(),
+                from,
+                to,
+            )?;
+            for g in Graha::ALL {
+                check_partition(&graha_sign_series(&mut eph, &s, g, from, to).unwrap(), from, to)?;
+            }
+        }
+    }
+}

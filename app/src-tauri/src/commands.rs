@@ -85,6 +85,9 @@ impl From<CoreError> for CommandError {
             CoreError::InvalidTransitInput(field) => {
                 Self::new("invalid_transit_input", &[("field", field.to_owned())])
             }
+            CoreError::InvalidMuhurtaInput(field) => {
+                Self::new("invalid_muhurta_input", &[("field", field.to_owned())])
+            }
         }
     }
 }
@@ -240,6 +243,11 @@ mod tests {
         let e = CommandError::from(CoreError::InvalidTransitInput("natal_bhavas"));
         assert_eq!(e.code, "invalid_transit_input");
         assert_eq!(e.params["field"], "natal_bhavas");
+        let e = CommandError::from(CoreError::InvalidMuhurtaInput("place"));
+        assert_eq!(e.code, "invalid_muhurta_input");
+        // Yalnızca alan adı: yer ve tarih hata parametresine girmez.
+        assert_eq!(e.params.len(), 1);
+        assert_eq!(e.params["field"], "place");
     }
 
     #[test]
