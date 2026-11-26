@@ -7,6 +7,7 @@ import { AshtakavargaPanel } from "./AshtakavargaPanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
+import { DrishtiPanel } from "./DrishtiPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { PanchangPanel } from "./PanchangPanel";
 import type { PanelDefinition } from "./types";
@@ -23,7 +24,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   // İleri modül panelleri (Plan 14).
   panchang: { titleKey: "panel.panchang", component: PanchangPanel },
   ashtakavarga: { titleKey: "panel.ashtakavarga", component: AshtakavargaPanel },
-  drishti: { titleKey: "panel.drishti", component: UnavailablePanel },
+  drishti: { titleKey: "panel.drishti", component: DrishtiPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

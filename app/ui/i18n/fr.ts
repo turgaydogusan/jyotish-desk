@@ -103,6 +103,17 @@ export const fr: Messages = {
     totalOf: "Total {{view}} : {{total}}",
     timeUnknown: "Heure de naissance inconnue : l'ashtakavarga dépend aussi du lagna et n'est pas affiché.",
   },
+  drishti: {
+    value: "Valeur",
+    values: { full: "Marque d'aspect plein", virupa: "Virupa" },
+    caption: "Aspects des grahas : les lignes aspectent, les colonnes sont aspectées",
+    aspecting: "Aspectant",
+    full: "aspect plein",
+    legendFull: "{{mark}} aspect plein par signe. Rahu et Ketu ne reçoivent pas d'aspect de graha.",
+    legendVirupa: "Valeur d'aspect par degré (sphuta drishti), en virupas : 0–60.",
+    method: "Méthode : {{method}}",
+    timeUnknown: "Heure de naissance inconnue : la position et les aspects de la Lune sont approximatifs (≈).",
+  },
   table: {
     graha: "Graha",
     sign: "Signe",

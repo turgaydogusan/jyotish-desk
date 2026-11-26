@@ -102,6 +102,17 @@ export const tr = {
     totalOf: "{{view}} toplamı {{total}}",
     timeUnknown: "Doğum saati bilinmiyor: ashtakavarga lagnaya da bağlı olduğu için gösterilmiyor.",
   },
+  drishti: {
+    value: "Değer",
+    values: { full: "Tam bakış işareti", virupa: "Virupa" },
+    caption: "Graha bakışları: satırlar bakan, sütunlar bakılan graha",
+    aspecting: "Bakan",
+    full: "tam bakış",
+    legendFull: "{{mark}} burç temelli tam bakış. Rahu ve Ketu'ya graha bakışı atanmaz.",
+    legendVirupa: "Derece temelli bakış değeri (sphuta drishti), virupa: 0–60.",
+    method: "Yöntem: {{method}}",
+    timeUnknown: "Doğum saati bilinmiyor: Ay'ın konumu ve bakışları yaklaşıktır (≈).",
+  },
   table: {
     graha: "Graha",
     sign: "Burç",

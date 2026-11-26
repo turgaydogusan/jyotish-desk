@@ -182,3 +182,7 @@
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
+.drishti-table th,
+.drishti-table td {
+  padding: 2px 4px;
+}

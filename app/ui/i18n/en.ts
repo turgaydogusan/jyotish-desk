@@ -103,6 +103,17 @@ export const en: Messages = {
     totalOf: "{{view}} total {{total}}",
     timeUnknown: "Birth time unknown: ashtakavarga also depends on the lagna and is not shown.",
   },
+  drishti: {
+    value: "Value",
+    values: { full: "Full aspect mark", virupa: "Virupa" },
+    caption: "Graha aspects: rows aspect, columns are aspected",
+    aspecting: "Aspecting",
+    full: "full aspect",
+    legendFull: "{{mark}} full aspect by sign. Rahu and Ketu are given no graha aspect.",
+    legendVirupa: "Aspect value by degree (sphuta drishti), in virupas: 0–60.",
+    method: "Method: {{method}}",
+    timeUnknown: "Birth time unknown: the Moon's position and aspects are approximate (≈).",
+  },
   table: {
     graha: "Graha",
     sign: "Sign",

@@ -4,6 +4,7 @@ import { vi } from "vitest";
 vi.mock("./api", () => ({
   api: {
     transitsAt: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().transit })),
+    computeDrishti: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().drishti })),
     printWindow: vi.fn(async () => ({ status: "ok", data: null })),
     previewMoment: vi.fn(async () => ({ status: "error", error: { code: "invalid_input", params: { field: "birth.date" } } })),
     searchPlaces: vi.fn(async () => ({ status: "ok", data: [] })),
@@ -194,6 +195,9 @@ test("the palette adds a module panel below the layout and focuses it; again rem
   expect(panel()).toHaveAttribute("data-x", "0");
   expect(panel()).toHaveAttribute("data-w", "6");
   await waitFor(() => expect(panel()).toHaveFocus());
+  // Panel açılınca bakış tablosunu ister ve çizer.
+  expect(await within(panel()!).findByRole("table", { name: /Graha bakışları/ })).toBeInTheDocument();
+  expect(api.computeDrishti).toHaveBeenCalledTimes(1);
   // Diğer paneller yerinde.
   expect(screen.getByRole("region", { name: "Harita D1" })).toHaveAttribute("data-y", "0");
   await run();
