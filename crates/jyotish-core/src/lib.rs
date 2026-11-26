@@ -5,7 +5,7 @@
 //! Vimshottari dasha, panchang, ashtakavarga ve transit (M3). İleri modüllerin ortak temeli
 //! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`. Jaimini
 //! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`. Shadbala ve Bhava bala
-//! (Alt proje 3.4): `shadbala`.
+//! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`.
 
 pub mod ashtakavarga;
 mod chart;
@@ -29,6 +29,7 @@ pub mod settings;
 pub mod shadbala;
 pub mod transit;
 pub mod varga;
+pub mod yogas;
 pub mod zodiac;
 
 pub use ashtakavarga::{
@@ -89,5 +90,11 @@ pub use shadbala::{
 pub use transit::{compute_transits, TransitGraha, TransitSnapshot};
 pub use varga::{
     all_vargas, is_vargottama, varga_chart, varga_position, Varga, VargaChart, VargaPlacement,
+};
+pub use yogas::{
+    is_exchange, is_mutual_aspect, occupied_sign_count, yoga_relations, yoga_rule, YogaGroup,
+    YogaMatch, YogaRelation, YogaRule, COUNTED_GRAHAS, DUSTHANA_HOUSES, KENDRA_HOUSES,
+    TRIKONA_HOUSES, UPACHAYA_HOUSES, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS,
+    YOGA_GRAHAS,
 };
 pub use zodiac::{angular_distance, deg_in_sign, nakshatra_pada, normalize, Sign};
