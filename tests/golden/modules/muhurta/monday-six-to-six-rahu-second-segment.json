@@ -1,0 +1,38 @@
+{
+  "id": "monday-six-to-six-rahu-second-segment",
+  "source": "hand",
+  "rule_ref": "Muhurta derlemelerinin gün dilimleri, hora düzeni, tithi grupları, nakshatra doğaları, tara ve chandra bala (alıntı yapılmaz); ileri modüller spec'i §10",
+  "derivation": [
+    "Gün: Pazartesi. Gün doğumu 06:00, batımı 18:00, sonraki gün doğumu 06:00 (dakika: 360, 1080, 1800).",
+    "Gündüz 1080 − 360 = 720 dakika; sekizde biri 720 / 8 = 90 dakika.",
+    "Rahu dilimi: Pazartesi günü 2. dilim → 360 + 1 × 90 = 450 … 540 (07:30–09:00).",
+    "Yamaganda: Pazartesi günü 4. dilim → 630 … 720 (10:30–12:00).",
+    "Gulika: Pazartesi günü 6. dilim → 810 … 900 (13:30–15:00).",
+    "Abhijit: gündüzün on beşte biri 720 / 15 = 48 dakika; sekizinci muhurta 360 + 7 × 48 = 696 … 744 (11:36–12:24). Çarşamba istisnası: yok.",
+    "Hora: gün doğumundan sonraki gün doğumuna 1800 − 360 = 1440 dakika; 24'te biri 60 dakika. İlk hora günün lordunundur (Ay); sonrakiler Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay döngüsünde ilerler: Ay, Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay ….",
+    "Tithi 9: Shukla pakshanın 9. tithisi → Rikta grubu.",
+    "Günün nakshatrası 5. (Mrigashira): Soft (yumuşak).",
+    "Tara bala: doğum nakshatrası 4. (Rohini); ondan günün nakshatrasına sayım (başlangıç dahil) dokuzlu döngüde 2 → Sampat; elverişli küme Sampat, Kshema, Sadhana, Mitra, Parama Mitra → elverişli.",
+    "Chandra bala: doğum Ay burcu Akrep, geçiş Ay'ı Boğa → 7. ev; elverişli evler 1, 3, 6, 7, 10, 11 → elverişli."
+  ],
+  "input": {
+    "day": {"vara": "Monday", "sunrise_min": 360.0, "sunset_min": 1080.0, "next_sunrise_min": 1800.0},
+    "tithi": 9,
+    "moon": {"nakshatra": 5, "sign": "Taurus"},
+    "natal": {"nakshatra": 4, "sign": "Scorpio"}
+  },
+  "expected": {
+    "eighth_min": 90.0,
+    "rahu": {"segment": 2, "from_min": 450.0, "to_min": 540.0},
+    "yamaganda": {"segment": 4, "from_min": 630.0, "to_min": 720.0},
+    "gulika": {"segment": 6, "from_min": 810.0, "to_min": 900.0},
+    "abhijit": {"from_min": 696.0, "to_min": 744.0},
+    "abhijit_weekday_exception": false,
+    "hora_min": 60.0,
+    "hora_lords": ["Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter"],
+    "tithi_group": "Rikta",
+    "nakshatra_nature": "Soft",
+    "tara": {"number": 2, "favourable": true},
+    "chandra": {"house": 7, "favourable": true}
+  }
+}

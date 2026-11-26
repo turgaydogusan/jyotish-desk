@@ -1,0 +1,38 @@
+{
+  "id": "saturday-eleven-hour-day-gulika-first",
+  "source": "hand",
+  "rule_ref": "Muhurta derlemelerinin gün dilimleri, hora düzeni, tithi grupları, nakshatra doğaları, tara ve chandra bala (alıntı yapılmaz); ileri modüller spec'i §10",
+  "derivation": [
+    "Gün: Cumartesi. Gün doğumu 06:30, batımı 17:30, sonraki gün doğumu 06:30 (dakika: 390, 1050, 1830).",
+    "Gündüz 1050 − 390 = 660 dakika; sekizde biri 660 / 8 = 82,5 dakika.",
+    "Rahu dilimi: Cumartesi günü 3. dilim → 390 + 2 × 82,5 = 555 … 637,5 (09:15–10:37:30).",
+    "Yamaganda: Cumartesi günü 6. dilim → 802,5 … 885 (13:22:30–14:45).",
+    "Gulika: Cumartesi günü 1. dilim → 390 … 472,5 (06:30–07:52:30).",
+    "Abhijit: gündüzün on beşte biri 660 / 15 = 44 dakika; sekizinci muhurta 390 + 7 × 44 = 698 … 742 (11:38–12:22). Çarşamba istisnası: yok.",
+    "Hora: gün doğumundan sonraki gün doğumuna 1830 − 390 = 1440 dakika; 24'te biri 60 dakika. İlk hora günün lordunundur (Satürn); sonrakiler Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay döngüsünde ilerler: Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay, Satürn ….",
+    "Tithi 24: Krishna pakshanın 9. tithisi → Rikta grubu.",
+    "Günün nakshatrası 10. (Magha): Fierce (sert).",
+    "Tara bala: doğum nakshatrası 4. (Rohini); ondan günün nakshatrasına sayım (başlangıç dahil) dokuzlu döngüde 7 → Naidhana; elverişli küme Sampat, Kshema, Sadhana, Mitra, Parama Mitra → elverişli değil.",
+    "Chandra bala: doğum Ay burcu Kova, geçiş Ay'ı Aslan → 7. ev; elverişli evler 1, 3, 6, 7, 10, 11 → elverişli."
+  ],
+  "input": {
+    "day": {"vara": "Saturday", "sunrise_min": 390.0, "sunset_min": 1050.0, "next_sunrise_min": 1830.0},
+    "tithi": 24,
+    "moon": {"nakshatra": 10, "sign": "Leo"},
+    "natal": {"nakshatra": 4, "sign": "Aquarius"}
+  },
+  "expected": {
+    "eighth_min": 82.5,
+    "rahu": {"segment": 3, "from_min": 555.0, "to_min": 637.5},
+    "yamaganda": {"segment": 6, "from_min": 802.5, "to_min": 885.0},
+    "gulika": {"segment": 1, "from_min": 390.0, "to_min": 472.5},
+    "abhijit": {"from_min": 698.0, "to_min": 742.0},
+    "abhijit_weekday_exception": false,
+    "hora_min": 60.0,
+    "hora_lords": ["Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars"],
+    "tithi_group": "Rikta",
+    "nakshatra_nature": "Fierce",
+    "tara": {"number": 7, "favourable": false},
+    "chandra": {"house": 7, "favourable": true}
+  }
+}

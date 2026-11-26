@@ -1,0 +1,38 @@
+{
+  "id": "tuesday-fourteen-hour-day-short-horas",
+  "source": "hand",
+  "rule_ref": "Muhurta derlemelerinin gün dilimleri, hora düzeni, tithi grupları, nakshatra doğaları, tara ve chandra bala (alıntı yapılmaz); ileri modüller spec'i §10",
+  "derivation": [
+    "Gün: Salı. Gün doğumu 05:00, batımı 19:00, sonraki gün doğumu 04:36 (dakika: 300, 1140, 1716).",
+    "Gündüz 1140 − 300 = 840 dakika; sekizde biri 840 / 8 = 105 dakika.",
+    "Rahu dilimi: Salı günü 7. dilim → 300 + 6 × 105 = 930 … 1035 (15:30–17:15).",
+    "Yamaganda: Salı günü 3. dilim → 510 … 615 (08:30–10:15).",
+    "Gulika: Salı günü 5. dilim → 720 … 825 (12:00–13:45).",
+    "Abhijit: gündüzün on beşte biri 840 / 15 = 56 dakika; sekizinci muhurta 300 + 7 × 56 = 692 … 748 (11:32–12:28). Çarşamba istisnası: yok.",
+    "Hora: gün doğumundan sonraki gün doğumuna 1716 − 300 = 1416 dakika; 24'te biri 59 dakika. İlk hora günün lordunundur (Mars); sonrakiler Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay döngüsünde ilerler: Mars, Güneş, Venüs, Merkür, Ay, Satürn, Jüpiter, Mars ….",
+    "Tithi 18: Krishna pakshanın 3. tithisi → Jaya grubu.",
+    "Günün nakshatrası 19. (Mula): Sharp (keskin).",
+    "Tara bala: doğum nakshatrası 26. (Uttara Bhadrapada); ondan günün nakshatrasına sayım (başlangıç dahil) dokuzlu döngüde 3 → Vipat; elverişli küme Sampat, Kshema, Sadhana, Mitra, Parama Mitra → elverişli değil.",
+    "Chandra bala: doğum Ay burcu Aslan, geçiş Ay'ı Yay → 5. ev; elverişli evler 1, 3, 6, 7, 10, 11 → elverişli değil."
+  ],
+  "input": {
+    "day": {"vara": "Tuesday", "sunrise_min": 300.0, "sunset_min": 1140.0, "next_sunrise_min": 1716.0},
+    "tithi": 18,
+    "moon": {"nakshatra": 19, "sign": "Sagittarius"},
+    "natal": {"nakshatra": 26, "sign": "Leo"}
+  },
+  "expected": {
+    "eighth_min": 105.0,
+    "rahu": {"segment": 7, "from_min": 930.0, "to_min": 1035.0},
+    "yamaganda": {"segment": 3, "from_min": 510.0, "to_min": 615.0},
+    "gulika": {"segment": 5, "from_min": 720.0, "to_min": 825.0},
+    "abhijit": {"from_min": 692.0, "to_min": 748.0},
+    "abhijit_weekday_exception": false,
+    "hora_min": 59.0,
+    "hora_lords": ["Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus"],
+    "tithi_group": "Jaya",
+    "nakshatra_nature": "Sharp",
+    "tara": {"number": 3, "favourable": false},
+    "chandra": {"house": 5, "favourable": false}
+  }
+}

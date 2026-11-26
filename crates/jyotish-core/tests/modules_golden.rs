@@ -6,13 +6,16 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use jyotish_core::muhurta::{rahu_segment, yamaganda_segment};
 use jyotish_core::{
-    argala_rows, arudha_padas, chara_dasha, chara_dasha_order, chara_dasha_sign_years,
-    chara_karakas, co_lord_choice, drishti_table, house_lord, houses_owned, jaimini_lord,
-    jaimini_report, karakamsha, kuja_dosha, kuta_class_ids, kuta_report, moon_is_waxing, nature,
-    normalize, shadbala, sign_dasha_children, yoga_rule, yogas, AdvancedSettings, ArgalaStatus,
-    Graha, GrahaWar, KarakaRole, KujaDosha, Kuta, KutaRole, MoonDayChange, MoonPoint, Nature,
-    Positions, ShadbalaAstro, Sign, SignDashaPeriod, TimeLords, YogaRelation, ASPECTING_GRAHAS,
+    argala_rows, arudha_padas, chandra_bala, chara_dasha, chara_dasha_order,
+    chara_dasha_sign_years, chara_karakas, co_lord_choice, day_segments, drishti_table, house_lord,
+    houses_owned, jaimini_lord, jaimini_report, karakamsha, kuja_dosha, kuta_class_ids,
+    kuta_report, moon_is_waxing, nakshatra_nature, nature, normalize, shadbala,
+    sign_dasha_children, tara_bala, tithi_group, yoga_rule, yogas, AdvancedSettings, ArgalaStatus,
+    ChandraBala, Graha, GrahaWar, Interval, KarakaRole, KujaDosha, Kuta, KutaRole, MoonDayChange,
+    MoonPoint, NakshatraNature, NatalMoon, Nature, Positions, ShadbalaAstro, Sign, SignDashaPeriod,
+    SunDay, TaraBala, TimeLords, TithiGroup, Vara, YogaRelation, ASPECTING_GRAHAS,
     CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, KUTA_METHOD, SHADBALA_GRAHAS,
     SHADBALA_METHOD, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS,
 };
@@ -27,6 +30,7 @@ const MIN_CHARA_DASHA: usize = 7;
 const MIN_SHADBALA: usize = 4;
 const MIN_YOGAS: usize = 15;
 const MIN_KUTA: usize = 8;
+const MIN_MUHURTA: usize = 7;
 /// El hesabı ile motor arasındaki en büyük fark, virupa.
 const VIRUPA_TOL: f64 = 1e-9;
 /// Shadbala çalışma kâğıdının toleransı, virupa (ileri modüller spec'i §7 "Test").
@@ -34,12 +38,12 @@ const WORKSHEET_TOL: f64 = 0.01;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Fixture<X> {
+struct Fixture<X, I = Input> {
     id: String,
     source: String,
     rule_ref: String,
     derivation: Vec<String>,
-    input: Input,
+    input: I,
     expected: X,
 }
 
@@ -95,7 +99,12 @@ impl Input {
     }
 }
 
-fn load<X: DeserializeOwned>(module: &str, min: usize) -> Vec<(Fixture<X>, Positions)> {
+/// Bir modülün el örnekleri, ortak denetimleriyle: en az sayı, dosya adı, kaynak, gönderme ve
+/// türetme adımları. `I` girdinin biçimidir (çoğu modülde sentetik konumlar: `Input`).
+fn load_raw<X: DeserializeOwned, I: DeserializeOwned>(
+    module: &str,
+    min: usize,
+) -> Vec<Fixture<X, I>> {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/golden/modules")
         .join(module);
@@ -115,7 +124,7 @@ fn load<X: DeserializeOwned>(module: &str, min: usize) -> Vec<(Fixture<X>, Posit
         .map(|p| {
             let text =
                 std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
-            let f: Fixture<X> =
+            let f: Fixture<X, I> =
                 serde_json::from_str(&text).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
             assert_eq!(
                 p.file_stem().and_then(|s| s.to_str()),
@@ -130,6 +139,15 @@ fn load<X: DeserializeOwned>(module: &str, min: usize) -> Vec<(Fixture<X>, Posit
                 "{}: derivation steps",
                 f.id
             );
+            f
+        })
+        .collect()
+}
+
+fn load<X: DeserializeOwned>(module: &str, min: usize) -> Vec<(Fixture<X>, Positions)> {
+    load_raw::<X, Input>(module, min)
+        .into_iter()
+        .map(|f| {
             let positions = f.input.positions(&f.id);
             (f, positions)
         })
@@ -1482,4 +1500,206 @@ fn kuta_fixtures_cover_the_required_cases() {
             );
         }
     }
+}
+
+/// Muhurta örneklerinin girdisi: sentetik bir gün (dakika olarak gün doğumu, batımı ve sonraki
+/// gün doğumu; varası), o günün tithisi ve Ay'ı, ve doğum Ay'ı. Konum ve ephemeris yoktur.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MuhurtaInput {
+    day: MuhurtaDay,
+    tithi: u8,
+    moon: NatalMoon,
+    natal: NatalMoon,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MuhurtaDay {
+    vara: Vara,
+    sunrise_min: f64,
+    sunset_min: f64,
+    next_sunrise_min: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedSegment {
+    segment: u8,
+    from_min: f64,
+    to_min: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedSpan {
+    from_min: f64,
+    to_min: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MuhurtaExpected {
+    eighth_min: f64,
+    rahu: ExpectedSegment,
+    yamaganda: ExpectedSegment,
+    gulika: ExpectedSegment,
+    abhijit: ExpectedSpan,
+    abhijit_weekday_exception: bool,
+    hora_min: f64,
+    hora_lords: Vec<Graha>,
+    tithi_group: TithiGroup,
+    nakshatra_nature: NakshatraNature,
+    tara: TaraBala,
+    chandra: ChandraBala,
+}
+
+const MINUTES_PER_DAY: f64 = 1440.0;
+/// El hesabı ile motor arasındaki en büyük fark, dakika.
+const MINUTE_TOL: f64 = 1e-6;
+
+fn muhurta_fixtures() -> Vec<Fixture<MuhurtaExpected, MuhurtaInput>> {
+    load_raw("muhurta", MIN_MUHURTA)
+}
+
+#[test]
+fn muhurta_hand_fixtures() {
+    for f in muhurta_fixtures() {
+        let id = &f.id;
+        let (i, x) = (&f.input, &f.expected);
+        // Dakika değerleri gün kesrine çevrilir (sentetik gün; Jülyen günü değildir).
+        let s = day_segments(&SunDay {
+            sunrise_jd_ut: i.day.sunrise_min / MINUTES_PER_DAY,
+            sunset_jd_ut: i.day.sunset_min / MINUTES_PER_DAY,
+            next_sunrise_jd_ut: i.day.next_sunrise_min / MINUTES_PER_DAY,
+            vara: i.day.vara,
+        });
+        let minutes = |t: f64| t * MINUTES_PER_DAY;
+        let close = |got: f64, want: f64, what: &str| {
+            assert!(
+                (minutes(got) - want).abs() < MINUTE_TOL,
+                "{id}: {what}: {} vs {want}",
+                minutes(got)
+            );
+        };
+        assert_eq!(s.eighths.len(), 8, "{id}");
+        for e in &s.eighths {
+            close(e.end_jd_ut - e.start_jd_ut, x.eighth_min, "eighth");
+        }
+        let segment = |got: &Interval<u8>, want: &ExpectedSegment, what: &str| {
+            assert_eq!(got.value, want.segment, "{id}: {what} segment");
+            close(got.start_jd_ut, want.from_min, what);
+            close(got.end_jd_ut, want.to_min, what);
+        };
+        segment(&s.rahu, &x.rahu, "rahu");
+        segment(&s.yamaganda, &x.yamaganda, "yamaganda");
+        segment(&s.gulika, &x.gulika, "gulika");
+        assert_eq!(s.abhijit.value, 8, "{id}: abhijit is the eighth muhurta");
+        close(s.abhijit.start_jd_ut, x.abhijit.from_min, "abhijit");
+        close(s.abhijit.end_jd_ut, x.abhijit.to_min, "abhijit");
+        assert_eq!(
+            s.abhijit_weekday_exception, x.abhijit_weekday_exception,
+            "{id}: abhijit weekday exception"
+        );
+        assert_eq!(x.hora_lords.len(), 24, "{id}: twenty-four hora lords");
+        let lords: Vec<Graha> = s.horas.iter().map(|h| h.value).collect();
+        assert_eq!(lords, x.hora_lords, "{id}: hora lords");
+        for h in &s.horas {
+            close(h.end_jd_ut - h.start_jd_ut, x.hora_min, "hora");
+        }
+        close(s.horas[0].start_jd_ut, i.day.sunrise_min, "first hora");
+        close(s.horas[23].end_jd_ut, i.day.next_sunrise_min, "last hora");
+        assert_eq!(tithi_group(i.tithi), x.tithi_group, "{id}: tithi group");
+        assert_eq!(
+            nakshatra_nature(i.moon.nakshatra),
+            x.nakshatra_nature,
+            "{id}: nakshatra nature"
+        );
+        assert_eq!(
+            tara_bala(i.natal.nakshatra, i.moon.nakshatra),
+            x.tara,
+            "{id}: tara bala"
+        );
+        assert_eq!(
+            chandra_bala(i.natal.sign, i.moon.sign),
+            x.chandra,
+            "{id}: chandra bala"
+        );
+    }
+}
+
+/// Örnekler yedi varanın her birini, beş tithi grubunu, yedi nakshatra doğasını, elverişli ve
+/// elverişsiz tara ile chandra balayı, Çarşamba istisnasını ve 24 saatten kısa, 24 saate eşit ve
+/// 24 saatten uzun günü kapsar; spec §10'un örneği (06:00–18:00 Pazartesi: Rahu 07:30–09:00,
+/// Abhijit 11:36–12:24) aralarındadır.
+#[test]
+fn muhurta_fixtures_cover_the_required_cases() {
+    let fixtures = muhurta_fixtures();
+    for vara in Vara::ALL {
+        let of_day: Vec<_> = fixtures
+            .iter()
+            .filter(|f| f.input.day.vara == vara)
+            .collect();
+        assert!(!of_day.is_empty(), "no fixture for {vara:?}");
+        for f in of_day {
+            assert_eq!(f.expected.rahu.segment, rahu_segment(vara), "{}", f.id);
+            assert_eq!(
+                f.expected.yamaganda.segment,
+                yamaganda_segment(vara),
+                "{}",
+                f.id
+            );
+        }
+    }
+    for group in TithiGroup::ALL {
+        assert!(
+            fixtures.iter().any(|f| f.expected.tithi_group == group),
+            "no fixture with {group:?}"
+        );
+    }
+    for nature in NakshatraNature::ALL {
+        assert!(
+            fixtures
+                .iter()
+                .any(|f| f.expected.nakshatra_nature == nature),
+            "no fixture with {nature:?}"
+        );
+    }
+    for favourable in [true, false] {
+        assert!(fixtures
+            .iter()
+            .any(|f| f.expected.tara.favourable == favourable));
+        assert!(fixtures
+            .iter()
+            .any(|f| f.expected.chandra.favourable == favourable));
+    }
+    assert!(fixtures
+        .iter()
+        .any(|f| f.expected.abhijit_weekday_exception));
+    assert!(
+        fixtures.iter().any(|f| f.input.tithi > 15),
+        "a krishna tithi"
+    );
+    for want in [59.0, 60.0, 61.0] {
+        assert!(
+            fixtures.iter().any(|f| f.expected.hora_min == want),
+            "no fixture with {want}-minute horas"
+        );
+    }
+    let spec = fixtures
+        .iter()
+        .find(|f| {
+            f.input.day.vara == Vara::Monday
+                && f.input.day.sunrise_min == 360.0
+                && f.input.day.sunset_min == 1080.0
+        })
+        .expect("the six-to-six Monday of the design document");
+    assert_eq!(
+        (spec.expected.rahu.from_min, spec.expected.rahu.to_min),
+        (450.0, 540.0)
+    );
+    assert_eq!(
+        (spec.expected.abhijit.from_min, spec.expected.abhijit.to_min),
+        (696.0, 744.0)
+    );
 }

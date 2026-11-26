@@ -1,0 +1,38 @@
+{
+  "id": "wednesday-ten-hour-day-abhijit-exception",
+  "source": "hand",
+  "rule_ref": "Muhurta derlemelerinin gün dilimleri, hora düzeni, tithi grupları, nakshatra doğaları, tara ve chandra bala (alıntı yapılmaz); ileri modüller spec'i §10",
+  "derivation": [
+    "Gün: Çarşamba. Gün doğumu 07:00, batımı 17:00, sonraki gün doğumu 07:24 (dakika: 420, 1020, 1884).",
+    "Gündüz 1020 − 420 = 600 dakika; sekizde biri 600 / 8 = 75 dakika.",
+    "Rahu dilimi: Çarşamba günü 5. dilim → 420 + 4 × 75 = 720 … 795 (12:00–13:15).",
+    "Yamaganda: Çarşamba günü 2. dilim → 495 … 570 (08:15–09:30).",
+    "Gulika: Çarşamba günü 4. dilim → 645 … 720 (10:45–12:00).",
+    "Abhijit: gündüzün on beşte biri 600 / 15 = 40 dakika; sekizinci muhurta 420 + 7 × 40 = 700 … 740 (11:40–12:20). Çarşamba istisnası: var.",
+    "Hora: gün doğumundan sonraki gün doğumuna 1884 − 420 = 1464 dakika; 24'te biri 61 dakika. İlk hora günün lordunundur (Merkür); sonrakiler Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay döngüsünde ilerler: Merkür, Ay, Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür ….",
+    "Tithi 30: Krishna pakshanın 15. tithisi → Purna grubu.",
+    "Günün nakshatrası 26. (Uttara Bhadrapada): Fixed (sabit).",
+    "Tara bala: doğum nakshatrası 23. (Dhanishta); ondan günün nakshatrasına sayım (başlangıç dahil) dokuzlu döngüde 4 → Kshema; elverişli küme Sampat, Kshema, Sadhana, Mitra, Parama Mitra → elverişli.",
+    "Chandra bala: doğum Ay burcu Oğlak, geçiş Ay'ı Balık → 3. ev; elverişli evler 1, 3, 6, 7, 10, 11 → elverişli."
+  ],
+  "input": {
+    "day": {"vara": "Wednesday", "sunrise_min": 420.0, "sunset_min": 1020.0, "next_sunrise_min": 1884.0},
+    "tithi": 30,
+    "moon": {"nakshatra": 26, "sign": "Pisces"},
+    "natal": {"nakshatra": 23, "sign": "Capricorn"}
+  },
+  "expected": {
+    "eighth_min": 75.0,
+    "rahu": {"segment": 5, "from_min": 720.0, "to_min": 795.0},
+    "yamaganda": {"segment": 2, "from_min": 495.0, "to_min": 570.0},
+    "gulika": {"segment": 4, "from_min": 645.0, "to_min": 720.0},
+    "abhijit": {"from_min": 700.0, "to_min": 740.0},
+    "abhijit_weekday_exception": true,
+    "hora_min": 61.0,
+    "hora_lords": ["Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn"],
+    "tithi_group": "Purna",
+    "nakshatra_nature": "Fixed",
+    "tara": {"number": 4, "favourable": true},
+    "chandra": {"house": 3, "favourable": true}
+  }
+}

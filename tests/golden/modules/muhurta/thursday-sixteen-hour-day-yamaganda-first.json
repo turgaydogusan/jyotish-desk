@@ -1,0 +1,38 @@
+{
+  "id": "thursday-sixteen-hour-day-yamaganda-first",
+  "source": "hand",
+  "rule_ref": "Muhurta derlemelerinin gün dilimleri, hora düzeni, tithi grupları, nakshatra doğaları, tara ve chandra bala (alıntı yapılmaz); ileri modüller spec'i §10",
+  "derivation": [
+    "Gün: Perşembe. Gün doğumu 04:00, batımı 20:00, sonraki gün doğumu 04:00 (dakika: 240, 1200, 1680).",
+    "Gündüz 1200 − 240 = 960 dakika; sekizde biri 960 / 8 = 120 dakika.",
+    "Rahu dilimi: Perşembe günü 6. dilim → 240 + 5 × 120 = 840 … 960 (14:00–16:00).",
+    "Yamaganda: Perşembe günü 1. dilim → 240 … 360 (04:00–06:00).",
+    "Gulika: Perşembe günü 3. dilim → 480 … 600 (08:00–10:00).",
+    "Abhijit: gündüzün on beşte biri 960 / 15 = 64 dakika; sekizinci muhurta 240 + 7 × 64 = 688 … 752 (11:28–12:32). Çarşamba istisnası: yok.",
+    "Hora: gün doğumundan sonraki gün doğumuna 1680 − 240 = 1440 dakika; 24'te biri 60 dakika. İlk hora günün lordunundur (Jüpiter); sonrakiler Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay döngüsünde ilerler: Jüpiter, Mars, Güneş, Venüs, Merkür, Ay, Satürn, Jüpiter ….",
+    "Tithi 12: Shukla pakshanın 12. tithisi → Bhadra grubu.",
+    "Günün nakshatrası 15. (Swati): Movable (yürük).",
+    "Tara bala: doğum nakshatrası 8. (Pushya); ondan günün nakshatrasına sayım (başlangıç dahil) dokuzlu döngüde 8 → Mitra; elverişli küme Sampat, Kshema, Sadhana, Mitra, Parama Mitra → elverişli.",
+    "Chandra bala: doğum Ay burcu Boğa, geçiş Ay'ı Terazi → 6. ev; elverişli evler 1, 3, 6, 7, 10, 11 → elverişli."
+  ],
+  "input": {
+    "day": {"vara": "Thursday", "sunrise_min": 240.0, "sunset_min": 1200.0, "next_sunrise_min": 1680.0},
+    "tithi": 12,
+    "moon": {"nakshatra": 15, "sign": "Libra"},
+    "natal": {"nakshatra": 8, "sign": "Taurus"}
+  },
+  "expected": {
+    "eighth_min": 120.0,
+    "rahu": {"segment": 6, "from_min": 840.0, "to_min": 960.0},
+    "yamaganda": {"segment": 1, "from_min": 240.0, "to_min": 360.0},
+    "gulika": {"segment": 3, "from_min": 480.0, "to_min": 600.0},
+    "abhijit": {"from_min": 688.0, "to_min": 752.0},
+    "abhijit_weekday_exception": false,
+    "hora_min": 60.0,
+    "hora_lords": ["Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun"],
+    "tithi_group": "Bhadra",
+    "nakshatra_nature": "Movable",
+    "tara": {"number": 8, "favourable": true},
+    "chandra": {"house": 6, "favourable": true}
+  }
+}

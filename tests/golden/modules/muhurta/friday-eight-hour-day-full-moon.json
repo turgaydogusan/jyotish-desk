@@ -1,0 +1,38 @@
+{
+  "id": "friday-eight-hour-day-full-moon",
+  "source": "hand",
+  "rule_ref": "Muhurta derlemelerinin gün dilimleri, hora düzeni, tithi grupları, nakshatra doğaları, tara ve chandra bala (alıntı yapılmaz); ileri modüller spec'i §10",
+  "derivation": [
+    "Gün: Cuma. Gün doğumu 08:00, batımı 16:00, sonraki gün doğumu 08:00 (dakika: 480, 960, 1920).",
+    "Gündüz 960 − 480 = 480 dakika; sekizde biri 480 / 8 = 60 dakika.",
+    "Rahu dilimi: Cuma günü 4. dilim → 480 + 3 × 60 = 660 … 720 (11:00–12:00).",
+    "Yamaganda: Cuma günü 7. dilim → 840 … 900 (14:00–15:00).",
+    "Gulika: Cuma günü 2. dilim → 540 … 600 (09:00–10:00).",
+    "Abhijit: gündüzün on beşte biri 480 / 15 = 32 dakika; sekizinci muhurta 480 + 7 × 32 = 704 … 736 (11:44–12:16). Çarşamba istisnası: yok.",
+    "Hora: gün doğumundan sonraki gün doğumuna 1920 − 480 = 1440 dakika; 24'te biri 60 dakika. İlk hora günün lordunundur (Venüs); sonrakiler Satürn, Jüpiter, Mars, Güneş, Venüs, Merkür, Ay döngüsünde ilerler: Venüs, Merkür, Ay, Satürn, Jüpiter, Mars, Güneş, Venüs ….",
+    "Tithi 15: Shukla pakshanın 15. tithisi → Purna grubu.",
+    "Günün nakshatrası 3. (Krittika): Mixed (karışık).",
+    "Tara bala: doğum nakshatrası 7. (Punarvasu); ondan günün nakshatrasına sayım (başlangıç dahil) dokuzlu döngüde 6 → Sadhana; elverişli küme Sampat, Kshema, Sadhana, Mitra, Parama Mitra → elverişli.",
+    "Chandra bala: doğum Ay burcu İkizler, geçiş Ay'ı Boğa → 12. ev; elverişli evler 1, 3, 6, 7, 10, 11 → elverişli değil."
+  ],
+  "input": {
+    "day": {"vara": "Friday", "sunrise_min": 480.0, "sunset_min": 960.0, "next_sunrise_min": 1920.0},
+    "tithi": 15,
+    "moon": {"nakshatra": 3, "sign": "Taurus"},
+    "natal": {"nakshatra": 7, "sign": "Gemini"}
+  },
+  "expected": {
+    "eighth_min": 60.0,
+    "rahu": {"segment": 4, "from_min": 660.0, "to_min": 720.0},
+    "yamaganda": {"segment": 7, "from_min": 840.0, "to_min": 900.0},
+    "gulika": {"segment": 2, "from_min": 540.0, "to_min": 600.0},
+    "abhijit": {"from_min": 704.0, "to_min": 736.0},
+    "abhijit_weekday_exception": false,
+    "hora_min": 60.0,
+    "hora_lords": ["Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon"],
+    "tithi_group": "Purna",
+    "nakshatra_nature": "Mixed",
+    "tara": {"number": 6, "favourable": true},
+    "chandra": {"house": 12, "favourable": false}
+  }
+}

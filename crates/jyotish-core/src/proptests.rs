@@ -1560,3 +1560,79 @@ mod timeline_properties {
         }
     }
 }
+
+mod muhurta_properties {
+    use proptest::prelude::*;
+
+    use crate::muhurta::day_segments;
+    use crate::panchang::Vara;
+    use crate::shadbala::vara_lord;
+    use crate::timeline::SunDay;
+
+    fn vara() -> impl Strategy<Value = Vara> {
+        (0usize..7).prop_map(|i| Vara::ALL[i])
+    }
+
+    /// Gün: doğuş, 0,2–0,8 gün süren gündüz ve 0,9–1,1 gün sonraki doğuş.
+    fn sun_day() -> impl Strategy<Value = SunDay> {
+        (
+            2_400_000.0f64..2_500_000.0,
+            0.2f64..0.8,
+            0.9f64..1.1,
+            vara(),
+        )
+            .prop_map(|(rise, daylight, length, vara)| SunDay {
+                sunrise_jd_ut: rise,
+                sunset_jd_ut: rise + daylight,
+                next_sunrise_jd_ut: rise + length,
+                vara,
+            })
+    }
+
+    proptest! {
+        #[test]
+        fn eight_segments_split_the_daytime_and_the_three_marked_ones_differ(day in sun_day()) {
+            let s = day_segments(&day);
+            prop_assert_eq!(s.eighths.len(), 8);
+            prop_assert_eq!(s.eighths[0].start_jd_ut, day.sunrise_jd_ut);
+            prop_assert_eq!(s.eighths[7].end_jd_ut, day.sunset_jd_ut);
+            for w in s.eighths.windows(2) {
+                prop_assert_eq!(w[0].end_jd_ut, w[1].start_jd_ut);
+                prop_assert!(w[0].start_jd_ut < w[0].end_jd_ut);
+            }
+            let marked = [s.rahu, s.yamaganda, s.gulika];
+            for m in marked {
+                prop_assert_eq!(m, s.eighths[usize::from(m.value) - 1]);
+            }
+            prop_assert!(marked[0].value != marked[1].value);
+            prop_assert!(marked[1].value != marked[2].value);
+            prop_assert!(marked[0].value != marked[2].value);
+            // Abhijit gündüzün tam ortasını içerir ve on beşte biri kadar sürer.
+            let noon = 0.5 * (day.sunrise_jd_ut + day.sunset_jd_ut);
+            prop_assert!(s.abhijit.contains(noon));
+            let daylight = day.sunset_jd_ut - day.sunrise_jd_ut;
+            prop_assert!((s.abhijit.days() - daylight / 15.0).abs() < 1e-9);
+            prop_assert_eq!(s.abhijit_weekday_exception, day.vara == Vara::Wednesday);
+        }
+
+        #[test]
+        fn twenty_four_horas_split_the_day_and_start_with_the_day_lord(day in sun_day()) {
+            let s = day_segments(&day);
+            prop_assert_eq!(s.horas.len(), 24);
+            prop_assert_eq!(s.horas[0].start_jd_ut, day.sunrise_jd_ut);
+            prop_assert_eq!(s.horas[23].end_jd_ut, day.next_sunrise_jd_ut);
+            prop_assert_eq!(s.horas[0].value, vara_lord(day.vara));
+            let length = (day.next_sunrise_jd_ut - day.sunrise_jd_ut) / 24.0;
+            for (k, h) in s.horas.iter().enumerate() {
+                prop_assert!((h.days() - length).abs() < 1e-9);
+                if k > 0 {
+                    prop_assert_eq!(s.horas[k - 1].end_jd_ut, h.start_jd_ut);
+                }
+                // Yedi saatte bir aynı lord.
+                if k >= 7 {
+                    prop_assert_eq!(h.value, s.horas[k - 7].value);
+                }
+            }
+        }
+    }
+}

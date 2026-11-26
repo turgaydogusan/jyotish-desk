@@ -6,7 +6,7 @@
 //! (Alt proje 3.1): `positions` (ortak girdi), `lordship`, `nature` ve `drishti`. Jaimini
 //! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`. Shadbala ve Bhava bala
 //! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`. Uyum (Alt proje 3.6): `kuta`.
-//! Muhurta (Alt proje 3.7): `timeline` (aralık dizileri).
+//! Muhurta (Alt proje 3.7): `timeline` (aralık dizileri) ve `muhurta` (gün panchangı, arama).
 
 pub mod ashtakavarga;
 mod chart;
@@ -22,6 +22,7 @@ mod houses;
 pub mod jaimini;
 pub mod kuta;
 pub mod lordship;
+pub mod muhurta;
 pub mod nature;
 pub mod panchang;
 pub mod positions;
@@ -71,6 +72,10 @@ pub use kuta::{
     KutaScore, MoonDayChange, MoonPoint, OverlayRow, KUTA_METHOD, KUTA_TOTAL_MAX,
 };
 pub use lordship::{house_lord, house_sign, houses_owned};
+pub use muhurta::{
+    chandra_bala, day_segments, nakshatra_nature, tara_bala, tithi_group, ChandraBala, DaySegments,
+    MuhurtaFlag, NakshatraNature, NatalMoon, TaraBala, TithiGroup, MUHURTA_METHOD,
+};
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};
 pub use panchang::{
     compute_panchang, elongation, karana_name, karana_no, local_weekday, nitya_yoga_no, paksha,

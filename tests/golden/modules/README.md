@@ -54,6 +54,7 @@ doğum anı ve 365,25 günlük yıl kullanır, tarihleri el yıllarının biriki
 | `shadbala` | `grahas` (yedi graha: sthana balanın beş kalemi ve `sthana`, `dig`, zaman gücünün sekiz kalemi ve `temporal`, `cheshta`, `naisargika`, `drik`, `total`, `rank`, `war`), `time_lords`, `bhavas` (on iki bhava: `house`, `lord`, `lord_bala`, `dig`, `drishti`, `total`, `rank`); saat bilinmiyorsa `expected` `null` | 4 |
 | `yogas` | `hits` (raporun bütün kayıtları, katalog sırasıyla: `id`, `grahas`, `houses`, `relations`, `conditions`), `absent` (bu örneğin "oluşmayan durum" olarak gösterdiği kurallar), `cancelled` (iptal örnekleri), `evaluated`, `skipped_time_unknown` | 15 |
 | `kuta` | `scores` (sekiz kuta, tablo sırasıyla: `kuta`, `score`, `groom_class`, `bride_class`), `total`, `bhakoot_exception`, `nadi_exception`, `kuja_dosha` (`[damat rolü, gelin rolü]`), `overlay` (`groom` ve `bride`: dokuzar satır `[diğer tarafın lagnasından ev ya da null, Ay'ından ev]`), `approximate` | 8 |
+| `muhurta` | `eighth_min`, `rahu`, `yamaganda`, `gulika` (`segment`, `from_min`, `to_min`), `abhijit` (`from_min`, `to_min`), `abhijit_weekday_exception`, `hora_min`, `hora_lords` (24), `tithi_group`, `nakshatra_nature`, `tara` (`number`, `favourable`), `chandra` (`house`, `favourable`) | 7 |
 
 Shadbala örnekleri çalışma kâğıdıdır (tasarım belgesi §7 "Test"): `shadbala/WORKSHEET.md` her
 kalemin aritmetiğini adım adım yazar, JSON dosyaları aynı girdiyi ve sonuçları taşır. Tolerans
@@ -77,5 +78,16 @@ istisnanın (var ve yok), vashyanın bölünen iki burcunun dört yarısının v
 haritanın iki rolde de örneklerde bulunduğunu sabitler. Okuma kuralları, motorun üç puan tablosu,
 tabloların basılı kaynaklarla karşılaştırma kaydı ve bağımsız gözden geçirmenin kaydı
 `kuta/REVIEW.md`'dedir.
+
+Muhurta örnekleri (tasarım belgesi §10 "Test") konum ve graha taşımaz: girdileri sentetik bir
+gündür. `input.day` gün doğumunu, gün batımını ve sonraki gün doğumunu dakika olarak (aynı gece
+yarısından) ve varayı; `input.tithi` günün tithisini (1–30); `input.moon` günün Ay'ını;
+`input.natal` doğum Ay'ını (ikisi de `nakshatra` ve `sign`) verir. Diğer modüllerin `lagna_lon` ve
+`grahas` alanları bu örneklerde yazılmaz. Beklenen saatler de dakikadır. Ayrı bir test örneklerin
+yedi varanın her birini, beş tithi grubunu, yedi nakshatra doğasını, elverişli ve elverişsiz tara
+ile chandra balayı, Çarşamba istisnasını ve 59, 60 ve 61 dakikalık horaları kapsadığını, ve
+tasarım belgesinin örneğinin (06:00–18:00 Pazartesi) aralarında bulunduğunu sabitler. Okuma
+kuralları, motorun tabloları, sahibin onayını bekleyen varyant noktaları ve bağımsız gözden
+geçirmenin kaydı `muhurta/REVIEW.md`'dedir.
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.
