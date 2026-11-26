@@ -434,3 +434,77 @@ test("jaimini panels: karakas, arudha padas and argala come from one command; ch
   await expect(arudha).toBeVisible();
   expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
 });
+
+test("chara dasha: the system selector in the dasha tree and strip; each system keeps its own open path; the strip marks the period Rust names", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+Digit2");
+  const panel = page.getByRole("region", { name: "Dasa ağacı" });
+  const tree = panel.getByRole("tree", { name: "Dasa ağacı" });
+  await expect(tree.getByRole("treeitem")).toHaveCount(9);
+  // Chara dasha seçilmeden istenmez (ileri modüller spec'i K1).
+  expect(await ipcCalls(page, "compute_chara_dasha")).toHaveLength(0);
+
+  const system = panel.getByRole("combobox", { name: "Sistem" });
+  await expect(system.locator("option:checked")).toHaveText("Vimshottari");
+  await system.selectOption("chara");
+  await expect(panel.getByText("Yön: geri")).toBeVisible();
+  await expect(panel.getByText("Yıllar: İki 6 · Boğ 6 · Koç 10 · Bal 11 · Kov 10 · Oğl 9 · Yay 4 · Akr 3 · Ter 1 · Baş 9 · Asl 8 · Yen 9")).toBeVisible();
+  await expect(tree.getByRole("treeitem")).toHaveCount(20);
+  await expect(tree.getByRole("treeitem").first()).toHaveAccessibleName("İki, 2000-01-01 – 2006-01-01");
+  await expect(tree.getByRole("treeitem", { name: /^2\. İki, / })).toBeVisible();
+  const computed = (await ipcCalls(page, "compute_chara_dasha")) as { input: { jd_ut: number; time_known: boolean; settings: { schema_version: number } } }[];
+  expect(computed).toHaveLength(1);
+  expect(computed[0].input).toMatchObject({ jd_ut: 2451545, time_known: true, settings: { schema_version: 2 } });
+
+  // Klavye: sağ ok açar, sonra ilk alt döneme iner; 3. seviye istenerek yüklenir ve son seviyedir.
+  await tree.getByRole("treeitem").first().focus();
+  for (const key of ["ArrowRight", "ArrowRight", "ArrowRight"]) await page.keyboard.press(key);
+  await expect(tree.getByRole("treeitem", { name: /^İki–Boğ–Koç, / })).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(":focus")).toHaveAttribute("aria-level", "3");
+  await expect(page.locator(":focus")).not.toHaveAttribute("aria-expanded");
+  const children = (await ipcCalls(page, "chara_dasha_children")) as { path: string[]; cycle: number }[];
+  expect(children.map((c) => [c.path, c.cycle])).toEqual([[["Gemini", "Taurus"], 1]]);
+
+  // Açık dal sistem başına ayrı kaydedilir; sistem panelin ayarıdır.
+  await expect
+    .poll(async () => {
+      const saved = (await ipcCalls(page, "save_view_state")).at(-1) as
+        | { viewState: { dasha_expanded_path: string[]; chara_expanded_path: unknown; panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: Record<string, unknown> }[] }[] } } }
+        | undefined;
+      const layout = saved?.viewState.panel_layout;
+      const settings = layout?.layouts.find((l) => l.id === layout.active_layout_id)?.panels.find((p) => p.kind === "dasha_tree")?.settings;
+      return [saved?.viewState.chara_expanded_path, saved?.viewState.dasha_expanded_path, settings?.system];
+    })
+    .toEqual([{ cycle: 1, signs: ["Gemini", "Taurus"] }, [], "chara"]);
+  // Vimshottari'ye dönünce onun (kapalı) ağacı gelir; chara dashaya dönünce açık dal yerindedir.
+  await system.selectOption("vimshottari");
+  await expect(tree.getByRole("treeitem")).toHaveCount(9);
+  await system.selectOption("chara");
+  await expect(tree.getByRole("treeitem", { name: /^İki–Boğ, / })).toHaveAttribute("aria-expanded", "true");
+  await expect(tree.getByRole("treeitem", { name: /^İki–Boğ–Koç, / })).toBeVisible();
+
+  // Dasa şeridi: güncel dönem Rust'tan gelir (`chara_dasha_at`); tıklama transit anını taşır.
+  await page.keyboard.press("Meta+Digit3");
+  const strip = page.getByRole("region", { name: "Dasa şeridi" });
+  await expect(strip.getByRole("list").getByRole("button")).toHaveCount(9);
+  expect(await ipcCalls(page, "chara_dasha_at")).toHaveLength(0);
+  await strip.getByRole("combobox", { name: "Sistem" }).selectOption("chara");
+  const items = strip.getByRole("list").getByRole("button");
+  await expect(items).toHaveCount(12);
+  await expect(items.first()).toContainText("Bal–Kov");
+  const current = strip.locator('[aria-current="true"]');
+  await expect(current).toHaveCount(1);
+  await expect(current).toHaveAttribute("data-sign", "Virgo");
+  await expect(current).toContainText("transit anında");
+  const asked = (await ipcCalls(page, "chara_dasha_at")) as { jdUt: number; input: { time_known: boolean } }[];
+  expect(asked).toHaveLength(1);
+  expect(asked[0].jdUt).toBeCloseTo(2461369.9166666665, 6);
+  await strip.getByRole("combobox", { name: "Seviye" }).selectOption("maha");
+  await expect(items).toHaveCount(20);
+  await expect(strip.locator('[aria-current="true"]')).toHaveAttribute("data-sign", "Pisces");
+  await items.first().click();
+  await expect.poll(async () => JSON.stringify((await ipcCalls(page, "transits_at")).at(-1))).toContain('"Jd":2451545');
+});

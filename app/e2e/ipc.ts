@@ -98,6 +98,16 @@ export async function mockIpc(page: Page, { session, unknownTime = false }: IpcO
         // Jaimini raporu: fikstürdeki gerçek sonuç; saat bilinmiyorsa Rust padaları boş döner.
         compute_jaimini: (args) =>
           (args.input as { time_known: boolean }).time_known ? fixture.jaimini : { ...fixture.jaimini, arudhas: null },
+        // Chara dasha: fikstürdeki gerçek sonuç; saat bilinmiyorsa Rust `null` döner. 3. seviye
+        // yalnızca fikstürde bulunan iki yol için vardır; transit anının yolu sabittir.
+        compute_chara_dasha: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.chara_dasha : null),
+        chara_dasha_children: (args) => {
+          const asked = JSON.stringify([args.cycle, args.path]);
+          if (asked === JSON.stringify([fixture.chara_dasha_children.cycle, fixture.chara_dasha_children.path])) return fixture.chara_dasha_children.periods;
+          if (asked === JSON.stringify([fixture.chara_dasha_at.cycle, fixture.chara_dasha_at.signs.slice(0, 2)])) return fixture.chara_dasha_at_children;
+          return [];
+        },
+        chara_dasha_at: () => fixture.chara_dasha_at,
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.
         app_info: () => ({ version: "0.9.0", updaterConfigured: true }),
