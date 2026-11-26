@@ -19,16 +19,17 @@ Değişmeyen kurallar (v1 spec ve UI spec'ten taşınır):
 Her karar gerekçesiyle kayıtlıdır; alt projelerin hepsini bağlar.
 
 - **K1 — Modüller `Chart`'a eklenmez, istek üzerine hesaplanır.** `Chart` ve `open_client` değişmez; her modülün kendi komutu vardır ve panel açıkken çağrılır. Gerekçe: `open_client` bütçesi (Rust ≤ 50 ms) korunur, kullanılmayan modül hesaplanmaz, modül sürümleri ayrı ilerler.
-- **K2 — Ortak girdi `ChartInput { jd_ut, lat, lon, settings, time_known }`.** `compute_chart` ile aynı alanlar, artı `time_known`. Doğum saati bilinmiyorsa lagnaya bağlı her çıktı `None` döner; arayüzün gizlemesine güvenilmez. Gerekçe: aynı veriyi AI paneli ve baskı da okuyacak; gizleme tek yerde olmalı.
-- **K3 — Saf çekirdek, ince toplayıcı.** Her modülün hesap fonksiyonu ephemeris görmeyen düz bir girdi alır (`Positions { lagna_lon: Option<f64>, grahas: [GrahaPoint; 9] }`, `GrahaPoint { graha, sidereal_lon, lat, speed }`; `From<&Chart>` ile üretilir). Zamana bağlı modüller (Shadbala, Muhurta) gereken astronomik değerleri ayrı bir toplayıcı fonksiyonla alır ve saf fonksiyona verir. Gerekçe: el hesabı fixture'ları ephemeris olmadan yazılabilir (§13).
+- **K2 — Ortak girdi `ChartInput { jd_ut, lat, lon, settings, time_known }`.** `compute_chart` ile aynı alanlar, artı `time_known`. Doğum saati bilinmiyorsa lagnaya bağlı her çıktı `None` döner; arayüzün gizlemesine güvenilmez. Gerekçe: aynı veriyi AI paneli ve baskı da okuyacak; gizleme tek yerde olmalı. İstisna: verisini v1'den beri `Chart`'tan okuyan paneller (3.1'in Panchang ve Ashtakavarga panelleri). K1 `Chart`'ı dondurduğu için bu ikisinde "saat bilinmiyor" davranışı v1 panellerindeki gibi arayüzde uygulanır (§4).
+- **K3 — Saf çekirdek, ince toplayıcı.** Her modülün hesap fonksiyonu ephemeris görmeyen düz bir girdi alır (`Positions` ve `GrahaPoint`; tam tanım §4'tedir ve esas olan odur. `lagna_lon` sidereal boylamdır; `lagna_sign` ve `rasi_sign` rasi çerçevesindedir (K5). `compute_positions(eph, &ChartInput)` ya da `From<&Chart>` ile üretilir; el örnekleri için ephemeris görmeyen `Positions::synthetic` vardır). Zamana bağlı modüller (Shadbala, Muhurta) gereken astronomik değerleri ayrı bir toplayıcı fonksiyonla alır ve saf fonksiyona verir. Gerekçe: el hesabı fixture'ları ephemeris olmadan yazılabilir (§13).
 - **K4 — Evler rasi evidir.** Aksi yazmadıkça "ev" lagna burcundan sayılan bütün burç evidir; `CalcSettings.house_system` yalnızca v1'deki bhava tablosunu etkiler. Gerekçe: yoga, arudha, argala ve kuta kuralları klasik kaynaklarda burç sayımıyla tanımlıdır; ev sistemi ayarıyla sessizce değişen yoga listesi hata kaynağıdır.
 - **K5 — Rasi çerçevesi `settings.zodiac`'ı izler.** Burca dayalı her kural haritanın rasi çerçevesindeki burçları kullanır (v1'deki dignity ve varga ile aynı); nakshatraya dayalı kurallar sidereal boylamı kullanır.
-- **K6 — Doğal iyicil/kötücül sınıfı tek fonksiyondur.** `nature(graha, positions) -> Benefic | Malefic`: Jüpiter ve Venüs iyicil; Güneş, Mars, Satürn, Rahu, Ketu kötücül; Ay büyürken (Güneş'ten uzanım 0°–180°) iyicil, küçülürken kötücül; Merkür aynı burçta kötücül varsa ve iyicil yoksa kötücül, değilse iyicil (BPHS, graha nitelikleri bölümü). Modüller kendi listesini tutmaz.
-- **K7 — Ayarlar: `CalcSettings` şema sürümü 2.** `advanced: AdvancedSettings` alt yapısı eklenir; tüm alanları varsayılanlıdır ve bilinmeyen anahtarlar yok sayılır. Sürüm 1 → 2 göçü varsayılanları yazar. Yalnızca en az iki uygulanmış seçeneği olan kararlar ayar olur: `karaka_scheme {Eight, Seven}` ve `jaimini_co_lords: bool`. Tek seçenekli yöntemler ayar değildir; her modül sonucu `method` kimliği taşır (ör. `"chara_dasha.padakrama_v1"`), baskı ve AI paneli hangi yöntemin kullanıldığını buradan söyler. Fark rozeti `advanced` alanlarını da kapsar.
+- **K6 — Doğal iyicil/kötücül sınıfı tek fonksiyondur.** `nature(graha, positions) -> Benefic | Malefic`: Jüpiter ve Venüs iyicil; Güneş, Mars, Satürn, Rahu, Ketu kötücül; Ay büyürken (Güneş'ten uzanım `[0°, 180°)`; tam 180° küçülen yarıdadır, v1 `paksha` sınırıyla aynı) iyicil, küçülürken kötücül; Merkür aynı burçta kötücül varsa ve iyicil yoksa kötücül, değilse iyicil (BPHS, graha nitelikleri bölümü). Modüller kendi listesini tutmaz.
+- **K7 — Ayarlar: `CalcSettings` şema sürümü 2.** `advanced: AdvancedSettings` alt yapısı eklenir. Alanlar ve göç 3.1'de tanımlanır; hesapta kullanımları ve ayar penceresindeki denetimleri 3.2 ve 3.3'tedir. Tolerans saklanan kaydın okunmasındadır (`store`): eksik `advanced` anahtarları varsayılanla dolar, bilinmeyen anahtarlar yok sayılır ve kayıtta durur. IPC tipinde alanlar zorunludur (`serde(default)` yoktur); tanınmayan bir seçenek değeri kaydı okunamaz kılar ve ayar genel varsayılana döner (uyarıyla). Sürüm 1 → 2 göçü varsayılanları yazar. Yalnızca en az iki uygulanmış seçeneği olan kararlar ayar olur: `karaka_scheme {Eight, Seven}` ve `jaimini_co_lords: bool`. Tek seçenekli yöntemler ayar değildir; her modül sonucu `method` kimliği taşır (ör. `"chara_dasha.padakrama_v1"`), baskı ve AI paneli hangi yöntemin kullanıldığını buradan söyler. Fark rozeti `advanced` alanlarını da kapsar.
 - **K8 — Hata ve uyarı.** Yeni hatalar `CoreError` → `{code, params}` yolunu izler; parametreler danışan verisi taşımaz. Ölümcül olmayan durumlar modül sonucunun `warnings` alanındadır.
 - **K9 — Başka yazılım çıktısı fixture olmaz.** Bu modüllerde referans değerler klasik kuraldan elle türetilir (§13). Gerekçe: clean-room; ayrıca bu teknikler yazılımdan yazılıma varyant farkı taşır, başka programla aynı sonucu vermek doğruluk ölçütü değildir.
 - **K10 — Baskı düzeni eklenmez.** Dört baskı düzeni (UI spec §7) değişmez. Modül baskıları ayrı bir işin konusudur.
 - **K11 — Panel dili.** Klasik terimler üç dilde aynı transliterasyonla yazılır, yanında kısa çeviri etiketi olabilir ("Uccha bala · yücelme gücü"). Etiket bir addır, yorum değildir.
+- **K12 — Modül panelleri paletten eklenir ve çıkarılır.** Her modül paneli için komut paletinde "… panelini aç/kapat" komutu vardır (yalnızca harita açıkken). Panel etkin düzenin altına, sola, kendi varsayılan boyutuyla eklenir ve odak ona geçer; aynı komut paneli çıkarır, odak gövdeye düşmez. Hazır düzenlere modül paneli eklenmez; kısayol atanmaz. Her alt proje panelini `MODULE_PANELS` listesine ekler. Gerekçe: v1'de panel ekleme yüzeyi yoktur (yalnızca notlar için `⌘⇧N`); genel bir panel kataloğu beta geri bildirimine bırakılmıştır.
 
 ## 3. Alt projeler, sıra ve bağımlılıklar
 
@@ -106,17 +107,17 @@ Komut: `compute_drishti(input: ChartInput) -> DrishtiTable`. Sonraki alt projele
 | Panel | `kind` | Ayarlar | İçerik |
 |---|---|---|---|
 | Panchang | `panchang` | — | Doğum anının tithi (paksha ile), vara, nakshatra ve pada, nitya yoga, karana; her birinin bitiş saati; gün doğumu ve batımı. Gün doğumu yoksa mevcut uyarı rozeti. |
-| Ashtakavarga | `ashtakavarga` | görünüm (SAV / tek graha BAV), biçim (tablo / harita içi) | 12 burç × 8 satır tablo; satır ve sütun toplamları. |
+| Ashtakavarga | `ashtakavarga` | görünüm (SAV / tek graha BAV), biçim (tablo / harita içi) | 12 burç × 8 satır tablo: yedi graha BAV'ı ve SAV satırı. Sütun toplamı SAV satırıdır (Rust'tan gelir); satır toplamı gösterilen hücrelerin toplamıdır (gösterim). "Tek graha BAV" görünümü o grahanın tek satırıdır (katkı dökümü değil). Doğum saati bilinmiyorsa tablo gösterilmez (bindular lagnaya da bağlıdır). |
 | Bakışlar | `drishti` | tür (graha / rashi — rashi 3.2 ile gelir), değer (tam bakış işareti / virupa) | Bakan × bakılan matrisi. Tam bakış `●`, kısmi değer sayı olarak; renk yoktur. |
 
-Üç panel de ortak seçimle bağlıdır (UI spec §3.4): bir graha ya da burç vurgulanınca ilgili satır ve sütun `--select` zemin alır. Retro her yerde düz `R`'dir ve Rahu ile Ketu'da gösterilmez.
+Üç panel de ortak seçimle bağlıdır (UI spec §3.4): bir graha ya da burç vurgulanınca ilgili satır ve sütun `--select` zemin ve yazı ağırlığı alır; "harita içi" kutu ayrıca çerçeveyle seçilir (renk tek başına anlam taşımaz). Bu üç panel retro göstermez; "retro her yerde düz `R`'dir ve Rahu ile Ketu'da gösterilmez" kuralı v1 panellerinde olduğu gibi sürer.
 
 ### Test
 
 - Sphuta drishti: tablo sınır noktalarında süreklilik; tam noktalarda beklenen değerler (60° → 15, 90° → 45, 120° → 30, 180° → 60, 210° → 45, 240° → 30, 270° → 15); özel bakışlarla 60. Property: değer her zaman [0, 60].
 - Burç bakışı: her graha için hedef burç kümesi el tablosuyla birebir; 7. bakış simetrik.
 - Göç: sürüm 1 ayar JSON'u sürüm 2'ye varsayılanlarla taşınır; bilinmeyen `advanced` anahtarı açılışı engellemez.
-- Paneller: boş, yükleniyor, hata, dolu ve "saat bilinmiyor" durumları (UI spec §8).
+- Paneller: boş, dolu ve "saat bilinmiyor" durumları (UI spec §8); "yükleniyor" ve "hata" durumları yalnızca komut çağıran Bakışlar panelindedir (Panchang ve Ashtakavarga `Chart`'tan okur). "Yeniden dene" hata kutusunu değiştirirken odak panelde durur.
 
 ### Gizlilik, performans, kapsam dışı
 
@@ -213,7 +214,7 @@ Argala lagnaya bağlı değildir (referans burçtur), bu yüzden doğum saati bi
 
 ### Gizlilik, performans, kapsam dışı
 
-- Gizlilik: §14. Yeni kalıcı veri: yalnızca iki ayar alanı.
+- Gizlilik: §14. Yeni kalıcı veri yok; 3.1'de tanımlanan iki ayar alanı (`karaka_scheme`, `jaimini_co_lords`) kullanılır.
 - Performans: ≤ 10 ms.
 - Kapsam dışı: graha arudhaları, karaka birleşmesi, Ketu için ters argala, güçle hükmedilen argala, Jaimini rasi güç sıralamasının tamamı, sthira karaka şeması, pada lagnaları dışındaki özel lagnalar (hora, ghati, bhava lagna).
 

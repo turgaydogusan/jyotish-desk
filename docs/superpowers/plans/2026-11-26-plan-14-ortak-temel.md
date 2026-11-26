@@ -65,6 +65,7 @@ Sahibi kararları devretti; muhafazakâr seçenek seçildi ve her karar bir sat�
   | Task 7 | | | | | 64 / 556 | |
   | Task 8 | | | | | 65 / 565 | |
   | Task 9 | | | | | | 13 |
+  | Son inceleme düzeltmeleri | 139 | | | | 65 / 571 | |
 
   Değişmeyenler: `jyotish-core` golden 8; `jyotish-desk` lib 46, `bindings` 1, `compute_chart` 1, `open_client` 1, `ui_fixture` 2; görsel 10; yayın betiği testleri 14.
 - **Taşınan kurallar (Plan 09 C1–C14, Plan 10 C2′, C15–C17), her görevin gereksinimidir:**
@@ -6274,7 +6275,7 @@ cargo deny check 2>&1 | tail -1
 PATH="$HOME/.rustup/toolchains/1.93-aarch64-apple-darwin/bin:$PATH" cargo check -p jyotish-core -p store -p jyotish-desk --all-targets 2>&1 | tail -1
 git diff cd95efe..HEAD --stat -- deny.toml Cargo.toml Cargo.lock app/package.json app/pnpm-lock.yaml app/src-tauri/capabilities app/src-tauri/tauri.conf.json crates/store/src/schema.rs
 ```
-Expected: fmt ve clippy çıktısız; testler: `jyotish-core` lib `138 passed`, golden `8 passed`, `modules_golden` `3 passed`; `store` lib `84 passed; 0 failed; 1 ignored`; `jyotish-desk` lib `46 passed`, `bindings` `1 passed`, `compute_chart` `1 passed`, `modules` `1 passed`, `open_client` `1 passed`, `ui_fixture` `2 passed`; `compute_drishti median` 10 ms'nin altında; deny `advisories ok, bans ok, licenses ok, sources ok`; MSRV `Finished`; son `git diff --stat` çıktısız (bağımlılık, yetenek, yapılandırma ve SQLite şeması değişmedi).
+Expected: fmt ve clippy çıktısız; testler: `jyotish-core` lib `139 passed` (son inceleme düzeltmeleriyle; Task 9 sonunda 138), golden `8 passed`, `modules_golden` `3 passed`; `store` lib `84 passed; 0 failed; 1 ignored`; `jyotish-desk` lib `46 passed`, `bindings` `1 passed`, `compute_chart` `1 passed`, `modules` `1 passed`, `open_client` `1 passed`, `ui_fixture` `2 passed`; `compute_drishti median` 10 ms'nin altında; deny `advisories ok, bans ok, licenses ok, sources ok`; MSRV `Finished`; son `git diff --stat` çıktısız (bağımlılık, yetenek, yapılandırma ve SQLite şeması değişmedi).
 
 - [ ] **Step 2: Arayüz kapıları**
 
@@ -6287,7 +6288,7 @@ rm -rf app/test-results
 node --test "scripts/release/*.test.mjs" 2>&1 | grep -E "ℹ (pass|fail)"
 git status --short
 ```
-Expected: `Test Files  65 passed (65)`, `Tests  565 passed (565)`; `✓ built`; e2e `13 passed`; görsel `10 passed` (temel PNG'ler değişmedi: D14); betik testleri `pass 14`, `fail 0`; `git status --short` boş.
+Expected: `Test Files  65 passed (65)`, `Tests  571 passed (571)` (son inceleme düzeltmeleriyle; Task 9 sonunda 565); `✓ built`; e2e `13 passed`; görsel `10 passed` (temel PNG'ler değişmedi: D14); betik testleri `pass 14`, `fail 0`; `git status --short` boş.
 
 - [ ] **Step 3: Kural taramaları (`cd95efe`'den bu yana)**
 
@@ -6335,7 +6336,7 @@ Spec §13: "`derivation` ayrı bir gözden geçirmede kuraldan yeniden hesaplan�
 - `jyotish-core` ortak temeli verir: `ChartInput`, `Positions`, `compute_positions`, ev lordluğu, doğal sınıf, Kuja dosha, burç temelli tam bakış ve sphuta drishti. Hepsi el örnekleri (10 dosya, kaynak `hand`), birim testleri ve proptest değişmezleriyle doğrulanır; doğum saati bilinmiyorsa lagnaya bağlı çıktılar `None`'dır.
 - `compute_drishti` ortak kalıpla çalışır (tek `ChartInput`, motor iş parçacığı, `blocking`, `CommandError`), v1 haritasıyla çapraz denetlenir ve bütçesinin (≤ 10 ms) içindedir.
 - Üç panel (Panchang, Ashtakavarga, Bakışlar) paletten etkin düzene eklenir ve kaldırılır; ortak seçime bağlıdır; boş, yükleniyor, hata, dolu ve "saat bilinmiyor" durumları testlidir; renk tek başına anlam taşımaz; yorum metni yoktur.
-- Kapılar: `jyotish-core` lib 138, `modules_golden` 3, `store` lib 84, `jyotish-desk` `modules` 1; Vitest 65/565; e2e 13; görsel 10; `cargo deny` temiz; diğer sayılar tabandaki gibi. Elle denetim kapısının **[otomatik]** maddeleri testlerle doğrulanmış, **[insan]** maddeleri yapılmış ya da sahibine devredilmiştir.
+- Kapılar: `jyotish-core` lib 139, `modules_golden` 3, `store` lib 84, `jyotish-desk` `modules` 1; Vitest 65/571 (son inceleme düzeltmeleri öncesinde 138 ve 565); e2e 13; görsel 10; `cargo deny` temiz; diğer sayılar tabandaki gibi. Elle denetim kapısının **[otomatik]** maddeleri testlerle doğrulanmış, **[insan]** maddeleri yapılmış ya da sahibine devredilmiştir.
 
 ## Bu planın kapsamadıkları
 
@@ -6351,7 +6352,7 @@ Spec §13: "`derivation` ayrı bir gözden geçirmede kuraldan yeniden hesaplan�
 
 ## Spec'e geri bildirim (spec boşlukları)
 
-Plan yazılırken bulunan ve Kararlar'da çözülen spec boşlukları. Denetleyici bunları `2026-11-26-alt-proje-3-ileri-moduller-design.md`'ye işler; bu plan o düzeltmeleri beklemez.
+Plan yazılırken bulunan ve Kararlar'da çözülen spec boşlukları. Dokuz madde son incelemede `2026-11-26-alt-proje-3-ileri-moduller-design.md`'ye işlenmiştir (K2, K3, K6, K7, yeni K12, §4 ve §5).
 
 1. **K7 / §4 / §5 — `advanced` alanlarının hangi alt projede tanımlandığı.** §4 "sürüm 1 → 2 göçü varsayılanları yazar" der, §5 iki alanı 3.2'nin "yeni kalıcı verisi" sayar. Çözüm (D1): alanlar ve göç 3.1'de; tüketim ve ayar penceresi 3.2'de. §5'in "Gizlilik" satırı "yeni kalıcı veri yok; 3.1'de tanımlanan iki ayar alanı kullanılır" olmalı.
 2. **K7 — toleransın yeri.** "Tüm alanları varsayılanlıdır ve bilinmeyen anahtarlar yok sayılır" cümlesi IPC tipi için değil saklanan kaydın okunması için geçerlidir (D2). Spec, toleransın `store` okuma yolunda olduğunu, IPC'de alanların zorunlu olduğunu ve tanınmayan seçenek değerinin ayarı sıfırladığını yazmalı.
