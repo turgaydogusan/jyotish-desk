@@ -91,6 +91,17 @@ export const tr = {
       Saturday: "Cumartesi",
     },
   },
+  ashtakavarga: {
+    view: "Görünüm",
+    format: "Biçim",
+    sav: "SAV",
+    bavOf: "{{graha}} BAV",
+    formats: { table: "Tablo", chart: "Harita içi" },
+    total: "Toplam",
+    caption: "Ashtakavarga, {{view}}: burç başına bindu",
+    totalOf: "{{view}} toplamı {{total}}",
+    timeUnknown: "Doğum saati bilinmiyor: ashtakavarga lagnaya da bağlı olduğu için gösterilmiyor.",
+  },
   table: {
     graha: "Graha",
     sign: "Burç",

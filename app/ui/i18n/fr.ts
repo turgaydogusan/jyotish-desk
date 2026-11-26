@@ -92,6 +92,17 @@ export const fr: Messages = {
       Saturday: "samedi",
     },
   },
+  ashtakavarga: {
+    view: "Vue",
+    format: "Format",
+    sav: "SAV",
+    bavOf: "BAV de {{graha}}",
+    formats: { table: "Tableau", chart: "Dans la carte" },
+    total: "Total",
+    caption: "Ashtakavarga, {{view}} : bindus par signe",
+    totalOf: "Total {{view}} : {{total}}",
+    timeUnknown: "Heure de naissance inconnue : l'ashtakavarga dépend aussi du lagna et n'est pas affiché.",
+  },
   table: {
     graha: "Graha",
     sign: "Signe",

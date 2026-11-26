@@ -92,6 +92,17 @@ export const en: Messages = {
       Saturday: "Saturday",
     },
   },
+  ashtakavarga: {
+    view: "View",
+    format: "Format",
+    sav: "SAV",
+    bavOf: "{{graha}} BAV",
+    formats: { table: "Table", chart: "In chart" },
+    total: "Total",
+    caption: "Ashtakavarga, {{view}}: bindus per sign",
+    totalOf: "{{view}} total {{total}}",
+    timeUnknown: "Birth time unknown: ashtakavarga also depends on the lagna and is not shown.",
+  },
   table: {
     graha: "Graha",
     sign: "Sign",

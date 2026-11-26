@@ -3,6 +3,7 @@ import { DashaStripPanel } from "../dasha/DashaStripPanel";
 import { DashaTreePanel } from "../dasha/DashaTreePanel";
 import { isKnownPanelKind, type KnownPanelKind } from "../layout/model";
 import { NotesPanel } from "../notes/NotesPanel";
+import { AshtakavargaPanel } from "./AshtakavargaPanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
@@ -21,7 +22,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   birth_info: { titleKey: "panel.birth_info", component: BirthInfoPanel },
   // İleri modül panelleri (Plan 14).
   panchang: { titleKey: "panel.panchang", component: PanchangPanel },
-  ashtakavarga: { titleKey: "panel.ashtakavarga", component: UnavailablePanel },
+  ashtakavarga: { titleKey: "panel.ashtakavarga", component: AshtakavargaPanel },
   drishti: { titleKey: "panel.drishti", component: UnavailablePanel },
 };
 
