@@ -357,6 +357,7 @@ export const en: Messages = {
       secondCycle: "2. {{name}}",
       timeUnknown: "Birth time unknown: chara dasha depends on the lagna and is not computed.",
       method: "Method: {{method}}",
+      outside: "The transit moment is outside the chara dasha periods.",
     },
     strip: {
       level: "Level",

@@ -117,9 +117,17 @@ fn ui_fixture_is_up_to_date() {
     let chara_children =
         chara_dasha_children_blocking(&engine, module_input.clone(), chara_path.clone(), 1)
             .expect("chara dasha children");
-    let chara_at = chara_dasha_at_blocking(&engine, module_input, transit.snapshot.jd_ut)
+    let chara_at = chara_dasha_at_blocking(&engine, module_input.clone(), transit.snapshot.jd_ut)
         .expect("chara dasha at")
         .expect("inside the produced span");
+    // Transit anındaki alt dönemin 3. seviyesi: dasa şeridinin "pratyantar" görünümü.
+    let chara_at_children = chara_dasha_children_blocking(
+        &engine,
+        module_input,
+        chara_at.signs[..2].to_vec(),
+        chara_at.cycle,
+    )
+    .expect("chara dasha children at the transit moment");
     // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
     assert_eq!(opened.chart_record.birth, delhi());
     let prefs = store
@@ -140,6 +148,7 @@ fn ui_fixture_is_up_to_date() {
         "chara_dasha": chara_dasha,
         "chara_dasha_children": { "path": chara_path, "cycle": 1, "periods": chara_children },
         "chara_dasha_at": chara_at,
+        "chara_dasha_at_children": chara_at_children,
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")

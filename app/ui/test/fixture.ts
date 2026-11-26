@@ -40,6 +40,8 @@ export interface UiFixture {
   chara_dasha_children: { path: Sign[]; cycle: number; periods: SignDashaPeriod[] };
   /** `chara_dasha_at`, fikstürdeki transit anı için (`transit.snapshot.jd_ut`). */
   chara_dasha_at: SignDashaPath;
+  /** `chara_dasha_children`: transit anındaki alt dönemin (`chara_dasha_at` yolunun ilk iki burcu) 3. seviyesi. */
+  chara_dasha_at_children: SignDashaPeriod[];
 }
 
 const FIXTURE = JSON.parse(raw) as UiFixture;

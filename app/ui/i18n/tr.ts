@@ -356,6 +356,7 @@ export const tr = {
       secondCycle: "2. {{name}}",
       timeUnknown: "Doğum saati bilinmiyor: chara dasha lagnaya bağlıdır ve hesaplanmaz.",
       method: "Yöntem: {{method}}",
+      outside: "Transit anı chara dasha dönemlerinin dışında.",
     },
     strip: {
       level: "Seviye",
