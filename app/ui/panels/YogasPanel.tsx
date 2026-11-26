@@ -94,7 +94,9 @@ function YogaList({ report, filter, opened }: { report: YogaReport; filter: Yoga
   const { active } = useHighlight();
   const listId = useId();
   const lagna = timeUnknown(opened) ? null : signIndex(opened.chart.lagna.sign);
-  const groups = (filter === "all" ? YOGA_GROUPS : [filter])
+  // "All" follows the report: hits arrive in catalog order, so the groups in order of first
+  // appearance are the catalog's groups. A group this build has no name for is still listed.
+  const groups = (filter === "all" ? [...new Set(report.hits.map((h) => h.group))] : [filter])
     .map((group) => ({ group, hits: report.hits.filter((h) => h.group === group) }))
     .filter((g) => g.hits.length > 0);
 

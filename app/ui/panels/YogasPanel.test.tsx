@@ -5,6 +5,7 @@ vi.mock("../api", () => ({ api: { computeYogas: vi.fn() } }));
 
 import { api, type Result } from "../api";
 import type { YogaReport } from "../bindings";
+import { useHighlight } from "../highlight/store";
 import { en } from "../i18n/en";
 import { fr } from "../i18n/fr";
 import { tr } from "../i18n/tr";
@@ -233,6 +234,52 @@ test("shared highlight: a graha marks every yoga it takes part in, a house every
   fireEvent.keyDown(window, { key: "Escape" });
   fireEvent.mouseLeave(within(screen.getByRole("table", { name: "Neecha bhanga" })).getByRole("button", { name: "11. ev" }));
   expect(marked()).toEqual([]);
+});
+
+/** Pins a sign the way the chart does (the panel itself offers no sign button). */
+function PinSign({ sign }: { sign: number }) {
+  const { togglePin } = useHighlight();
+  return <button onClick={() => togglePin({ type: "sign", sign })}>pin sign</button>;
+}
+
+test("shared highlight: a sign marks the yogas that name the house it is from the lagna", async () => {
+  renderWithStores(
+    <>
+      <PinSign sign={0} />
+      <LivePanel />
+    </>,
+    { layout: LAYOUT({}), opened: fixture().opened },
+  );
+  await screen.findByRole("table", { name: "Ay yogaları" });
+  const marked = () => [...document.querySelectorAll("tr.is-highlighted")].map((r) => (r as HTMLElement).dataset.yoga);
+  // Gemini lagna: Aries is the 11th house; the same rows as the house 11 button.
+  fireEvent.click(screen.getByRole("button", { name: "pin sign" }));
+  expect(marked()).toEqual(["lunar.gajakesari", "dhana.dhana", "exchange.maha", "neecha_bhanga.neecha_bhanga", "nabhasa_count.pasha"]);
+});
+
+test("shared highlight: without a birth time a sign marks nothing (no lagna to count from)", async () => {
+  vi.mocked(api.computeYogas).mockResolvedValue(ok(fixture().yogas_time_unknown));
+  renderWithStores(
+    <>
+      <PinSign sign={0} />
+      <LivePanel />
+    </>,
+    { layout: LAYOUT({}), opened: unknownTimeOpened() },
+  );
+  await screen.findByRole("table", { name: "Ay yogaları" });
+  fireEvent.click(screen.getByRole("button", { name: "pin sign" }));
+  expect(document.querySelectorAll("tr.is-highlighted")).toHaveLength(0);
+});
+
+test("a record whose group this build does not know is still listed, never dropped", async () => {
+  const report = fixture().yogas;
+  const stray = { ...report.hits[0], id: "lunar.sunapha", group: "Future" as unknown as YogaReport["hits"][number]["group"] };
+  vi.mocked(api.computeYogas).mockResolvedValue(ok({ ...report, hits: [...report.hits, stray] }));
+  renderPanel();
+  await screen.findByRole("table", { name: "Ay yogaları" });
+  expect(document.querySelectorAll("tr[data-yoga]")).toHaveLength(report.hits.length + 1);
+  expect(tables()).toHaveLength(10);
+  expect(screen.queryByText(/Bu grupta oluşan yoga yok/)).toBeNull();
 });
 
 test("every catalog rule, group, relation and condition has a name in the three languages", () => {
