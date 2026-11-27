@@ -1,0 +1,28 @@
+{
+  "id": "magha-age-62-mercury-first",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Nakshatra sınırı: 120° tam Magha'nın (10.) başıdır.",
+    "Doğum nakshatrası: Ay 120° ÷ 13°20′ → 10. nakshatra (Magha).",
+    "İlk lord: 10 + 62 − 2 = 70 = 7 × 9 + 7: artan 7 → 7. lord Merkür.",
+    "Yıl 360 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Merkür: 51 gün; birikimli 51/360 → bitiş 51. gün.",
+    "Ketu: 21 gün; birikimli 72/360 → bitiş 72. gün.",
+    "Venüs: 60 gün; birikimli 132/360 → bitiş 132. gün.",
+    "Güneş: 18 gün; birikimli 150/360 → bitiş 150. gün.",
+    "Ay: 30 gün; birikimli 180/360 → bitiş 180. gün.",
+    "Mars: 21 gün; birikimli 201/360 → bitiş 201. gün.",
+    "Rahu: 54 gün; birikimli 255/360 → bitiş 255. gün.",
+    "Jüpiter: 48 gün; birikimli 303/360 → bitiş 303. gün.",
+    "Satürn: 57 gün; birikimli 360/360 → bitiş 360. gün."
+  ],
+  "input": {"moon_lon": 120.0, "age": 62, "year_days": 360.0},
+  "expected": {
+    "birth_nakshatra": 10,
+    "remainder": 7,
+    "first_lord": "Mercury",
+    "periods": [["Mercury", 51.0], ["Ketu", 72.0], ["Venus", 132.0], ["Sun", 150.0], ["Moon", 180.0], ["Mars", 201.0], ["Rahu", 255.0], ["Jupiter", 303.0], ["Saturn", 360.0]],
+    "first_sub_periods": null
+  }
+}

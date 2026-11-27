@@ -1,0 +1,28 @@
+{
+  "id": "rohini-age-36-moon-first",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Otuz altı yıl dört tam çevrimdir: ilk lord doğum yılındakiyle aynıdır (Rohini: Ay).",
+    "Doğum nakshatrası: Ay 45° ÷ 13°20′ → 4. nakshatra (Rohini).",
+    "İlk lord: 4 + 36 − 2 = 38 = 4 × 9 + 2: artan 2 → 2. lord Ay.",
+    "Yıl 360 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Ay: 30 gün; birikimli 30/360 → bitiş 30. gün.",
+    "Mars: 21 gün; birikimli 51/360 → bitiş 51. gün.",
+    "Rahu: 54 gün; birikimli 105/360 → bitiş 105. gün.",
+    "Jüpiter: 48 gün; birikimli 153/360 → bitiş 153. gün.",
+    "Satürn: 57 gün; birikimli 210/360 → bitiş 210. gün.",
+    "Merkür: 51 gün; birikimli 261/360 → bitiş 261. gün.",
+    "Ketu: 21 gün; birikimli 282/360 → bitiş 282. gün.",
+    "Venüs: 60 gün; birikimli 342/360 → bitiş 342. gün.",
+    "Güneş: 18 gün; birikimli 360/360 → bitiş 360. gün."
+  ],
+  "input": {"moon_lon": 45.0, "age": 36, "year_days": 360.0},
+  "expected": {
+    "birth_nakshatra": 4,
+    "remainder": 2,
+    "first_lord": "Moon",
+    "periods": [["Moon", 30.0], ["Mars", 51.0], ["Rahu", 105.0], ["Jupiter", 153.0], ["Saturn", 210.0], ["Mercury", 261.0], ["Ketu", 282.0], ["Venus", 342.0], ["Sun", 360.0]],
+    "first_sub_periods": null
+  }
+}

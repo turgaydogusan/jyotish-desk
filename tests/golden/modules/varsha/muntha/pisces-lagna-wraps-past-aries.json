@@ -1,0 +1,24 @@
+{
+  "id": "pisces-lagna-wraps-past-aries",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: muntha (alıntı yapılmaz); okuma kuralları varsha/REVIEW.md",
+  "derivation": [
+    "Sayım Balık'tan Koç'a döner: 26 yıl iki tam tur ve iki burçtur.",
+    "Doğum lagnası 345,5° ÷ 30° → 12. burç (Balık). Yıllık lagna 100° ÷ 30° → 4. burç (Yengeç).",
+    "Tamamlanan yıl 26 = 2 × 12 + 2: muntha Balık burcundan 2 burç ötededir → Boğa.",
+    "Muntha lordu: Boğa burcunun lordu Venüs.",
+    "Evler: Boğa, Balık burcundan sayınca 3. ev; Yengeç burcundan sayınca 11. ev.",
+    "Lagna lordları: yıllık lagna Yengeç → Ay; doğum lagnası Balık → Jüpiter."
+  ],
+  "input": {"natal_lagna_lon": 345.5, "annual_lagna_lon": 100.0, "age": 26},
+  "expected": {
+    "sign": "Taurus",
+    "lord": "Venus",
+    "natal_house": 3,
+    "annual_house": 11,
+    "lagna_sign": "Cancer",
+    "lagna_lord": "Moon",
+    "natal_lagna_sign": "Pisces",
+    "natal_lagna_lord": "Jupiter"
+  }
+}

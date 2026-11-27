@@ -1,0 +1,38 @@
+{
+  "id": "bharani-birth-year-remainder-zero",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Artan 0: dokuzuncu lord. Doğum yılında ilk lord doğum nakshatrasının Vimshottari lordudur (Bharani: Venüs).",
+    "Doğum nakshatrası: Ay 20° ÷ 13°20′ → 2. nakshatra (Bharani).",
+    "İlk lord: 2 + 0 − 2 = 0 = 0 × 9 + 0: artan 0 → dokuzuncu lord Venüs.",
+    "Yıl 360 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Venüs: 60 gün; birikimli 60/360 → bitiş 60. gün.",
+    "Güneş: 18 gün; birikimli 78/360 → bitiş 78. gün.",
+    "Ay: 30 gün; birikimli 108/360 → bitiş 108. gün.",
+    "Mars: 21 gün; birikimli 129/360 → bitiş 129. gün.",
+    "Rahu: 54 gün; birikimli 183/360 → bitiş 183. gün.",
+    "Jüpiter: 48 gün; birikimli 231/360 → bitiş 231. gün.",
+    "Satürn: 57 gün; birikimli 288/360 → bitiş 288. gün.",
+    "Merkür: 51 gün; birikimli 339/360 → bitiş 339. gün.",
+    "Ketu: 21 gün; birikimli 360/360 → bitiş 360. gün.",
+    "İlk dönemin (Venüs, 0 → 60) alt dönemleri Venüs ile başlar ve dönemi aynı paylarla böler:",
+    "Venüs–Venüs: birikimli 60/360 × 60 → bitiş 10. gün.",
+    "Venüs–Güneş: birikimli 78/360 × 60 → bitiş 13. gün.",
+    "Venüs–Ay: birikimli 108/360 × 60 → bitiş 18. gün.",
+    "Venüs–Mars: birikimli 129/360 × 60 → bitiş 21,5. gün.",
+    "Venüs–Rahu: birikimli 183/360 × 60 → bitiş 30,5. gün.",
+    "Venüs–Jüpiter: birikimli 231/360 × 60 → bitiş 38,5. gün.",
+    "Venüs–Satürn: birikimli 288/360 × 60 → bitiş 48. gün.",
+    "Venüs–Merkür: birikimli 339/360 × 60 → bitiş 56,5. gün.",
+    "Venüs–Ketu: birikimli 360/360 × 60 → bitiş 60. gün."
+  ],
+  "input": {"moon_lon": 20.0, "age": 0, "year_days": 360.0},
+  "expected": {
+    "birth_nakshatra": 2,
+    "remainder": 0,
+    "first_lord": "Venus",
+    "periods": [["Venus", 60.0], ["Sun", 78.0], ["Moon", 108.0], ["Mars", 129.0], ["Rahu", 183.0], ["Jupiter", 231.0], ["Saturn", 288.0], ["Mercury", 339.0], ["Ketu", 360.0]],
+    "first_sub_periods": [["Venus", 10.0], ["Sun", 13.0], ["Moon", 18.0], ["Mars", 21.5], ["Rahu", 30.5], ["Jupiter", 38.5], ["Saturn", 48.0], ["Mercury", 56.5], ["Ketu", 60.0]]
+  }
+}

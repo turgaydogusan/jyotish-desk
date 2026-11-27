@@ -1,0 +1,24 @@
+{
+  "id": "taurus-lagna-third-year-leo",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: muntha (alıntı yapılmaz); okuma kuralları varsha/REVIEW.md",
+  "derivation": [
+    "Doğum lagnası Boğa, tamamlanan yıl 3; yıllık lagna Kova.",
+    "Doğum lagnası 46° ÷ 30° → 2. burç (Boğa). Yıllık lagna 322,87° ÷ 30° → 11. burç (Kova).",
+    "Tamamlanan yıl 3 = 0 × 12 + 3: muntha Boğa burcundan 3 burç ötededir → Aslan.",
+    "Muntha lordu: Aslan burcunun lordu Güneş.",
+    "Evler: Aslan, Boğa burcundan sayınca 4. ev; Kova burcundan sayınca 7. ev.",
+    "Lagna lordları: yıllık lagna Kova → Satürn; doğum lagnası Boğa → Venüs."
+  ],
+  "input": {"natal_lagna_lon": 46.0, "annual_lagna_lon": 322.87, "age": 3},
+  "expected": {
+    "sign": "Leo",
+    "lord": "Sun",
+    "natal_house": 4,
+    "annual_house": 7,
+    "lagna_sign": "Aquarius",
+    "lagna_lord": "Saturn",
+    "natal_lagna_sign": "Taurus",
+    "natal_lagna_lord": "Venus"
+  }
+}

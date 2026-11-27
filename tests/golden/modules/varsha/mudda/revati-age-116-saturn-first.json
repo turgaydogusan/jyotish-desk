@@ -1,0 +1,28 @@
+{
+  "id": "revati-age-116-saturn-first",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Son nakshatra ve ileri yaş: Revati (27), tamamlanan yıl 116.",
+    "Doğum nakshatrası: Ay 359,9° ÷ 13°20′ → 27. nakshatra (Revati).",
+    "İlk lord: 27 + 116 − 2 = 141 = 15 × 9 + 6: artan 6 → 6. lord Satürn.",
+    "Yıl 365,256363 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Satürn: 57 gün; birikimli 57/360 → bitiş 57,832257. gün.",
+    "Merkür: 51 gün; birikimli 108/360 → bitiş 109,576909. gün.",
+    "Ketu: 21 gün; birikimli 129/360 → bitiş 130,88353. gün.",
+    "Venüs: 60 gün; birikimli 189/360 → bitiş 191,759591. gün.",
+    "Güneş: 18 gün; birikimli 207/360 → bitiş 210,022409. gün.",
+    "Ay: 30 gün; birikimli 237/360 → bitiş 240,460439. gün.",
+    "Mars: 21 gün; birikimli 258/360 → bitiş 261,76706. gün.",
+    "Rahu: 54 gün; birikimli 312/360 → bitiş 316,555515. gün.",
+    "Jüpiter: 48 gün; birikimli 360/360 → bitiş 365,256363. gün."
+  ],
+  "input": {"moon_lon": 359.9, "age": 116, "year_days": 365.256363},
+  "expected": {
+    "birth_nakshatra": 27,
+    "remainder": 6,
+    "first_lord": "Saturn",
+    "periods": [["Saturn", 57.832257], ["Mercury", 109.576909], ["Ketu", 130.88353], ["Venus", 191.759591], ["Sun", 210.022409], ["Moon", 240.460439], ["Mars", 261.76706], ["Rahu", 316.555515], ["Jupiter", 365.256363]],
+    "first_sub_periods": null
+  }
+}

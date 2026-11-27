@@ -1,0 +1,24 @@
+{
+  "id": "oldest-age-and-zero-degree-lagna",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: muntha (alıntı yapılmaz); okuma kuralları varsha/REVIEW.md",
+  "derivation": [
+    "Lagna 0° Koç'un başıdır; 119 = 9 × 12 + 11: muntha lagnanın bir önceki burcundadır.",
+    "Doğum lagnası 0° ÷ 30° → 1. burç (Koç). Yıllık lagna 359,5° ÷ 30° → 12. burç (Balık).",
+    "Tamamlanan yıl 119 = 9 × 12 + 11: muntha Koç burcundan 11 burç ötededir → Balık.",
+    "Muntha lordu: Balık burcunun lordu Jüpiter.",
+    "Evler: Balık, Koç burcundan sayınca 12. ev; Balık burcundan sayınca 1. ev.",
+    "Lagna lordları: yıllık lagna Balık → Jüpiter; doğum lagnası Koç → Mars."
+  ],
+  "input": {"natal_lagna_lon": 0.0, "annual_lagna_lon": 359.5, "age": 119},
+  "expected": {
+    "sign": "Pisces",
+    "lord": "Jupiter",
+    "natal_house": 12,
+    "annual_house": 1,
+    "lagna_sign": "Pisces",
+    "lagna_lord": "Jupiter",
+    "natal_lagna_sign": "Aries",
+    "natal_lagna_lord": "Mars"
+  }
+}
