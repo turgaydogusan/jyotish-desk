@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 
 export const FIXTURE = JSON.parse(readFileSync(new URL("../ui/test/fixtures/delhi.json", import.meta.url), "utf8"));
+// Geçiş araçlarının fikstürleri (Plan 26) ayrı dosyalardadır; taklit onları `fixture.transit_tools` altında görür.
+FIXTURE.transit_tools = { sankranti: JSON.parse(readFileSync(new URL("../ui/test/fixtures/sankranti.json", import.meta.url), "utf8")) };
 
 export interface IpcOptions {
   /** `restore_session` dönüşü: `true` Delhi haritası, `false` oturum yok. */
@@ -115,6 +117,9 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         dasha_children: (args) =>
           JSON.stringify(args.path) === JSON.stringify(fixture.dasha_children.path) ? fixture.dasha_children.periods : [],
         transits_at: () => fixture.transit,
+        // Geçiş araçları (Plan 26): fikstürdeki gerçek sonuçlar. Liste yıla göre yeniden hesaplanmaz:
+        // istenen yıl yanıtın `year` alanına yazılır.
+        sankranti_list: (args) => ({ ...fixture.transit_tools.sankranti.list, year: args.year ?? fixture.transit_tools.sankranti.list.year }),
         // Bakış tablosu yeniden hesaplanmaz: fikstürdeki gerçek sonuç döner.
         compute_drishti: () => fixture.drishti,
         // Bhava tablosu ve Sudarshana chakra (Plan 25): fikstürdeki gerçek sonuçlar. Tablo

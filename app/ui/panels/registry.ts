@@ -23,6 +23,7 @@ import { NavataraPanel } from "./NavataraPanel";
 import { PanchangPanel } from "./PanchangPanel";
 import { EventSearchPanel } from "./EventSearchPanel";
 import { PrashnaFactsPanel } from "./PrashnaFactsPanel";
+import { SankrantiPanel } from "./SankrantiPanel";
 import { ShadbalaPanel } from "./ShadbalaPanel";
 import { SudarshanaPanel } from "./SudarshanaPanel";
 import type { PanelDefinition } from "./types";
@@ -70,6 +71,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   prashna_facts: { titleKey: "panel.prashna_facts", component: PrashnaFactsPanel },
   // Olay araması (Plan 22).
   event_search: { titleKey: "panel.event_search", component: EventSearchPanel },
+  // Geçiş araçları (yol haritası Plan 26).
+  sankranti: { titleKey: "panel.sankranti", component: SankrantiPanel },
   // Doğum anı ekleri (Plan 23).
   navatara: { titleKey: "panel.navatara", component: NavataraPanel },
   vimshopaka: { titleKey: "panel.vimshopaka", component: VimshopakaPanel },
