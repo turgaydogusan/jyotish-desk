@@ -1,0 +1,28 @@
+/* Varshaphala paneli ve mudda dasa görünümü. Renk token'lardan gelir (C9). */
+.varsha-age {
+  width: 5ch;
+}
+.varsha-figure {
+  width: 100%;
+  max-width: 26rem;
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+.varsha-save {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.varsha-save p {
+  margin: 0;
+  color: var(--text-2);
+}
+.varsha-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-table);
+}

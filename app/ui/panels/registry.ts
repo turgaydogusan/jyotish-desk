@@ -27,6 +27,7 @@ import { ShadbalaPanel } from "./ShadbalaPanel";
 import { SudarshanaPanel } from "./SudarshanaPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
+import { VarshaPanel } from "./VarshaPanel";
 import { VimshopakaPanel } from "./VimshopakaPanel";
 import { YogasPanel } from "./YogasPanel";
 
@@ -61,6 +62,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   yogas: { titleKey: "panel.yogas", component: YogasPanel },
   // Avasthalar (Plan 24).
   avastha: { titleKey: "panel.avastha", component: AvasthaPanel },
+  // Varshaphala (yol haritası Plan 27).
+  varsha: { titleKey: "panel.varsha", component: VarshaPanel },
   // Uyum (Plan 19).
   compat: { titleKey: "panel.compat", component: CompatPanel },
   // Muhurta (Plan 20).

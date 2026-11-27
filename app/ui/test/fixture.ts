@@ -56,6 +56,7 @@ import type {
   TithiGroup,
   TransitView,
   Varga,
+  VarshaView,
   VimshopakaReport,
   YogaGroup,
   YogaReport,
@@ -127,6 +128,13 @@ export interface UiFixture {
   avasthas_time_unknown: AvasthaReport;
   /** Rust `Baladi::ALL`, `Jagradadi::ALL`, `Lajjitadi::ALL` ve `Shayanadi::ALL`. */
   avastha_ids: { baladi: Baladi[]; jagradadi: Jagradadi[]; lajjitadi: Lajjitadi[]; shayanadi: Shayanadi[] };
+  /**
+   * Varshaphala (Plan 27): açık haritanın girdisiyle, doğum yerinde ve fikstürün sabit saatinde
+   * `compute_varsha` dönüşleri. `current` yaş verilmeden (süren yıl: 26), `next` 27 yaşıyla,
+   * `time_unknown` `time_known: false` ile (yıllık harita ve muntha yok). `mudda_order` Rust
+   * `MUDDA_ORDER`, `max_age` Rust `MAX_VARSHA_AGE`.
+   */
+  varsha: { current: VarshaView; next: VarshaView; time_unknown: VarshaView; mudda_order: Graha[]; max_age: number };
   /**
    * Uyum: ikinci danışan ("Eş Danışan", İstanbul 1987-03-17) eş haritadır. `input` ve `brief`
    * store'un `chart_input` ve `chart_brief` dönüşleridir. `report` açık harita damat rolündeyken,
