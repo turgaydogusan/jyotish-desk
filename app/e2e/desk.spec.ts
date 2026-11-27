@@ -834,10 +834,15 @@ test("muhurta day: a palette panel; the current place from the dialog, the day s
   await day.getByRole("button", { name: "Bulunulan yeri seç" }).focus();
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog", { name: "Bulunulan yer" });
-  await dialog.getByRole("button", { name: /^Açık haritanın doğum yerini kullan/ }).click();
+  const useBirthPlace = dialog.getByRole("button", { name: /^Açık haritanın doğum yerini kullan/ });
+  await expect(useBirthPlace).toBeVisible();
+  // Pencere açıkken de, yer seçilene dek gün istenmez.
+  expect(await dayCalls()).toHaveLength(0);
+  await useBirthPlace.click();
   await expect(dialog.locator(".home-place-current")).toHaveText("Seçili yer: New Delhi, Delhi, India · Asia/Kolkata");
-  const prefs = (await ipcCalls(page, "set_app_prefs")).at(-1) as { prefs: { home_place: unknown } };
-  expect(prefs.prefs.home_place).toEqual(FIXTURE.muhurta.home_place);
+  // Tercihlerin tamamı yazılır (kayıt bütün kaydı değiştirir): diğer tercihler yerinde durur.
+  const prefs = (await ipcCalls(page, "set_app_prefs")).at(-1) as { prefs: unknown };
+  expect(prefs.prefs).toEqual({ ...FIXTURE.prefs.prefs, home_place: FIXTURE.muhurta.home_place });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(day.getByRole("button", { name: "Bulunulan yeri değiştir" })).toBeFocused();
