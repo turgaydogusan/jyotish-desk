@@ -176,3 +176,88 @@ Motorun tabloları: `crates/jyotish-core/src/natal_extras/vimshopaka.rs`, `SHADV
 - [ ] Yücelme ve moolatrikonanın ayrı basamak olmaması (öteki okuma: ikisi de 20 sayılır).
 - [ ] Geçici dostluğun her vargada D1 burçlarından okunması (öteki okuma: o vargadan).
 - [ ] Rahu ve Ketu'ya değer verilmemesi.
+
+## 4. Elle denetim kaydı (Plan 23 Task 8)
+
+Her maddenin başında, otomatik bir karşılığı olup olmadığı yazılıdır. **[otomatik]** maddelerin
+karşılığı testlerdedir; yürüten ajan testin adını göstererek işaretler. **[insan]** maddeler
+yalnızca basılı kaynağa ya da gerçek uygulamaya bakan bir insan tarafından doğrulanır ve sahibine
+devredilir; devir sonraki planı engellemez (Y3). Gerçek uygulamada yalnızca deneme danışanları
+kullanılır.
+
+- [x] **[otomatik]** Yogi noktası Güneş + Ay + 93°20′'dir ve 360°'de sarılır; yogi nakshatrası
+  nitya yogadan yedi ileridedir; üç el örneği (A, B, C) noktayı, yogiyi, eş yogiyi ve avayogiyi
+  verir. (`yogi.rs › the_arc_is_seven_nakshatras_and_the_point_wraps`,
+  `› hand_examples_give_the_point_the_yogi_the_co_yogi_and_the_avayogi`,
+  `› the_yogi_nakshatra_is_the_nitya_yoga_shifted_by_seven`; `tests/natal_extras.rs`)
+- [x] **[otomatik]** Avayogi altıncı nakshatranın lordudur; ikinci yazım (nokta + 186°40′) aynı
+  lordu verir; dokuz yogi–avayogi çifti 1.2'deki tabloyla aynıdır.
+  (`yogi.rs › avayogi_is_the_sixth_nakshatra_and_agrees_with_the_added_arc`,
+  `› nakshatra_lords_repeat_every_nine`)
+- [x] **[otomatik]** Eş yoginin burcu rasi çerçevesindedir; `Sidereal` kipinde öteleme sıfırdır;
+  nakshatra ve lordlar kipten bağımsızdır. (`yogi.rs › the_point_sign_follows_the_rasi_frame`;
+  `collect.rs › panchang_extras_of_the_fake_sky`; `tests/natal_extras.rs`, tropikal-rasi kipindeki örnekler)
+- [x] **[otomatik]** Dagdha rasi tablosu burçtan yazılan ikinci tabloyla aynıdır (30 hücre); iki
+  paksha aynı satırı okur; dolunay ve yeni ayda boştur; aralık dışı tithi boş liste verir.
+  (`dagdha.rs › two_signs_on_thirteen_tithis_four_on_the_fourteenth_none_on_the_fifteenth`,
+  `› the_table_agrees_with_its_second_writing_by_sign`, `› out_of_range_tithis_have_no_dagdha_sign`)
+- [x] **[otomatik]** Raporun tithisi v1'in panchangındaki tithidir; Delhi 2000-01-01 için yogi
+  Rahu (Swati), avayogi Venüs (Purva Ashadha), dagdha Yay ve Balık.
+  (`dagdha.rs › extras_join_the_yogi_facts_the_tithi_and_the_dagdha_signs`; `tests/natal_extras.rs`)
+- [x] **[otomatik]** Navatara 27 satırdır, doğum nakshatrasından başlar, üç tur yürür; tara ve tur
+  adım adım sayımla aynıdır (729 çift); her graha kendi nakshatrasının satırındadır; geçiş taraları
+  transit komutunun nakshatralarından sayılır. (`navatara.rs` beş test;
+  `collect.rs › navatara_of_the_fake_sky_with_and_without_a_transit_moment`; `tests/natal_extras.rs`)
+- [x] **[otomatik]** Vimshopaka: dört kümenin ağırlıkları 20'ye toplanır; altı basamak 20, 18, 15,
+  10, 7, 5'tir; yücelme ve moolatrikona ayrı basamak değildir; geçici dostluk D1'den okunur; iki el
+  örneği (Güneş Aslan 0°, Ay Boğa 0°) dört değeri verir; her değer 5 ile 20 arasındadır.
+  (`vimshopaka.rs` altı test)
+- [x] **[otomatik]** Vimshopaka'nın varga burçları v1'in on altı varga haritasıyla, basamakları
+  Shadbala'nın saptavargaja kalemiyle (yedi vargada) aynıdır. (`tests/natal_extras.rs`)
+- [x] **[otomatik]** Doğum saati bilinmiyorsa üç rapor da döner ve `approximate` işaretlidir;
+  sayı prashnasında raporlar sayısız haritayla aynıdır. (`collect.rs` dört test;
+  `PanchangExtras.test.tsx › unknown birth time …`, `NavataraPanel.test.tsx › unknown birth time …`,
+  `VimshopakaPanel.test.tsx › unknown and approximate birth times …`)
+- [x] **[otomatik]** Geçiş anı haritadan önce denetlenir; hatası yalnızca alan adını taşır
+  (`invalid_transit_input { field: transit_jd_ut }`). (`collect.rs ›
+  collectors_check_the_input_before_and_through_the_chart`; `tests/natal_extras.rs`)
+- [x] **[otomatik]** Üç komut hata ayıklama derlemesinde 20 ms'nin altındadır.
+  (`tests/natal_extras.rs`: `assert!`)
+- [x] **[otomatik]** Raporlar panel açılmadan istenmez; Panchang paneli beş uzvu komut beklemeden
+  çizer ve ek tabloyu altına ekler; ek tablonun hatası beş uzvu kaldırmaz.
+  (`PanchangExtras.test.tsx` yedi test; e2e `natal extras: …`)
+- [x] **[otomatik]** Navatara paneli dokuz tarayı üç turda, lord ve kümeyle yazar; transit anını
+  Rust'a olduğu gibi gönderir; an değişirken tablolar yerinde durur; transit hatasında doğum tablosu
+  durur. (`NavataraPanel.test.tsx` sekiz test; e2e)
+- [x] **[otomatik]** Vimshopaka paneli yedi grahanın dört değerini üç ondalıkla yazar; "Vargalar"
+  görünümü on altı vargada burcu ve basamağı gösterir; ayar düzenle birlikte saklanır.
+  (`VimshopakaPanel.test.tsx` sekiz test; e2e)
+- [x] **[otomatik]** Her metin üç dilde vardır; klasik adlar (tara, nakshatra, küme adları) üç
+  dilde aynıdır; Fransızca metinlerde düz kesme işareti yoktur. (`i18n.test.ts`; üç panel testinin
+  dil testleri)
+- [ ] **[insan]** (sahibine devredildi) Dagdha rasi tablosu basılı kaynakla hücre hücre karşılaştırılır (1.3, 1.5);
+  paksha ayrımı olup olmadığına bakılır.
+- [ ] **[insan]** (sahibine devredildi) Yogi noktasının yayı (93°20′) ve avayoginin sayımı basılı kaynakla doğrulanır
+  (1.5).
+- [ ] **[insan]** (sahibine devredildi) Vimshopaka'nın dört ağırlık sütunu ve altı basamağı basılı kaynakla
+  karşılaştırılır (3.2, 3.3); yücelme ile moolatrikonanın yeri ve geçici dostluğun okunduğu varga
+  için karar verilir (3.4).
+- [ ] **[insan]** (sahibine devredildi) Navataranın lagna nakshatrasından da sayılıp sayılmayacağına karar verilir (2.2).
+- [ ] **[insan]** (sahibine devredildi) Gerçek uygulamada Panchang paneli: ek tablo beş uzvun altındadır ve panelin
+  varsayılan boyutunda kaydırmayla okunur; boyutun büyütülmesi gerekiyorsa karar olarak yazılır.
+- [ ] **[insan]** (sahibine devredildi) Gerçek uygulamada Navatara paneli: transit anı değiştirilince geçiş tablosu
+  değişir; "Şimdi" çalışır; nakshatralar transit tablosundakilerle aynıdır.
+- [ ] **[insan]** (sahibine devredildi) Gerçek uygulamada Vimshopaka paneli: saati "yaklaşık" girilmiş bir deneme
+  haritasında not görünür; "Vargalar" tablosu dar panelde yana kayar; açık ve koyu temada, üç
+  dilde okunur.
+- [ ] **[insan]** (sahibine devredildi) VoiceOver: üç tablo başlıklarıyla duyurulur; kısaltmayla yazılan grahalar tam
+  adıyla okunur; "doğrulanmamış tablo" notları okunur.
+- [ ] **[insan]** (sahibine devredildi) Denetim boyunca terminalde (Rust ve Vite çıktısı) danışan adı, doğum verisi,
+  koordinat ya da dosya yolu görünmez.
+
+## 5. Gözden geçirme kaydı
+
+| Tarih | Gözden geçiren | Kapsam | Sonuç |
+|---|---|---|---|
+| | | El örneklerinin kuraldan yeniden türetilmesi (yogi A–C, navatara tabanı, Vimshopaka'nın iki örneği) | |
+| | | Sahibinin basılı kaynak onayı (1.5, 2.2, 3.4) | |
