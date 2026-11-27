@@ -7,7 +7,7 @@ import { useMemo, type KeyboardEvent } from "react";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
 import "./chart.css";
 import { chartCells, layoutLabels, pathOf, VIEWBOX, type ChartCell, type LabelLayout } from "./geometry";
-import { RETRO_MARK, showsRetro, type ChartData, type ChartLabels, type ChartMark, type ChartPlanet, type ChartStyle } from "./types";
+import { RETRO_MARK, SHIFT_MARK, showsRetro, type ChartData, type ChartLabels, type ChartMark, type ChartPlanet, type ChartStyle } from "./types";
 
 export interface ChartSvgProps {
   data: ChartData;
@@ -30,9 +30,16 @@ function cellHighlighted(cell: ChartCell, h: HighlightTarget | null): boolean {
   return (h.type === "house" && h.house === cell.house) || (h.type === "sign" && h.sign === cell.sign);
 }
 
-/** Çizilebilir gezegen: burç 0…11 tamsayı, derece sonlu. Diğerleri açıkça atlanır. */
+/** Grahanın çizildiği hücrenin burcu: chalit görünümünde `cell`, değilse kendi burcu. */
+function cellSign(p: ChartPlanet): number {
+  return p.cell ?? p.sign;
+}
+
+const isSign = (n: number) => Number.isInteger(n) && n >= 0 && n <= 11;
+
+/** Çizilebilir gezegen: burç ve hücre 0…11 tamsayı, derece sonlu. Diğerleri açıkça atlanır. */
 function drawable(p: ChartPlanet): boolean {
-  return Number.isInteger(p.sign) && p.sign >= 0 && p.sign <= 11 && Number.isFinite(p.degInSign);
+  return isSign(p.sign) && isSign(cellSign(p)) && Number.isFinite(p.degInSign);
 }
 
 /** Çizilebilir işaret: burç 0…11 tamsayı ve metin boş değil. */
@@ -41,7 +48,7 @@ function drawableMark(m: ChartMark): boolean {
 }
 
 function labelText(p: ChartPlanet, graha: ChartLabels["graha"]): string {
-  return `${graha[p.id]}${showsRetro(p.id, p.retrograde) ? RETRO_MARK : ""}${p.combust ? "c" : ""}`;
+  return `${graha[p.id]}${showsRetro(p.id, p.retrograde) ? RETRO_MARK : ""}${p.combust ? "c" : ""}${p.shifted ? SHIFT_MARK : ""}`;
 }
 
 /** Transit etiketi: parantez biçimsel işarettir (renk değil, C9). */
@@ -55,6 +62,7 @@ function planetName(p: ChartPlanet, labels: ChartLabels): string {
   if (showsRetro(p.id, p.retrograde)) parts.push(labels.retro);
   if (p.combust) parts.push(labels.combust);
   if (p.vargottama) parts.push(labels.vargottama);
+  if (p.shifted && labels.shifted) parts.push(labels.shifted);
   return parts.join(", ");
 }
 
@@ -73,7 +81,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
       const bySign = new Map<number, ChartPlanet[]>();
       for (const p of list) {
         if (!drawable(p)) continue;
-        bySign.set(p.sign, [...(bySign.get(p.sign) ?? []), p]);
+        bySign.set(cellSign(p), [...(bySign.get(cellSign(p)) ?? []), p]);
       }
       return bySign;
     };
@@ -165,6 +173,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
               className={`chart-planet${on ? " chart-planet--highlight" : ""}`}
               data-graha={p.id}
               data-house={cell.house}
+              data-shifted={p.shifted ? "true" : undefined}
               data-x={x}
               data-y={y}
               {...button(target, isPressed, planetName(p, labels))}
@@ -189,6 +198,7 @@ export function ChartSvg({ data, style, labels, highlight = null, pressed = high
                 <tspan>{labels.graha[p.id]}</tspan>
                 {showsRetro(p.id, p.retrograde) && <tspan>{RETRO_MARK}</tspan>}
                 {p.combust && <tspan>c</tspan>}
+                {p.shifted && <tspan>{SHIFT_MARK}</tspan>}
               </text>
             </g>
           );

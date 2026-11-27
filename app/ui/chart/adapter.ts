@@ -1,6 +1,7 @@
 // Chart → ChartData. Burç, derece, retro, yanma ve vargottama Rust'tan hazır gelir
 // (`Chart.vargas`, `Chart.grahas`); arayüz hiçbir boylamdan burç türetmez (spec §4).
 import type { Chart, Sign, TransitView, Varga } from "../bindings";
+import { houseSign, signHouse } from "./geometry";
 import { isGrahaId, type ChartData, type ChartPlanet } from "./types";
 
 /** 0 = Mesha (Koç) … 11 = Meena (Balık); bindings `Sign` sırası. */
@@ -72,6 +73,25 @@ export function chartDataFromChart(chart: Chart, varga: Varga, { showLagna }: { 
     };
   });
   return { ascSign: showLagna ? signIndex(v.lagna_sign) : null, planets };
+}
+
+/**
+ * Chalit görünümü (yol haritası §4.5): her graha, bhavasının numarasını taşıyan hücreye çizilir.
+ * Bhava Rust'tan gelir (`Chart.grahas[].house`: haritanın ev sistemindeki ev); hücre, o numaralı
+ * rasi evinin hücresidir (`houseSign`: gösterim eşlemesi, hesap değil). Burcunun evinden başka
+ * bir bhavadaki graha `shifted` işaretini alır; burcu ve derecesi değişmez. Lagna yoksa (saat
+ * bilinmiyor) veri olduğu gibi döner.
+ */
+export function chalitData(chart: Chart, data: ChartData): ChartData {
+  const asc = data.ascSign;
+  if (asc === null) return data;
+  const houses = new Map(chart.grahas.map((g) => [g.graha, g.house]));
+  const planets = data.planets.map((p) => {
+    const house = houses.get(p.id);
+    if (house === undefined || house === signHouse(asc, p.sign)) return p;
+    return { ...p, cell: houseSign(asc, house), shifted: true };
+  });
+  return { ...data, planets };
 }
 
 /** `transits_at` dönüşü → çizim verisi (burç ve derece Rust'tan; dönüşüm yalnızca biçimdir). */

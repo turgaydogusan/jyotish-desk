@@ -1,5 +1,5 @@
 import { fixture } from "../test/fixture";
-import { chartDataFromChart, isVarga, signIndex, SIGNS, VARGAS } from "./adapter";
+import { chalitData, chartDataFromChart, isVarga, signIndex, SIGNS, VARGAS } from "./adapter";
 
 test("sign and varga lists follow the Rust enums", () => {
   expect(SIGNS).toHaveLength(12);
@@ -49,4 +49,43 @@ test("hidden lagna, missing vargas and null degrees", () => {
   expect(Number.isNaN(chartDataFromChart(chart, "D1", { showLagna: true })!.planets[0].degInSign)).toBe(true);
   chart.vargas = [];
   expect(chartDataFromChart(chart, "D1", { showLagna: true })).toBeNull();
+});
+
+test("chalit data moves a graha to the cell of its bhava and marks it; sign and degree stay", () => {
+  const f = fixture();
+  // Tam burç: bhava burç evidir; hiçbir graha yer değiştirmez ve nesne aynen döner.
+  const rasi = chartDataFromChart(f.opened.chart, "D1", { showLagna: true })!;
+  const same = chalitData(f.opened.chart, rasi);
+  expect(same.planets).toEqual(rasi.planets);
+  expect(same.planets.some((p) => p.shifted || p.cell !== undefined)).toBe(false);
+  // Placidus (fikstür): Merkür Yay'da (7. burç evi) ama 6. bhavada; Jüpiter Koç'ta (11.) ama
+  // 10. bhavada; Venüs Akrep'te (6.) ama 5. bhavada. Lagna İkizler (2): n. hücrenin burcu
+  // (2 + n − 1) mod 12'dir.
+  const chart = f.bhava.chart_placidus;
+  const data = chartDataFromChart(chart, "D1", { showLagna: true })!;
+  const chalit = chalitData(chart, data);
+  expect(chalit.ascSign).toBe(2);
+  const moved = chalit.planets.filter((p) => p.shifted).map((p) => [p.id, p.sign, p.cell]);
+  expect(moved).toEqual([
+    ["Mercury", 8, 7],
+    ["Jupiter", 0, 11],
+    ["Venus", 7, 6],
+  ]);
+  for (const p of chalit.planets) {
+    const before = data.planets.find((x) => x.id === p.id)!;
+    expect([p.sign, p.degInSign, p.retrograde, p.combust, p.vargottama]).toEqual([before.sign, before.degInSign, before.retrograde, before.combust, before.vargottama]);
+    if (!p.shifted) expect(p).toBe(before);
+  }
+  // Fikstür tablosuyla aynı grahalar (Rust `GrahaBhava.shifted`): arayüz ayrı bir kural uygulamaz.
+  expect(chalit.planets.filter((p) => p.shifted).map((p) => p.id)).toEqual(f.bhava.table_placidus.grahas.filter((g) => g.shifted).map((g) => g.graha));
+  // Girdi değişmez; transit ve işaret alanları taşınır.
+  expect(data.planets.some((p) => p.shifted)).toBe(false);
+  expect(chalitData(chart, { ...data, marks: [{ sign: 1, text: "AL" }] }).marks).toEqual([{ sign: 1, text: "AL" }]);
+});
+
+test("chalit data without a lagna is the data itself", () => {
+  const chart = fixture().bhava.chart_placidus;
+  const data = chartDataFromChart(chart, "D1", { showLagna: false })!;
+  expect(data.ascSign).toBeNull();
+  expect(chalitData(chart, data)).toBe(data);
 });

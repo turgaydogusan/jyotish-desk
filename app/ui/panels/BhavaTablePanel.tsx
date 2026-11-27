@@ -8,6 +8,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import type { BhavaPoint, BhavaTable } from "../bindings";
 import { signIndex } from "../chart/adapter";
+import { SHIFT_MARK } from "../chart/types";
 import { useHighlight } from "../highlight/store";
 import type { Panel } from "../layout/model";
 import { useBhavaTable } from "../modules/useBhavaTable";
@@ -23,8 +24,6 @@ import type { PanelProps } from "./types";
 
 export const BHAVA_POINTS = ["start", "mid", "end"] as const;
 export type BhavaPointKind = (typeof BHAVA_POINTS)[number];
-/** Burç evinden başka bir bhavadaki grahanın işareti. */
-export const SHIFT_MARK = "*";
 const DASH = "—";
 
 /** Derece ve yay dakikası; Rust'ta sonlu olmayan değer (`null`) çizgidir. */

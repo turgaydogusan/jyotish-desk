@@ -333,3 +333,38 @@ test("a static drawing is one image: no buttons or tab stops, the same cells and
   expect(container.querySelector('[data-graha="Mercury"]')).toHaveTextContent(`Me${RETRO_MARK}c`);
   expect(container.querySelector('[data-graha="Moon"] text')).toHaveAttribute("text-decoration", "underline");
 });
+
+test.each(STYLES)("%s: a shifted graha is drawn in its cell with a mark read as a word", (style) => {
+  // Lagna Aslan (4). Satürn Kova'da (7. burç evi) ama 6. bhavada: Oğlak (9) hücresine çizilir.
+  const chalit: ChartData = {
+    ascSign: 4,
+    planets: [
+      { id: "Sun", sign: 4, degInSign: 12.5, retrograde: false },
+      { id: "Saturn", sign: 10, degInSign: 1, retrograde: true, cell: 9, shifted: true },
+    ],
+  };
+  const { container } = render(<ChartSvg data={chalit} style={style} labels={{ ...labels, shifted: "bhava differs" }} />);
+  const saturn = container.querySelector('[data-graha="Saturn"]')!;
+  expect(saturn).toHaveAttribute("data-house", "6");
+  expect(saturn).toHaveAttribute("data-shifted", "true");
+  expect(saturn.querySelector("text")).toHaveTextContent(`Sa${RETRO_MARK}*`);
+  // Ad grahanın kendi burcunu ve derecesini söyler; işaret sözcükle okunur.
+  expect(screen.getByRole("button", { name: "Sa, Aq 1°, retrograde, bhava differs" })).toBe(saturn);
+  const sun = container.querySelector('[data-graha="Sun"]')!;
+  expect(sun).toHaveAttribute("data-house", "1");
+  expect(sun).not.toHaveAttribute("data-shifted");
+  expect(sun.querySelector("text")).toHaveTextContent("Su");
+});
+
+test("without a word for the mark the name stays as it was; a bad cell is skipped", () => {
+  const chalit: ChartData = {
+    ascSign: 4,
+    planets: [
+      { id: "Saturn", sign: 10, degInSign: 1, retrograde: false, cell: 9, shifted: true },
+      { id: "Mars", sign: 3, degInSign: 2, retrograde: false, cell: 12, shifted: true },
+    ],
+  };
+  const { container } = render(<ChartSvg data={chalit} style="north" labels={labels} />);
+  expect(screen.getByRole("button", { name: "Sa, Aq 1°" })).toBeInTheDocument();
+  expect(container.querySelector('[data-graha="Mars"]')).toBeNull();
+});

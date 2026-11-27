@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { api } from "../api";
 import type { Panel } from "../layout/model";
-import { fixture, unknownTimeOpened } from "../test/fixture";
+import { fixture, placidusOpened, unknownTimeOpened } from "../test/fixture";
 import { renderWithStores } from "../test/render";
 import { useLayoutStore } from "../view/store";
 import { ChartPanel, partnerPlanets } from "./ChartPanel";
@@ -335,4 +335,136 @@ test("a failed partner report leaves the chart drawn and offers a retry", async 
   expect(container.querySelector(".chart-transit")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
   await waitFor(() => expect(container.querySelectorAll(".chart-transit")).toHaveLength(9));
+});
+
+// Chalit görünümü (yol haritası Plan 25). Fikstür: Delhi, Placidus; Merkür, Jüpiter ve Venüs
+// burç evinden bir önceki bhavadadır.
+const unknownPlacidus = () => {
+  const o = placidusOpened();
+  o.chart_record.birth.time = null;
+  o.chart_record.birth.time_certainty = "Unknown";
+  o.chart_record.resolved.warnings = ["TimeUnknownNoon"];
+  return o;
+};
+
+test("whole sign: the chalit box is not offered; a stored setting shows it with the reason and draws the rasi chart", () => {
+  const off = renderPanel({ varga: "D1", style: "north" });
+  expect(screen.queryByRole("checkbox", { name: "Bhava chalit" })).toBeNull();
+  expect(off.container.querySelector(".chart-toolbar-hint")).toBeNull();
+  off.unmount();
+  const { container } = renderPanel({ varga: "D1", style: "north", chalit: true });
+  const box = screen.getByRole("checkbox", { name: "Bhava chalit" });
+  expect(box).toBeChecked();
+  expect(box).toBeEnabled();
+  expect(box).toHaveAttribute("aria-disabled", "true");
+  expect(box).toHaveAccessibleDescription("Ev sistemi tam burç: chalit görünümü rasi ile aynıdır.");
+  expect(screen.getByText("Ev sistemi tam burç: chalit görünümü rasi ile aynıdır.")).not.toHaveClass("visually-hidden");
+  expect(screen.getByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
+  expect(container.querySelector("[data-shifted]")).toBeNull();
+  expect(screen.queryByText(/^Hücreler bhavadır/)).toBeNull();
+});
+
+test("the chalit toggle is saved with the layout and redraws the grahas by bhava without a request", async () => {
+  for (const f of [api.transitsAt, api.computeJaimini, api.computeCompat]) vi.mocked(f).mockClear();
+  const opened = placidusOpened();
+  const { container, persistence } = renderWithStores(<LivePanel />, { layout: LAYOUT({ varga: "D1", style: "north" }), opened });
+  const box = screen.getByRole("checkbox", { name: "Bhava chalit" });
+  expect(box).not.toBeChecked();
+  expect(box).not.toHaveAttribute("aria-disabled");
+  // Rasi görünümü: Merkür burcunun evinde (7).
+  expect(container.querySelector('[data-graha="Mercury"]')).toHaveAttribute("data-house", "7");
+  expect(container.querySelector("[data-shifted]")).toBeNull();
+  fireEvent.click(box);
+  await waitFor(() => expect(screen.getByRole("group", { name: "Bhava chalit haritası" })).toBeInTheDocument());
+  const houses = Object.fromEntries([...container.querySelectorAll("[data-graha]")].map((g) => [g.getAttribute("data-graha"), Number(g.getAttribute("data-house"))]));
+  // Her graha haritanın verdiği bhavadadır (`Chart.grahas[].house`).
+  expect(houses).toEqual(Object.fromEntries(opened.chart.grahas.map((g) => [g.graha, g.house])));
+  expect(houses).toMatchObject({ Sun: 7, Mercury: 6, Jupiter: 10, Venus: 5 });
+  // Çizim sırası hücre sırasıdır (5., 6. ve 10. bhava).
+  expect([...container.querySelectorAll("[data-shifted]")].map((g) => g.getAttribute("data-graha"))).toEqual(["Venus", "Mercury", "Jupiter"]);
+  // İşaret öteki işaretlerden sonra yazılır (Merkür bu haritada yanıktır: "Mec*").
+  expect(container.querySelector('[data-graha="Mercury"] text')).toHaveTextContent(/^Mec\*$/);
+  expect(container.querySelector('[data-graha="Venus"] text')).toHaveTextContent(/^Ve\*$/);
+  // Ad grahanın kendi burcunu söyler; işaret sözcükle okunur.
+  expect(screen.getByRole("button", { name: /^Me, Yay \d+°, yanık, bhavası farklı$/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^Ve, Akr \d+°, bhavası farklı$/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^Gü, Yay \d+°$/ })).toBeInTheDocument();
+  // Hücreler yerinde: 1. ev lagna burcudur (İkizler).
+  expect(screen.getByRole("button", { name: "1. ev, İki" })).toBeInTheDocument();
+  expect(screen.getByText("Hücreler bhavadır (Placidus); burç numarası o numaralı rasi evinin burcudur. * Graha, burcunun evinden başka bir bhavadadır.")).toBeInTheDocument();
+  await waitFor(() => expect(persistence.saved.at(-1)?.viewState.panel_layout!.layouts.find((l) => l.id === "user:t")!.panels[0].settings).toEqual({ varga: "D1", style: "north", chalit: true }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Bhava chalit" }));
+  await waitFor(() => expect(screen.getByRole("group", { name: "D1 haritası" })).toBeInTheDocument());
+  expect(container.querySelector("[data-shifted]")).toBeNull();
+  expect(screen.queryByText(/^Hücreler bhavadır/)).toBeNull();
+  for (const f of [api.transitsAt, api.computeJaimini, api.computeCompat]) expect(f).not.toHaveBeenCalled();
+});
+
+test.each(["north", "south", "circle"])("chalit %s: every graha sits in the cell of its bhava", (style) => {
+  const opened = placidusOpened();
+  const { container } = renderPanel({ varga: "D1", style, chalit: true }, opened);
+  expect(container.querySelector("svg")!.dataset.style).toBe(style);
+  for (const g of opened.chart.grahas) expect(container.querySelector(`[data-graha="${g.graha}"]`), g.graha).toHaveAttribute("data-house", String(g.house));
+  expect(container.querySelectorAll("[data-shifted]")).toHaveLength(3);
+});
+
+test("chalit is drawn on D1 only and never without a birth time; the box says why", () => {
+  const d9 = renderPanel({ varga: "D9", chalit: true }, placidusOpened());
+  const box = screen.getByRole("checkbox", { name: "Bhava chalit" });
+  expect(box).toBeEnabled();
+  expect(box).toHaveAttribute("aria-disabled", "true");
+  expect(box).toHaveAccessibleDescription("Bhava chalit yalnızca D1'de çizilir.");
+  expect(screen.getByRole("group", { name: "D9 haritası" })).toBeInTheDocument();
+  expect(d9.container.querySelector("[data-shifted]")).toBeNull();
+  // Kapalı kutu ayarı değiştirmez.
+  fireEvent.click(box);
+  expect(box).toBeChecked();
+  d9.unmount();
+  const unknown = renderPanel({ varga: "D1", chalit: true }, unknownPlacidus());
+  const off = screen.getByRole("checkbox", { name: "Bhava chalit" });
+  expect(off).toHaveAttribute("aria-disabled", "true");
+  expect(off).toHaveAccessibleDescription("Doğum saati bilinmiyor: bhavalar lagnaya bağlıdır ve chalit görünümü çizilemez.");
+  expect(screen.getByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
+  expect(unknown.container.querySelector("[data-shifted]")).toBeNull();
+});
+
+test("the chalit view draws no ring and no marks, asks for none and says so on the checked boxes", async () => {
+  for (const f of [api.transitsAt, api.computeJaimini, api.computeCompat]) vi.mocked(f).mockClear();
+  const { container } = renderWithStores(<LivePanel />, { layout: LAYOUT({ varga: "D1", transit_ring: true, arudha_marks: true, chalit: true }), opened: placidusOpened() });
+  expect(screen.getByRole("group", { name: "Bhava chalit haritası" })).toBeInTheDocument();
+  expect(container.querySelector(".chart-transit")).toBeNull();
+  expect(container.querySelector(".chart-mark")).toBeNull();
+  const note = "Chalit görünümünde transit halkası, eş halkası ve arudha padalar çizilmez.";
+  expect(screen.getByText(note)).not.toHaveClass("visually-hidden");
+  for (const name of ["Transit halkası", "Arudha padalar"]) {
+    const box = screen.getByRole("checkbox", { name });
+    expect(box).toBeChecked();
+    expect(box).not.toHaveAttribute("aria-disabled");
+    expect(box).toHaveAccessibleDescription(note);
+  }
+  expect(api.transitsAt).not.toHaveBeenCalled();
+  expect(api.computeJaimini).not.toHaveBeenCalled();
+  // Chalit kapanınca katmanlar geri gelir: istekler o zaman yapılır.
+  vi.mocked(api.transitsAt).mockResolvedValue({ status: "ok", data: fixture().transit });
+  vi.mocked(api.computeJaimini).mockResolvedValue({ status: "ok", data: fixture().jaimini });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Bhava chalit" }));
+  await waitFor(() => expect(container.querySelectorAll(".chart-transit")).toHaveLength(9));
+  await waitFor(() => expect(container.querySelectorAll(".chart-mark")).toHaveLength(12));
+  expect(screen.queryByText(note)).toBeNull();
+});
+
+test("an unchecked layer carries no chalit note", () => {
+  renderPanel({ varga: "D1", chalit: true }, placidusOpened());
+  expect(screen.queryByText("Chalit görünümünde transit halkası, eş halkası ve arudha padalar çizilmez.")).toBeNull();
+  expect(screen.getByRole("checkbox", { name: "Transit halkası" })).not.toHaveAccessibleDescription();
+});
+
+test("Placidus inside the polar circle: the chalit view says the bhavas are Porphyry", () => {
+  const opened = placidusOpened();
+  opened.chart.meta.warnings = ["PlacidusPolarFallback"];
+  renderPanel({ varga: "D1", chalit: true }, opened);
+  expect(screen.getByText("Placidus bu enlemde hesaplanamadı; bhavalar Porphyry noktalarından sayılır.")).toHaveAttribute("role", "note");
+  // Rasi görünümünde not yoktur (uyarı rozeti harita başlığındadır).
+  const rasi = renderPanel({ varga: "D1" }, opened);
+  expect(rasi.container.querySelector('[role="note"]')).toBeNull();
 });
