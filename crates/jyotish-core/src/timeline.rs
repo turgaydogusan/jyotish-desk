@@ -105,7 +105,7 @@ pub(crate) fn check_span(from_jd_ut: f64, to_jd_ut: f64) -> Result<(), CoreError
     for jd in [from_jd_ut, to_jd_ut] {
         // NaN ve sonsuz da aralık dışındadır.
         if !JD_UT_RANGE.contains(&jd) {
-            return Err(CoreError::InvalidJulianDay(jd));
+            return Err(CoreError::InvalidMuhurtaInput("range"));
         }
     }
     if from_jd_ut >= to_jd_ut {
@@ -636,11 +636,11 @@ mod tests {
         );
         assert!(matches!(
             walk(&mut eph, f64::NAN, JD, 1.0, ok),
-            Err(CoreError::InvalidJulianDay(_))
+            Err(CoreError::InvalidMuhurtaInput("range"))
         ));
         assert_eq!(
             walk(&mut eph, 1e9, 1e9 + 1.0, 1.0, ok),
-            Err(CoreError::InvalidJulianDay(1e9))
+            Err(CoreError::InvalidMuhurtaInput("range"))
         );
         let failing = walk(&mut eph, JD, JD + 1.0, 1.0, |_, jd| {
             if jd > JD {

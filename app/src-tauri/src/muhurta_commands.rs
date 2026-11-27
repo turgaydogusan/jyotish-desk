@@ -226,6 +226,8 @@ pub fn muhurta_search_blocking(
     cursor: Option<MuhurtaPageCursor>,
     now: Timestamp,
 ) -> Result<MuhurtaSearchView, CommandError> {
+    // Yer, tarihlerden önce denetlenir: geçersiz yer hangi alanla sorulursa sorulsun `place`'tir.
+    offset_at(&query.place, 2_451_545.0)?;
     let (from_jd_ut, to_jd_ut) = search_range(&query, cursor.as_ref(), now)?;
     let from_offset_secs = offset_at(&query.place, from_jd_ut)?;
     let to_offset_secs = offset_at(&query.place, to_jd_ut)?;

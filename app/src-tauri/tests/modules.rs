@@ -2291,4 +2291,31 @@ fn muhurta_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         }),
         "natal"
     );
+    // Yer, tarihlerden önce denetlenir: geçersiz enlem ya da bilinmeyen dilim tarih verilsin
+    // verilmesin yalnızca `place` alanıyla döner.
+    for bad in [
+        MuhurtaPlace {
+            lat: 95.0,
+            ..query.place.clone()
+        },
+        MuhurtaPlace {
+            tz: TzChoice::Iana("Mars/Olympus".into()),
+            ..query.place.clone()
+        },
+    ] {
+        for (from_date, to_date) in [
+            (None, None),
+            (Some("2026-11-26".to_owned()), Some("2026-11-28".to_owned())),
+        ] {
+            assert_eq!(
+                field(MuhurtaQuery {
+                    from_date,
+                    to_date,
+                    place: bad.clone(),
+                    ..query.clone()
+                }),
+                "place"
+            );
+        }
+    }
 }

@@ -169,7 +169,7 @@ pub fn day_panchang<E: Ephemeris + ?Sized>(
     settings.validate()?;
     // NaN ve sonsuz da aralık dışındadır.
     if !JD_UT_RANGE.contains(&jd_ut) {
-        return Err(CoreError::InvalidJulianDay(jd_ut));
+        return Err(CoreError::InvalidMuhurtaInput("range"));
     }
     if !((-90.0..=90.0).contains(&geo_lat) && (-180.0..=180.0).contains(&geo_lon)) {
         return Err(CoreError::InvalidMuhurtaInput("place"));
@@ -195,7 +195,7 @@ pub fn day_panchang<E: Ephemeris + ?Sized>(
         }
     };
     if !(JD_UT_RANGE.contains(&start) && JD_UT_RANGE.contains(&end)) {
-        return Err(CoreError::InvalidJulianDay(jd_ut));
+        return Err(CoreError::InvalidMuhurtaInput("range"));
     }
     // Hassasiyet Güneş'ten okunur (`compute_chart` ile aynı kural).
     if eph.body(start, Body::Sun, rasi_frame(settings))?.precision == Precision::Moshier {
@@ -537,7 +537,7 @@ mod tests {
         }
         assert_eq!(
             day_panchang(&mut eph, 1e9, 41.0, 29.0, &s, None),
-            Err(CoreError::InvalidJulianDay(1e9))
+            Err(CoreError::InvalidMuhurtaInput("range"))
         );
         let old = CalcSettings {
             schema_version: 1,
