@@ -593,6 +593,7 @@ export const tr = {
     title: "Haritalarda ara",
     form: "Arama koşulları",
     allOfHint: "Koşulların hepsi sağlanmalıdır; bir koşulun içindeki seçenekler “ya da”dır.",
+    housesNote: "Evler lagnadan sayılan burç evleridir; haritanın ev sistemi ayarı aramayı etkilemez.",
     emptyHint: "Henüz koşul yok. Arama, bütün koşulları sağlayan kayıtlı haritaları listeler.",
     add: "Koşul ekle",
     addExample: "Örnek koşul ekle",
@@ -740,7 +741,7 @@ export const tr = {
     grahas: "Grahalar",
     run: "Ara",
     stop: "Durdur",
-    why: { kinds: "En az bir olay türü seçin.", grahas: "En az bir graha seçin.", pair: "Kavuşum için en az iki graha seçin." },
+    why: { kinds: "En az bir olay türü seçin.", grahas: "En az bir graha seçin.", pair: "Kavuşum için en az iki graha seçin; Rahu ile Ketu birbiriyle kavuşmaz." },
     field: {
       kinds: "olay türleri",
       grahas: "grahalar",

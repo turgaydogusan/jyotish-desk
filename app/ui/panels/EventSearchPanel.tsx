@@ -36,6 +36,11 @@ export const DEFAULT_EVENT_GRAHAS: readonly Graha[] = ["Jupiter", "Saturn", "Rah
 const NATAL_KINDS: readonly SkyEventKind[] = ["TransitToNatal", "HouseFromNatalMoon"];
 const GRAHA_FREE: readonly SkyEventKind[] = ["NewMoon", "FullMoon", "HouseFromNatalMoon"];
 
+/** Kavuşum aranabilecek bir çift var mı: en az iki graha; Rahu ile Ketu çifti aranmaz (seçimin biçimi, hesap değil). */
+function hasPair(grahas: readonly Graha[]): boolean {
+  return grahas.length >= 2 && !(grahas.length === 2 && grahas.every((g) => g === "Rahu" || g === "Ketu"));
+}
+
 /** Panel ayarındaki kümenin toleranslı okuması: tanınmayan değerler atılır; anahtar yoksa varsayılan. */
 export function parseSet<T>(raw: unknown, allowed: readonly T[], fallback: readonly T[]): T[] {
   if (!Array.isArray(raw)) return [...fallback];
@@ -68,7 +73,7 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
 
   const usesGrahas = kinds.some((k) => !GRAHA_FREE.includes(k));
   const natal = kinds.some((k) => NATAL_KINDS.includes(k));
-  const why = kinds.length === 0 ? "kinds" : usesGrahas && grahas.length === 0 ? "grahas" : kinds.includes("Conjunction") && grahas.length < 2 ? "pair" : null;
+  const why = kinds.length === 0 ? "kinds" : usesGrahas && grahas.length === 0 ? "grahas" : kinds.includes("Conjunction") && !hasPair(grahas) ? "pair" : null;
   const ready = place.place !== null && why === null;
   // İstek: yer, aralık, seçim, haritanın hesap ayarları ve (gerekiyorsa) doğum verisi.
   const spec: EventSearchSpec | null =

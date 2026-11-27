@@ -236,7 +236,17 @@ export function Shell() {
             setSearch(false);
             openClient(clientId, chartId);
           }}
-          onTagged={session.touch}
+          onTagged={(chartIds) => {
+            session.touch();
+            // Açık harita etiketlenenler arasındaysa etiketleri yeniden okunur: yan paneldeki
+            // etiket alanı eski listeyle yazarsa toplu eklenen etiket silinirdi.
+            const chart = opened?.chart_record;
+            if (!chart || !chartIds.includes(chart.id)) return;
+            void api.listCharts(chart.client_id).then((r) => {
+              const fresh = r.status === "ok" ? r.data.find((c) => c.id === chart.id) : undefined;
+              if (fresh) session.setTags(chart.id, fresh.tags);
+            });
+          }}
         />
       )}
       {prashna && <PrashnaForm onClose={() => setPrashna(false)} onCreated={() => layout.select(BUILTIN_LAYOUT_IDS.prashna)} />}

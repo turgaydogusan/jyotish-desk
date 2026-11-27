@@ -29,6 +29,7 @@ vi.mock("./api", () => ({
     listSavedSearches: vi.fn(async () => ({ status: "ok", data: [] })),
     chartSearch: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().search.page_all_charts })),
     chartSearchCancel: vi.fn(async () => ({ status: "ok", data: null })),
+    tagCharts: vi.fn(),
   },
 }));
 
@@ -613,6 +614,30 @@ test("casting a prashna opens it on the Prashna layout: D1, facts, panchang and 
   expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
   fireEvent.keyDown(window, { key: "4", code: "Digit4", metaKey: true });
   expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Prashna");
+});
+
+test("tagging search results that include the open chart re-reads its tags, so a later tag edit keeps the bulk tag", async () => {
+  const opened = fixture().opened;
+  const chart = opened.chart_record;
+  renderApp({ opened });
+  fireEvent.keyDown(window, { key: "F", metaKey: true, shiftKey: true });
+  const sheet = screen.getByRole("dialog", { name: "Haritalarda ara" });
+  fireEvent.click(within(sheet).getByRole("button", { name: "Örnek koşul ekle" }));
+  fireEvent.click(within(sheet).getByRole("button", { name: "Ara" }));
+  await within(sheet).findByRole("button", { name: /Örnek Danışan, etiketsiz harita: haritayı aç/ });
+  const hits = fixture().search.page_all_charts.hits.map((h) => h.chart_id);
+  expect(hits).toContain(chart.id);
+  vi.mocked(api.tagCharts).mockResolvedValueOnce({ status: "ok", data: hits.length });
+  vi.mocked(api.listCharts).mockClear();
+  vi.mocked(api.listCharts).mockResolvedValue({ status: "ok", data: [{ ...chart, tags: [...chart.tags, "Toplu"] }] });
+  fireEvent.change(within(sheet).getByLabelText("Sonuçları etiketle"), { target: { value: "Toplu" } });
+  fireEvent.click(within(sheet).getByRole("button", { name: "Etiketle" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Sonuçları etiketle" })).getByRole("button", { name: /haritayı etiketle/ }));
+  await waitFor(() => expect(api.listCharts).toHaveBeenCalledWith(chart.client_id));
+  fireEvent.click(within(sheet).getByRole("button", { name: "Kapat" }));
+  // Yan paneldeki etiket alanı toplu eklenen etiketi gösterir: sonraki düzenleme onu silmez.
+  await waitFor(() => expect(screen.getByDisplayValue([...chart.tags, "Toplu"].join(", "))).toBeInTheDocument());
+  vi.mocked(api.listCharts).mockResolvedValue({ status: "ok", data: [] });
 });
 
 test("Cmd+Shift+F and the palette open the chart search; Esc closes it, the conditions stay and a result opens its chart", async () => {

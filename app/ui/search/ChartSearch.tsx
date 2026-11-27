@@ -28,8 +28,8 @@ export interface ChartSearchProps {
   onClose(): void;
   /** Sonuç satırı: haritayı açar (kabuk yüzeyi kapatır). */
   onOpenChart(clientId: number, chartId: number): void;
-  /** Toplu etiketlemeden sonra liste görünümleri yenilenir. */
-  onTagged(): void;
+  /** Toplu etiketlemeden sonra: liste görünümleri ve (etiketlenenler arasındaysa) açık haritanın etiketleri yenilenir. */
+  onTagged(chartIds: number[]): void;
 }
 
 export function ChartSearch({ query, onQueryChange, onClose, onOpenChart, onTagged }: ChartSearchProps) {
@@ -78,6 +78,7 @@ export function ChartSearch({ query, onQueryChange, onClose, onOpenChart, onTagg
           }}
         />
         <p className="chart-toolbar-hint">{t("search.allOfHint")}</p>
+        <p className="chart-toolbar-hint">{t("search.housesNote")}</p>
         {query.all_of.map((c, i) => (
           <ConditionRow key={i} index={i} value={c} onChange={(next) => setConditions(query.all_of.map((x, j) => (j === i ? next : x)))} onRemove={() => remove(i)} />
         ))}
@@ -315,7 +316,7 @@ function SavedSearches({ query, saveWhy: queryWhy, onLoad }: { query: ChartQuery
   );
 }
 
-function Results({ search, stale, onRetry, onOpenChart, onTagged }: { search: Search; stale: boolean; onRetry(): void; onOpenChart(clientId: number, chartId: number): void; onTagged(): void }) {
+function Results({ search, stale, onRetry, onOpenChart, onTagged }: { search: Search; stale: boolean; onRetry(): void; onOpenChart(clientId: number, chartId: number): void; onTagged(chartIds: number[]): void }) {
   const { t, i18n } = useTranslation();
   const listId = useId();
   const { status, hits, scanned, total } = search;
@@ -350,6 +351,8 @@ function Results({ search, stale, onRetry, onOpenChart, onTagged }: { search: Se
         </p>
       )}
       {status === "done" && hits.length === 0 && <p className="panel-message">{t(scanned === 0 ? "search.noCharts" : "search.noHits", { scanned })}</p>}
+      {/* Etiketleme listeden önce durur: klavyeyle ona varmak için yüzlerce sonuç düğmesinden geçilmez. */}
+      {hits.length > 0 && <TagResults chartIds={hits.map((h) => h.chart_id)} finished={finished} onTagged={onTagged} />}
       {shown.length > 0 && (
         <ul className="search-hits">
           {shown.map((h) => {
@@ -368,13 +371,12 @@ function Results({ search, stale, onRetry, onOpenChart, onTagged }: { search: Se
         </ul>
       )}
       {hits.length > shown.length && <p className="panel-notice">{t("search.capped", { shown: shown.length, n: hits.length })}</p>}
-      {hits.length > 0 && <TagResults chartIds={hits.map((h) => h.chart_id)} finished={finished} onTagged={onTagged} />}
     </section>
   );
 }
 
 /** "Sonuçları etiketle": etiket adı, sonra etiketi ve etkilenecek harita sayısını gösteren onay. */
-function TagResults({ chartIds, finished, onTagged }: { chartIds: number[]; finished: boolean; onTagged(): void }) {
+function TagResults({ chartIds, finished, onTagged }: { chartIds: number[]; finished: boolean; onTagged(chartIds: number[]): void }) {
   const { t, i18n } = useTranslation();
   const id = useId();
   const [tag, setTag] = useState("");
@@ -395,7 +397,7 @@ function TagResults({ chartIds, finished, onTagged }: { chartIds: number[]; fini
     }
     setError(null);
     setDone(r.data);
-    onTagged();
+    onTagged(chartIds);
   };
   return (
     <div className="search-toolbar search-tag">

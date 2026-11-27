@@ -211,9 +211,19 @@ test("the list is bound to the whole request: changed calculation settings mark 
 
 test("an incomplete selection says why, a changed form marks the list, and an error can be retried", async () => {
   renderPanel({ kinds: ["Conjunction"], grahas: ["Sun"] });
-  expect(run()).toHaveAccessibleDescription("Kavuşum için en az iki graha seçin.");
+  const pair = "Kavuşum için en az iki graha seçin; Rahu ile Ketu birbiriyle kavuşmaz.";
+  expect(run()).toHaveAccessibleDescription(pair);
   fireEvent.click(run());
   expect(api.eventSearch).not.toHaveBeenCalled();
+  // Yalnızca Rahu ile Ketu: aranacak çift yoktur (Rust da reddeder); üçüncü grahayla vardır.
+  fireEvent.click(box("Rahu"));
+  expect(run()).not.toHaveAttribute("aria-disabled");
+  fireEvent.click(box("Ketu"));
+  fireEvent.click(box("Güneş"));
+  expect(run()).toHaveAccessibleDescription(pair);
+  fireEvent.click(box("Ketu"));
+  fireEvent.click(box("Rahu"));
+  fireEvent.click(box("Güneş"));
   fireEvent.click(box("Güneş"));
   expect(run()).toHaveAccessibleDescription("En az bir graha seçin.");
   fireEvent.click(box("Tam kavuşum"));

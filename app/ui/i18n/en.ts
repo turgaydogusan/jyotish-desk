@@ -594,6 +594,7 @@ export const en: Messages = {
     title: "Search charts",
     form: "Search conditions",
     allOfHint: "Every condition must hold; the options inside one condition are alternatives.",
+    housesNote: "Houses are whole-sign houses counted from the lagna; the chart’s house system setting does not affect the search.",
     emptyHint: "No conditions yet. The search lists the saved charts that meet every condition.",
     add: "Add a condition",
     addExample: "Add an example condition",
@@ -741,7 +742,7 @@ export const en: Messages = {
     grahas: "Grahas",
     run: "Search",
     stop: "Stop",
-    why: { kinds: "Select at least one event kind.", grahas: "Select at least one graha.", pair: "Select at least two grahas for conjunctions." },
+    why: { kinds: "Select at least one event kind.", grahas: "Select at least one graha.", pair: "Select at least two grahas for conjunctions; Rahu and Ketu never meet each other." },
     field: {
       kinds: "event kinds",
       grahas: "grahas",

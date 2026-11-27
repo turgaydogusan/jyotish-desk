@@ -594,6 +594,7 @@ export const fr: Messages = {
     title: "Rechercher dans les thèmes",
     form: "Conditions de recherche",
     allOfHint: "Toutes les conditions doivent être remplies ; les options d’une même condition sont des alternatives.",
+    housesNote: "Les maisons sont les maisons rasi comptées depuis le signe du lagna ; le système de maisons du thème n’influe pas sur la recherche.",
     emptyHint: "Aucune condition pour l’instant. La recherche liste les thèmes enregistrés qui remplissent toutes les conditions.",
     add: "Ajouter une condition",
     addExample: "Ajouter une condition d’exemple",
@@ -741,7 +742,7 @@ export const fr: Messages = {
     grahas: "Grahas",
     run: "Rechercher",
     stop: "Arrêter",
-    why: { kinds: "Sélectionnez au moins un type d’événement.", grahas: "Sélectionnez au moins un graha.", pair: "Sélectionnez au moins deux grahas pour les conjonctions." },
+    why: { kinds: "Sélectionnez au moins un type d’événement.", grahas: "Sélectionnez au moins un graha.", pair: "Sélectionnez au moins deux grahas pour les conjonctions ; Rahu et Ketu ne se rejoignent jamais." },
     field: {
       kinds: "types d’événement",
       grahas: "grahas",

@@ -1176,6 +1176,10 @@ test("event search: the panel from the palette, the event list in the chart's ti
   const table = panel.getByRole("table", { name: "Olaylar" });
   await expect(table.locator("tbody tr")).toHaveCount(total);
   await expect(table.locator("tbody tr").first().locator("td")).toHaveText(["Yeni ay", "Akr · Jyeshtha"]);
+  // Saat açık haritanın yerinin dilimindedir: 2026-12-09 yeni ayı 00:51 UT'dir; Delhi'de
+  // (+05:30) 06:21.
+  expect(FIXTURE.search.events.events[0].offset_secs).toBe(19_800);
+  await expect(table.locator("tbody tr").first().getByRole("button")).toHaveText("2026-12-09 06:21");
   const calls = await eventCalls();
   expect(calls).toHaveLength(1);
   expect(calls[0].spec).toMatchObject({
