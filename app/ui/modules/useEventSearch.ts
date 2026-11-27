@@ -1,7 +1,8 @@
 // Olay aramasını (`event_search`) yürüten kanca (ileri modüller spec'i §12.2). Arama tek bir
 // komut çağrısıdır; Rust dilim dilim yürütür ve dilim sınırlarında durdurma isteğine bakar. Her
 // arama yeni bir kimlik alır: eski aramanın geç gelen yanıtı düşer. "Durdur" Rust'a bildirilir.
-// Sonuç yeni arama başlayana dek yerinde durur; hatadan sonraki arama boş başlar. Arayüzde hesap
+// Sonuç yalnızca kendi isteğiyle durur: yeni arama başlayınca silinir (liste o an DOM'dan
+// kalkar; D24), hatadan sonraki arama da boş başlar. Arayüzde hesap
 // yoktur (C4); sonuç saklanmaz (K1). Girdi yer ve açık haritanın doğum verisini taşır: loglanmaz.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";

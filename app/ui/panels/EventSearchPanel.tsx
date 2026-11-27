@@ -3,9 +3,11 @@
 // saklanmaz. Olaylar `event_search`'ten gelir; burada hesap yoktur (C4). Saatler seçilen yerin
 // dilimindedir (varsayılan: açık haritanın yeri). Satırdaki an, transit tarihini o ana götürür.
 // Olay bir olgudur: "iyi" ya da "kötü" hükmü ve açıklama metni yoktur. Retro düz `R`'dir.
+// Arama durumu ve sonuç sayısı hep DOM'da duran tek bir `role="status"` bölgesindedir. Liste,
+// başlatıldığı isteğin kopyasına bağlıdır (D24): yeni arama başlayınca önceki liste kalkar.
 import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import type { Graha, OpenedClient, SkyEventKind, SkyEventView } from "../bindings";
+import type { CommandError, EventSearchSpec, Graha, OpenedClient, SkyEventKind, SkyEventView } from "../bindings";
 import { signIndex } from "../chart/adapter";
 import { GRAHA_IDS } from "../chart/types";
 import type { Panel } from "../layout/model";
@@ -19,7 +21,7 @@ import { timeUnknown } from "../session/birth";
 import { useSession } from "../session/store";
 import { useTransitControl } from "../transit/store";
 import { useLayoutStore } from "../view/store";
-import { formatJdClock, formatJdDate } from "./format";
+import { formatJdClock, formatJdDate, formatJdMinute } from "./format";
 import { nakshatraName } from "./labels";
 import { PlaceControls, PlaceMissing, usePanelPlace } from "./MuhurtaPlace";
 import "./panels.css";
@@ -48,7 +50,7 @@ export function EventSearchPanel({ panel }: PanelProps) {
 }
 
 function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { setPanelSettings } = useLayoutStore();
   const id = useId();
   // Saatler varsayılan olarak açık haritanın yerinin dilimindedir.
@@ -58,7 +60,8 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
   const grahas = parseSet(panel.settings.grahas, GRAHA_IDS, DEFAULT_EVENT_GRAHAS);
   const search = useEventSearch(String(opened.chart_record.id));
   const running = search.status === "running";
-  const phase = usePanelLoadPhase(running);
+  // Başlıktaki satır içi gösterge; paneldeki metin durum bölgesindedir.
+  usePanelLoadPhase(running);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const runButton = useRef<HTMLButtonElement>(null);
@@ -67,8 +70,23 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
   const natal = kinds.some((k) => NATAL_KINDS.includes(k));
   const why = kinds.length === 0 ? "kinds" : usesGrahas && grahas.length === 0 ? "grahas" : kinds.includes("Conjunction") && grahas.length < 2 ? "pair" : null;
   const ready = place.place !== null && why === null;
-  // Liste, başlatıldığı girdiye aittir: girdi arama sürerken değişirse arama durdurulur.
-  const key = JSON.stringify([place.place === null ? null : muhurtaPlace(place.place), from, to, kinds, grahas]);
+  // İstek: yer, aralık, seçim, haritanın hesap ayarları ve (gerekiyorsa) doğum verisi.
+  const spec: EventSearchSpec | null =
+    place.place === null
+      ? null
+      : {
+          from_date: from === "" ? null : from,
+          to_date: to === "" ? null : to,
+          place: muhurtaPlace(place.place),
+          kinds,
+          grahas,
+          settings: opened.chart.meta.settings,
+          // Doğum verisi yalnızca açık harita isteyen türler seçiliyse gönderilir.
+          natal: natal ? chartInput(opened) : null,
+        };
+  // Liste, başlatıldığı isteğin tamamına aittir (D24): istek arama sürerken değişirse arama
+  // durdurulur. Anahtar yalnızca bellekte karşılaştırılır; yazılmaz ve loglanmaz.
+  const key = JSON.stringify(spec);
   const [searchedKey, setSearchedKey] = useState<string | null>(null);
   const stale = search.status !== "idle" && searchedKey !== null && searchedKey !== key;
   const { stop } = search;
@@ -78,19 +96,12 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (place.place === null || why !== null || running) return;
+    if (spec === null || why !== null || running) return;
     setSearchedKey(key);
-    search.start({
-      from_date: from === "" ? null : from,
-      to_date: to === "" ? null : to,
-      place: muhurtaPlace(place.place),
-      kinds,
-      grahas,
-      settings: opened.chart.meta.settings,
-      // Doğum verisi yalnızca açık harita isteyen türler seçiliyse gönderilir.
-      natal: natal ? chartInput(opened) : null,
-    });
+    search.start(spec);
   };
+  // Hata yalnızca alan adını taşır; ad arayüz dilinde yazılır.
+  const shownError = search.error === null ? null : fieldError(search.error, (f) => (i18n.exists(`eventSearch.field.${f}`) ? t(`eventSearch.field.${f}`) : f));
 
   return (
     <div className="module-panel event-search">
@@ -125,20 +136,18 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
           </p>
         )}
         <div className="module-toolbar">
-          {/* Kullanılamazken yerel `disabled` değildir: odaklanır ve nedeni görünür bir satırdır. */}
-          <button ref={runButton} type="submit" aria-disabled={!ready || running ? true : undefined} aria-describedby={ready ? undefined : `${id}-why`}>
+          {/* Kullanılamazken yerel `disabled` değildir: odaklanır ve nedeni görünür bir satırdır
+              (arama sürerken durum bölgesindeki "Aranıyor…"). */}
+          <button ref={runButton} type="submit" aria-disabled={!ready || running ? true : undefined} aria-describedby={!ready ? `${id}-why` : running ? `${id}-status` : undefined}>
             {t("eventSearch.run")}
           </button>
           {running && <StopButton onStop={search.stop} fallback={runButton} />}
-          <span className="muhurta-progress" role="status">
-            {running && phase !== "none" ? t("eventSearch.searching") : ""}
-          </span>
         </div>
         {!ready && <div id={`${id}-why`}>{why !== null ? <p className="chart-toolbar-hint">{t(`eventSearch.why.${why}`)}</p> : <PlaceMissing choice={place.choice} />}</div>}
       </form>
-      {search.error && (
+      {shownError && (
         <PanelError
-          error={search.error}
+          error={shownError}
           onRetry={() => {
             // Hata kutusu yeni arama başlayınca gider: odak önce "Ara"ya taşınır.
             runButton.current?.focus();
@@ -146,9 +155,16 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
           }}
         />
       )}
-      <Results search={search} stale={stale} />
+      <Results search={search} stale={stale} statusId={`${id}-status`} />
     </div>
   );
+}
+
+/** `invalid_search_input`'un alan adını verilen adla değiştirir; öteki hatalar olduğu gibi kalır. */
+function fieldError(error: CommandError, name: (field: string) => string): CommandError {
+  const field = error.params.field;
+  if (error.code !== "invalid_search_input" || typeof field !== "string") return error;
+  return { ...error, params: { ...error.params, field: name(field) } };
 }
 
 /** "Durdur": arama bitince DOM'dan gider; odak ondaysa "Ara" düğmesine taşınır. */
@@ -168,14 +184,26 @@ function StopButton({ onStop, fallback }: { onStop(): void; fallback: RefObject<
   );
 }
 
-function Results({ search, stale }: { search: EventSearch; stale: boolean }) {
+function Results({ search, stale, statusId }: { search: EventSearch; stale: boolean; statusId: string }) {
   const { t } = useTranslation();
   const transit = useTransitControl();
   const captionId = useId();
-  if (search.status === "idle") return <p className="panel-message">{t("eventSearch.idle")}</p>;
-  if (search.status === "stopped") return <p className="panel-message">{t("eventSearch.stopped")}</p>;
   const view = search.view;
-  if (view === null) return null;
+  // Durum bölgesi hep DOM'dadır: "Aranıyor…", "durduruldu", sonra olay sayısı ve kesilme notları.
+  if (view === null) {
+    return (
+      <>
+        <div role="status" id={statusId}>
+          {(search.status === "running" || search.status === "stopped") && (
+            <p className="panel-message" data-summary>
+              {t(search.status === "running" ? "eventSearch.searching" : "eventSearch.stopped")}
+            </p>
+          )}
+        </div>
+        {search.status === "idle" && <p className="panel-message">{t("eventSearch.idle")}</p>}
+      </>
+    );
+  }
   const shown = view.events.slice(0, MAX_SHOWN_EVENTS);
   const name = (g: Graha) => t(`grahaName.${g}`);
   const label = ({ event: e }: SkyEventView): string => {
@@ -196,24 +224,25 @@ function Results({ search, stale }: { search: EventSearch; stale: boolean }) {
   };
   const where = ({ event: e }: SkyEventView) => [e.sign === null ? null : t(`sign.${signIndex(e.sign)}`), e.nakshatra === null ? null : nakshatraName(e.nakshatra)].filter((x) => x !== null).join(" · ");
   const day = (jd: number | null, offset: number) => formatJdDate(jd, offset);
+  // Kesilen liste son olayın anına dek taranmıştır: an, o olayın kendi ofsetiyle yazılır.
+  const until = formatJdMinute(view.scanned_to_jd_ut, view.events.at(-1)?.offset_secs ?? view.to_offset_secs);
   return (
     <>
-      <p className="panel-message" data-summary>
-        {t(view.events.length === 0 ? "eventSearch.none" : "eventSearch.summary", {
-          n: view.events.length,
-          from: day(view.from_jd_ut, view.from_offset_secs),
-          // Aralığın sonu son günün bitişidir: bir saniye öncesi o günün tarihini verir.
-          to: day(view.to_jd_ut === null ? null : view.to_jd_ut - 1 / 86_400, view.to_offset_secs),
-        })}
-      </p>
+      <div role="status" id={statusId}>
+        <p className="panel-message" data-summary>
+          {t(view.events.length === 0 ? "eventSearch.none" : "eventSearch.summary", {
+            n: view.events.length,
+            from: day(view.from_jd_ut, view.from_offset_secs),
+            // Aralığın sonu son günün bitişidir: bir saniye öncesi o günün tarihini verir.
+            to: day(view.to_jd_ut === null ? null : view.to_jd_ut - 1 / 86_400, view.to_offset_secs),
+          })}
+        </p>
+        {view.truncated && <p className="panel-notice">{t("eventSearch.truncated", { max: MAX_EVENTS, until })}</p>}
+        {view.events.length > shown.length && <p className="panel-notice">{t("eventSearch.capped", { shown: shown.length, n: view.events.length })}</p>}
+      </div>
       {stale && (
         <p className="panel-notice" role="note">
           {t("eventSearch.stale")}
-        </p>
-      )}
-      {view.truncated && (
-        <p className="panel-notice" role="note">
-          {t("eventSearch.truncated", { max: MAX_EVENTS, until: day(view.scanned_to_jd_ut, view.to_offset_secs) })}
         </p>
       )}
       {shown.length > 0 && (
@@ -251,7 +280,6 @@ function Results({ search, stale }: { search: EventSearch; stale: boolean }) {
           </table>
         </div>
       )}
-      {view.events.length > shown.length && <p className="panel-notice">{t("eventSearch.capped", { shown: shown.length, n: view.events.length })}</p>}
       <p className="panel-message">{t("eventSearch.method", { method: view.method })}</p>
     </>
   );

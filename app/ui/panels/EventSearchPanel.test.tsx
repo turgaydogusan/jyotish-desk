@@ -13,6 +13,7 @@ import { chartInput } from "../modules/input";
 import { EVENT_KINDS } from "../search/model";
 import { fixture, unknownTimeOpened } from "../test/fixture";
 import { renderWithStores } from "../test/render";
+import { useSession, type Session } from "../session/store";
 import { useTransitControl, type Transit } from "../transit/store";
 import { useLayoutStore } from "../view/store";
 import { DEFAULT_EVENT_GRAHAS, DEFAULT_EVENT_KINDS, EventSearchPanel, MAX_SHOWN_EVENTS, parseSet } from "./EventSearchPanel";
@@ -26,10 +27,12 @@ const LAYOUT = (settings: Record<string, unknown>) => {
 };
 
 let transit: Transit;
+let session: Session;
 /** Paneli düzen deposundan okur: ayar değişince panel yeni ayarla yeniden çizilir (pano gibi). */
 function LivePanel() {
   const { active } = useLayoutStore();
   transit = useTransitControl();
+  session = useSession();
   return <EventSearchPanel panel={active.panels[0]} />;
 }
 function renderPanel(settings: Record<string, unknown> = {}, { opened = fixture().opened, prefs = FX.prefs.prefs }: { opened?: OpenedClient | null; prefs?: AppPrefs | null } = {}) {
@@ -67,6 +70,8 @@ test("a new panel starts with the slow grahas, the chart's place and nothing sea
   expect(screen.getByText(/Türleri, grahaları ve aralığı seçip/)).toBeInTheDocument();
   expect(api.eventSearch).not.toHaveBeenCalled();
   expect(screen.queryByRole("table")).toBeNull();
+  // Durum bölgesi baştan DOM'dadır ve boştur: sonradan yazılan metin duyurulur.
+  expect(screen.getByRole("status")).toBeEmptyDOMElement();
 });
 
 test("the request carries the settings, and the natal chart only when a natal kind is selected", async () => {
@@ -102,6 +107,8 @@ test("the events are listed in the place's time and a row moves the transit date
   fireEvent.click(run());
   await settle();
   expect(summary()).toBe(`${VIEW.events.length} olay · 2026-11-26 – 2027-03-31`);
+  // Olay sayısı durum bölgesindedir.
+  expect(screen.getByRole("status")).toHaveTextContent(`${VIEW.events.length} olay · 2026-11-26 – 2027-03-31`);
   expect(rows()).toHaveLength(VIEW.events.length);
   // İlk üç olay: yeni ay, Satürn'ün R bitişi, Jüpiter'in R başlangıcı (fikstür; +05:30).
   expect(cells(rows()[0]).slice(1)).toEqual(["Yeni ay", "Akr · Jyeshtha"]);
@@ -126,15 +133,21 @@ test("while searching the panel says so and stopping keeps the focus on the sear
     renderPanel();
     fireEvent.click(run());
     expect(run()).toHaveAttribute("aria-disabled", "true");
+    // Kullanılamamanın nedeni görünür ve düğmeye bağlıdır; aynı bölge sonra sonucu taşır.
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Aranıyor…");
+    expect(run()).toHaveAccessibleDescription("Aranıyor…");
     await act(async () => vi.advanceTimersByTime(150));
-    expect(screen.getByRole("status")).toHaveTextContent("Aranıyor…");
+    expect(screen.getByRole("status")).toBe(status);
     const stop = screen.getByRole("button", { name: "Durdur" });
     stop.focus();
     fireEvent.click(stop);
     expect(api.eventSearchCancel).toHaveBeenCalledWith(vi.mocked(api.eventSearch).mock.calls[0][1]);
     expect(screen.queryByRole("button", { name: "Durdur" })).toBeNull();
     expect(run()).toHaveFocus();
-    expect(screen.getByText("Arama durduruldu.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent("Arama durduruldu.");
+    expect(run()).not.toHaveAccessibleDescription();
     // Durdurulan aramanın geç gelen yanıtı gösterilmez.
     await act(async () => pending.resolve(ok(VIEW)));
     expect(screen.queryByRole("table")).toBeNull();
@@ -149,6 +162,8 @@ test("no events, a cut list and a long list are said in words", async () => {
   fireEvent.click(run());
   await settle();
   expect(summary()).toMatch(/^Bu aralıkta olay yok \(2026-11-26 – 2027-03-31\)\./);
+  const status = screen.getByRole("status");
+  expect(status).toHaveTextContent(/^Bu aralıkta olay yok/);
   expect(screen.queryByRole("table")).toBeNull();
   // Kesilen liste: nereye dek tarandığı yazılır.
   const many = Array.from({ length: MAX_SHOWN_EVENTS + 5 }, () => VIEW.events[0]);
@@ -156,8 +171,42 @@ test("no events, a cut list and a long list are said in words", async () => {
   fireEvent.click(run());
   await settle();
   expect(rows()).toHaveLength(MAX_SHOWN_EVENTS);
-  expect(screen.getByText(/Liste 2000 olayda kesildi; 2026-12-0\d tarihinden sonrası taranmadı\./)).toBeInTheDocument();
-  expect(screen.getByText(`İlk ${MAX_SHOWN_EVENTS} olay gösteriliyor (${MAX_SHOWN_EVENTS + 5} olay). Aralığı ya da seçimi daraltın.`)).toBeInTheDocument();
+  // Son olayın anı (fikstür; +05:30) dakikasıyla yazılır: o günün sonrası da taranmamıştır.
+  const cut = "Liste 2000 olayda kesildi; 2026-12-09 06:21 anından sonrası taranmadı. Aralığı ya da seçimi daraltın.";
+  const capped = `İlk ${MAX_SHOWN_EVENTS} olay gösteriliyor (${MAX_SHOWN_EVENTS + 5} olay). Aralığı ya da seçimi daraltın.`;
+  expect(screen.getByText(cut)).toBeInTheDocument();
+  expect(screen.getByText(capped)).toBeInTheDocument();
+  // Kesilme ve sınır notları da aynı durum bölgesindedir.
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status).toHaveTextContent(cut);
+  expect(status).toHaveTextContent(capped);
+});
+
+test("the cut moment is written in the last event's own offset, not the range end's", async () => {
+  // Son olay 23:50'de (UT, ofset 0); aralığın sonundaki ofset +01:00 (yaz saati geçişi) olsaydı ertesi gün yazılırdı.
+  const jd = 2461385.5 - 9.5 / 1440;
+  const last = { event: { ...VIEW.events[0].event, jd_ut: jd }, offset_secs: 0 };
+  vi.mocked(api.eventSearch).mockResolvedValueOnce(ok({ ...VIEW, events: [VIEW.events[0], last], truncated: true, scanned_to_jd_ut: jd, to_offset_secs: 3600 }));
+  renderPanel();
+  fireEvent.click(run());
+  await settle();
+  expect(screen.getByRole("status")).toHaveTextContent("Liste 2000 olayda kesildi; 2026-12-10 23:50 anından sonrası taranmadı.");
+});
+
+test("the list is bound to the whole request: changed calculation settings mark it as earlier", async () => {
+  const opened = fixture().opened;
+  renderPanel({}, { opened });
+  fireEvent.click(run());
+  await settle();
+  expect(screen.queryByRole("note")).toBeNull();
+  const settings = { ...opened.chart.meta.settings, dasha_year: opened.chart.meta.settings.dasha_year === 360 ? null : 360 };
+  act(() => session.open({ ...opened, chart: { ...opened.chart, meta: { ...opened.chart.meta, settings } } }));
+  expect(screen.getByRole("note")).toHaveTextContent("Ayarlar değişti; liste önceki aramaya ait.");
+  // Yeni arama yeni ayarları taşır ve işaret kalkar.
+  fireEvent.click(run());
+  await settle();
+  expect(sent().settings).toEqual(settings);
+  expect(screen.queryByRole("note")).toBeNull();
 });
 
 test("an incomplete selection says why, a changed form marks the list, and an error can be retried", async () => {
@@ -175,7 +224,8 @@ test("an incomplete selection says why, a changed form marks the list, and an er
   vi.mocked(api.eventSearch).mockResolvedValueOnce({ status: "error", error: { code: "invalid_search_input", params: { field: "range" } } });
   fireEvent.click(run());
   await settle();
-  expect(screen.getByRole("alert")).toHaveTextContent("Arama isteği geçersiz: range.");
+  // Alan adı ham kimlik olarak değil, arayüz dilinde yazılır.
+  expect(screen.getByRole("alert")).toHaveTextContent("Arama isteği geçersiz: tarih aralığı (bitiş başlangıçtan sonra olmalı; Ay içeren aramada en çok 5 yıl, ötekilerde en çok 120 yıl).");
   // Hata: önceki arama olmadığı gibi tablo da yoktur; yeniden deneme odağı "Ara"da tutar.
   expect(screen.queryByRole("table")).toBeNull();
   const retry = screen.getByRole("button", { name: "Yeniden dene" });
@@ -210,6 +260,11 @@ test("stored settings are read tolerantly and every kind has a name in every lan
   for (const lang of [tr, en, fr]) {
     expect(Object.keys(lang.eventSearch.kind)).toEqual([...EVENT_KINDS]);
     for (const kind of EVENT_KINDS) expect(lang.eventSearch.event).toHaveProperty(kind);
+    // Olay aramasının hata alanlarının (D10) her birinin adı vardır.
+    expect(Object.keys(lang.eventSearch.field).sort()).toEqual(["from_date", "grahas", "kinds", "natal", "place", "range", "to_date"]);
   }
+  // Tek olayda da doğru okunur: sayı addan sonra gelir.
+  expect(en.eventSearch.summary).toBe("Events: {{n}} · {{from}} – {{to}}");
+  expect(fr.eventSearch.summary).toBe("Événements : {{n}} · {{from}} – {{to}}");
   expect(JSON.stringify(fr.eventSearch)).not.toContain("'");
 });
