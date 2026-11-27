@@ -948,3 +948,116 @@ test("muhurta search: the filter form, paged windows, a saved filter, and a row 
   await expect(results.locator("tbody tr")).toHaveCount(30);
   await expect(first).toBeFocused();
 });
+
+test("prashna: Cmd+Shift+P casts a number prashna for the open client; the Prashna layout, the facts, the focus house and the question", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+Shift+p");
+  const sheet = page.getByRole("dialog", { name: "Yeni prashna" });
+  await expect(sheet.getByRole("radio", { name: "Şimdi" })).toBeFocused();
+  // Bulunulan yer seçilmemiş: form yer ister, haritanın yerine kendiliğinden düşmez ve komut çağırmaz.
+  await expect(sheet.locator(".prashna-place")).toContainText("Bulunulan yer seçilmemiş.");
+  await sheet.getByRole("button", { name: "Prashna kur" }).click();
+  await expect(sheet.getByRole("combobox", { name: "Yer" })).toBeFocused();
+  await expect(sheet.getByText("Bir yer seçin.")).toBeVisible();
+  expect(await ipcCalls(page, "create_prashna")).toHaveLength(0);
+  await sheet.getByRole("combobox", { name: "Yer" }).selectOption("chart");
+  await expect(sheet.locator(".prashna-place")).toHaveText("New Delhi, Delhi, India · Asia/Kolkata");
+  await sheet.getByRole("textbox", { name: "Sayı (isteğe bağlı)" }).fill("54");
+  await sheet.getByRole("textbox", { name: "Soru" }).fill("Deneme sorusu");
+  await sheet.getByRole("combobox", { name: "Odak evi" }).selectOption("7");
+  await sheet.getByRole("button", { name: "Prashna kur" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // İstek: an "şimdi" (Rust okur), yer haritanın yeri, sayı ve soru yazıldığı gibi; açık danışana.
+  type Request = { request: { client_id: number | null; at: unknown; place: { place: { name: string }; tz: unknown }; number: number | null; question: string; focus_house: number | null } };
+  const [cast] = (await ipcCalls(page, "create_prashna")) as Request[];
+  expect(cast.request).toMatchObject({ client_id: 1, at: "Now", number: 54, question: "Deneme sorusu", focus_house: 7 });
+  expect(cast.request.place).toEqual(FIXTURE.muhurta.home_place);
+
+  // Harita açılır ve Prashna düzenine geçilir: D1, olgular, panchang ve notlar.
+  await expect(page.getByRole("combobox", { name: "Düzen" })).toHaveValue("builtin:prashna");
+  await expect(page.locator(".topbar-chart").first()).toHaveText("Prashna 2026-11-25 15:30");
+  await expect(page.locator(".topbar-number")).toContainText("sayı: 54");
+  const facts = page.getByRole("region", { name: "Prashna olguları" });
+  await expect(page.getByRole("region", { name: "Panchang", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Notlar" })).toBeVisible();
+  await expect(facts.getByRole("textbox", { name: "Soru" })).toHaveValue("Deneme sorusu");
+  // Lagna sayıdan gelir (54 → Başak 28°20′, navamsa ortası); modül girdisi sayıyı taşır.
+  await expect(facts.getByRole("region", { name: "Lagna" })).toContainText("Baş 28°20′ · 54. navamsanın ortası");
+  await expect(facts.getByRole("region", { name: "Lagna" })).toContainText("Shirshodaya · başla doğan");
+  type FactsCall = { input: { jd_ut: number; time_known: boolean; lagna_number: number | null }; focusHouse: number | null };
+  const factCalls = async () => (await ipcCalls(page, "compute_prashna_facts")) as FactsCall[];
+  expect(await factCalls()).toHaveLength(1);
+  expect((await factCalls())[0]).toMatchObject({ input: { jd_ut: FIXTURE.prashna.opened_number.chart.jd_ut, time_known: true, lagna_number: 54 }, focusHouse: 7 });
+  const lords = facts.getByRole("table", { name: "Lagna lordu ve odak evinin lordu" });
+  await expect(lords.locator("tbody tr")).toHaveCount(2);
+  await expect(lords.locator("tbody tr").first().locator("th, td").first()).toHaveText("Lagna lordu");
+  await expect(facts.getByRole("region", { name: "Ay" })).toContainText("Rohini");
+  await expect(facts.getByText("Bu panel olguları sayar; sorunun yanıtını ya da bir hükmü söylemez.")).toBeVisible();
+
+  // Odak evi panelden değişir: kaydedilir, olgular yeniden okunur, odak seçicide durur.
+  const focus = facts.getByRole("combobox", { name: "Odak evi" });
+  await focus.focus();
+  await focus.selectOption("10");
+  await expect.poll(async () => (await factCalls()).length).toBe(2);
+  expect((await factCalls())[1].focusHouse).toBe(10);
+  await expect(facts.locator('tr[data-focus="true"] th')).toHaveText("10. ev · odak");
+  await expect(focus).toBeFocused();
+  // Soru yazdıkça kaydedilir; olgular yeniden hesaplanmaz.
+  await facts.getByRole("textbox", { name: "Soru" }).fill("Deneme sorusu, ikinci yazım");
+  await expect(facts.getByText("Kaydedildi")).toBeVisible();
+  type Edit = { chartId: number; edit: { question: string; focus_house: number | null } };
+  const edits = (await ipcCalls(page, "update_prashna")) as Edit[];
+  expect(edits.at(-1)).toEqual({ chartId: FIXTURE.prashna.opened_number.chart_record.id, edit: { question: "Deneme sorusu, ikinci yazım", focus_house: 10 } });
+  expect(await factCalls()).toHaveLength(2);
+  // Lagna lordu ortak vurgudur: haritadaki graha da işaretlenir.
+  await lords.getByRole("button", { name: "Merkür" }).click();
+  await expect(lords.locator('tr[data-lord="lagna"]')).toHaveClass(/is-highlighted/);
+});
+
+test("prashna without an open client: the palette command, a searched place, a typed moment; the chart opens under the built-in client", async ({ page }) => {
+  await mockIpc(page, { session: false });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Jyotish Desk" })).toBeVisible();
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await palette.getByRole("combobox").fill("prashna");
+  await palette.getByRole("option", { name: /Yeni prashna/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Yeni prashna" });
+  // Açık danışan yok: danışan kutusu ve "açık haritanın yeri" seçeneği yoktur.
+  await expect(sheet.getByRole("checkbox")).toHaveCount(0);
+  await expect(sheet.getByText(/Açık danışan yok: prashna “Prashna” adlı yerleşik danışanın altında toplanır\./)).toBeVisible();
+  await expect(sheet.getByRole("combobox", { name: "Yer" }).locator("option")).toHaveText(["Bulunulan yer", "Başka bir yer ara"]);
+  await sheet.getByRole("combobox", { name: "Yer" }).selectOption("search");
+  await sheet.getByRole("combobox", { name: "Yer ara" }).fill("new delhi");
+  await expect(sheet.getByRole("listbox").getByRole("option").first()).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(sheet.locator(".prashna-place")).toContainText("Asia/Kolkata");
+  // Girilen an sorunun yerinin duvar saatidir; çözümü Rust yapar.
+  await sheet.getByRole("radio", { name: "Başka bir an" }).check();
+  await sheet.getByLabel("Tarih").fill("2026-11-25");
+  await sheet.getByLabel("Saat").fill("15:30");
+  await sheet.getByRole("button", { name: "Prashna kur" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const [cast] = (await ipcCalls(page, "create_prashna")) as { request: { client_id: number | null; at: unknown; number: number | null; focus_house: number | null } }[];
+  expect(cast.request).toMatchObject({ client_id: null, at: { Local: { date: "2026-11-25", time: "15:30" } }, number: null, focus_house: null });
+
+  // Yerleşik danışan açılır; zaman prashnasında sayı rozeti yoktur ve odak evi seçilmemiştir.
+  await expect(page.getByRole("heading", { level: 1, name: "Prashna" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Düzen" })).toHaveValue("builtin:prashna");
+  await expect(page.locator(".topbar-number")).toHaveCount(0);
+  const facts = page.getByRole("region", { name: "Prashna olguları" });
+  await expect(facts.getByRole("combobox", { name: "Odak evi" })).toHaveValue("");
+  await expect(facts.getByText("Odak evi seçilmedi: odak evinin lordu ve iki lordun bağı gösterilmez.")).toBeVisible();
+  const calls = (await ipcCalls(page, "compute_prashna_facts")) as { input: { lagna_number: number | null }; focusHouse: number | null }[];
+  expect(calls).toEqual([expect.objectContaining({ focusHouse: null })]);
+  expect(calls[0].input.lagna_number).toBeNull();
+  // Olgular paneli paletten kapatılıp açılabilir (K12); kapatınca odak gövdeye düşmez.
+  await page.keyboard.press("Meta+k");
+  await page.getByRole("dialog", { name: "Komut paleti" }).getByRole("combobox").fill("prashna olgu");
+  await page.getByRole("dialog", { name: "Komut paleti" }).getByRole("option", { name: /Prashna olguları panelini aç\/kapat/ }).click();
+  await expect(page.getByRole("region", { name: "Prashna olguları" })).toHaveCount(0);
+  await expect(page.locator("body")).not.toBeFocused();
+});
