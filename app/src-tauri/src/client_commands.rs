@@ -5,15 +5,16 @@ use std::sync::{Arc, Mutex};
 
 use atlas::MomentError;
 use ephemeris::Engine;
-use jyotish_core::{CalcSettings, Chart};
+use jyotish_core::{CalcSettings, Chart, ChartInput};
 use serde::Serialize;
 use specta::Type;
 use store::{
-    ChartRecord, Client, NewChart, NewClient, Note, Store, StoreError, StoreWarning, ViewState,
+    ChartRecord, Client, NewChart, NewClient, Note, PrashnaMeta, Store, StoreError, StoreWarning,
+    ViewState,
 };
 use tauri::State;
 
-use crate::commands::{compute_chart_blocking, CommandError};
+use crate::commands::{compute_chart_for_blocking, CommandError};
 
 /// Tauri durumunda tek store örneği.
 pub type StoreState = Arc<Mutex<Store>>;
@@ -31,6 +32,9 @@ pub struct OpenedClient {
     pub view_state: ViewState,
     pub chart: Chart,
     pub recent_notes: Vec<Note>,
+    /// Harita prashnaysa yan kaydı (soru, sayı, odak evi); değilse `null`. Sayı prashnasında
+    /// `chart` sayının lagnasıyla hesaplanmıştır (ileri modüller spec'i §11).
+    pub prashna: Option<PrashnaMeta>,
     pub warnings: Vec<StoreWarning>,
 }
 
@@ -143,6 +147,24 @@ pub(crate) fn lock(store: &Mutex<Store>) -> Result<std::sync::MutexGuard<'_, Sto
     }
 }
 
+/// Kayıtlı bir haritanın hesap girdisi: çözülmüş an, yer ve ayarlar; sayı prashnasında sayı.
+/// Harita her zaman lagnasıyla hesaplanır (`time_known`); saati bilinmeyen haritada lagnanın
+/// gösterilmemesi v1'deki gibi arayüzün işidir.
+fn stored_input(
+    chart: &ChartRecord,
+    settings: CalcSettings,
+    prashna: Option<&PrashnaMeta>,
+) -> ChartInput {
+    ChartInput {
+        jd_ut: chart.resolved.jd_ut,
+        lat: chart.birth.place.lat,
+        lon: chart.birth.place.lon,
+        settings,
+        time_known: true,
+        lagna_number: prashna.and_then(|p| p.number),
+    }
+}
+
 /// `open_client` gövdesi: kayıt (store kilidi kısa tutulur), sonra motor iş parçacığında
 /// harita. Bloklar; async bağlamdan `spawn_blocking` içinde çağrılmalıdır.
 pub fn open_client_blocking(
@@ -152,13 +174,9 @@ pub fn open_client_blocking(
     chart_id: Option<u32>,
 ) -> Result<OpenedClient, CommandError> {
     let rec = lock(store)?.open_client(client_id, chart_id)?;
-    let place = &rec.chart.birth.place;
-    let chart = compute_chart_blocking(
+    let chart = compute_chart_for_blocking(
         engine,
-        rec.chart.resolved.jd_ut,
-        place.lat,
-        place.lon,
-        rec.calc_settings.clone(),
+        stored_input(&rec.chart, rec.calc_settings.clone(), rec.prashna.as_ref()),
     )?;
     Ok(OpenedClient {
         client: rec.client,
@@ -167,6 +185,7 @@ pub fn open_client_blocking(
         view_state: rec.view_state,
         chart,
         recent_notes: rec.recent_notes,
+        prashna: rec.prashna,
         warnings: rec.warnings,
     })
 }
@@ -243,13 +262,13 @@ pub fn save_calc_settings_blocking(
     chart_id: u32,
     settings: CalcSettings,
 ) -> Result<Chart, CommandError> {
-    let rec = {
+    let (rec, prashna) = {
         let mut s = lock(store)?;
         s.save_calc_settings(chart_id, &settings)?;
-        s.chart(chart_id)?
+        (s.chart(chart_id)?, s.prashna_meta(chart_id)?)
     };
-    let place = &rec.birth.place;
-    compute_chart_blocking(engine, rec.resolved.jd_ut, place.lat, place.lon, settings)
+    // Sayı prashnası yeni ayarla da sayının lagnasıyla hesaplanır.
+    compute_chart_for_blocking(engine, stored_input(&rec, settings, prashna.as_ref()))
 }
 
 /// Bloklayan gövdeyi havuzda çalıştırır. Görev paniklerse (`JoinError`) `task_failed` döner

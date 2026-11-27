@@ -2,8 +2,8 @@
 // için `create_client` dönüşü, ilk 3. seviye dönemin alt dönemleri, "new delhi" atlas araması,
 // an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit, bakış tablosu, Jaimini raporu,
 // chara dasha, Shadbala raporu, yoga raporu (kataloğuyla), ikinci bir danışanla uyum raporları,
-// gün panchangı (iki gün) ve üç dilimlik bir muhurta araması. Arayüz hesap yapmadığı için testler
-// bunu çizer.
+// gün panchangı (iki gün), üç dilimlik bir muhurta araması ve iki prashna haritası (olgularıyla).
+// Arayüz hesap yapmadığı için testler bunu çizer.
 import type {
   CharaDasha,
   ChartBrief,
@@ -17,6 +17,7 @@ import type {
   JaiminiReport,
   Kuta,
   KutaReport,
+  LordLink,
   MomentPreview,
   MuhurtaFlag,
   MuhurtaPlace,
@@ -26,7 +27,9 @@ import type {
   NatalMoon,
   OpenedClient,
   PlaceHit,
+  PrashnaFacts,
   PrefsLoad,
+  RisingMode,
   ShadbalaReport,
   Sign,
   SignDashaPath,
@@ -102,6 +105,22 @@ export interface UiFixture {
     query: MuhurtaQuery;
     pages: MuhurtaSearchView[];
   };
+  /**
+   * Prashna: fikstürün sabit saatinde ("şimdi"), açık danışanın altında ve Delhi'de kurulmuş iki
+   * harita. `opened` zaman prashnasının, `opened_number` 54 sayılı sayı prashnasının
+   * `create_prashna` dönüşüdür (deneme sorusu; odak evi 7). `facts` zaman prashnasının,
+   * `facts_number` sayı prashnasının odak evi 7 ile, `facts_no_focus` zaman prashnasının odak evi
+   * seçilmeden `compute_prashna_facts` dönüşüdür.
+   */
+  prashna: {
+    opened: OpenedClient;
+    opened_number: OpenedClient;
+    facts: PrashnaFacts;
+    facts_no_focus: PrashnaFacts;
+    facts_number: PrashnaFacts;
+  };
+  /** Rust `RisingMode::ALL`, `LordLink::ALL`, `PRASHNA_NUMBER_MAX` ve `MAX_QUESTION_CHARS`. */
+  prashna_ids: { rising: RisingMode[]; links: LordLink[]; max_number: number; max_question_chars: number };
   /** Rust `MuhurtaFlag::ALL`, `TithiGroup::ALL`, `NakshatraNature::ALL` ve `MUHURTA_MAX_MIN_MINUTES`. */
   muhurta_ids: { flags: MuhurtaFlag[]; tithi_groups: TithiGroup[]; nakshatra_natures: NakshatraNature[]; max_min_minutes: number };
 }

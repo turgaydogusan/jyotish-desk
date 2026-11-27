@@ -13,6 +13,11 @@ test("module input is the computed chart's moment, place and settings", () => {
 
 test("an unknown birth time is passed on so that Rust hides lagna-dependent output", () => {
   expect(chartInput(unknownTimeOpened()).time_known).toBe(false);
+  // Sayı prashnasında sayı girdiyle gider; zaman prashnasında ve öteki haritalarda gitmez.
+  const { prashna } = fixture();
+  expect(chartInput(prashna.opened_number)).toMatchObject({ jd_ut: prashna.opened_number.chart.jd_ut, time_known: true, lagna_number: 54 });
+  expect(chartInput(prashna.opened).lagna_number).toBeNull();
+  expect(inputKey(prashna.opened_number)).not.toBe(inputKey(prashna.opened));
 });
 
 test("the input key changes with the chart, the birth time certainty and the settings", () => {

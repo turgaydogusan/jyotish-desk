@@ -3,10 +3,20 @@
 import type { ChartInput, OpenedClient } from "../bindings";
 import { timeUnknown } from "../session/birth";
 
-/** Açık haritanın modül girdisi: hesaplanan haritanın anı, konumu ve ayarları. */
+/**
+ * Açık haritanın modül girdisi: hesaplanan haritanın anı, konumu ve ayarları. Sayı prashnasında
+ * sayı da gider: her modül, haritanın gösterdiği (sayıdan gelen) lagnayı kullanır.
+ */
 export function chartInput(opened: OpenedClient): ChartInput {
   const { chart } = opened;
-  return { jd_ut: chart.jd_ut, lat: chart.geo_lat, lon: chart.geo_lon, settings: chart.meta.settings, time_known: !timeUnknown(opened), lagna_number: null };
+  return {
+    jd_ut: chart.jd_ut,
+    lat: chart.geo_lat,
+    lon: chart.geo_lon,
+    settings: chart.meta.settings,
+    time_known: !timeUnknown(opened),
+    lagna_number: opened.prashna?.number ?? null,
+  };
 }
 
 /**

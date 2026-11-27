@@ -23,6 +23,8 @@ import {
   type NewClient,
   type BirthData,
   type PanelLayout,
+  type PrashnaEdit,
+  type PrashnaRequest,
   type SavedMuhurtaFilter,
   type Sign,
   type TransitAt,
@@ -111,6 +113,12 @@ export const api = {
   // Kayıtlı süzgeçler: ad ve koşullar; yer, tarih ve kişi kaydedilmez. Kayıt listenin tamamını yazar.
   loadMuhurtaFilters: () => wrap(() => commands.loadMuhurtaFilters()),
   saveMuhurtaFilters: (filters: SavedMuhurtaFilter[]) => wrap(() => commands.saveMuhurtaFilters(filters)),
+  // Prashna: soru anının haritası ("şimdi" Rust'ta okunur; girilen an sorunun yerinin duvar
+  // saatidir). `createPrashna` haritayı kurar ve açar; `updatePrashna` soru metnini ve odak evini
+  // kaydeder; olgular panel açıkken istenir ve saklanmaz. Soru metni, yer ve an loglanmaz.
+  createPrashna: (request: PrashnaRequest) => wrap(() => commands.createPrashna(request)),
+  updatePrashna: (chartId: number, edit: PrashnaEdit) => wrap(() => commands.updatePrashna(chartId, edit)),
+  computePrashnaFacts: (input: ChartInput, focusHouse: number | null) => wrap(() => commands.computePrashnaFacts(input, focusHouse)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

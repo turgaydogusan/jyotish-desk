@@ -13,8 +13,8 @@ use atlas::Timestamp;
 use ephemeris::Engine;
 use jyotish_core::muhurta::{NakshatraNature, TithiGroup, MUHURTA_MAX_MIN_MINUTES};
 use jyotish_core::{
-    kuta_class_ids, ChartInput, Graha, Kuta, MuhurtaCriteria, MuhurtaFlag, NatalMoon, Vara,
-    YOGA_CATALOG, YOGA_CONDITIONS,
+    kuta_class_ids, ChartInput, Graha, Kuta, LordLink, MuhurtaCriteria, MuhurtaFlag, NatalMoon,
+    RisingMode, Vara, PRASHNA_NUMBER_MAX, YOGA_CATALOG, YOGA_CONDITIONS,
 };
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
@@ -27,11 +27,14 @@ use jyotish_desk_lib::module_commands::{
 use jyotish_desk_lib::muhurta_commands::{
     day_panchang_blocking, muhurta_search_blocking, MuhurtaPlace, MuhurtaQuery,
 };
+use jyotish_desk_lib::prashna_commands::{
+    compute_prashna_facts_blocking, create_prashna_blocking, PrashnaMoment, PrashnaRequest,
+};
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
 use store::{
     BirthData, ChartKind, Gender, HomePlace, NewChart, NewClient, Place, Store, TimeCertainty,
-    TzChoice,
+    TzChoice, MAX_QUESTION_CHARS,
 };
 
 const CLIENT_UUID: &str = "00000000-0000-4000-8000-000000000001";
@@ -39,6 +42,9 @@ const CHART_UUID: &str = "00000000-0000-4000-8000-000000000002";
 /// Uyum fikstürünün eş haritası (ikinci danışan).
 const PARTNER_CLIENT_UUID: &str = "00000000-0000-4000-8000-000000000011";
 const PARTNER_CHART_UUID: &str = "00000000-0000-4000-8000-000000000012";
+/// Prashna fikstürünün iki haritası (zaman ve sayı prashnası).
+const PRASHNA_CHART_UUID: &str = "00000000-0000-4000-8000-000000000021";
+const PRASHNA_NUMBER_CHART_UUID: &str = "00000000-0000-4000-8000-000000000022";
 
 /// Eş harita: İstanbul, 1987-03-17 10:00 (deneme verisi; gerçek kişi değildir).
 fn istanbul() -> BirthData {
@@ -317,6 +323,47 @@ fn ui_fixture_is_up_to_date() {
         .expect("store")
         .app_prefs_load()
         .expect("prefs");
+
+    // Prashna: fikstürün sabit saatinde ("şimdi"), açık danışanın altında, bulunulan yerde
+    // (Delhi) iki harita: zaman prashnası ve 54 sayısıyla sayı prashnası (deneme sorusu; gerçek
+    // kişi ya da soru değildir). Olgular odak evi 7 ile; bir de odak evi seçilmemiş hâli.
+    // Öteki bütün okumalardan sonra kurulur: önceki kayıtların kimlikleri değişmez.
+    let prashna_now = Timestamp::from_second(1_795_600_800).expect("timestamp");
+    let prashna_request = |number: Option<u8>| PrashnaRequest {
+        client_id: Some(opened.client.id),
+        at: PrashnaMoment::Now,
+        place: home_place.clone(),
+        number,
+        question: "Deneme sorusu: yolculuk bu ay olur mu?".into(),
+        focus_house: Some(7),
+    };
+    let prashna_time = create_prashna_blocking(&engine, &store, prashna_request(None), prashna_now)
+        .expect("time prashna");
+    let prashna_number =
+        create_prashna_blocking(&engine, &store, prashna_request(Some(54)), prashna_now)
+            .expect("number prashna");
+    let prashna_input = |o: &jyotish_desk_lib::client_commands::OpenedClient| ChartInput {
+        jd_ut: o.chart.jd_ut,
+        lat: o.chart.geo_lat,
+        lon: o.chart.geo_lon,
+        settings: o.calc_settings.clone(),
+        time_known: true,
+        lagna_number: o.prashna.as_ref().and_then(|p| p.number),
+    };
+    let prashna_facts =
+        compute_prashna_facts_blocking(&engine, prashna_input(&prashna_time), Some(7))
+            .expect("prashna facts");
+    let prashna_facts_no_focus =
+        compute_prashna_facts_blocking(&engine, prashna_input(&prashna_time), None)
+            .expect("prashna facts without a focus house");
+    let prashna_facts_number =
+        compute_prashna_facts_blocking(&engine, prashna_input(&prashna_number), Some(7))
+            .expect("number prashna facts");
+    assert_eq!(
+        prashna_number.chart.lagna.sign,
+        jyotish_core::Sign::Virgo,
+        "54 is the sixth sign"
+    );
     let value = json!({
         "opened": opened,
         "dasha_children": { "path": path, "periods": children },
@@ -354,6 +401,19 @@ fn ui_fixture_is_up_to_date() {
             "query": muhurta_query,
             "pages": muhurta_pages,
         },
+        "prashna": {
+            "opened": prashna_time,
+            "opened_number": prashna_number,
+            "facts": prashna_facts,
+            "facts_no_focus": prashna_facts_no_focus,
+            "facts_number": prashna_facts_number,
+        },
+        "prashna_ids": {
+            "rising": RisingMode::ALL,
+            "links": LordLink::ALL,
+            "max_number": PRASHNA_NUMBER_MAX,
+            "max_question_chars": MAX_QUESTION_CHARS,
+        },
         "muhurta_ids": {
             "flags": MuhurtaFlag::ALL,
             "tithi_groups": TithiGroup::ALL,
@@ -367,6 +427,8 @@ fn ui_fixture_is_up_to_date() {
         .replace(&opened.chart_record.uuid, CHART_UUID)
         .replace(&partner.client.uuid, PARTNER_CLIENT_UUID)
         .replace(&partner.chart_record.uuid, PARTNER_CHART_UUID)
+        .replace(&prashna_time.chart_record.uuid, PRASHNA_CHART_UUID)
+        .replace(&prashna_number.chart_record.uuid, PRASHNA_NUMBER_CHART_UUID)
         + "\n";
 
     let path = root.join("../ui/test/fixtures/delhi.json");

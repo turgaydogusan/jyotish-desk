@@ -25,7 +25,8 @@ use jyotish_core::{
     MAX_SUNRISE_GAP_DAYS, MUHURTA_METHOD, SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS, SHADBALA_METHOD,
     YOGA_CATALOG, YOGA_CATALOG_VERSION,
 };
-use jyotish_desk_lib::commands::compute_chart_blocking;
+use jyotish_core::{number_lagna_lon, prashna_facts, rising_mode, ZodiacMode, PRASHNA_METHOD};
+use jyotish_desk_lib::commands::{compute_chart_blocking, compute_chart_for_blocking};
 use jyotish_desk_lib::module_commands::{
     chara_dasha_at_blocking, chara_dasha_children_blocking, compute_chara_dasha_blocking,
     compute_compat_blocking, compute_drishti_blocking, compute_jaimini_blocking,
@@ -35,6 +36,7 @@ use jyotish_desk_lib::muhurta_commands::{
     day_panchang_blocking, muhurta_search_blocking, MuhurtaPlace, MuhurtaQuery, MuhurtaSearchView,
     MuhurtaWindowView,
 };
+use jyotish_desk_lib::prashna_commands::compute_prashna_facts_blocking;
 use jyotish_desk_lib::transit_commands::TransitAt;
 use serde_json::Value;
 use store::TzChoice;
@@ -84,6 +86,7 @@ fn module_commands_run_on_the_engine_thread_and_map_errors() {
     compat_checks(&engine, &inputs);
     timeline_checks(&engine, &inputs);
     muhurta_checks(&engine, &inputs);
+    prashna_checks(&engine, &inputs);
 }
 
 fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
@@ -2375,4 +2378,184 @@ fn muhurta_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
             );
         }
     }
+}
+
+/// Prashna (ileri modüller spec'i §11): gerçek ephemeris'le olgular, sayı prashnasının
+/// değişmezi, v1 haritasıyla çapraz denetim, alan adlı hatalar ve bütçe.
+fn prashna_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    for (id, input) in inputs {
+        let chart = compute_chart_blocking(
+            engine,
+            input.jd_ut,
+            input.lat,
+            input.lon,
+            input.settings.clone(),
+        )
+        .expect("chart");
+        // `ChartInput`'un haritası, sayı yokken v1 haritasının aynısıdır.
+        assert_eq!(
+            compute_chart_for_blocking(engine, input.clone()).expect("chart for input"),
+            chart,
+            "{id}"
+        );
+        let positions = Positions::from(&chart);
+        for focus in [None, Some(1), Some(7), Some(10)] {
+            let facts = compute_prashna_facts_blocking(engine, input.clone(), focus)
+                .unwrap_or_else(|e| panic!("{id}: {}", e.code));
+            assert_eq!(facts.method, PRASHNA_METHOD, "{id}");
+            // Çapraz denetim: saf fonksiyon v1 haritasının konumlarından aynı olguları verir.
+            let mut pure =
+                prashna_facts(&positions, &input.settings.combustion_orbs, focus).expect("pure");
+            pure.warnings.clone_from(&facts.warnings);
+            assert_eq!(facts, pure, "{id}");
+            // v1 olgularıyla çapraz denetim: lordların burcu, evi, dignity'si, retrosu ve
+            // yanması haritanın graha tablosundakiyle aynıdır (golden fixture'larla doğrulanmış).
+            let lagna = facts.lagna.as_ref().expect("lagna");
+            assert_eq!(lagna.sign, chart.lagna.sign, "{id}");
+            assert_eq!(lagna.rising, rising_mode(chart.lagna.sign), "{id}");
+            let v1 = |g: Graha| chart.grahas.iter().find(|p| p.graha == g).expect("graha");
+            let mut lords = vec![&lagna.lord];
+            if let Some(f) = &facts.focus {
+                assert_eq!(Some(f.house), focus, "{id}");
+                assert_eq!(f.lord.graha, house_lord(chart.lagna.sign, f.house), "{id}");
+                lords.push(&f.lord);
+            } else {
+                assert_eq!(focus, None, "{id}");
+            }
+            for l in lords {
+                let g = v1(l.graha);
+                assert_eq!(
+                    (l.sign, l.dignity, l.retrograde, l.combust),
+                    (g.sign, g.dignity, g.retrograde, g.combust),
+                    "{id}: {:?}",
+                    l.graha
+                );
+                assert_eq!(l.house, g.sign.house_from(chart.lagna.sign), "{id}");
+            }
+            // Ay ve anın panchangı (v1) birbirini tutar.
+            let moon = v1(Graha::Moon);
+            assert_eq!(
+                (facts.moon.sign, facts.moon.nakshatra, facts.moon.pada),
+                (moon.sign, moon.nakshatra, moon.pada),
+                "{id}"
+            );
+            assert_eq!(
+                (facts.moon.tithi, facts.moon.paksha),
+                (chart.panchang.tithi.no, chart.panchang.tithi.paksha),
+                "{id}"
+            );
+            assert_eq!(facts.yogas, yogas(&positions), "{id}");
+        }
+
+        // Sayı prashnası: grahalar aynı anın grahalarıdır; yalnızca lagna ve evler değişir.
+        for number in [1, 9, 10, 54, 108] {
+            let numbered = ChartInput {
+                lagna_number: Some(number),
+                ..input.clone()
+            };
+            let c = compute_chart_for_blocking(engine, numbered.clone()).expect("number chart");
+            let want = number_lagna_lon(number).expect("lagna");
+            assert!(
+                (c.lagna.sidereal_lon - want).abs() < 1e-12,
+                "{id}: {number}"
+            );
+            assert_eq!(c.bhavas.system, HouseSystem::WholeSign, "{id}");
+            for (a, b) in c.grahas.iter().zip(&chart.grahas) {
+                assert_eq!(
+                    (a.lon, a.sidereal_lon, a.speed, a.sign, a.nakshatra),
+                    (b.lon, b.sidereal_lon, b.speed, b.sign, b.nakshatra),
+                    "{id}: {number} {:?}",
+                    a.graha
+                );
+                assert_eq!(a.house, a.sign.house_from(c.lagna.sign), "{id}");
+            }
+            assert_eq!(c.dasha, chart.dasha, "{id}");
+            assert_eq!(c.panchang, chart.panchang, "{id}");
+            // Sayı lagna verir, meridyen vermez: Shadbala ve Bhava bala sayı prashnasında yoktur.
+            assert_eq!(
+                compute_shadbala_blocking(engine, numbered.clone()).expect("shadbala"),
+                None,
+                "{id}: {number}"
+            );
+            let facts = compute_prashna_facts_blocking(engine, numbered.clone(), Some(7))
+                .expect("number facts");
+            assert_eq!(facts.lagna.as_ref().unwrap().sign, c.lagna.sign, "{id}");
+            // Her modül aynı lagnayı görür (ör. bakış tablosu ve yoga listesi).
+            let numbered_positions = Positions::from(&c);
+            assert_eq!(facts.yogas, yogas(&numbered_positions), "{id}");
+            assert_eq!(
+                compute_yogas_blocking(engine, numbered).expect("yogas"),
+                yogas(&numbered_positions),
+                "{id}"
+            );
+        }
+        // Gerçek lagna verilince (burç evi sistemi, sidereal kip) harita v1 haritasının aynısıdır.
+        if input.settings.house_system == HouseSystem::WholeSign
+            && input.settings.zodiac == ZodiacMode::Sidereal
+        {
+            let (jd, lat, lon, s) = (input.jd_ut, input.lat, input.lon, input.settings.clone());
+            let lagna = chart.lagna.sidereal_lon;
+            let again = engine
+                .call(move |se: &mut ephemeris::SwissEph| {
+                    jyotish_core::compute_chart_with_lagna(se, jd, lat, lon, &s, lagna)
+                })
+                .expect("engine")
+                .expect("chart");
+            assert_eq!(again, chart, "{id}");
+        }
+    }
+
+    // Hatalar yalnızca alan adı taşır; odak evi ve sayı konumdan önce denetlenir.
+    let (_, first) = &inputs[0];
+    let bad_place = ChartInput {
+        lat: 95.0,
+        ..first.clone()
+    };
+    for (input, focus, field) in [
+        (first.clone(), Some(0), "focus_house"),
+        (first.clone(), Some(13), "focus_house"),
+        (bad_place.clone(), Some(13), "focus_house"),
+        (
+            ChartInput {
+                lagna_number: Some(0),
+                ..bad_place.clone()
+            },
+            None,
+            "number",
+        ),
+        (
+            ChartInput {
+                lagna_number: Some(109),
+                ..first.clone()
+            },
+            Some(3),
+            "number",
+        ),
+    ] {
+        let e = compute_prashna_facts_blocking(engine, input, focus).unwrap_err();
+        assert_eq!(e.code, "invalid_prashna_input");
+        assert_eq!(e.params.len(), 1);
+        assert_eq!(e.params["field"], field);
+    }
+    // Saat bilinmiyorsa lagnaya bağlı bölümler boştur (K2).
+    let unknown = ChartInput {
+        time_known: false,
+        ..first.clone()
+    };
+    let facts = compute_prashna_facts_blocking(engine, unknown, Some(5)).expect("facts");
+    assert!(facts.lagna.is_none() && facts.focus.is_none() && facts.moon.house.is_none());
+
+    // Bütçe: spec §15 `compute_prashna_facts` ≤ 15 ms (temel harita hesabı dahil).
+    let numbered = ChartInput {
+        lagna_number: Some(54),
+        ..first.clone()
+    };
+    let (median, max) = median_of_15(|| {
+        compute_prashna_facts_blocking(engine, numbered.clone(), Some(7)).expect("facts");
+    });
+    eprintln!("compute_prashna_facts median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(15),
+        "compute_prashna_facts median {median:?}"
+    );
 }

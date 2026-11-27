@@ -44,6 +44,8 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
       // kaydı gerçek bir gidiş dönüş görür.
       let prefs = fixture.prefs.prefs;
       let muhurtaFilters: unknown[] = [];
+      // Bu oturumda kurulan prashna haritaları: harita kimliği → açılan kayıt.
+      const prashnas: Record<number, typeof ayse> = {};
       const chartOf = (clientId: number) => opened[clientId].chart_record.id;
       const stamp = () => new Date(Date.UTC(2026, 10, 25, 10, 0, noteSeq)).toISOString();
       const respond: Record<string, (args: Record<string, unknown>) => unknown> = {
@@ -154,6 +156,37 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         save_muhurta_filters: (args) => {
           muhurtaFilters = args.filters as unknown[];
           return muhurtaFilters;
+        },
+        // Prashna: harita yeniden hesaplanmaz. Sayı verilmişse fikstürün sayı prashnası (54),
+        // verilmemişse zaman prashnası döner; soru ve odak evi isteğinkidir. Açılan harita
+        // danışanın haritaları arasına girer; soru ve odak evi kaydı bellek içidir.
+        create_prashna: (args) => {
+          const request = args.request as { client_id: number | null; number: number | null; question: string; focus_house: number | null };
+          const base = structuredClone(request.number === null ? fixture.prashna.opened : fixture.prashna.opened_number);
+          base.prashna = { ...base.prashna, number: request.number, question: request.question.trim(), focus_house: request.focus_house };
+          if (request.client_id === null) base.client = { ...base.client, id: 9, uuid: "00000000-0000-4000-8000-000000000009", name: "Prashna", last_chart_id: base.chart_record.id };
+          base.chart_record = { ...base.chart_record, client_id: base.client.id };
+          opened[base.client.id] = base;
+          prashnas[base.chart_record.id] = base;
+          return base;
+        },
+        update_prashna: (args) => {
+          const target = prashnas[args.chartId as number];
+          if (!target) throw { code: "not_found", params: { what: "prashna", id: String(args.chartId) } };
+          const edit = args.edit as { question: string; focus_house: number | null };
+          target.prashna = { ...target.prashna, question: edit.question.trim(), focus_house: edit.focus_house };
+          return target.prashna;
+        },
+        // Olgular fikstürden: sayı prashnası, odak evi seçilmemiş ve odak evli zaman prashnası.
+        // Fikstürde yalnızca 7. evin olguları vardır; başka bir ev aynı olguları o evin
+        // numarasıyla döner (arayüz hesap yapmaz, numarayı çizer).
+        compute_prashna_facts: (args) => {
+          const input = args.input as { lagna_number: number | null };
+          const focus = args.focusHouse as number | null;
+          if (focus === null) return fixture.prashna.facts_no_focus;
+          const facts = structuredClone(input.lagna_number === null ? fixture.prashna.facts : fixture.prashna.facts_number);
+          facts.focus.house = focus;
+          return facts;
         },
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.

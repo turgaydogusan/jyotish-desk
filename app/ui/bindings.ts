@@ -88,6 +88,24 @@ export const commands = {
 	 *  dilim sınırını aşarsa kapandığı dilimde verilir. Yer ve doğum Ay'ı loglanmaz.
 	 */
 	muhurtaSearch: (query: MuhurtaQuery, settings: CalcSettings, cursor: MuhurtaPageCursor | null, options?: InvokeOptions) => typedError<MuhurtaSearchView, CommandError>(__TAURI_INVOKE("muhurta_search", { query, settings, cursor }, options)),
+	/**
+	 *  Soru anının haritasını kurar ve açar. An "şimdi" ya da sorunun yerinin duvar saatidir; yer
+	 *  haritanın yeri olarak saklanır. Harita `Event` türündedir ve genel varsayılan ayarların
+	 *  kopyasını alır. Soru metni, yer ve an loglanmaz; hatalar yalnızca alan adı taşır.
+	 */
+	createPrashna: (request: PrashnaRequest, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_prashna", { request }, options)),
+	/**
+	 *  Açık prashnanın soru metnini ve odak evini kaydeder (otomatik kayıt). Harita yeniden
+	 *  hesaplanmaz: ikisi de lagnayı ve grahaları etkilemez.
+	 */
+	updatePrashna: (chartId: number, edit: PrashnaEdit, options?: InvokeOptions) => typedError<PrashnaMeta, CommandError>(__TAURI_INVOKE("update_prashna", { chartId, edit }, options)),
+	/**
+	 *  Soru haritasının olguları: lagna ve lordu, odak evinin lordu ve iki lordun bağı, Ay,
+	 *  kendralardaki grahalar ve yoga listesi. `input` açık haritanın girdisidir (sayı
+	 *  prashnasında `lagna_number` doludur); `focus_house` astrologun seçtiği evdir. Sonuç
+	 *  saklanmaz.
+	 */
+	computePrashnaFacts: (input: ChartInput, focusHouse: number | null, options?: InvokeOptions) => typedError<PrashnaFacts, CommandError>(__TAURI_INVOKE("compute_prashna_facts", { input, focusHouse }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -603,6 +621,16 @@ export type ExportResult = {
 	over_import_limit: boolean,
 };
 
+export type FocusFacts = {
+	/**  Astrologun seçtiği ev, 1..=12. */
+	house: number,
+	sign: Sign,
+	lord: LordFacts,
+	relation: LordRelation,
+	/**  Odak evindeki grahalar, `Graha::ALL` sırasında. */
+	occupants: Occupant[],
+};
+
 export type FoldChoice = "Earlier" | "Later";
 
 export type Gender = "Male" | "Female" | "Other";
@@ -673,6 +701,13 @@ export type GrahaWar = {
 export type HomePlace = {
 	place: Place,
 	tz: TzChoice,
+};
+
+export type HouseOccupants = {
+	house: number,
+	sign: Sign,
+	/**  `Graha::ALL` sırasında. */
+	grahas: Occupant[],
 };
 
 export type HouseSystem = "WholeSign" | 
@@ -846,11 +881,63 @@ export type Lagna = {
 	pada: number,
 };
 
+export type LagnaFacts = {
+	sign: Sign,
+	/**  Burç türü: yürük, sabit, çift doğalı. */
+	kind: SignKind,
+	rising: RisingMode,
+	lord: LordFacts,
+	/**  Dört kendra (1, 4, 7, 10), ev sırasıyla; boş evler de listededir. */
+	kendras: HouseOccupants[],
+};
+
 export type Layout = {
 	id: string,
 	name: string,
 	builtin: boolean,
 	panels: Panel[],
+};
+
+/**  Bir ev lordunun haritadaki durumu. */
+export type LordFacts = {
+	graha: Graha,
+	sign: Sign,
+	/**  Lagnadan sayılan burç evi, 1..=12. */
+	house: number,
+	dignity: Dignity | null,
+	retrograde: boolean,
+	combust: boolean,
+};
+
+/**
+ *  Lagna lordu ile odak evinin lordu arasındaki bağ. Birden çoğu birlikte geçerli olabilir
+ *  (ör. değişim ve karşılıklı bakış); liste bu enum'un sırasındadır.
+ */
+export type LordLink = 
+/**  Birlikte: aynı burçtalar. */
+"Conjunct" | 
+/**  Değişim: her biri diğerinin burcunda. */
+"Exchange" | 
+/**  Karşılıklı bakış: her biri diğerinin burcuna tam bakışla bakar. */
+"MutualAspect" | 
+/**  Tek yönlü bakış: yalnızca lagna lordu odak lordunun burcuna bakar. */
+"LagnaLordAspects" | 
+/**  Tek yönlü bakış: yalnızca odak lordu lagna lordunun burcuna bakar. */
+"FocusLordAspects";
+
+/**
+ *  İki lordun ilişkisi (spec §11: birlikte, karşılıklı bakış, tek yönlü bakış, değişim,
+ *  hiçbiri) ve birbirinden ev sayıları.
+ */
+export type LordRelation = {
+	/**  İki ev aynı grahanındır (ör. odak evi 1; Koç lagnasında 8. ev): bağ aranmaz. */
+	same_graha: boolean,
+	/**  Geçerli bağlar, `LordLink::ALL` sırasında; boş liste "hiçbiri"dir. */
+	links: LordLink[],
+	/**  Odak lordunun burcunun, lagna lordunun burcundan sayısı (1..=12). */
+	focus_lord_from_lagna_lord: number,
+	/**  Lagna lordunun burcunun, odak lordunun burcundan sayısı (1..=12). */
+	lagna_lord_from_focus_lord: number,
 };
 
 /**  Kaydetmeden çözülmüş an: kanonik doğum verisi ve `ResolvedRecord`. */
@@ -869,6 +956,22 @@ export type MomentWarning = "TimeUnknownNoon" | "LmtFromLongitude" | "PreTzdbRel
 export type MoonDayChange = {
 	nakshatra: boolean,
 	sign: boolean,
+};
+
+export type MoonFacts = {
+	sign: Sign,
+	/**  Lagnadan sayılan burç evi; lagna yoksa `None`. */
+	house: number | null,
+	nakshatra: number,
+	pada: number,
+	/**  1..=30. */
+	tithi: number,
+	paksha: Paksha,
+	/**
+	 *  Ay'ın burcuna tam bakışla bakan grahalar (burç temelli graha drishti),
+	 *  `ASPECTING_GRAHAS` sırasında.
+	 */
+	aspected_by: Graha[],
 };
 
 /**
@@ -1001,6 +1104,8 @@ export type NatalMoon = {
 	sign: Sign,
 };
 
+export type Nature = "Benefic" | "Malefic";
+
 export type NewChart = {
 	label: string,
 	kind: ChartKind,
@@ -1031,6 +1136,12 @@ export type Note = {
 	updated_at: string,
 };
 
+/**  Bir evdeki graha ve doğal sınıfı (K6). */
+export type Occupant = {
+	graha: Graha,
+	nature: Nature,
+};
+
 /**
  *  `open_client` dönüşü (spec §4: `{client, birth, calc_settings, view_state, chart,
  *  recent_notes}`; doğum verisi `chart_record.birth`'tedir).
@@ -1042,6 +1153,11 @@ export type OpenedClient = {
 	view_state: ViewState,
 	chart: Chart,
 	recent_notes: Note[],
+	/**
+	 *  Harita prashnaysa yan kaydı (soru, sayı, odak evi); değilse `null`. Sayı prashnasında
+	 *  `chart` sayının lagnasıyla hesaplanmıştır (ileri modüller spec'i §11).
+	 */
+	prashna: PrashnaMeta | null,
 	warnings: StoreWarning[],
 };
 
@@ -1147,6 +1263,61 @@ export type PlaceHit = {
 	timezone: string,
 };
 
+/**  Soru metni ve odak evi (otomatik kayıt). */
+export type PrashnaEdit = {
+	question: string,
+	focus_house: number | null,
+};
+
+/**
+ *  `compute_prashna_facts` sonucu. Lagnaya bağlı iki bölüm (`lagna`, `focus`) lagna yoksa
+ *  `None`'dır (K2); `focus` odak evi seçilmemişse de `None`'dır.
+ */
+export type PrashnaFacts = {
+	lagna: LagnaFacts | null,
+	focus: FocusFacts | null,
+	moon: MoonFacts,
+	/**  Soru haritasının yoga listesi (Alt proje 3.5'in kataloğu). */
+	yogas: YogaReport,
+	/**  Temel haritanın konum duyarlılığı uyarısı (`LowPrecision`). */
+	warnings: ChartWarning[],
+	method: string,
+};
+
+/**
+ *  Bir prashna haritasının yan kaydı (ileri modüller spec'i §11). Soru metni not gövdesi gibi
+ *  hassastır: loglanmaz, hata iletisine girmez.
+ */
+export type PrashnaMeta = {
+	/**  En çok `MAX_QUESTION_CHARS` karakter; boş olabilir. */
+	question: string,
+	/**  Sayı prashnası: lagna bu sayıdan gelir (1..=108). Zaman prashnasında `None`. */
+	number: number | null,
+	/**  Astrologun seçtiği ev (1..=12); seçilmemişse `None`. */
+	focus_house: number | null,
+	created_at: string,
+};
+
+/**  Soru anı. `Local`: sorunun yerinin duvar saati (`YYYY-MM-DD`, `HH:MM` ya da `HH:MM:SS`). */
+export type PrashnaMoment = "Now" | { Local: {
+	date: string,
+	time: string,
+} };
+
+/**
+ *  Yeni prashnanın girdisi. `client_id` boşsa harita yerleşik "Prashna" danışanına eklenir.
+ *  `place` sorunun yeridir (varsayılanı bulunulan yer) ve haritanın yeri olarak saklanır.
+ *  `number` doluysa sayı prashnasıdır: lagna sayıdan gelir (1..=108).
+ */
+export type PrashnaRequest = {
+	client_id: number | null,
+	at: PrashnaMoment,
+	place: HomePlace,
+	number: number | null,
+	question: string,
+	focus_house: number | null,
+};
+
 /**  `app_prefs_load` sonucu: kullanılacak tercihler ve okuma uyarıları. */
 export type PrefsLoad = {
 	prefs: AppPrefs,
@@ -1185,6 +1356,12 @@ export type ResolvedRecord = {
 	warnings: MomentWarning[],
 	tzdb_version: string,
 };
+
+/**
+ *  Burcun doğuş biçimi (BPHS, burç nitelikleri bölümü): başla doğan (shirshodaya), sırtla
+ *  doğan (prishthodaya), iki yönlü (ubhayodaya).
+ */
+export type RisingMode = "HeadFirst" | "BackFirst" | "BothWays";
 
 export type SavedMuhurtaFilter = {
 	name: string,
@@ -1240,6 +1417,9 @@ export type SignDashaPeriod = {
 	/**  Alt dönemleri istenebilir (`level < MAX_SIGN_DASHA_LEVEL`). */
 	has_children: boolean,
 };
+
+/**  Burcun türü: yürük (chara), sabit (sthira), çift doğalı (dwiswabhava). */
+export type SignKind = "Movable" | "Fixed" | "Dual";
 
 /**  Sthana bala (konum gücü) kalemleri, virupa. */
 export type SthanaBala = {

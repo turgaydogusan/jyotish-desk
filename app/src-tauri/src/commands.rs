@@ -5,7 +5,8 @@ use std::sync::Arc;
 
 use ephemeris::{Engine, EphError, SwissEph};
 use jyotish_core::{
-    Bhavas, CalcSettings, Chart, CoreError, DashaPeriod, DashaSeed, Graha, TransitSnapshot,
+    Bhavas, CalcSettings, Chart, ChartInput, CoreError, DashaPeriod, DashaSeed, Graha,
+    TransitSnapshot,
 };
 use serde::Serialize;
 use specta::Type;
@@ -115,6 +116,18 @@ pub fn compute_chart_blocking(
     let chart = engine.call(move |se: &mut SwissEph| {
         jyotish_core::compute_chart(se, jd_ut, lat, lon, &settings)
     })??;
+    Ok(chart)
+}
+
+/// Bir modül girdisinin haritası: sayı prashnasında (`input.lagna_number`) lagna sayıdan gelir,
+/// diğer her haritada `compute_chart_blocking` ile aynıdır. Açılan danışanın haritası buradan
+/// hesaplanır; böylece harita ile modül panelleri aynı lagnayı görür. Bloklar.
+pub fn compute_chart_for_blocking(
+    engine: &Engine,
+    input: ChartInput,
+) -> Result<Chart, CommandError> {
+    let chart =
+        engine.call(move |se: &mut SwissEph| jyotish_core::compute_chart_for(se, &input))??;
     Ok(chart)
 }
 
