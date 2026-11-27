@@ -51,3 +51,16 @@ export function useModule<T>(key: string | null, fetch: () => Promise<Result<T>>
     retry,
   };
 }
+
+/**
+ * Yeniden okuma sürerken gösterilecek veri: `state.data` yoksa ve istek sürüyorsa aynı `scope`
+ * için son okunan veri. Böylece içerik (liste, tablo, odaktaki denetim) yeni yanıt gelene dek
+ * yerinde durur; hata ya da başka bir `scope` eski veriyi göstermez. `scope === null` unutur.
+ */
+export function useLastData<T>(state: ModuleState<T>, scope: string | null): T | null {
+  const last = useRef<{ scope: string; data: T } | null>(null);
+  if (scope === null || (last.current !== null && last.current.scope !== scope)) last.current = null;
+  if (scope !== null && state.data !== null) last.current = { scope, data: state.data };
+  if (state.data !== null) return state.data;
+  return state.loading ? (last.current?.data ?? null) : null;
+}

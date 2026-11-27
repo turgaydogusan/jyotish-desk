@@ -14,6 +14,7 @@ import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { DrishtiPanel } from "./DrishtiPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
+import { MuhurtaDayPanel } from "./MuhurtaDayPanel";
 import { PanchangPanel } from "./PanchangPanel";
 import { ShadbalaPanel } from "./ShadbalaPanel";
 import type { PanelDefinition } from "./types";
@@ -43,6 +44,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   yogas: { titleKey: "panel.yogas", component: YogasPanel },
   // Uyum (Plan 19).
   compat: { titleKey: "panel.compat", component: CompatPanel },
+  // Muhurta (Plan 20).
+  muhurta_day: { titleKey: "panel.muhurta_day", component: MuhurtaDayPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

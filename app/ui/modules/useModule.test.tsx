@@ -3,7 +3,7 @@ import { StrictMode } from "react";
 import { expect, test, vi } from "vitest";
 import type { Result } from "../api";
 import type { CommandError } from "../bindings";
-import { useModule } from "./useModule";
+import { useLastData, useModule } from "./useModule";
 
 const failure: CommandError = { code: "calc", params: { detail: "x" } };
 
@@ -111,4 +111,43 @@ test("a fetch that rejects ends as an error instead of loading forever, and retr
   expect(state()).toBe("error:ipc");
   await act(async () => screen.getByRole("button", { name: "retry" }).click());
   expect(state()).toBe("B");
+});
+
+function KeptProbe({ k, scope, fetch }: { k: string | null; scope: string | null; fetch: () => Promise<Result<string>> }) {
+  const m = useModule(k, fetch);
+  const shown = useLastData(m, scope);
+  return <span data-testid="kept">{`${shown ?? "none"}${m.loading ? " (loading)" : ""}${m.error ? " (error)" : ""}`}</span>;
+}
+
+test("the last data stays on screen while a new key loads, but not across scopes or after an error", async () => {
+  const kept = () => screen.getByTestId("kept").textContent;
+  const [a, b, c, d] = [deferred<string>(), deferred<string>(), deferred<string>(), deferred<string>()];
+  const fetch = vi
+    .fn<() => Promise<Result<string>>>()
+    .mockReturnValueOnce(a.promise)
+    .mockReturnValueOnce(b.promise)
+    .mockReturnValueOnce(c.promise)
+    .mockReturnValueOnce(d.promise);
+  const { rerender } = render(<KeptProbe k="a" scope="panel" fetch={fetch} />);
+  expect(kept()).toBe("none (loading)");
+  await act(async () => a.resolve({ status: "ok", data: "A" }));
+  expect(kept()).toBe("A");
+  // Yeni anahtar: yanıt gelene dek önceki veri gösterilir.
+  rerender(<KeptProbe k="b" scope="panel" fetch={fetch} />);
+  expect(kept()).toBe("A (loading)");
+  await act(async () => b.resolve({ status: "ok", data: "B" }));
+  expect(kept()).toBe("B");
+  // Hata eski veriyi göstermez.
+  rerender(<KeptProbe k="c" scope="panel" fetch={fetch} />);
+  expect(kept()).toBe("B (loading)");
+  await act(async () => c.resolve({ status: "error", error: failure }));
+  expect(kept()).toBe("none (error)");
+  // Başka bir kapsam (başka harita) öncekinin verisini göstermez.
+  rerender(<KeptProbe k="d" scope="other" fetch={fetch} />);
+  expect(kept()).toBe("none (loading)");
+  await act(async () => d.resolve({ status: "ok", data: "D" }));
+  expect(kept()).toBe("D");
+  // Anahtar ve kapsam yokken hiçbir şey gösterilmez.
+  rerender(<KeptProbe k={null} scope={null} fetch={fetch} />);
+  expect(kept()).toBe("none");
 });

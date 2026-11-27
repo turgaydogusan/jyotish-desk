@@ -34,3 +34,36 @@ export function formatJdMinute(jd: number | null, offsetSecs: number): string {
 export function formatSpeed(degPerDay: number): string {
   return `${degPerDay < 0 ? "−" : "+"}${Math.abs(degPerDay).toFixed(3)}`;
 }
+
+/**
+ * JD (UT) → sabit ofsette saat, "SS:DD" (dakika aşağı yuvarlanır). An, `baseJd`'nin o ofsetteki
+ * takvim gününde değilse gün farkı eklenir: "06:57 (+1)", "23:10 (−1)". Yalnızca gösterim.
+ */
+export function formatJdClock(jd: number | null, offsetSecs: number, baseJd: number | null): string {
+  const full = formatJdMinute(jd, offsetSecs);
+  if (full === "—" || jd === null) return full;
+  const clock = full.slice(-5);
+  if (baseJd === null || !Number.isFinite(baseJd)) return clock;
+  const localDay = (x: number) => Math.floor((x - UNIX_EPOCH_JD) + offsetSecs / 86_400);
+  const days = localDay(jd) - localDay(baseJd);
+  if (days === 0) return clock;
+  return `${clock} (${days > 0 ? "+" : "−"}${Math.abs(days)})`;
+}
+
+/** JD (UT) → sabit ofsette takvim günü, "YYYY-AA-GG". */
+export function formatJdDate(jd: number | null, offsetSecs: number): string {
+  const full = formatJdMinute(jd, offsetSecs);
+  return full === "—" ? full : full.slice(0, -6);
+}
+
+/** İki an arasındaki süre: "2 sa 05 dk", "45 dk"; bir günden uzunsa "3 g 4 sa". Dakika aşağı yuvarlanır. */
+export function formatJdSpan(startJd: number | null, endJd: number | null, units: { day: string; hour: string; minute: string }): string {
+  if (startJd === null || endJd === null || !Number.isFinite(startJd) || !Number.isFinite(endJd) || endJd < startJd) return "—";
+  const minutes = Math.floor((endJd - startJd) * 1440 + 1e-6);
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const rest = minutes % 60;
+  if (days > 0) return `${days} ${units.day} ${hours} ${units.hour}`;
+  if (hours > 0) return `${hours} ${units.hour} ${String(rest).padStart(2, "0")} ${units.minute}`;
+  return `${rest} ${units.minute}`;
+}

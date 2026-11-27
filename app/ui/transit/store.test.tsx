@@ -84,7 +84,10 @@ test("choosing now again while already at now asks Rust again, so a stale now ca
   await waitFor(() => expect(screen.getByTestId("utc")).toHaveTextContent(fixture().transit.utc));
   expect(api.transitsAt).toHaveBeenCalledTimes(1);
   vi.mocked(api.transitsAt).mockResolvedValueOnce(ok({ ...fixture().transit, utc: "2030-01-01T00:00:00Z" }));
+  const epoch = control.epoch;
   act(() => control.setAt("Now"));
+  // Anı kendisi okuyan bileşenler (gün panchangı) bu sayaçla yeniden okur.
+  expect(control.epoch).toBe(epoch + 1);
   await waitFor(() => expect(screen.getByTestId("utc")).toHaveTextContent("2030-01-01T00:00:00Z"));
   expect(api.transitsAt).toHaveBeenCalledTimes(2);
   expect(vi.mocked(api.transitsAt).mock.calls[1][0]).toBe("Now");

@@ -152,3 +152,27 @@ export const KARAKA_ROLES: Record<KarakaRole, { short: string; name: string }> =
 export function arudhaLabel(house: number): string {
   return house === 1 ? "AL" : house === 12 ? "UL" : `A${house}`;
 }
+
+/** Dokuz taranın adı, 1 = Janma … 9 = Parama Mitra (Sanskritçe terim; dile göre değişmez). */
+export const TARA_NAMES = ["Janma", "Sampat", "Vipat", "Kshema", "Pratyak", "Sadhana", "Naidhana", "Mitra", "Parama Mitra"] as const;
+
+/** 1 tabanlı tara numarasının adı; aralık dışıysa numaranın kendisi. */
+export function taraName(n: number): string {
+  return TARA_NAMES[n - 1] ?? String(n);
+}
+
+/** Nakshatra doğalarının Sanskritçe adı (dile göre değişmez); kısa çevirisi i18n'dedir. */
+export const NAKSHATRA_NATURE_NAMES = {
+  Fixed: "Dhruva",
+  Movable: "Chara",
+  Fierce: "Ugra",
+  Mixed: "Mishra",
+  Swift: "Kshipra",
+  Soft: "Mridu",
+  Sharp: "Tikshna",
+} as const;
+
+/** Tithinin (1–30) paksha kısaltmasıyla kısa yazımı: "S9" (Shukla 9), "K14" (Krishna 14). */
+export function tithiShort(no: number): string {
+  return `${no <= 15 ? "S" : "K"}${tithiInPaksha(no)}`;
+}

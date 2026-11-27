@@ -290,3 +290,108 @@
   border-left: 2px solid var(--warn);
   color: var(--text);
 }
+
+/* Muhurta panelleri (ileri modüller spec'i §10). */
+.muhurta-place-name {
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+.muhurta-place-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.muhurta-day-title {
+  margin: 0;
+  font-weight: var(--fw-medium);
+}
+/* Uyarı yalnızca renkle ayrılmaz: kenar çizgisi, rozet ve metin. */
+.muhurta-warning {
+  padding-left: 6px;
+  border-left: 2px solid var(--warn);
+  color: var(--text);
+}
+.muhurta-table caption {
+  text-align: left;
+  padding: 6px 6px 2px;
+  font-weight: var(--fw-medium);
+}
+.day-strip-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.day-strip {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+}
+.day-strip li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 2px;
+  border-left: 1px solid var(--line);
+  font-size: var(--fs-table);
+  font-variant-numeric: tabular-nums;
+}
+.day-strip li:first-child {
+  border-left: 0;
+}
+/* İşaretli dilim renkle değil, taramayla ve yazıyla ayrılır. */
+.day-strip li.is-marked {
+  background-image: repeating-linear-gradient(45deg, var(--line) 0 1px, transparent 1px 6px);
+}
+.day-strip-no,
+.day-strip-time {
+  color: var(--text-2);
+}
+.day-strip-time {
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.day-strip-mark {
+  font-weight: var(--fw-medium);
+  color: var(--ink-strong);
+}
+.day-strip-abhijit {
+  display: flex;
+  font-size: var(--fs-table);
+}
+.day-strip-abhijit span {
+  box-sizing: border-box;
+  border: 1px solid var(--ink);
+  border-top: 0;
+  text-align: center;
+  color: var(--ink-strong);
+  overflow: hidden;
+}
+.muhurta-flags {
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+.muhurta-flag-name {
+  font-weight: var(--fw-medium);
+}
+.home-place {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 22em;
+}
+.home-place-current {
+  margin: 0;
+  font-weight: var(--fw-medium);
+}
+.home-place-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

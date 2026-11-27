@@ -12,6 +12,11 @@ export interface Transit {
   view: TransitView | null;
   error: CommandError | null;
   loading: boolean;
+  /**
+   * "Şimdi" her seçildiğinde ve her yeniden denemede artar. Anı kendisi okuyan bileşenler (gün
+   * panchangı) bunu anahtarlarına katar: an "şimdi" olarak dursa da yeniden okurlar.
+   */
+  epoch: number;
   setAt(at: TransitAt): void;
   retry(): void;
 }
@@ -76,11 +81,12 @@ export function TransitProvider({ children }: { children: ReactNode }) {
       view: mine?.view ?? null,
       error: mine && mine.key === key ? mine.error : null,
       loading: key !== null && mine?.key !== key,
+      epoch: nonce,
       setAt,
       retry,
       register,
     }),
-    [at, mine, key, setAt, retry, register],
+    [at, mine, key, nonce, setAt, retry, register],
   );
   return <TransitContext.Provider value={value}>{children}</TransitContext.Provider>;
 }
