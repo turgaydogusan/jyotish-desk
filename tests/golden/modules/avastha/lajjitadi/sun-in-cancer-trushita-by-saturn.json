@@ -1,0 +1,44 @@
+{
+  "id": "sun-in-cancer-trushita-by-saturn",
+  "source": "hand",
+  "rule_ref": "BPHS, avasthalar bölümü: Baladi, Jagradadi ve Lajjitadi (alıntı yapılmaz); okuma kuralları avastha/REVIEW.md",
+  "derivation": [
+    "Güneş Yengeç'te (su burcu); düşmanı Satürn Oğlak'tan karşıya bakar ve Yengeç'e bakan iyicil yok: Trushita.",
+    "Ay'ın sınıfı: uzanım = Ay − Güneş = 40.0 − 95.0 ≡ 305.0°; 180° ya da daha çok: küçülüyor, kötücül.",
+    "Güneş: Yengeç 5°00′ (çift burç, 1. dilim → Mrita); lord Ay dost → Swapna; 5. ev; birlikte: yok; bakan: Satürn; burç lordu Ay (dost).",
+    "Güneş durumları: Kshudhita (Satürn); Trushita (Satürn); Mudita.",
+    "Ay: Boğa 10°00′ (çift burç, 2. dilim → Vriddha); yücelme burcu → Jagrat; 3. ev; birlikte: Merkür, Jüpiter, Venüs; bakan: Mars; burç lordu Venüs (nötr).",
+    "Ay durumları: Garvita; Mudita (Merkür, Jüpiter).",
+    "Mars: Kova 3°00′ (tek burç, 1. dilim → Bala); lord Satürn nötr → Swapna; 12. ev; birlikte: yok; bakan: yok; burç lordu Satürn (nötr).",
+    "Mars durumları: hiçbiri.",
+    "Merkür: Boğa 20°00′ (çift burç, 4. dilim → Kumara); lord Venüs dost → Swapna; 3. ev; birlikte: Ay, Jüpiter, Venüs; bakan: Mars; burç lordu Venüs (dost).",
+    "Merkür durumları: Kshudhita (Ay); Mudita (Jüpiter, Venüs).",
+    "Jüpiter: Boğa 1°00′ (çift burç, 1. dilim → Mrita); lord Venüs düşman → Sushupti; 3. ev; birlikte: Ay, Merkür, Venüs; bakan: Mars; burç lordu Venüs (düşman).",
+    "Jüpiter durumları: Kshudhita (Merkür, Venüs); Mudita (Ay, Mars).",
+    "Venüs: Boğa 2°00′ (çift burç, 1. dilim → Mrita); kendi burcu → Jagrat; 3. ev; birlikte: Ay, Merkür, Jüpiter; bakan: Mars; burç lordu Venüs (kendisi).",
+    "Venüs durumları: Kshudhita (Ay); Mudita (Merkür, Jüpiter).",
+    "Satürn: Oğlak 12°00′ (çift burç, 3. dilim → Yuva); kendi burcu → Jagrat; 11. ev; birlikte: yok; bakan: Güneş, Jüpiter; burç lordu Satürn (kendisi).",
+    "Satürn durumları: Kshudhita (Güneş).",
+    "Oluşmayan: Güneş Lajjita değil (Güneş 5. evde ama yalnız).",
+    "Oluşmayan: Güneş Kshobhita değil (Güneş'in kendisi Güneş ile birlikte sayılmaz).",
+    "Oluşmayan: Jüpiter Kshobhita değil (Jüpiter Güneş ile birlikte değil)."
+  ],
+  "input": {
+    "lagna_lon": 345.0,
+    "grahas": {"Sun": 95.0, "Moon": 40.0, "Mars": 303.0, "Mercury": 50.0, "Jupiter": 31.0, "Venus": 32.0, "Saturn": 282.0, "Rahu": 175.0, "Ketu": 355.0}
+  },
+  "expected": {
+    "baladi": {"Sun": "Mrita", "Moon": "Vriddha", "Mars": "Bala", "Mercury": "Kumara", "Jupiter": "Mrita", "Venus": "Mrita", "Saturn": "Yuva"},
+    "jagradadi": {"Sun": "Swapna", "Moon": "Jagrat", "Mars": "Swapna", "Mercury": "Swapna", "Jupiter": "Sushupti", "Venus": "Jagrat", "Saturn": "Jagrat"},
+    "lajjitadi": {
+      "Sun": [{"state": "Kshudhita", "grahas": ["Saturn"]}, {"state": "Trushita", "grahas": ["Saturn"]}, {"state": "Mudita", "grahas": []}],
+      "Moon": [{"state": "Garvita", "grahas": []}, {"state": "Mudita", "grahas": ["Mercury", "Jupiter"]}],
+      "Mars": [],
+      "Mercury": [{"state": "Kshudhita", "grahas": ["Moon"]}, {"state": "Mudita", "grahas": ["Jupiter", "Venus"]}],
+      "Jupiter": [{"state": "Kshudhita", "grahas": ["Mercury", "Venus"]}, {"state": "Mudita", "grahas": ["Moon", "Mars"]}],
+      "Venus": [{"state": "Kshudhita", "grahas": ["Moon"]}, {"state": "Mudita", "grahas": ["Mercury", "Jupiter"]}],
+      "Saturn": [{"state": "Kshudhita", "grahas": ["Sun"]}]
+    },
+    "absent": [{"graha": "Sun", "state": "Lajjita"}, {"graha": "Sun", "state": "Kshobhita"}, {"graha": "Jupiter", "state": "Kshobhita"}]
+  }
+}

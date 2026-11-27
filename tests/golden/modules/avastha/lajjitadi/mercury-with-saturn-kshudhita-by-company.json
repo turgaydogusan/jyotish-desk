@@ -1,0 +1,45 @@
+{
+  "id": "mercury-with-saturn-kshudhita-by-company",
+  "source": "hand",
+  "rule_ref": "BPHS, avasthalar bölümü: Baladi, Jagradadi ve Lajjitadi (alıntı yapılmaz); okuma kuralları avastha/REVIEW.md",
+  "derivation": [
+    "Merkür Oğlak'ta Satürn ile birlikte: Satürn Merkür'e nötrdür ve Oğlak düşman burcu değildir, ama Satürn ile birliktelik Kshudhita'nın dördüncü koludur.",
+    "Ay'ın sınıfı: uzanım = Ay − Güneş = 140.0 − 130.0 ≡ 10.0°; 180°'den küçük: büyüyor, iyicil.",
+    "Güneş: Aslan 10°00′ (tek burç, 2. dilim → Kumara); kendi burcu → Jagrat; 1. ev; birlikte: Ay; bakan: yok; burç lordu Güneş (kendisi).",
+    "Güneş durumları: Garvita; Mudita (Ay).",
+    "Ay: Aslan 20°00′ (tek burç, 4. dilim → Vriddha); lord Güneş dost → Swapna; 1. ev; birlikte: Güneş; bakan: yok; burç lordu Güneş (dost).",
+    "Ay durumları: Mudita (Güneş).",
+    "Mars: Koç 20°00′ (tek burç, 4. dilim → Vriddha); kendi burcu → Jagrat; 9. ev; birlikte: yok; bakan: Venüs; burç lordu Mars (kendisi).",
+    "Mars durumları: hiçbiri.",
+    "Merkür: Oğlak 10°00′ (çift burç, 2. dilim → Vriddha); lord Satürn nötr → Swapna; 6. ev; birlikte: Satürn; bakan: yok; burç lordu Satürn (nötr).",
+    "Merkür durumları: Kshudhita (Satürn).",
+    "Jüpiter: Balık 20°00′ (çift burç, 4. dilim → Kumara); kendi burcu → Jagrat; 8. ev; birlikte: yok; bakan: Satürn; burç lordu Jüpiter (kendisi).",
+    "Jüpiter durumları: hiçbiri.",
+    "Venüs: Terazi 20°00′ (tek burç, 4. dilim → Vriddha); kendi burcu → Jagrat; 3. ev; birlikte: yok; bakan: Mars, Satürn; burç lordu Venüs (kendisi).",
+    "Venüs durumları: Mudita (Satürn).",
+    "Satürn: Oğlak 25°00′ (çift burç, 5. dilim → Bala); kendi burcu → Jagrat; 6. ev; birlikte: Merkür; bakan: yok; burç lordu Satürn (kendisi).",
+    "Satürn durumları: Mudita (Merkür).",
+    "Oluşmayan: Satürn Trushita değil (Satürn su burcunda değil).",
+    "Oluşmayan: Venüs Garvita değil (Venüs Terazi 20°'de: kendi burcu, moolatrikona aralığı (0°–15°) dışında).",
+    "Oluşmayan: Mars Garvita değil (Mars Koç 20°'de: kendi burcu, moolatrikona aralığı (0°–12°) dışında).",
+    "Oluşmayan: Jüpiter Kshudhita değil (bakan Satürn Jüpiter'e nötr ve birlikte değil)."
+  ],
+  "input": {
+    "lagna_lon": 135.0,
+    "grahas": {"Sun": 130.0, "Moon": 140.0, "Mars": 20.0, "Mercury": 280.0, "Jupiter": 350.0, "Venus": 200.0, "Saturn": 295.0, "Rahu": 33.0, "Ketu": 213.0}
+  },
+  "expected": {
+    "baladi": {"Sun": "Kumara", "Moon": "Vriddha", "Mars": "Vriddha", "Mercury": "Vriddha", "Jupiter": "Kumara", "Venus": "Vriddha", "Saturn": "Bala"},
+    "jagradadi": {"Sun": "Jagrat", "Moon": "Swapna", "Mars": "Jagrat", "Mercury": "Swapna", "Jupiter": "Jagrat", "Venus": "Jagrat", "Saturn": "Jagrat"},
+    "lajjitadi": {
+      "Sun": [{"state": "Garvita", "grahas": []}, {"state": "Mudita", "grahas": ["Moon"]}],
+      "Moon": [{"state": "Mudita", "grahas": ["Sun"]}],
+      "Mars": [],
+      "Mercury": [{"state": "Kshudhita", "grahas": ["Saturn"]}],
+      "Jupiter": [],
+      "Venus": [{"state": "Mudita", "grahas": ["Saturn"]}],
+      "Saturn": [{"state": "Mudita", "grahas": ["Mercury"]}]
+    },
+    "absent": [{"graha": "Saturn", "state": "Trushita"}, {"graha": "Venus", "state": "Garvita"}, {"graha": "Mars", "state": "Garvita"}, {"graha": "Jupiter", "state": "Kshudhita"}]
+  }
+}
