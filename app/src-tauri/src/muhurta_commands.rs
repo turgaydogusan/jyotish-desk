@@ -27,6 +27,8 @@ use crate::transit_commands::{transit_moment, TransitAt};
 /// Tarih verilmeyen aramanın uzunluğu, gün: başlangıç günü ve sonraki 30 gün.
 pub const DEFAULT_SEARCH_DAYS: f64 = 31.0;
 const UNIX_EPOCH_JD: f64 = 2_440_587.5;
+/// Yerin tek başına denetlendiği sabit an (J2000): her saat dilimi kuralı bu anda çözülür.
+const J2000_JD: f64 = 2_451_545.0;
 
 /// Hesabın yapılacağı yer ve saatlerin gösterileceği dilim. Ad taşımaz.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
@@ -132,9 +134,14 @@ pub fn day_panchang_blocking(
     settings: CalcSettings,
     natal: Option<NatalMoon>,
 ) -> Result<DayPanchangView, CommandError> {
-    let (jd_ut, _) = transit_moment(&at, now)?;
-    // Yer, motoru meşgul etmeden önce denetlenir.
-    offset_at(&place, jd_ut)?;
+    // Yer, andan ve motordan önce denetlenir: geçersiz yer hangi anla sorulursa sorulsun
+    // `place`'tir.
+    offset_at(&place, J2000_JD)?;
+    // Çözülemeyen an (bilinmeyen dilim, yaz saati boşluğuna düşen duvar saati, bozuk tarih ya
+    // da saat, sonlu olmayan gün) yalnızca alan adıyla döner: v1'in transit hataları dilimin
+    // adını, duvar saatini ve önerilen saati parametreye yazar (D20).
+    let (jd_ut, _) = transit_moment(&at, now).map_err(|_| invalid("at"))?;
+    timestamp_of(jd_ut).ok_or_else(|| invalid("at"))?;
     let (lat, lon) = (place.lat, place.lon);
     let day = engine.call(move |se: &mut SwissEph| {
         jyotish_core::day_panchang(se, jd_ut, lat, lon, &settings, natal)
@@ -227,7 +234,7 @@ pub fn muhurta_search_blocking(
     now: Timestamp,
 ) -> Result<MuhurtaSearchView, CommandError> {
     // Yer, tarihlerden önce denetlenir: geçersiz yer hangi alanla sorulursa sorulsun `place`'tir.
-    offset_at(&query.place, 2_451_545.0)?;
+    offset_at(&query.place, J2000_JD)?;
     let (from_jd_ut, to_jd_ut) = search_range(&query, cursor.as_ref(), now)?;
     let from_offset_secs = offset_at(&query.place, from_jd_ut)?;
     let to_offset_secs = offset_at(&query.place, to_jd_ut)?;

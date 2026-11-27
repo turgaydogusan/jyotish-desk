@@ -2043,6 +2043,52 @@ fn muhurta_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         (e.code.as_str(), e.params["field"].as_str()),
         ("invalid_muhurta_input", "natal")
     );
+    // The moment itself: an unknown zone, a wall time inside a daylight saving gap, a broken
+    // date and a non-finite day are all reported by the field name alone (no zone id, no local
+    // time, no suggestion). A bad place is reported first, whatever the moment is.
+    let local = |date: &str, time: &str, tz: &str| TransitAt::Local {
+        date: date.to_owned(),
+        time: time.to_owned(),
+        tz: tz.to_owned(),
+    };
+    for (at, want) in [
+        (local("2026-11-25", "10:00", "Mars/Olympus"), "at"),
+        (local("2026-03-29", "02:30", "Europe/Berlin"), "at"),
+        (local("25.11.2026", "10:00", "Europe/Berlin"), "at"),
+        (local("2026-11-25", "25:00", "Europe/Berlin"), "at"),
+        (TransitAt::Jd(f64::NAN), "at"),
+        (TransitAt::Jd(1e9), "at"),
+    ] {
+        let e = day_panchang_blocking(
+            engine,
+            at.clone(),
+            now,
+            kolkata_time.clone(),
+            delhi.settings.clone(),
+            None,
+        )
+        .unwrap_err();
+        assert_eq!(e.code, "invalid_muhurta_input", "{at:?}");
+        assert_eq!(e.params.len(), 1, "{at:?}: {:?}", e.params);
+        assert_eq!(e.params["field"], want, "{at:?}");
+        let e = day_panchang_blocking(
+            engine,
+            at.clone(),
+            now,
+            MuhurtaPlace {
+                lat: 95.0,
+                ..kolkata_time.clone()
+            },
+            delhi.settings.clone(),
+            None,
+        )
+        .unwrap_err();
+        assert_eq!(
+            (e.code.as_str(), e.params.len(), e.params["field"].as_str()),
+            ("invalid_muhurta_input", 1, "place"),
+            "{at:?}"
+        );
+    }
     let old = CalcSettings {
         schema_version: 1,
         ..CalcSettings::default()
