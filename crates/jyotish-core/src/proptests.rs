@@ -1829,6 +1829,9 @@ mod muhurta_properties {
             nakshatra in 1u8..=27,
             sign in 0usize..12,
             samples in proptest::collection::vec(0.0f64..1.0, 3),
+            // Half of the cases walk the range in short chunks: windows then cross chunk ends
+            // and are carried in the cursor, and the same checks hold for them.
+            chunk in prop_oneof![Just(31.0f64), 0.7f64..9.0],
         ) {
             let mut eph = sky.eph();
             let s = CalcSettings::default();
@@ -1840,7 +1843,7 @@ mod muhurta_properties {
                 criteria,
                 natal: Some(NatalMoon { nakshatra, sign: Sign::ALL[sign] }),
             };
-            let windows = search_all(&mut eph, &s, &f, 31.0);
+            let windows = search_all(&mut eph, &s, &f, chunk);
             let min_days = (f64::from(f.criteria.min_minutes) / 1440.0).max(MUHURTA_MIN_WINDOW_DAYS);
             let mut previous_end = f.from_jd_ut;
             for w in &windows {
@@ -1865,6 +1868,15 @@ mod muhurta_properties {
                     }
                 }
                 previous_end = w.end_jd_ut;
+            }
+            // The stretch after the last window (the whole range when there is none) does not
+            // pass the filter either.
+            let gap = f.to_jd_ut - previous_end;
+            if f.criteria.min_minutes == 0 && gap > 4.0 * SECOND {
+                for x in &samples {
+                    let jd = previous_end + SECOND + (gap - 2.0 * SECOND) * x;
+                    prop_assert!(!holds_at(&mut eph, &s, &f, jd), "after the last window at {}", jd);
+                }
             }
         }
 
