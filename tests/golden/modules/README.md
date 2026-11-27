@@ -122,4 +122,11 @@ Gerçek motorla çapraz denetim `app/src-tauri/tests/natal_extras.rs` ve
 sahibin onayını bekleyen noktalar, denetim maddeleri ve gözden geçirme kaydı
 `natal_extras/REVIEW.md` ve `bhava/REVIEW.md`'dedir.
 
+Transit takvimi (yol haritası §4.11, Plan 29) de bu dizinde JSON örneği taşımaz: `calendar/`
+klasöründe yalnızca `REVIEW.md` vardır ve hiçbir test bu klasörü yüklemez. El örnekleri modülün
+birim testleridir (`crates/jyotish-core/src/calendar/` içindeki `mod tests`, sahte gökyüzüyle);
+gerçek motorla çapraz denetim (gün panchangı ve olay aramasıyla) `app/src-tauri/tests/calendar.rs`
+dosyasındadır. Okuma kuralları (gün tanımı, gün doğumu olmayan gün, olayın günü), sahibin kararını
+bekleyen noktalar, denetim maddeleri ve gözden geçirme kaydı `calendar/REVIEW.md`'dedir.
+
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.
