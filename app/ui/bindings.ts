@@ -112,6 +112,35 @@ export const commands = {
 	 *  saklanmaz.
 	 */
 	computePrashnaFacts: (input: ChartInput, focusHouse: number | null, options?: InvokeOptions) => typedError<PrashnaFacts, CommandError>(__TAURI_INVOKE("compute_prashna_facts", { input, focusHouse }, options)),
+	/**
+	 *  Harita araması, bir sayfa (en çok 500 harita): sorgunun koşullarını sağlayan kayıtlı haritalar.
+	 *  İlk çağrıda `cursor` boştur ve `search_id` yeni bir aramayı başlatır (süren arama varsa
+	 *  geçersiz olur); dönen `next` bir sonraki çağrıya olduğu gibi verilir. Her harita kendi kayıtlı
+	 *  anı, yeri ve hesap ayarıyla hesaplanır. Sorgu ve sonuçlar loglanmaz.
+	 */
+	chartSearch: (query: ChartQuery, searchId: number, cursor: ChartSearchCursor | null, options?: InvokeOptions) => typedError<ChartSearchPage, CommandError>(__TAURI_INVOKE("chart_search", { query, searchId, cursor }, options)),
+	/**
+	 *  Harita aramasını durdurur: süren sayfa dilim sınırında biter ve sonraki istek `search_stale`
+	 *  döner. Kimlik süren aramaya ait değilse hiçbir şey yapmaz.
+	 */
+	chartSearchCancel: (searchId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("chart_search_cancel", { searchId }, options)),
+	/**
+	 *  Etiketi verilen haritaların hepsine ekler (öteki etiketleri durur). Etiketlenen harita
+	 *  sayısını döner; artık var olmayan haritalar atlanır. Arayüz onay penceresinden sonra çağırır.
+	 */
+	tagCharts: (request: TagChartsRequest, options?: InvokeOptions) => typedError<number, CommandError>(__TAURI_INVOKE("tag_charts", { request }, options)),
+	listSavedSearches: (options?: InvokeOptions) => typedError<SavedSearch[], CommandError>(__TAURI_INVOKE("list_saved_searches", undefined, options)),
+	/**  Aramayı adıyla saklar; aynı adlı kayıt varsa koşulları değişir. Yalnızca koşullar saklanır. */
+	saveSearch: (request: SaveSearchRequest, options?: InvokeOptions) => typedError<SavedSearch, CommandError>(__TAURI_INVOKE("save_search", { request }, options)),
+	deleteSavedSearch: (searchId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_saved_search", { searchId }, options)),
+	/**
+	 *  Olay araması: tarih aralığındaki gök olayları, zaman sırasıyla. `search_id` aramanın
+	 *  kimliğidir; `event_search_cancel` ile durdurulur. Açık haritanın doğum boylamları yalnızca
+	 *  bellekte kullanılır. Yer ve girdi loglanmaz.
+	 */
+	eventSearch: (spec: EventSearchSpec, searchId: number, options?: InvokeOptions) => typedError<EventSearchView, CommandError>(__TAURI_INVOKE("event_search", { spec, searchId }, options)),
+	/**  Olay aramasını durdurur: süren arama dilim sınırında `search_stale` ile biter. */
+	eventSearchCancel: (searchId: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("event_search_cancel", { searchId }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -389,6 +418,16 @@ export type ChartBrief = {
 	chart_kind: ChartKind,
 };
 
+/**  Eşleşen bir harita. */
+export type ChartHit = {
+	client_id: number,
+	chart_id: number,
+	client_name: string,
+	/**  Boşsa arayüz harita türünün adını gösterir. */
+	chart_label: string,
+	matched: MatchFact[],
+};
+
 /**
  *  Modül komutlarının ortak girdisi: `compute_chart` ile aynı alanlar ve `time_known`.
  *  Doğum saati bilinmiyorsa (`time_known == false`) lagnaya bağlı her çıktı `None` döner;
@@ -423,6 +462,12 @@ export type ChartMeta = {
 	warnings: ChartWarning[],
 };
 
+/**  Harita araması sorgusu. */
+export type ChartQuery = {
+	all_of: QueryCondition[],
+	scope: QueryScope,
+};
+
 export type ChartRecord = {
 	id: number,
 	uuid: string,
@@ -437,6 +482,44 @@ export type ChartRecord = {
 	last_opened_at: string | null,
 	created_at: string,
 	updated_at: string,
+};
+
+/**
+ *  Sonraki sayfanın imleci: taramanın geldiği yer ve o ana dek biriken sayılar. Arayüz olduğu
+ *  gibi geri gönderir.
+ */
+export type ChartSearchCursor = {
+	/**  Bu kimlikten büyük haritalar taranacak. */
+	after_chart_id: number,
+	scanned: number,
+	skipped_time_unknown: number,
+	failed: number,
+	/**  Arama başlarken kapsamdaki harita sayısı. */
+	total: number,
+	/**
+	 *  Aramanın başladığı an (tarihi verilmeyen `DashaAt` koşulları için); sayfalar arasında
+	 *  değişmez.
+	 */
+	now_jd_ut: number | null,
+};
+
+/**
+ *  Bir sayfanın sonucu. Sayılar aramanın başından bu sayfanın sonuna dek birikmiş değerlerdir;
+ *  `hits` yalnızca bu sayfanın eşleşmeleridir.
+ */
+export type ChartSearchPage = {
+	search_id: number,
+	hits: ChartHit[],
+	scanned: number,
+	total: number,
+	/**  Sorgu lagna istediği ve doğum saati bilinmediği için değerlendirilemeyen haritalar. */
+	skipped_time_unknown: number,
+	/**  Hesaplanamayan haritalar (ör. hesap aralığının dışındaki tarih). */
+	failed: number,
+	done: boolean,
+	/**  Sonraki sayfanın imleci; `done` ise `null`. */
+	next: ChartSearchCursor | null,
+	method: string,
 };
 
 /**  Ölümcül olmayan durumlar (spec §7); arayüz kodları i18n ile çevirir. */
@@ -490,6 +573,79 @@ export type CompatRoles =
 "OpenIsGroom" | 
 /**  Açık harita gelin rolü, eş harita damat rolü. */
 "OpenIsBride";
+
+/**  Bir koşul. Değer kümeleri (`signs`, `houses`, …) kendi içinde "ya da"dır. */
+export type Condition = 
+/**  Graha, `varga`'da bu burçlardan birindedir. */
+({ GrahaInSign: {
+	graha: Graha,
+	signs: Sign[],
+	varga: Varga,
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Graha, lagnadan sayılan bu burç evlerinden birindedir (K4). */
+({ GrahaInHouse: {
+	graha: Graha,
+	houses: number[],
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Graha bu nakshatralardan birindedir; `padas` boşsa her pada. */
+({ GrahaInNakshatra: {
+	graha: Graha,
+	nakshatras: number[],
+	padas: number[],
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Graha `flags`'teki durumlardan birindedir ya da dignity'si `dignities`'tedir. */
+({ GrahaState: {
+	graha: Graha,
+	flags: GrahaFlag[],
+	dignities: Dignity[],
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Lagna, `varga`'da bu burçlardan birindedir. */
+({ LagnaInSign: {
+	signs: Sign[],
+	varga: Varga,
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Grahaların hepsi aynı burçtadır (rasi). */
+({ Conjunction: {
+	grahas: Graha[],
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  `from`, `to`'nun burcuna burç temelli tam bakışla bakar. */
+({ GrahaAspects: {
+	from: Graha,
+	to: Graha,
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  `lord_of` evinin lordu bu evlerden birindedir. */
+({ HouseLordInHouse: {
+	lord_of: number,
+	houses: number[],
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Tithi `tithis`'tedir ya da paksha `paksha`'dır. */
+({ MoonPhase: {
+	tithis: number[],
+	paksha: Paksha | null,
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; YogaPresent?: never } | 
+/**
+ *  `date` gününde (`YYYY-MM-DD`, 12:00 UT; boşsa aramanın başladığı an) Vimshottari'nin
+ *  `level`. seviyesinin lordu `lords`'tan biridir.
+ */
+({ DashaAt: {
+	date: string | null,
+	level: number,
+	lords: Graha[],
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Chara karaka rolünü bu grahalardan biri taşır (haritanın karaka şemasıyla). */
+({ CharaKaraka: {
+	role: KarakaRole,
+	grahas: Graha[],
+} }) & { ArudhaInSign?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  `pada` evinin arudha padası (1 = AL, 12 = UL) bu burçlardan birindedir. */
+({ ArudhaInSign: {
+	pada: number,
+	signs: Sign[],
+} }) & { CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never; YogaPresent?: never } | 
+/**  Bu yogalardan en az biri oluşur (katalog kimlikleri). */
+({ YogaPresent: {
+	ids: string[],
+} }) & { ArudhaInSign?: never; CharaKaraka?: never; Conjunction?: never; DashaAt?: never; GrahaAspects?: never; GrahaInHouse?: never; GrahaInNakshatra?: never; GrahaInSign?: never; GrahaState?: never; HouseLordInHouse?: never; LagnaInSign?: never; MoonPhase?: never };
 
 /**
  *  Haritanın Vimshottari ağacı: 1–3. seviyeler ön-sırada (her dönemin ardından alt
@@ -617,6 +773,40 @@ export type EngineStatus = {
 };
 
 /**
+ *  Olay aramasının girdisi. `from_date` ve `to_date` yerin takvim günleridir (`YYYY-MM-DD`, ikisi
+ *  de dahil); `from_date` boşsa bugün, `to_date` boşsa başlangıçtan bir yıl sonrası. `place`
+ *  yalnızca günlerin sınırını ve saatlerin gösterileceği dilimi belirler. `natal` açık haritanın
+ *  modül girdisidir (doğum boylamına geliş ve doğum Ay'ına göre ev değiştirme için); `settings`
+ *  açık haritanın, harita yoksa genel varsayılanın hesap ayarıdır.
+ */
+export type EventSearchSpec = {
+	from_date: string | null,
+	to_date: string | null,
+	place: MuhurtaPlace,
+	kinds: SkyEventKind[],
+	grahas: Graha[],
+	settings: CalcSettings,
+	natal: ChartInput | null,
+};
+
+export type EventSearchView = {
+	/**  Zaman sırasıyla; en çok `MAX_SKY_EVENTS`. */
+	events: SkyEventView[],
+	/**  Olay sayısı sınırı aştı: liste sınırda kesildi ve aralığın sonuna dek taranmadı. */
+	truncated: boolean,
+	/**
+	 *  Taranan aralık (kesildiyse `scanned_to_jd_ut` aralığın sonundan öncedir) ve uçlarındaki
+	 *  ofset.
+	 */
+	from_jd_ut: number | null,
+	to_jd_ut: number | null,
+	scanned_to_jd_ut: number | null,
+	from_offset_secs: number,
+	to_offset_secs: number,
+	method: string,
+};
+
+/**
  *  Dışa aktarılan dosyanın adı ve boyutu; içe aktarma sınırını aşan dosya bu uygulamaya geri
  *  yüklenemez (D15: dışa aktarma engellenmez, arayüz uyarır).
  */
@@ -642,6 +832,9 @@ export type FoldChoice = "Earlier" | "Later";
 export type Gender = "Male" | "Female" | "Other";
 
 export type Graha = "Sun" | "Moon" | "Mars" | "Mercury" | "Jupiter" | "Venus" | "Saturn" | "Rahu" | "Ketu";
+
+/**  Grahanın aranabilen ikili durumları. Retro, Rahu ve Ketu için sunulmaz. */
+export type GrahaFlag = "Retrograde" | "Combust" | "Vargottama";
 
 /**  Bir grahanın haritadaki konumu (spec §5 `GrahaPosition`). */
 export type GrahaPosition = {
@@ -944,6 +1137,32 @@ export type LordRelation = {
 	focus_lord_from_lagna_lord: number,
 	/**  Lagna lordunun burcunun, odak lordunun burcundan sayısı (1..=12). */
 	lagna_lord_from_focus_lord: number,
+};
+
+/**
+ *  Eşleşen bir koşulun olgusu: sonuç satırındaki kısa özetin verisi. Hangi alanların dolu
+ *  olduğu koşulun türüne bağlıdır; arayüz türü sorgudan (`condition` sırası) bilir.
+ */
+export type MatchFact = {
+	/**  Koşulun `all_of` içindeki sırası (0'dan). */
+	condition: number,
+	/**  "Değil" koşulu sağlandı: koşulun kendisi tutmuyor; diğer alanlar boştur. */
+	negated: boolean,
+	grahas: Graha[],
+	sign: Sign | null,
+	/**  Lagnadan sayılan burç evi. */
+	house: number | null,
+	nakshatra: number | null,
+	pada: number | null,
+	/**  Tek grahalı olguda grahanın retro olup olmadığı (düğümlerde hep yanlış). */
+	retrograde: boolean,
+	/**  `GrahaState`: tutan durumlar. */
+	flags: GrahaFlag[],
+	/**  `GrahaState`: grahanın dignity'si (kümedeyse). */
+	dignity: Dignity | null,
+	tithi: number | null,
+	/**  `YogaPresent`: oluşan yogaların kimlikleri, sorgudaki sırayla. */
+	yogas: string[],
 };
 
 /**  Kaydetmeden çözülmüş an: kanonik doğum verisi ve `ResolvedRecord`. */
@@ -1349,6 +1568,22 @@ export type PrefsWarning =
 	found: number,
 } }) & { CalcSettingsReset?: never };
 
+/**  Koşul ve "değil" işareti. */
+export type QueryCondition = {
+	cond: Condition,
+	negate: boolean,
+};
+
+/**  Kapsam süzgeci: hangi haritaların taranacağı. */
+export type QueryScope = {
+	/**  Boş değilse yalnızca bu etiketlerden en az birini taşıyan haritalar. */
+	tags: string[],
+	/**  `None`: her tür. */
+	kind: ScopeKind | null,
+	/**  Prashna haritaları taranmaz (varsayılan açık). */
+	exclude_prashna: boolean,
+};
+
 /**
  *  Kayıtta saklanan çözülmüş an (spec §5 `resolved_*`, `tzdb_version`). Açılışta atlas
  *  sorgusu gerekmez; hesap `jd_ut` ile yapılır.
@@ -1369,10 +1604,27 @@ export type ResolvedRecord = {
  */
 export type RisingMode = "HeadFirst" | "BackFirst" | "BothWays";
 
+/**  "Aramayı sakla"nın girdisi. */
+export type SaveSearchRequest = {
+	name: string,
+	query: ChartQuery,
+};
+
 export type SavedMuhurtaFilter = {
 	name: string,
 	criteria: MuhurtaCriteria,
 };
+
+/**  Kayıtlı arama: bir ad ve koşullar. Sonuç listesi ve sayısı saklanmaz. */
+export type SavedSearch = {
+	id: number,
+	name: string,
+	query: ChartQuery,
+	updated_at: string,
+};
+
+/**  Kapsamdaki harita türü. */
+export type ScopeKind = "Natal" | "Event";
 
 export type SearchHit = {
 	client: Client,
@@ -1427,6 +1679,46 @@ export type SignDashaPeriod = {
 /**  Burcun türü: yürük (chara), sabit (sthira), çift doğalı (dwiswabhava). */
 export type SignKind = "Movable" | "Fixed" | "Dual";
 
+/**  Bir gök olayı. */
+export type SkyEvent = {
+	kind: SkyEventKind,
+	jd_ut: number | null,
+	/**
+	 *  Olayın grahaları: girişte ve dönüşte tek graha; kavuşumda iki graha (`Graha::ALL`
+	 *  sırasında); yeni ay ve dolunayda Güneş ve Ay; `TransitToNatal`'da önce geçiş grahası,
+	 *  sonra doğum grahası.
+	 */
+	grahas: Graha[],
+	/**  Olayın rasi çerçevesindeki burcu (girilen burç; kavuşumun, dönüşün ve Ay'ın burcu). */
+	sign: Sign | null,
+	/**  Girilen nakshatra; yeni ay ve dolunayda Ay'ın nakshatrası. */
+	nakshatra: number | null,
+	/**  `HouseFromNatalMoon`: doğum Ay burcundan sayılan yeni ev. */
+	house: number | null,
+};
+
+export type SkyEventKind = 
+/**  Grahanın burç girişi (retro girişler dahil). */
+"SignIngress" | 
+/**  Grahanın nakshatra girişi. */
+"NakshatraIngress" | 
+/**  Düz hareketten retroya dönüş. */
+"StationRetrograde" | 
+/**  Retrodan düz harekete dönüş. */
+"StationDirect" | 
+/**  İki grahanın boylamca tam kavuşumu. */
+"Conjunction" | "NewMoon" | "FullMoon" | 
+/**  Geçiş grahasının bir doğum grahasının boylamına gelişi (kendi boylamına dönüşü dahil). */
+"TransitToNatal" | 
+/**  Jüpiter ya da Satürn'ün doğum Ay burcundan sayılan evinin değişmesi. */
+"HouseFromNatalMoon";
+
+/**  Bir olay ve o andaki UTC ofseti (saat, yerin diliminde gösterilir). */
+export type SkyEventView = {
+	event: SkyEvent,
+	offset_secs: number,
+};
+
 /**  Sthana bala (konum gücü) kalemleri, virupa. */
 export type SthanaBala = {
 	uccha: number | null,
@@ -1468,6 +1760,12 @@ export type SunriseDef =
 "DiskCenterNoRefraction" | 
 /**  Üst kenar, atmosfer kırılmasıyla (batı konvansiyonu). */
 "UpperLimbRefracted";
+
+/**  "Sonuçları etiketle"nin girdisi. */
+export type TagChartsRequest = {
+	chart_ids: number[],
+	tag: string,
+};
 
 export type TagCount = {
 	name: string,

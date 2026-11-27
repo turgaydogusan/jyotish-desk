@@ -662,6 +662,7 @@ export const fr: Messages = {
     invalid_muhurta_input: "Requête de muhurta invalide : {{field}}.",
     invalid_prashna_input: "Requête de prashna invalide : {{field}}.",
     invalid_search_input: "Requête de recherche invalide : {{field}}.",
+    search_stale: "La recherche a été arrêtée ou remplacée par une nouvelle.",
     atlas_unavailable: "La recherche de lieux est indisponible ({{reason}}). Vous pouvez saisir la latitude, la longitude et le fuseau à la main.",
     atlas_sqlite: "L’atlas des lieux est illisible ({{detail}}).",
     atlas_io: "Le fichier de l’atlas est illisible ({{detail}}).",

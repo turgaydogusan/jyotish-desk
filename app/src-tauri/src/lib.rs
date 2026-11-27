@@ -5,6 +5,7 @@ pub mod data_dir;
 pub mod module_commands;
 pub mod muhurta_commands;
 pub mod prashna_commands;
+pub mod search_commands;
 pub mod store_commands;
 pub mod transit_commands;
 pub mod update_commands;
@@ -44,6 +45,14 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             prashna_commands::create_prashna,
             prashna_commands::update_prashna,
             prashna_commands::compute_prashna_facts,
+            search_commands::chart_search,
+            search_commands::chart_search_cancel,
+            search_commands::tag_charts,
+            search_commands::list_saved_searches,
+            search_commands::save_search,
+            search_commands::delete_saved_search,
+            search_commands::event_search,
+            search_commands::event_search_cancel,
             client_commands::open_client,
             client_commands::restore_session,
             client_commands::create_client,
@@ -91,6 +100,7 @@ pub fn run() {
         // Güncelleyici yalnızca `update_commands` üzerinden çalışır; açılışta denetim yapmaz.
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(update_commands::InstallGuard::default())
+        .manage(Arc::new(search_commands::SearchRegistry::default()))
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);

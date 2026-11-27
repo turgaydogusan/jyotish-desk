@@ -25,6 +25,10 @@ use jyotish_core::{
     MAX_SUNRISE_GAP_DAYS, MUHURTA_METHOD, SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS, SHADBALA_METHOD,
     YOGA_CATALOG, YOGA_CATALOG_VERSION,
 };
+use jyotish_core::{
+    compute_positions, evaluate, search_facts, ChartQuery, Condition, Outcome, QueryCondition,
+    QueryScope, ScopeKind, SkyEventKind, EVENT_METHOD, MAX_SKY_EVENTS, SEARCH_METHOD,
+};
 use jyotish_core::{number_lagna_lon, prashna_facts, rising_mode, ZodiacMode, PRASHNA_METHOD};
 use jyotish_desk_lib::commands::{compute_chart_blocking, compute_chart_for_blocking};
 use jyotish_desk_lib::module_commands::{
@@ -37,9 +41,16 @@ use jyotish_desk_lib::muhurta_commands::{
     MuhurtaWindowView,
 };
 use jyotish_desk_lib::prashna_commands::compute_prashna_facts_blocking;
+use jyotish_desk_lib::search_commands::{
+    chart_search_blocking, evaluate_rows, event_search_blocking, ChartSearchCursor,
+    ChartSearchPage, EventSearchSpec, EventSearchView, SearchRegistry, SEARCH_SLICE_CHARTS,
+};
 use jyotish_desk_lib::transit_commands::TransitAt;
 use serde_json::Value;
-use store::TzChoice;
+use std::sync::Mutex;
+use store::{
+    BirthData, ChartKind, NewChart, NewClient, Place, SearchRow, Store, TimeCertainty, TzChoice,
+};
 
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -87,6 +98,7 @@ fn module_commands_run_on_the_engine_thread_and_map_errors() {
     timeline_checks(&engine, &inputs);
     muhurta_checks(&engine, &inputs);
     prashna_checks(&engine, &inputs);
+    search_checks(&engine, &inputs);
 }
 
 fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
@@ -2558,4 +2570,963 @@ fn prashna_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         median <= Duration::from_millis(15),
         "compute_prashna_facts median {median:?}"
     );
+}
+
+fn search_query(conds: Vec<(Condition, bool)>, scope: QueryScope) -> ChartQuery {
+    ChartQuery {
+        all_of: conds
+            .into_iter()
+            .map(|(cond, negate)| QueryCondition { cond, negate })
+            .collect(),
+        scope,
+    }
+}
+
+fn every_chart() -> QueryScope {
+    QueryScope {
+        tags: Vec::new(),
+        kind: None,
+        exclude_prashna: false,
+    }
+}
+
+/// Bir aramanın bütün sayfaları; her sayfanın süresiyle.
+fn chart_search_all(
+    engine: &Engine,
+    db: &Mutex<Store>,
+    registry: &SearchRegistry,
+    query: &ChartQuery,
+    search_id: u32,
+    now: Timestamp,
+) -> (Vec<ChartSearchPage>, Vec<Duration>) {
+    let (mut pages, mut times) = (Vec::new(), Vec::new());
+    let mut cursor: Option<ChartSearchCursor> = None;
+    loop {
+        let t = Instant::now();
+        let page =
+            chart_search_blocking(engine, db, registry, query.clone(), search_id, cursor, now)
+                .unwrap_or_else(|e| panic!("chart search: {} {:?}", e.code, e.params));
+        times.push(t.elapsed());
+        assert_eq!(page.search_id, search_id);
+        assert_eq!(page.method, SEARCH_METHOD);
+        assert_eq!(page.done, page.next.is_none());
+        cursor = page.next;
+        pages.push(page);
+        if cursor.is_none() {
+            return (pages, times);
+        }
+    }
+}
+
+/// Sentetik veritabanı: 100 danışan × 20 harita = 2 000 harita (deneme verisi; gerçek kişi
+/// değildir). Her 100. haritanın doğum saati bilinmez (20 harita).
+fn synthetic_db() -> Store {
+    let mut db = Store::open_in_memory().expect("store");
+    let birth = |n: u32| {
+        let unknown = n % 100 == 99;
+        BirthData {
+            date: format!("{:04}-{:02}-{:02}", 1930 + n % 90, 1 + n % 12, 1 + n % 28),
+            time: (!unknown).then(|| format!("{:02}:{:02}", n % 24, n % 60)),
+            time_certainty: if unknown {
+                TimeCertainty::Unknown
+            } else {
+                TimeCertainty::Exact
+            },
+            place: Place {
+                name: "Deneme".into(),
+                country: String::new(),
+                admin1: String::new(),
+                lat: f64::from(n % 120) - 60.0,
+                lon: f64::from(n % 340) - 170.0,
+                geoname_id: None,
+            },
+            tz: TzChoice::Fixed(0),
+            fold: None,
+            notes: String::new(),
+        }
+    };
+    let mut n = 0;
+    for c in 0..100 {
+        let (client, _) = db
+            .create_client(&NewClient {
+                name: format!("Deneme {c}"),
+                gender: None,
+                chart: NewChart {
+                    label: String::new(),
+                    kind: ChartKind::Natal,
+                    birth: birth(n),
+                },
+            })
+            .expect("client");
+        n += 1;
+        for k in 1..20 {
+            db.add_chart(
+                client.id,
+                &NewChart {
+                    label: format!("Harita {k}"),
+                    kind: ChartKind::Event,
+                    birth: birth(n),
+                },
+            )
+            .expect("chart");
+            n += 1;
+        }
+    }
+    db
+}
+
+fn search_error(e: jyotish_desk_lib::commands::CommandError) -> (String, Vec<(String, String)>) {
+    (e.code, e.params.into_iter().collect())
+}
+
+fn search_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    let now: Timestamp = "2026-11-27T12:00:00Z".parse().expect("timestamp");
+    let now_jd = 2_461_372.0;
+
+    // Çapraz denetim, gerçek ephemeris'le: hafif yolun konumları tam yolun konumlarıdır ve
+    // haritadan okunan olgularla kurulan sorgu eşleşir; koşullardan birinin "değil"i eşleşmez.
+    for (id, input) in inputs {
+        for time_known in [true, false] {
+            let input = ChartInput {
+                time_known,
+                ..input.clone()
+            };
+            let i = input.clone();
+            let (facts, positions, chart) = engine
+                .call(move |se: &mut SwissEph| {
+                    (
+                        search_facts(se, &i),
+                        compute_positions(se, &i),
+                        jyotish_core::compute_chart_for(se, &i),
+                    )
+                })
+                .expect("engine");
+            let (facts, positions, chart) = (
+                facts.expect("facts"),
+                positions.expect("positions"),
+                chart.expect("chart"),
+            );
+            assert_eq!(facts.positions, positions, "{id}");
+            assert_eq!(facts.seed, chart.dasha.seed, "{id}");
+            let (sun, moon) = (&chart.grahas[0], &chart.grahas[1]);
+            let d9 = chart
+                .vargas
+                .iter()
+                .find(|v| v.varga == Varga::D9)
+                .expect("navamsa");
+            let maha = chart
+                .dasha
+                .periods
+                .iter()
+                .find(|p| p.level == 1 && p.start_jd_ut <= now_jd && now_jd < p.end_jd_ut);
+            let mut conds = vec![
+                Condition::GrahaInSign {
+                    graha: Graha::Moon,
+                    signs: vec![moon.sign],
+                    varga: Varga::D1,
+                },
+                Condition::GrahaInSign {
+                    graha: Graha::Sun,
+                    signs: vec![d9.placements[0].sign],
+                    varga: Varga::D9,
+                },
+                Condition::GrahaInNakshatra {
+                    graha: Graha::Moon,
+                    nakshatras: vec![moon.nakshatra],
+                    padas: vec![moon.pada],
+                },
+                Condition::MoonPhase {
+                    tithis: vec![chart.panchang.tithi.no],
+                    paksha: None,
+                },
+            ];
+            if let Some(p) = maha {
+                conds.push(Condition::DashaAt {
+                    date: None,
+                    level: 1,
+                    lords: vec![p.lords[0]],
+                });
+            }
+            if time_known {
+                conds.push(Condition::LagnaInSign {
+                    signs: vec![chart.lagna.sign],
+                    varga: Varga::D1,
+                });
+                conds.push(Condition::LagnaInSign {
+                    signs: vec![d9.lagna_sign],
+                    varga: Varga::D9,
+                });
+                conds.push(Condition::GrahaInHouse {
+                    graha: Graha::Sun,
+                    houses: vec![sun.sign.house_from(chart.lagna.sign)],
+                });
+            }
+            let all: Vec<(Condition, bool)> = conds.iter().cloned().map(|c| (c, false)).collect();
+            let q = search_query(all.clone(), every_chart());
+            let Outcome::Match(found) = evaluate(&q, &facts, now_jd).expect("evaluate") else {
+                panic!("{id}: the chart's own facts should match");
+            };
+            assert_eq!(found.len(), conds.len(), "{id}");
+            assert_eq!(found[0].sign, Some(moon.sign));
+            for flip in 0..all.len() {
+                let mut negated = all.clone();
+                negated[flip].1 = true;
+                let q = search_query(negated, every_chart());
+                assert_eq!(
+                    evaluate(&q, &facts, now_jd).expect("evaluate"),
+                    Outcome::NoMatch,
+                    "{id}: condition {flip} negated"
+                );
+            }
+        }
+    }
+
+    // Bütçe (spec §12 "Performans"): tek harita için `search_facts` ≤ 0,4 ms. Motor iş
+    // parçacığında, haritalar arasında dolaşarak ölçülür.
+    let sample: Vec<ChartInput> = inputs.iter().map(|(_, i)| i.clone()).collect();
+    let per_chart = engine
+        .call(move |se: &mut SwissEph| {
+            for i in &sample {
+                search_facts(se, i).expect("facts");
+            }
+            let mut times: Vec<Duration> = (0..15)
+                .map(|_| {
+                    let t = Instant::now();
+                    for _ in 0..40 {
+                        for i in &sample {
+                            search_facts(se, i).expect("facts");
+                        }
+                    }
+                    t.elapsed() / (40 * sample.len() as u32)
+                })
+                .collect();
+            times.sort();
+            times[times.len() / 2]
+        })
+        .expect("engine");
+    eprintln!("search_facts per chart, median {per_chart:?}");
+    assert!(
+        per_chart <= Duration::from_micros(400),
+        "search_facts per chart {per_chart:?}"
+    );
+
+    // Hesaplanamayan harita aramayı durdurmaz: sayılır, komşuları değerlendirilir.
+    let first = inputs[0].1.clone();
+    let row = |chart_id: u32, input: ChartInput| SearchRow {
+        chart_id,
+        client_id: 1,
+        client_name: "Deneme".into(),
+        chart_label: String::new(),
+        input,
+    };
+    let rows = vec![
+        row(1, first.clone()),
+        row(
+            2,
+            ChartInput {
+                jd_ut: 9.0e9,
+                ..first.clone()
+            },
+        ),
+        row(
+            3,
+            ChartInput {
+                time_known: false,
+                ..first.clone()
+            },
+        ),
+    ];
+    let lagna_any = search_query(
+        vec![(
+            Condition::LagnaInSign {
+                signs: Sign::ALL.to_vec(),
+                varga: Varga::D1,
+            },
+            false,
+        )],
+        every_chart(),
+    );
+    let q = lagna_any.clone();
+    let (hits, unknown, failed) = engine
+        .call(move |se: &mut SwissEph| evaluate_rows(se, &q, rows, now_jd))
+        .expect("engine");
+    assert_eq!((hits.len(), unknown, failed), (1, 1, 1));
+    assert_eq!(hits[0].chart_id, 1);
+
+    // Store entegrasyonu: 2 000 sentetik haritalı veritabanı.
+    let built = Instant::now();
+    let db = Mutex::new(synthetic_db());
+    eprintln!(
+        "synthetic database (2 000 charts) built in {:?}",
+        built.elapsed()
+    );
+    let registry = SearchRegistry::default();
+    let moon_signs = vec![Sign::Aries, Sign::Taurus, Sign::Gemini, Sign::Cancer];
+    let moon = search_query(
+        vec![(
+            Condition::GrahaInSign {
+                graha: Graha::Moon,
+                signs: moon_signs.clone(),
+                varga: Varga::D1,
+            },
+            false,
+        )],
+        every_chart(),
+    );
+    // Isınma (SQLite deyim önbelleği, ephemeris dosyaları).
+    chart_search_all(engine, &db, &registry, &moon, 1, now);
+    let started = Instant::now();
+    let (pages, times) = chart_search_all(engine, &db, &registry, &moon, 2, now);
+    let total = started.elapsed();
+    // Sayfalama tüm haritaları tam bir kez tarar: dört dolu sayfa ve boş bir son sayfa.
+    assert_eq!(pages.len(), 5);
+    let scanned: Vec<u32> = pages.iter().map(|p| p.scanned).collect();
+    assert_eq!(scanned, [500, 1_000, 1_500, 2_000, 2_000]);
+    assert!(pages.iter().all(|p| p.total == 2_000));
+    let last = pages.last().expect("last page");
+    assert!(last.done && last.hits.is_empty());
+    assert_eq!((last.skipped_time_unknown, last.failed), (0, 0));
+    let hits: Vec<&jyotish_desk_lib::search_commands::ChartHit> =
+        pages.iter().flat_map(|p| &p.hits).collect();
+    let mut ids: Vec<u32> = hits.iter().map(|h| h.chart_id).collect();
+    let count = ids.len();
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), count, "a chart is reported at most once");
+    // Dört burç on ikinin üçte biridir: 2 000 haritanın kabaca üçte biri eşleşir.
+    assert!((500..=850).contains(&count), "{count} hits");
+    for h in &hits {
+        assert_eq!(h.matched.len(), 1);
+        assert!(h.matched[0].sign.is_some_and(|s| moon_signs.contains(&s)));
+        assert!(h.client_name.starts_with("Deneme "));
+    }
+    // İlk sayfa tam yolla karşılaştırılır: eşleşen kümenin tamamı ve yalnızca o.
+    let first_rows = db
+        .lock()
+        .expect("store")
+        .search_rows(&every_chart(), 0, 500)
+        .expect("rows");
+    let mut expected: Vec<u32> = Vec::new();
+    for r in &first_rows {
+        let chart = compute_chart_for_blocking(engine, r.input.clone()).expect("chart");
+        if moon_signs.contains(&chart.grahas[1].sign) {
+            expected.push(r.chart_id);
+        }
+    }
+    let got: Vec<u32> = pages[0].hits.iter().map(|h| h.chart_id).collect();
+    assert_eq!(got, expected);
+    // Bütçe (spec §12): ilk sayfa (500 harita) ≤ 300 ms; 10 000 harita ≤ 5 s, yani 2 000
+    // harita ≤ 1 s.
+    let slowest = times.iter().max().copied().unwrap_or_default();
+    eprintln!(
+        "chart_search (2 000 charts, one condition) total {total:?}, first page {:?}, slowest page {slowest:?}, {count} hits",
+        times[0]
+    );
+    assert!(
+        times[0] <= Duration::from_millis(300),
+        "first page {:?}",
+        times[0]
+    );
+    assert!(total <= Duration::from_secs(1), "2 000 charts {total:?}");
+
+    // Yoga ve dasha koşullu arama: 10 000 harita ≤ 10 s, yani 2 000 harita ≤ 2 s.
+    let heavy = search_query(
+        vec![
+            (
+                Condition::YogaPresent {
+                    ids: YOGA_CATALOG
+                        .iter()
+                        .take(16)
+                        .map(|r| r.id.to_owned())
+                        .collect(),
+                },
+                false,
+            ),
+            (
+                Condition::DashaAt {
+                    date: None,
+                    level: 3,
+                    lords: Graha::ALL.to_vec(),
+                },
+                false,
+            ),
+        ],
+        every_chart(),
+    );
+    let started = Instant::now();
+    let (pages, _) = chart_search_all(engine, &db, &registry, &heavy, 3, now);
+    let total = started.elapsed();
+    let last = pages.last().expect("last page");
+    // Lagna isteyen yoga kuralları sorguda olduğu için saati bilinmeyen 20 harita atlanır.
+    assert_eq!(
+        (last.scanned, last.skipped_time_unknown, last.failed),
+        (2_000, 20, 0)
+    );
+    eprintln!("chart_search (2 000 charts, yoga and dasha) total {total:?}");
+    assert!(total <= Duration::from_secs(2), "yoga and dasha {total:?}");
+
+    // Lagna koşulu: saati bilinmeyen haritalar eşleşmez ve ayrıca sayılır.
+    let (pages, _) = chart_search_all(engine, &db, &registry, &lagna_any, 4, now);
+    let last = pages.last().expect("last page");
+    let matched: usize = pages.iter().map(|p| p.hits.len()).sum();
+    assert_eq!((matched, last.skipped_time_unknown), (1_980, 20));
+
+    // Kapsam: tür süzgeci taramayı daraltır (100 doğum haritası).
+    let natal_only = ChartQuery {
+        scope: QueryScope {
+            kind: Some(ScopeKind::Natal),
+            ..every_chart()
+        },
+        ..moon.clone()
+    };
+    let (pages, _) = chart_search_all(engine, &db, &registry, &natal_only, 5, now);
+    assert_eq!(pages.len(), 1);
+    assert_eq!((pages[0].scanned, pages[0].total), (100, 100));
+
+    // "Sonuçları etiketle": etiket eşleşen haritalara eklenir; etiket kapsamı aynı kümeyi tarar.
+    let tagged = db
+        .lock()
+        .expect("store")
+        .tag_charts(&ids, "Ay ilk dört burçta")
+        .expect("tag");
+    assert_eq!(tagged as usize, count);
+    let by_tag = ChartQuery {
+        scope: QueryScope {
+            tags: vec!["ay ilk dört burçta".into()],
+            ..every_chart()
+        },
+        ..moon.clone()
+    };
+    let (pages, _) = chart_search_all(engine, &db, &registry, &by_tag, 6, now);
+    let last = pages.last().expect("last page");
+    let matched: usize = pages.iter().map(|p| p.hits.len()).sum();
+    assert_eq!((last.total as usize, matched), (count, count));
+
+    // Durdurma: durdurulan aramanın sonraki sayfası reddedilir; yeni arama eskisini geçersiz
+    // kılar; biten aramanın imleci de geçersizdir. Hata parametre taşımaz.
+    let page = |id: u32, cursor: Option<ChartSearchCursor>| {
+        chart_search_blocking(engine, &db, &registry, moon.clone(), id, cursor, now)
+    };
+    let first_page = page(10, None).expect("first page");
+    let next = first_page.next.expect("more pages");
+    registry.cancel_chart_search(10);
+    assert_eq!(
+        search_error(page(10, Some(next)).unwrap_err()),
+        ("search_stale".to_owned(), Vec::new())
+    );
+    let old = page(11, None)
+        .expect("first page")
+        .next
+        .expect("more pages");
+    page(12, None).expect("a new search");
+    assert_eq!(page(11, Some(old)).unwrap_err().code, "search_stale");
+    // Başka bir kimliğin durdurulması süren aramaya dokunmaz.
+    registry.cancel_chart_search(11);
+    let (pages, _) = {
+        let mut cursor = page(12, None).expect("restart").next;
+        let mut pages = Vec::new();
+        while let Some(c) = cursor {
+            let p = page(12, Some(c)).expect("page");
+            cursor = p.next;
+            pages.push(p);
+        }
+        (pages, ())
+    };
+    assert!(pages.last().expect("last").done);
+    assert_eq!(page(12, Some(next)).unwrap_err().code, "search_stale");
+    // Sayfa hesaplanırken durdurma: dilim sınırında (100 harita) biter.
+    assert_eq!(SEARCH_SLICE_CHARTS, 100);
+    let stopped = std::thread::scope(|scope| {
+        let worker = scope.spawn(|| page(20, None));
+        while !worker.is_finished() {
+            registry.cancel_chart_search(20);
+            std::thread::sleep(Duration::from_micros(200));
+        }
+        worker.join().expect("worker")
+    });
+    // Durdurma ilk sayfanın bitişinden önce yetişirse sayfa reddedilir; yetişmezse sayfa döner
+    // ve sonraki istek reddedilir.
+    match stopped {
+        Err(e) => assert_eq!(e.code, "search_stale"),
+        Ok(p) => {
+            registry.cancel_chart_search(20);
+            let next = p.next.expect("more pages");
+            assert_eq!(page(20, Some(next)).unwrap_err().code, "search_stale");
+        }
+    }
+
+    // Girdi hataları yalnızca alan adı taşır ve veritabanına dokunmadan döner.
+    let empty = search_query(Vec::new(), every_chart());
+    let e = chart_search_blocking(engine, &db, &registry, empty, 30, None, now).unwrap_err();
+    assert_eq!(
+        search_error(e),
+        (
+            "invalid_search_input".to_owned(),
+            vec![("field".to_owned(), "conditions".to_owned())]
+        )
+    );
+
+    event_checks(engine, inputs, now);
+}
+
+fn event_spec(
+    place: &MuhurtaPlace,
+    from: &str,
+    to: &str,
+    kinds: &[SkyEventKind],
+    grahas: &[Graha],
+) -> EventSearchSpec {
+    EventSearchSpec {
+        from_date: Some(from.into()),
+        to_date: Some(to.into()),
+        place: place.clone(),
+        kinds: kinds.to_vec(),
+        grahas: grahas.to_vec(),
+        settings: CalcSettings::default(),
+        natal: None,
+    }
+}
+
+fn event_checks(engine: &Engine, inputs: &[(String, ChartInput)], now: Timestamp) {
+    let registry = SearchRegistry::default();
+    let utc = MuhurtaPlace {
+        lat: 41.0,
+        lon: 29.0,
+        tz: TzChoice::Fixed(0),
+    };
+    let run = |spec: EventSearchSpec, id: u32| -> EventSearchView {
+        event_search_blocking(engine, &registry, spec, id, now)
+            .unwrap_or_else(|e| panic!("event search: {} {:?}", e.code, e.params))
+    };
+    let settings = CalcSettings::default();
+    let sidereal = Zodiac::Sidereal(settings.ayanamsa.sidereal_mode());
+    let lon_at = |body: Body, jd: f64| -> f64 {
+        engine
+            .call(move |se: &mut SwissEph| se.body(jd, body, sidereal))
+            .expect("engine")
+            .expect("body")
+            .lon
+    };
+    let arcsecond = 1.0 / 3600.0;
+
+    // Ay olayları, 5 yıl: yeni ay ve dolunayda uzanım 0° ve 180° ± 1″ (spec §12 "Test").
+    let lunations = event_spec(
+        &utc,
+        "2020-01-01",
+        "2024-12-31",
+        &[SkyEventKind::NewMoon, SkyEventKind::FullMoon],
+        &[],
+    );
+    let started = Instant::now();
+    let view = run(lunations.clone(), 1);
+    let moon_total = started.elapsed();
+    assert_eq!(view.method, EVENT_METHOD);
+    assert!(!view.truncated);
+    // 2020-01-01 00:00 UT = JD 2458849,5; iki uç da dahildir: 1 827 gün.
+    assert_eq!(view.from_jd_ut, 2_458_849.5);
+    assert_eq!(view.to_jd_ut - view.from_jd_ut, 1_827.0);
+    assert_eq!(view.scanned_to_jd_ut, view.to_jd_ut);
+    let news = view
+        .events
+        .iter()
+        .filter(|e| e.event.kind == SkyEventKind::NewMoon)
+        .count();
+    let fulls = view.events.len() - news;
+    // 1 827 gün / 29,53 = 61,9 ay.
+    assert!(
+        (61..=63).contains(&news) && (61..=63).contains(&fulls),
+        "{news} / {fulls}"
+    );
+    assert!(view
+        .events
+        .windows(2)
+        .all(|w| w[0].event.jd_ut <= w[1].event.jd_ut));
+    for e in &view.events {
+        let jd = e.event.jd_ut;
+        let elongation = (lon_at(Body::Moon, jd) - lon_at(Body::Sun, jd)).rem_euclid(360.0);
+        let want = if e.event.kind == SkyEventKind::NewMoon {
+            0.0
+        } else {
+            180.0
+        };
+        let off = wrap180(elongation - want).abs();
+        assert!(off <= arcsecond, "{:?} at {jd}: {off}", e.event.kind);
+        assert_eq!(e.offset_secs, 0);
+        assert_eq!(e.event.grahas, [Graha::Sun, Graha::Moon]);
+    }
+    // Bilinen an: 2020-06-21 yeni ayı (halkalı tutulma), 06:41 UT ± 2 dakika.
+    let june = 2_459_021.5 + (6.0 + 41.0 / 60.0) / 24.0;
+    assert!(view
+        .events
+        .iter()
+        .any(|e| e.event.kind == SkyEventKind::NewMoon
+            && (e.event.jd_ut - june).abs() < 2.0 / 1_440.0));
+    eprintln!(
+        "event_search (Moon, 5 years) {moon_total:?}, {} events",
+        view.events.len()
+    );
+    assert!(
+        moon_total <= Duration::from_secs(2),
+        "Moon events {moon_total:?}"
+    );
+
+    // Yavaş grahalar, 120 yıl: burç girişleri ve dönüşler.
+    let slow_grahas = [Graha::Jupiter, Graha::Saturn, Graha::Rahu, Graha::Ketu];
+    let slow = event_spec(
+        &utc,
+        "1950-01-01",
+        "2069-12-30",
+        &[
+            SkyEventKind::SignIngress,
+            SkyEventKind::StationRetrograde,
+            SkyEventKind::StationDirect,
+        ],
+        &slow_grahas,
+    );
+    let started = Instant::now();
+    let view = run(slow.clone(), 2);
+    let slow_total = started.elapsed();
+    assert!(!view.truncated);
+    assert_eq!(view.to_jd_ut - view.from_jd_ut, 43_829.0);
+    // Dilim dilim bulunan girişler, aralığın tek seferde yürünen dizisinin sınırlarıdır.
+    for graha in slow_grahas {
+        let (from, to, s) = (view.from_jd_ut, view.to_jd_ut, settings.clone());
+        let series = engine
+            .call(move |se: &mut SwissEph| graha_sign_series(se, &s, graha, from, to))
+            .expect("engine")
+            .expect("series");
+        let found: Vec<&jyotish_core::SkyEvent> = view
+            .events
+            .iter()
+            .map(|e| &e.event)
+            .filter(|e| e.kind == SkyEventKind::SignIngress && e.grahas == [graha])
+            .collect();
+        assert_eq!(found.len(), series.len() - 1, "{graha:?}");
+        for (e, interval) in found.iter().zip(&series[1..]) {
+            assert!((e.jd_ut - interval.start_jd_ut).abs() < 1e-5);
+            assert_eq!(e.sign, Some(interval.value));
+        }
+    }
+    // Satürn 120 yılda yaklaşık 116 kez retroya döner (kavuşum dönemi 378 gün) ve aynı sayıda
+    // düze döner; düğümler dönüş vermez.
+    let stations = |kind: SkyEventKind, graha: Graha| {
+        view.events
+            .iter()
+            .filter(|e| e.event.kind == kind && e.event.grahas == [graha])
+            .count()
+    };
+    let retro = stations(SkyEventKind::StationRetrograde, Graha::Saturn);
+    let direct = stations(SkyEventKind::StationDirect, Graha::Saturn);
+    assert!(
+        (114..=118).contains(&retro) && retro.abs_diff(direct) <= 1,
+        "{retro} / {direct}"
+    );
+    assert_eq!(stations(SkyEventKind::StationRetrograde, Graha::Rahu), 0);
+    eprintln!(
+        "event_search (slow grahas, 120 years) {slow_total:?}, {} events",
+        view.events.len()
+    );
+    assert!(
+        slow_total <= Duration::from_secs(2),
+        "slow grahas {slow_total:?}"
+    );
+
+    // Dilim bütçesi: araya giren harita hesabı en çok 300 ms bekler.
+    for (name, spec) in [("moon", &lunations), ("slow", &slow)] {
+        let core = jyotish_core::EventSpec {
+            from_jd_ut: if name == "moon" {
+                2_458_849.5
+            } else {
+                view.from_jd_ut
+            },
+            to_jd_ut: if name == "moon" {
+                2_458_849.5 + 1_827.0
+            } else {
+                view.to_jd_ut
+            },
+            kinds: spec.kinds.clone(),
+            grahas: spec.grahas.clone(),
+        };
+        let mut slowest = Duration::ZERO;
+        for chunk in jyotish_core::event_chunks(&core) {
+            let (c, s) = (core.clone(), settings.clone());
+            let t = Instant::now();
+            engine
+                .call(move |se: &mut SwissEph| {
+                    jyotish_core::event_search_chunk(se, &s, &c, None, chunk)
+                })
+                .expect("engine")
+                .expect("chunk");
+            slowest = slowest.max(t.elapsed());
+        }
+        eprintln!("event_search ({name}) slowest chunk {slowest:?}");
+        assert!(
+            slowest <= Duration::from_millis(300),
+            "{name} chunk {slowest:?}"
+        );
+    }
+
+    // Kavuşum: 2020-12-21 Jüpiter–Satürn kavuşumu (18:20 UT dolayı); iki boylamın farkı ≤ 1″.
+    let great = run(
+        event_spec(
+            &utc,
+            "2020-01-01",
+            "2021-12-31",
+            &[SkyEventKind::Conjunction],
+            &[Graha::Saturn, Graha::Jupiter],
+        ),
+        3,
+    );
+    assert_eq!(great.events.len(), 1);
+    let e = &great.events[0].event;
+    assert_eq!(e.grahas, [Graha::Jupiter, Graha::Saturn]);
+    let diff = wrap180(lon_at(Body::Jupiter, e.jd_ut) - lon_at(Body::Saturn, e.jd_ut)).abs();
+    assert!(diff <= arcsecond, "{diff}");
+    // 2020-12-21 00:00 UT = JD 2459204,5.
+    assert!(
+        (e.jd_ut - (2_459_204.5 + 18.3 / 24.0)).abs() < 0.05,
+        "{}",
+        e.jd_ut
+    );
+    assert_eq!(e.sign, Some(Sign::Capricorn));
+
+    // Açık haritayla: Satürn'ün doğum boylamına dönüşü doğumdan 28–31 yıl sonradır ve doğum
+    // Ay'ına göre ev değiştirmeleri Jüpiter ile Satürn'ün burç girişleridir.
+    let (_, natal) = inputs
+        .iter()
+        .find(|(id, _)| id.starts_with("istanbul-1987"))
+        .expect("istanbul golden");
+    let with_natal = EventSearchSpec {
+        settings: natal.settings.clone(),
+        natal: Some(natal.clone()),
+        ..event_spec(
+            &utc,
+            "2014-01-01",
+            "2019-12-31",
+            &[
+                SkyEventKind::TransitToNatal,
+                SkyEventKind::HouseFromNatalMoon,
+            ],
+            &[Graha::Saturn],
+        )
+    };
+    let view = run(with_natal.clone(), 4);
+    let returns: Vec<f64> = view
+        .events
+        .iter()
+        .map(|e| &e.event)
+        .filter(|e| {
+            e.kind == SkyEventKind::TransitToNatal && e.grahas == [Graha::Saturn, Graha::Saturn]
+        })
+        .map(|e| (e.jd_ut - natal.jd_ut) / 365.25)
+        .collect();
+    assert!(!returns.is_empty() && returns.len() % 2 == 1, "{returns:?}");
+    assert!(
+        returns.iter().all(|y| (28.0..=31.0).contains(y)),
+        "{returns:?}"
+    );
+    let natal_positions = {
+        let i = natal.clone();
+        engine
+            .call(move |se: &mut SwissEph| compute_positions(se, &i))
+            .expect("engine")
+            .expect("positions")
+    };
+    let moon_sign = natal_positions.sign_of(Graha::Moon);
+    let houses: Vec<&jyotish_core::SkyEvent> = view
+        .events
+        .iter()
+        .map(|e| &e.event)
+        .filter(|e| e.kind == SkyEventKind::HouseFromNatalMoon)
+        .collect();
+    assert!(
+        houses.len() >= 6,
+        "{} house changes in six years",
+        houses.len()
+    );
+    for e in houses {
+        let sign = e.sign.expect("sign");
+        assert_eq!(e.house, Some(sign.house_from(moon_sign)));
+        assert!(e.grahas == [Graha::Jupiter] || e.grahas == [Graha::Saturn]);
+    }
+    // Sonuç doğum boylamlarını taşımaz: olay yalnızca tür, an, graha, burç, nakshatra ve evdir.
+    let json = serde_json::to_string(&view.events[0]).expect("json");
+    let keys: Vec<String> = serde_json::from_str::<Value>(&json).expect("value")["event"]
+        .as_object()
+        .expect("object")
+        .keys()
+        .cloned()
+        .collect();
+    assert_eq!(
+        keys,
+        ["grahas", "house", "jd_ut", "kind", "nakshatra", "sign"]
+    );
+
+    // Kesme: Ay'ın 5 yıllık nakshatra girişleri (yaklaşık 1 800) ve burç girişleri (yaklaşık
+    // 800) birlikte sınırı aşar.
+    let many = run(
+        event_spec(
+            &utc,
+            "2020-01-01",
+            "2024-12-31",
+            &[SkyEventKind::NakshatraIngress, SkyEventKind::SignIngress],
+            &[Graha::Moon],
+        ),
+        5,
+    );
+    assert!(many.truncated);
+    assert_eq!(many.events.len(), MAX_SKY_EVENTS);
+    assert!(many.scanned_to_jd_ut < many.to_jd_ut);
+    assert_eq!(
+        many.scanned_to_jd_ut,
+        many.events.last().expect("last").event.jd_ut
+    );
+
+    // Varsayılan aralık: bugün (yerin günü) ve sonraki 366 gün; ofset yerin dilimindendir.
+    let istanbul = MuhurtaPlace {
+        lat: 41.0138,
+        lon: 28.9497,
+        tz: TzChoice::Iana("Europe/Istanbul".into()),
+    };
+    let default_range = run(
+        EventSearchSpec {
+            from_date: None,
+            to_date: None,
+            ..event_spec(&istanbul, "", "", &[SkyEventKind::FullMoon], &[])
+        },
+        6,
+    );
+    // 2026-11-27 00:00 +03:00 = 2026-11-26 21:00 UT.
+    assert!((default_range.from_jd_ut - 2_461_371.375).abs() < 1e-9);
+    assert_eq!(default_range.to_jd_ut - default_range.from_jd_ut, 366.0);
+    assert_eq!(default_range.from_offset_secs, 10_800);
+    assert!((12..=13).contains(&default_range.events.len()));
+    assert!(default_range.events.iter().all(|e| e.offset_secs == 10_800));
+
+    // Hatalar yalnızca alan adı taşır; yer tarihlerden önce denetlenir.
+    let field = |spec: EventSearchSpec| -> String {
+        let e = event_search_blocking(engine, &registry, spec, 7, now).unwrap_err();
+        assert_eq!(e.code, "invalid_search_input");
+        assert_eq!(e.params.len(), 1, "{:?}", e.params);
+        e.params["field"].clone()
+    };
+    let ingress = [SkyEventKind::SignIngress];
+    let bad_place = MuhurtaPlace {
+        lat: 91.0,
+        ..utc.clone()
+    };
+    assert_eq!(
+        field(event_spec(
+            &bad_place,
+            "bozuk",
+            "bozuk",
+            &ingress,
+            &[Graha::Sun]
+        )),
+        "place"
+    );
+    let bad_zone = MuhurtaPlace {
+        tz: TzChoice::Iana("Mars/Olympus".into()),
+        ..utc.clone()
+    };
+    assert_eq!(
+        field(event_spec(
+            &bad_zone,
+            "2020-01-01",
+            "2020-02-01",
+            &ingress,
+            &[Graha::Sun]
+        )),
+        "place"
+    );
+    assert_eq!(
+        field(event_spec(
+            &utc,
+            "01.01.2020",
+            "2020-02-01",
+            &ingress,
+            &[Graha::Sun]
+        )),
+        "from_date"
+    );
+    assert_eq!(
+        field(event_spec(
+            &utc,
+            "2020-01-01",
+            "2020-13-01",
+            &ingress,
+            &[Graha::Sun]
+        )),
+        "to_date"
+    );
+    assert_eq!(
+        field(event_spec(
+            &utc,
+            "2020-02-01",
+            "2020-01-01",
+            &ingress,
+            &[Graha::Sun]
+        )),
+        "range"
+    );
+    // Ay'lı arama 5 yılı, Ay'sız arama 120 yılı aşamaz.
+    assert_eq!(
+        field(event_spec(
+            &utc,
+            "2020-01-01",
+            "2025-01-02",
+            &ingress,
+            &[Graha::Moon]
+        )),
+        "range"
+    );
+    assert_eq!(
+        field(event_spec(
+            &utc,
+            "1950-01-01",
+            "2070-01-02",
+            &ingress,
+            &[Graha::Saturn]
+        )),
+        "range"
+    );
+    assert_eq!(
+        field(event_spec(
+            &utc,
+            "2020-01-01",
+            "2020-02-01",
+            &[],
+            &[Graha::Sun]
+        )),
+        "kinds"
+    );
+    assert_eq!(
+        field(event_spec(&utc, "2020-01-01", "2020-02-01", &ingress, &[])),
+        "grahas"
+    );
+    assert_eq!(
+        field(event_spec(
+            &utc,
+            "2020-01-01",
+            "2020-02-01",
+            &[SkyEventKind::TransitToNatal],
+            &[Graha::Saturn]
+        )),
+        "natal"
+    );
+
+    // Durdurma: süren arama dilim sınırında `search_stale` ile biter.
+    let stopped = std::thread::scope(|scope| {
+        let worker =
+            scope.spawn(|| event_search_blocking(engine, &registry, slow.clone(), 40, now));
+        while !worker.is_finished() {
+            registry.cancel_event_search(40);
+            std::thread::sleep(Duration::from_micros(200));
+        }
+        worker.join().expect("worker")
+    });
+    let e = stopped.expect_err("a cancelled search returns no events");
+    assert_eq!(search_error(e), ("search_stale".to_owned(), Vec::new()));
+    // Durdurmadan sonra yeni arama çalışır.
+    assert!(!run(lunations, 41).events.is_empty());
 }

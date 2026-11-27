@@ -13,8 +13,10 @@ use atlas::Timestamp;
 use ephemeris::Engine;
 use jyotish_core::muhurta::{NakshatraNature, TithiGroup, MUHURTA_MAX_MIN_MINUTES};
 use jyotish_core::{
-    kuta_class_ids, ChartInput, Graha, Kuta, LordLink, MuhurtaCriteria, MuhurtaFlag, NatalMoon,
-    RisingMode, Vara, PRASHNA_NUMBER_MAX, YOGA_CATALOG, YOGA_CONDITIONS,
+    kuta_class_ids, ChartInput, ChartQuery, Condition, Graha, GrahaFlag, Kuta, LordLink,
+    MuhurtaCriteria, MuhurtaFlag, NatalMoon, QueryCondition, QueryScope, RisingMode, SkyEventKind,
+    Vara, Varga, EIGHT_KARAKA_ROLES, MAX_CONDITIONS, MAX_SCOPE_TAGS, MAX_SEARCH_DASHA_LEVEL,
+    MAX_SKY_EVENTS, MAX_YOGA_IDS, PRASHNA_NUMBER_MAX, YOGA_CATALOG, YOGA_CONDITIONS,
 };
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
@@ -29,6 +31,9 @@ use jyotish_desk_lib::muhurta_commands::{
 };
 use jyotish_desk_lib::prashna_commands::{
     compute_prashna_facts_blocking, create_prashna_blocking, PrashnaMoment, PrashnaRequest,
+};
+use jyotish_desk_lib::search_commands::{
+    chart_search_blocking, event_search_blocking, EventSearchSpec, SearchRegistry,
 };
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
@@ -364,6 +369,103 @@ fn ui_fixture_is_up_to_date() {
         jyotish_core::Sign::Virgo,
         "54 is the sixth sign"
     );
+    // Arama (Plan 22): fikstür veritabanındaki dört haritada bir harita araması, bir kayıtlı
+    // arama ve açık haritayla bir olay araması.
+    let registry = SearchRegistry::default();
+    let search_query = ChartQuery {
+        all_of: vec![
+            QueryCondition {
+                cond: Condition::GrahaInSign {
+                    graha: Graha::Moon,
+                    signs: vec![moon.sign],
+                    varga: Varga::D1,
+                },
+                negate: false,
+            },
+            QueryCondition {
+                cond: Condition::GrahaInHouse {
+                    graha: Graha::Sun,
+                    houses: vec![1, 10],
+                },
+                negate: true,
+            },
+        ],
+        scope: QueryScope::default(),
+    };
+    let search_page = chart_search_blocking(
+        &engine,
+        &store,
+        &registry,
+        search_query.clone(),
+        1,
+        None,
+        fixture_now,
+    )
+    .expect("chart search");
+    assert!(search_page.done, "the fixture database is one page");
+    assert_eq!(
+        search_page.total, 2,
+        "prashna charts are out of the default scope"
+    );
+    assert_eq!(
+        search_page.hits.len(),
+        1,
+        "only the open chart has its own Moon sign"
+    );
+    let search_all_charts = chart_search_blocking(
+        &engine,
+        &store,
+        &registry,
+        ChartQuery {
+            scope: QueryScope {
+                exclude_prashna: false,
+                ..QueryScope::default()
+            },
+            ..search_query.clone()
+        },
+        2,
+        None,
+        fixture_now,
+    )
+    .expect("chart search with prashna charts");
+    assert_eq!(search_all_charts.total, 4);
+    let saved_search = store
+        .lock()
+        .expect("store")
+        .save_search("Ay burcu, Güneş 1. ya da 10. evde değil", &search_query)
+        .expect("save search");
+    let event_spec = EventSearchSpec {
+        from_date: Some("2026-11-26".into()),
+        to_date: Some("2027-03-31".into()),
+        place: muhurta_place.clone(),
+        kinds: vec![
+            SkyEventKind::SignIngress,
+            SkyEventKind::StationRetrograde,
+            SkyEventKind::StationDirect,
+            SkyEventKind::Conjunction,
+            SkyEventKind::NewMoon,
+            SkyEventKind::FullMoon,
+            SkyEventKind::TransitToNatal,
+            SkyEventKind::HouseFromNatalMoon,
+        ],
+        grahas: vec![Graha::Sun, Graha::Mars, Graha::Jupiter, Graha::Saturn],
+        settings: opened.calc_settings.clone(),
+        natal: Some(module_input.clone()),
+    };
+    let event_view = event_search_blocking(&engine, &registry, event_spec.clone(), 1, fixture_now)
+        .expect("event search");
+    assert!(!event_view.truncated);
+    for kind in [
+        SkyEventKind::SignIngress,
+        SkyEventKind::NewMoon,
+        SkyEventKind::FullMoon,
+        SkyEventKind::TransitToNatal,
+    ] {
+        assert!(
+            event_view.events.iter().any(|e| e.event.kind == kind),
+            "the fixture range has a {kind:?}"
+        );
+    }
     let value = json!({
         "opened": opened,
         "dasha_children": { "path": path, "periods": children },
@@ -413,6 +515,25 @@ fn ui_fixture_is_up_to_date() {
             "links": LordLink::ALL,
             "max_number": PRASHNA_NUMBER_MAX,
             "max_question_chars": MAX_QUESTION_CHARS,
+        },
+        "search": {
+            "query": search_query,
+            "page": search_page,
+            "page_all_charts": search_all_charts,
+            "saved": saved_search,
+            "event_spec": event_spec,
+            "events": event_view,
+        },
+        "search_ids": {
+            "event_kinds": SkyEventKind::ALL,
+            "flags": GrahaFlag::ALL,
+            "vargas": Varga::ALL,
+            "karaka_roles": EIGHT_KARAKA_ROLES,
+            "max_conditions": MAX_CONDITIONS,
+            "max_scope_tags": MAX_SCOPE_TAGS,
+            "max_yoga_ids": MAX_YOGA_IDS,
+            "max_dasha_level": MAX_SEARCH_DASHA_LEVEL,
+            "max_events": MAX_SKY_EVENTS,
         },
         "muhurta_ids": {
             "flags": MuhurtaFlag::ALL,

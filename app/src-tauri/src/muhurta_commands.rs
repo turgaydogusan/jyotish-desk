@@ -28,7 +28,7 @@ use crate::transit_commands::{transit_moment, TransitAt};
 pub const DEFAULT_SEARCH_DAYS: f64 = 31.0;
 const UNIX_EPOCH_JD: f64 = 2_440_587.5;
 /// Yerin tek başına denetlendiği sabit an (J2000): her saat dilimi kuralı bu anda çözülür.
-const J2000_JD: f64 = 2_451_545.0;
+pub(crate) const J2000_JD: f64 = 2_451_545.0;
 
 /// Hesabın yapılacağı yer ve saatlerin gösterileceği dilim. Ad taşımaz.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
@@ -117,7 +117,7 @@ fn timestamp_of(jd_ut: f64) -> Option<Timestamp> {
 
 /// Yerin denetimi ve bir andaki ofseti. Geçersiz koordinat ya da çözülemeyen saat dilimi
 /// yalnızca alan adıyla döner.
-fn offset_at(place: &MuhurtaPlace, jd_ut: f64) -> Result<i32, CommandError> {
+pub(crate) fn offset_at(place: &MuhurtaPlace, jd_ut: f64) -> Result<i32, CommandError> {
     if !((-90.0..=90.0).contains(&place.lat) && (-180.0..=180.0).contains(&place.lon)) {
         return Err(invalid("place"));
     }
@@ -169,7 +169,11 @@ pub async fn day_panchang(
 
 /// Yerin takvim gününün başı (00:00 duvar saati). Gece yarısı yaz saati boşluğuna düşerse
 /// öğleden 12 saat öncesi alınır.
-fn day_start_jd(date: &str, place: &MuhurtaPlace, field: &str) -> Result<f64, CommandError> {
+pub(crate) fn day_start_jd(
+    date: &str,
+    place: &MuhurtaPlace,
+    field: &str,
+) -> Result<f64, CommandError> {
     let date: atlas::Date = date.trim().parse().map_err(|_| invalid(field))?;
     let resolve = |time: &str| {
         store::resolve_birth(&BirthData {
@@ -196,7 +200,7 @@ fn day_start_jd(date: &str, place: &MuhurtaPlace, field: &str) -> Result<f64, Co
 }
 
 /// Yerin bugünkü takvim günü (`YYYY-MM-DD`).
-fn today(place: &MuhurtaPlace, now: Timestamp) -> Result<String, CommandError> {
+pub(crate) fn today(place: &MuhurtaPlace, now: Timestamp) -> Result<String, CommandError> {
     let offset =
         atlas::offset_at(&tz_spec(&place.tz), place.lon, now).map_err(|_| invalid("place"))?;
     let local = Timestamp::from_second(now.as_second() + i64::from(offset))
