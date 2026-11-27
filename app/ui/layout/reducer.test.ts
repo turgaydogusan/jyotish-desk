@@ -2,7 +2,7 @@ import { hasOverlap } from "./grid";
 import { BUILTIN_LAYOUT_IDS, builtinLayout, defaultLayoutState, MAX_LAYOUTS, MAX_PANELS, type LayoutState } from "./model";
 import { activeLayout, layoutReducer, newId, NOTES_PANEL, normalizeState } from "./reducer";
 
-const { interview, research, transit } = BUILTIN_LAYOUT_IDS;
+const { interview, research, transit, prashna } = BUILTIN_LAYOUT_IDS;
 
 function withUser(): LayoutState {
   return layoutReducer(defaultLayoutState(), { type: "saveAs", id: "user:1", name: "Benim" });
@@ -17,7 +17,8 @@ test("select switches the active layout and ignores unknown ids", () => {
 test("selectIndex follows layout order and ignores out-of-range", () => {
   const s = withUser();
   expect(layoutReducer(s, { type: "selectIndex", index: 2 }).active_layout_id).toBe(transit);
-  expect(layoutReducer(s, { type: "selectIndex", index: 3 }).active_layout_id).toBe("user:1");
+  expect(layoutReducer(s, { type: "selectIndex", index: 3 }).active_layout_id).toBe(prashna);
+  expect(layoutReducer(s, { type: "selectIndex", index: 4 }).active_layout_id).toBe("user:1");
   expect(layoutReducer(s, { type: "selectIndex", index: 8 })).toBe(s);
 });
 
@@ -56,7 +57,7 @@ test("saveAs and duplicate stop at MAX_LAYOUTS so nothing is lost on the next re
 
 test("duplicate inserts a copy right after its source without changing the active layout", () => {
   const s = layoutReducer(defaultLayoutState(), { type: "duplicate", sourceId: research, id: "user:2", name: "Araştırma kopyası" });
-  expect(s.layouts.map((l) => l.id)).toEqual([interview, research, "user:2", transit]);
+  expect(s.layouts.map((l) => l.id)).toEqual([interview, research, "user:2", transit, prashna]);
   expect(s.layouts[2].builtin).toBe(false);
   expect(s.layouts[2].panels).toEqual(builtinLayout(research)!.panels);
   expect(s.active_layout_id).toBe(interview);
@@ -66,7 +67,7 @@ test("builtins cannot be deleted; deleting the active user layout falls back to 
   const s = withUser();
   expect(layoutReducer(s, { type: "delete", id: interview })).toBe(s);
   const d = layoutReducer(s, { type: "delete", id: "user:1" });
-  expect(d.layouts.map((l) => l.id)).toEqual([interview, research, transit]);
+  expect(d.layouts.map((l) => l.id)).toEqual([interview, research, transit, prashna]);
   expect(d.active_layout_id).toBe(interview);
 });
 

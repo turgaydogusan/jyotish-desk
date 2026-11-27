@@ -82,3 +82,13 @@ export function BalaUnavailable({ opened }: { opened: OpenedClient }) {
   const { t } = useTranslation();
   return <p className="panel-notice">{t(timeUnknown(opened) ? "bala.timeUnknown" : "bala.noSunrise")}</p>;
 }
+
+/** Sayı prashnasında lagna sayıdan gelir ve MC tanımsızdır: Shadbala ve Bhava bala hesaplanmaz (Rust `None` döner). */
+export function BalaNumberPrashna() {
+  const { t } = useTranslation();
+  return (
+    <p className="panel-notice" role="note">
+      {t("bala.numberPrashna")}
+    </p>
+  );
+}

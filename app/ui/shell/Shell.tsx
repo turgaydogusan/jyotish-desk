@@ -6,7 +6,7 @@ import { api } from "../api";
 import type { CommandError } from "../bindings";
 import { BirthForm } from "../birth/BirthForm";
 import { Sidebar } from "../clients/Sidebar";
-import type { ModulePanelKind } from "../layout/model";
+import { BUILTIN_LAYOUT_IDS, type ModulePanelKind } from "../layout/model";
 import type { PaletteItem } from "../palette/items";
 import { Palette } from "../palette/Palette";
 import { Dashboard } from "../dashboard/Dashboard";
@@ -215,7 +215,7 @@ export function Shell() {
       {settings && <SettingsDialog onClose={() => setSettings(false)} />}
       {about && <AboutDialog onClose={() => setAbout(false)} />}
       {form && <BirthForm mode={form} onClose={() => setForm(null)} />}
-      {prashna && <PrashnaForm onClose={() => setPrashna(false)} />}
+      {prashna && <PrashnaForm onClose={() => setPrashna(false)} onCreated={() => layout.select(BUILTIN_LAYOUT_IDS.prashna)} />}
     </div>
   );
 }

@@ -8,3 +8,62 @@
   color: var(--text-2);
   font-size: 12px;
 }
+
+.prashna-question label {
+  display: block;
+  color: var(--text-2);
+}
+.prashna-question textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+}
+.prashna-number {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.prashna-section h3 {
+  margin: 10px 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.prashna-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+.prashna-list > div {
+  display: contents;
+}
+.prashna-list dt {
+  color: var(--text-2);
+}
+.prashna-list dd {
+  margin: 0;
+}
+.prashna-list.is-highlighted {
+  background: var(--select);
+}
+.prashna-relation-label {
+  margin: 6px 0 2px;
+  color: var(--text-2);
+}
+.prashna-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.prashna-links li {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.prashna-relation {
+  margin: 6px 0 0;
+}

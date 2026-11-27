@@ -18,7 +18,7 @@ import {
 import parityRaw from "./fixtures/layout-parity.json?raw";
 
 const ids = (layouts: Layout[]) => layouts.map((l) => l.id);
-const BUILTINS = [BUILTIN_LAYOUT_IDS.interview, BUILTIN_LAYOUT_IDS.research, BUILTIN_LAYOUT_IDS.transit];
+const BUILTINS = [BUILTIN_LAYOUT_IDS.interview, BUILTIN_LAYOUT_IDS.research, BUILTIN_LAYOUT_IDS.transit, BUILTIN_LAYOUT_IDS.prashna];
 
 function overlaps(a: Panel, b: Panel) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -45,6 +45,7 @@ test("catalog has the seven v1 panel kinds and the module panels", () => {
     "compat",
     "muhurta_day",
     "muhurta_search",
+    "prashna_facts",
   ]);
   expect(isKnownPanelKind("chart")).toBe(true);
   expect(isKnownPanelKind("drishti")).toBe(true);
@@ -52,23 +53,26 @@ test("catalog has the seven v1 panel kinds and the module panels", () => {
 });
 
 test("module panels are known kinds, listed once, with a size the grid accepts", () => {
-  expect(MODULE_PANELS.map((m) => m.kind)).toEqual(["panchang", "ashtakavarga", "drishti", "jaimini_karakas", "arudha", "argala", "shadbala", "bhava_bala", "yogas", "compat", "muhurta_day", "muhurta_search"]);
+  expect(MODULE_PANELS.map((m) => m.kind)).toEqual(["panchang", "ashtakavarga", "drishti", "jaimini_karakas", "arudha", "argala", "shadbala", "bhava_bala", "yogas", "compat", "muhurta_day", "muhurta_search", "prashna_facts"]);
   for (const m of MODULE_PANELS) {
     expect(isKnownPanelKind(m.kind)).toBe(true);
     expect(m.w).toBeGreaterThanOrEqual(minSize(m.kind).w);
     expect(m.h).toBeGreaterThanOrEqual(minSize(m.kind).h);
     expect(m.w).toBeLessThanOrEqual(GRID_COLUMNS);
   }
-  // Hazır düzenler değişmedi: modül panelleri paletten eklenir.
-  for (const l of builtinLayouts()) expect(l.panels.some((p) => MODULE_PANELS.some((m) => m.kind === p.kind))).toBe(false);
+  // v1'in üç hazır düzeni değişmedi: modül panelleri paletten eklenir. Modül paneli taşıyan tek
+  // hazır düzen Prashna'dır (ileri modüller spec'i §11).
+  for (const l of builtinLayouts()) {
+    expect(l.panels.some((p) => MODULE_PANELS.some((m) => m.kind === p.kind))).toBe(l.id === BUILTIN_LAYOUT_IDS.prashna);
+  }
 });
 
-test("default state has the three builtin layouts with interview active", () => {
+test("default state has the four builtin layouts with interview active", () => {
   const s = defaultLayoutState();
   expect(s.schema_version).toBe(LAYOUT_SCHEMA_VERSION);
   expect(s.active_layout_id).toBe(BUILTIN_LAYOUT_IDS.interview);
   expect(ids(s.layouts)).toEqual(BUILTINS);
-  expect(s.layouts.map((l) => l.name)).toEqual(["Görüşme", "Araştırma", "Transit"]);
+  expect(s.layouts.map((l) => l.name)).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna"]);
   expect(s.layouts.every((l) => l.builtin)).toBe(true);
 });
 
@@ -84,6 +88,8 @@ test("builtin presets follow the spec text and fit the 12-column grid without ov
   ]);
   expect(kinds(BUILTIN_LAYOUT_IDS.transit)).toEqual(["chart:D1", "transit_table:", "dasha_strip:"]);
   expect(builtinLayout(BUILTIN_LAYOUT_IDS.transit)!.panels[0].settings.transit_ring).toBe(true);
+  // Prashna düzeni (ileri modüller spec'i §11): D1, olgular, anın panchangı ve notlar.
+  expect(kinds(BUILTIN_LAYOUT_IDS.prashna)).toEqual(["chart:D1", "prashna_facts:", "panchang:", "notes:"]);
 
   for (const id of BUILTINS) {
     const panels = builtinLayout(id)!.panels;
@@ -230,7 +236,7 @@ test("layout and panel counts are capped like the Rust store", () => {
   const users = all.filter((l) => !l.builtin);
   // Hazır düzenler sınırın içindedir: toplam `MAX_LAYOUTS`.
   expect(all).toHaveLength(MAX_LAYOUTS);
-  expect(users).toHaveLength(MAX_LAYOUTS - 3);
+  expect(users).toHaveLength(MAX_LAYOUTS - BUILTINS.length);
   expect(users.every((l) => l.panels.length === MAX_PANELS)).toBe(true);
-  expect(users[MAX_LAYOUTS - 4].id).toBe(`user:${MAX_LAYOUTS - 4}`);
+  expect(users[MAX_LAYOUTS - BUILTINS.length - 1].id).toBe(`user:${MAX_LAYOUTS - BUILTINS.length - 1}`);
 });

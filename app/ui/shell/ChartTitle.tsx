@@ -19,6 +19,12 @@ export function ChartTitle({ onSettings }: { onSettings?: () => void }) {
     <div className="topbar-title">
       <h1 className="topbar-client">{opened.client.name}</h1>
       <span className="topbar-chart">{label}</span>
+      {opened.prashna && opened.prashna.number !== null && (
+        <span className="topbar-chart topbar-number" title={t("prashna.numberHint")}>
+          {t("prashna.numberBadge", { number: opened.prashna.number })}
+          <span className="visually-hidden">: {t("prashna.numberHint")}</span>
+        </span>
+      )}
       {(warnings.length > 0 || diff.length > 0) && (
         <ul className="badges" aria-label={t("shell.warnings")}>
           {warnings.map((w) => (

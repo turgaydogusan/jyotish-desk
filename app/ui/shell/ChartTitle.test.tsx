@@ -27,3 +27,19 @@ test("a differing advanced setting is named in the badge", () => {
   renderWithStores(<ChartTitle onSettings={() => {}} />, { opened });
   expect(screen.getByRole("button", { name: /Ayar farkı/ })).toHaveAttribute("title", "Bu haritanın ayarı varsayılandan farklı: İleri modül ayarları");
 });
+
+test("a number prashna carries its number beside the chart label; a time prashna and other charts do not", () => {
+  const { prashna } = fixture();
+  const first = renderWithStores(<ChartTitle onSettings={() => {}} />, { opened: prashna.opened_number });
+  const badge = screen.getByText("sayı: 54");
+  expect(badge).toHaveAttribute("title", "Sayı prashnası: lagna sayıdan gelir (navamsa ortası); grahalar anın grahalarıdır.");
+  // Açıklama ekran okuyucuya da okunur.
+  expect(badge).toHaveTextContent("sayı: 54: Sayı prashnası: lagna sayıdan gelir (navamsa ortası); grahalar anın grahalarıdır.");
+  expect(screen.getByText("Prashna 2026-11-25 15:30")).toBeInTheDocument();
+  first.unmount();
+  const second = renderWithStores(<ChartTitle onSettings={() => {}} />, { opened: prashna.opened });
+  expect(screen.queryByText(/^sayı:/)).toBeNull();
+  second.unmount();
+  renderWithStores(<ChartTitle onSettings={() => {}} />);
+  expect(screen.queryByText(/^sayı:/)).toBeNull();
+});

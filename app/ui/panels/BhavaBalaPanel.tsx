@@ -10,7 +10,7 @@ import { useHighlight } from "../highlight/store";
 import type { Panel } from "../layout/model";
 import { useShadbala } from "../modules/useShadbala";
 import { useSession } from "../session/store";
-import { BalaScroll, BalaUnavailable, balaUnit, formatBala, UnitSelect, type BalaUnit } from "./bala";
+import { BalaNumberPrashna, BalaScroll, BalaUnavailable, balaUnit, formatBala, UnitSelect, type BalaUnit } from "./bala";
 import "./panels.css";
 import { PinButton } from "./PinButton";
 import { PanelError, PanelSkeleton, usePanelLoadPhase } from "./states";
@@ -20,6 +20,8 @@ export function BhavaBalaPanel({ panel }: PanelProps) {
   const { t } = useTranslation();
   const { opened } = useSession();
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
+  // Sayı prashnasında meridyen yoktur: rapor istenmez.
+  if (opened.prashna?.number != null) return <BalaNumberPrashna />;
   return <BhavaBala panel={panel} opened={opened} />;
 }
 

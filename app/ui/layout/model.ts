@@ -1,7 +1,7 @@
 // Pano düzeni veri modeli (spec §3.2). Kalıcı biçim `ViewState.panel_layout` ile aynıdır;
 // M4'teki store komutu gelene kadar localStorage'da tutulur (bkz. persistence.ts).
 
-/** Panel kataloğu: v1 (UI spec §3.3) ve ileri modül panelleri (ileri modüller spec'i §4, §5, §7, §8, §9, §10). */
+/** Panel kataloğu: v1 (UI spec §3.3) ve ileri modül panelleri (ileri modüller spec'i §4, §5, §7, §8, §9, §10, §11). */
 export const PANEL_KINDS = [
   "chart",
   "graha_table",
@@ -22,6 +22,7 @@ export const PANEL_KINDS = [
   "compat",
   "muhurta_day",
   "muhurta_search",
+  "prashna_facts",
 ] as const;
 export type KnownPanelKind = (typeof PANEL_KINDS)[number];
 
@@ -47,6 +48,8 @@ export const MODULE_PANELS = [
   // Muhurta (Plan 20).
   { kind: "muhurta_day", w: 7, h: 18 },
   { kind: "muhurta_search", w: 8, h: 18 },
+  // Prashna (Plan 21).
+  { kind: "prashna_facts", w: 7, h: 20 },
 ] as const satisfies readonly { kind: KnownPanelKind; w: number; h: number }[];
 export type ModulePanelKind = (typeof MODULE_PANELS)[number]["kind"];
 
@@ -91,6 +94,7 @@ export const BUILTIN_LAYOUT_IDS = {
   interview: "builtin:interview",
   research: "builtin:research",
   transit: "builtin:transit",
+  prashna: "builtin:prashna",
 } as const;
 export type BuiltinLayoutId = (typeof BUILTIN_LAYOUT_IDS)[keyof typeof BUILTIN_LAYOUT_IDS];
 
@@ -98,6 +102,7 @@ const BUILTIN_ORDER: readonly BuiltinLayoutId[] = [
   BUILTIN_LAYOUT_IDS.interview,
   BUILTIN_LAYOUT_IDS.research,
   BUILTIN_LAYOUT_IDS.transit,
+  BUILTIN_LAYOUT_IDS.prashna,
 ];
 
 export function isKnownPanelKind(kind: string): kind is KnownPanelKind {
@@ -150,6 +155,19 @@ const BUILTIN_FACTORIES: Record<BuiltinLayoutId, () => Layout> = {
       chart("d1", "D1", 0, 0, 7, 12, true),
       panel("transits", "transit_table", 7, 0, 5, 12, { date: null }),
       panel("dasha", "dasha_strip", 0, 12, 12, 4, { level: "antar" }),
+    ],
+  }),
+  // Prashna (ileri modüller spec'i §11): D1, olgular, anın panchangı ve notlar. Modül paneli
+  // taşıyan tek hazır düzendir.
+  [BUILTIN_LAYOUT_IDS.prashna]: () => ({
+    id: BUILTIN_LAYOUT_IDS.prashna,
+    name: "Prashna",
+    builtin: true,
+    panels: [
+      chart("d1", "D1", 0, 0, 5, 12),
+      panel("facts", "prashna_facts", 5, 0, 7, 21),
+      panel("panchang", "panchang", 0, 12, 5, 9),
+      panel("notes", "notes", 0, 21, 12, 5),
     ],
   }),
 };

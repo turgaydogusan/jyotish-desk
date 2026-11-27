@@ -3,7 +3,7 @@
 // önceki haritanın bekleyen görünüm kaydı önce ona yazılır (carried rule C5).
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
-import type { CalcSettings, Chart, CommandError, OpenedClient } from "../bindings";
+import type { CalcSettings, Chart, CommandError, OpenedClient, PrashnaMeta } from "../bindings";
 import { storeWarningNotices, useNotices } from "../shell/notices";
 import { compatOf } from "../view/model";
 import { useViewStore } from "../view/store";
@@ -33,6 +33,8 @@ export interface Session {
   touch(): void;
   /** Ayar kaydı yeniden hesapladı (`save_calc_settings` dönüşü): açık harita bu haritaysa ayar ve harita değişir. */
   updateSettings(chartId: number, settings: CalcSettings, chart: Chart): void;
+  /** Soru metni ya da odak evi kaydedildi (`update_prashna` dönüşü): açık harita bu haritaysa yan kaydı değişir. */
+  setPrashna(chartId: number, prashna: PrashnaMeta): void;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -95,9 +97,14 @@ export function SessionProvider({ initial, children }: { initial: OpenedClient |
     setOpened((o) => (o && o.chart_record.id === chartId ? { ...o, calc_settings: settings, chart } : o));
   }, []);
 
+  const setPrashna = useCallback((chartId: number, prashna: PrashnaMeta) => {
+    // Yalnızca prashna olan açık haritaya yazılır: geç gelen bir yanıt başka haritayı prashna yapmaz.
+    setOpened((o) => (o && o.chart_record.id === chartId && o.prashna !== null ? { ...o, prashna } : o));
+  }, []);
+
   const value = useMemo(
-    () => ({ opened, revision, open, openClient, close, setTags, touch, updateSettings }),
-    [opened, revision, open, openClient, close, setTags, touch, updateSettings],
+    () => ({ opened, revision, open, openClient, close, setTags, touch, updateSettings, setPrashna }),
+    [opened, revision, open, openClient, close, setTags, touch, updateSettings, setPrashna],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

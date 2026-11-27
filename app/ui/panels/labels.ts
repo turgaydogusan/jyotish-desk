@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { KarakaRole } from "../bindings";
+import type { KarakaRole, RisingMode } from "../bindings";
 import { GRAHA_IDS, type ChartLabels, type GrahaId } from "../chart/types";
 
 export function grahaAbbreviations(t: TFunction): Record<GrahaId, string> {
@@ -154,6 +154,9 @@ export function arudhaLabel(house: number): string {
 }
 
 /** Dokuz taranın adı, 1 = Janma … 9 = Parama Mitra (Sanskritçe terim; dile göre değişmez). */
+/** Doğuş biçiminin klasik adı; üç dilde aynı yazılır (K11). Çevrilen kısa ek `prashna.rising.*`'tadır. */
+export const RISING_NAMES = { HeadFirst: "Shirshodaya", BackFirst: "Prishthodaya", BothWays: "Ubhayodaya" } as const satisfies Record<RisingMode, string>;
+
 export const TARA_NAMES = ["Janma", "Sampat", "Vipat", "Kshema", "Pratyak", "Sadhana", "Naidhana", "Mitra", "Parama Mitra"] as const;
 
 /** 1 tabanlı tara numarasının adı; aralık dışıysa numaranın kendisi. */

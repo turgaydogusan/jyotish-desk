@@ -104,3 +104,33 @@ test("setTags updates the open chart's tags and bumps the revision", () => {
   expect(out("tags")).toHaveTextContent("araştırma");
   expect(out("revision")).toHaveTextContent("1");
 });
+
+test("setPrashna rewrites the side record of the open prashna only", () => {
+  function Side() {
+    const session = useSession();
+    const meta = session.opened?.prashna;
+    return (
+      <div>
+        <output aria-label="prashna">{meta ? `${meta.focus_house ?? "-"}|${meta.number ?? "-"}|${meta.question}` : "none"}</output>
+        <output aria-label="revision">{session.revision}</output>
+        <button onClick={() => meta && session.setPrashna(session.opened!.chart_record.id, { ...meta, question: "Yeni", focus_house: null })}>mine</button>
+        <button onClick={() => session.setPrashna(9999, { question: "Başka", number: 3, focus_house: 2, created_at: "t" })}>other</button>
+        <button onClick={() => session.setPrashna(session.opened!.chart_record.id, { question: "Başka", number: 3, focus_house: 2, created_at: "t" })}>force</button>
+      </div>
+    );
+  }
+  const first = renderWithStores(<Side />, { opened: fixture().prashna.opened_number });
+  expect(out("prashna")).toHaveTextContent("7|54|Deneme sorusu: yolculuk bu ay olur mu?");
+  // Başka haritanın geç gelen kaydı açık haritaya yazılmaz.
+  fireEvent.click(screen.getByText("other"));
+  expect(out("prashna")).toHaveTextContent("7|54|Deneme sorusu");
+  fireEvent.click(screen.getByText("mine"));
+  expect(out("prashna")).toHaveTextContent("-|54|Yeni");
+  // Listeleri etkilemez: revizyon artmaz.
+  expect(out("revision")).toHaveTextContent("0");
+  first.unmount();
+  // Prashna olmayan harita bir kayıtla prashna olmaz.
+  renderWithStores(<Side />);
+  fireEvent.click(screen.getByText("force"));
+  expect(out("prashna")).toHaveTextContent("none");
+});

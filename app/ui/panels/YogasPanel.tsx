@@ -89,7 +89,8 @@ function Yogas({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
   );
 }
 
-function YogaList({ report, filter, opened }: { report: YogaReport; filter: YogaGroupFilter; opened: OpenedClient }) {
+/** Yoga raporunun gruplu listesi; prashna olguları paneli de kullanır. */
+export function YogaList({ report, filter, opened }: { report: YogaReport; filter: YogaGroupFilter; opened: OpenedClient }) {
   const { t } = useTranslation();
   const { active } = useHighlight();
   const listId = useId();

@@ -263,3 +263,10 @@ test("shared highlight: a graha marks its row in every table; a time lord pins t
   fireEvent.keyDown(window, { key: "Escape" });
   expect(marked()).toEqual([]);
 });
+
+test("a number prashna has no meridian: the panel says so and asks for no report", () => {
+  renderPanel({}, fixture().prashna.opened_number);
+  expect(screen.getByRole("note")).toHaveTextContent("Sayı prashnasında lagna sayıdan gelir; meridyen (MC) tanımsızdır. Shadbala ve Bhava bala hesaplanmaz.");
+  expect(api.computeShadbala).not.toHaveBeenCalled();
+  expect(screen.queryByRole("table")).toBeNull();
+});

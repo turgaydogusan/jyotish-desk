@@ -10,6 +10,8 @@ vi.mock("./api", () => ({
     searchPlaces: vi.fn(async () => ({ status: "ok", data: [] })),
     createClient: vi.fn(),
     createPrashna: vi.fn(),
+    computePrashnaFacts: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().prashna.facts_number })),
+    updatePrashna: vi.fn(),
     updateChart: vi.fn(),
     saveViewState: vi.fn(async () => ({ status: "ok", data: null })),
     savePanelLayout: vi.fn(async () => ({ status: "ok", data: null })),
@@ -584,4 +586,28 @@ test("Cmd+Shift+P and the palette open the new prashna sheet, with or without an
   expect(ev.defaultPrevented).toBe(true);
   expect(screen.queryByRole("dialog", { name: "Yeni prashna" })).toBeNull();
   expect(api.createPrashna).not.toHaveBeenCalled();
+});
+
+test("casting a prashna opens it on the Prashna layout: D1, facts, panchang and notes", async () => {
+  const { prashna } = fixture();
+  vi.mocked(api.createPrashna).mockResolvedValueOnce({ status: "ok", data: prashna.opened_number });
+  const home = fixture().muhurta.home_place;
+  renderApp({ prefs: { prefs: { ...fixture().prefs.prefs, home_place: home }, warnings: [] } });
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
+  fireEvent.keyDown(window, { key: "P", metaKey: true, shiftKey: true });
+  const sheet = screen.getByRole("dialog", { name: "Yeni prashna" });
+  fireEvent.change(within(sheet).getByLabelText("Sayı (isteğe bağlı)"), { target: { value: "54" } });
+  fireEvent.click(within(sheet).getByRole("button", { name: "Prashna kur" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(vi.mocked(api.createPrashna).mock.calls[0][0]).toMatchObject({ client_id: 1, at: "Now", number: 54, place: home });
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Prashna");
+  expect(screen.getByText("Prashna 2026-11-25 15:30")).toBeInTheDocument();
+  expect(screen.getByText("sayı: 54", { selector: ".topbar-number" })).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "D1 haritası" })).toBeInTheDocument();
+  for (const name of ["Prashna olguları", "Panchang", "Notlar"]) expect(screen.getByRole("region", { name })).toBeInTheDocument();
+  // ⌘4 de aynı düzendir (dördüncü hazır düzen).
+  fireEvent.keyDown(window, { key: "1", code: "Digit1", metaKey: true });
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
+  fireEvent.keyDown(window, { key: "4", code: "Digit4", metaKey: true });
+  expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Prashna");
 });
