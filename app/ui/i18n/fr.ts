@@ -581,6 +581,7 @@ export const fr: Messages = {
         placeMissing: "Choisissez un lieu.",
         atMissing: "Saisissez la date et l’heure, ou choisissez « Maintenant ».",
         at: "Ce moment n’a pas pu être résolu pour ce lieu. Vérifiez la date et l’heure ; pour une heure tombant dans un changement d’heure, établissez le thème une minute plus tôt puis corrigez-le avec ⌘E.",
+        atNow: "Le moment présent n’a pas pu être résolu pour ce lieu. Réessayez, ou choisissez « Un autre moment » et saisissez la date et l’heure.",
         place: "Ce lieu est inutilisable (coordonnées ou fuseau horaire non résolus). Choisissez un autre lieu.",
         number: "Le nombre doit être un entier de 1 à 108.",
         question: "La question ne peut pas dépasser 2000 caractères.",

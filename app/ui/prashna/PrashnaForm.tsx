@@ -57,7 +57,9 @@ export function PrashnaForm({ onClose, onCreated }: PrashnaFormProps) {
     }
   };
   const fieldError = (f: PrashnaField): string | null => {
-    const key = shown[f] ?? (serverField === f ? `prashna.form.error.${f}` : undefined);
+    // "Şimdi" iken an Rust'ta okunur: düzeltilecek bir tarih ve saat yoktur, ileti bunu söyler.
+    const server = f === "at" && draft.moment === "now" ? "prashna.form.error.atNow" : `prashna.form.error.${f}`;
+    const key = shown[f] ?? (serverField === f ? server : undefined);
     return key ? t(key) : null;
   };
   const errorCount = (["at", "place", "number", "question", "focus_house"] as const).filter((f) => fieldError(f) !== null).length;

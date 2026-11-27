@@ -581,6 +581,7 @@ export const en: Messages = {
         placeMissing: "Choose a place.",
         atMissing: "Enter the date and the time, or choose “Now”.",
         at: "This moment could not be resolved at this place. Check the date and the time; for a time inside a daylight-saving change, cast it a minute earlier and correct the chart with ⌘E.",
+        atNow: "The present moment could not be resolved at this place. Try again, or choose “Another moment” and enter the date and the time.",
         place: "This place cannot be used (its coordinates or time zone could not be resolved). Choose another place.",
         number: "The number must be a whole number from 1 to 108.",
         question: "The question can be at most 2000 characters.",

@@ -580,6 +580,7 @@ export const tr = {
         placeMissing: "Bir yer seçin.",
         atMissing: "Tarihi ve saati girin ya da “Şimdi”yi seçin.",
         at: "Bu an bu yerde çözülemedi. Tarihi ve saati denetleyin; yaz saati geçişine düşen saat için önce bir dakika öncesiyle kurup haritayı ⌘E ile düzeltin.",
+        atNow: "Şu an bu yerde çözülemedi. Yeniden deneyin ya da “Başka bir an”ı seçip tarihi ve saati girin.",
         place: "Bu yer kullanılamıyor (koordinat ya da saat dilimi çözülemedi). Başka bir yer seçin.",
         number: "Sayı 1 ile 108 arasında bir tamsayı olmalı.",
         question: "Soru en çok 2000 karakter olabilir.",

@@ -155,12 +155,14 @@ test("a time error from Rust while the moment is now is shown by the moment choi
   submit();
   await wait();
   expect(onClose).not.toHaveBeenCalled();
-  expect(within(dialog()).getByText(/Bu an bu yerde çözülemedi\./)).toBeInTheDocument();
+  expect(within(dialog()).getByText(/^(▲ )?Şu an bu yerde çözülemedi\. Yeniden deneyin ya da “Başka bir an”ı seçip tarihi ve saati girin\.$/)).toBeInTheDocument();
   expect(field("Şimdi")).toHaveAttribute("aria-invalid", "true");
-  expect(field("Şimdi")).toHaveAccessibleDescription(/Bu an bu yerde çözülemedi\./);
+  expect(field("Şimdi")).toHaveAccessibleDescription(/^(▲ )?Şu an bu yerde çözülemedi\. Yeniden deneyin ya da “Başka bir an”ı seçip tarihi ve saati girin\.$/);
   expect(document.activeElement).toBe(field("Şimdi"));
+  // "Şimdi"de düzeltilecek tarih ve saat yoktur: ileti onları denetlemeyi söylemez.
+  expect(within(dialog()).queryByText(/Tarihi ve saati denetleyin/)).toBeNull();
   fireEvent.click(field("Başka bir an"));
-  expect(within(dialog()).queryByText(/Bu an bu yerde çözülemedi\./)).toBeNull();
+  expect(within(dialog()).queryByText(/^(▲ )?Şu an bu yerde çözülemedi\. Yeniden deneyin ya da “Başka bir an”ı seçip tarihi ve saati girin\.$/)).toBeNull();
 });
 
 test("a field error from Rust is shown on its field with a static message; other errors are a form alert", async () => {
@@ -222,7 +224,7 @@ test("the form texts exist in three languages and the classical word is the same
     expect(lang.prashna.form.title).toContain("prashna");
     expect(lang.shortcuts.newPrashna).toBe(lang.prashna.form.title);
     expect(lang.palette.command.newPrashna).toBe(lang.prashna.form.title);
-    expect(Object.keys(lang.prashna.form.error).sort()).toEqual(["at", "atMissing", "focus_house", "number", "place", "placeMissing", "question"]);
+    expect(Object.keys(lang.prashna.form.error).sort()).toEqual(["at", "atMissing", "atNow", "focus_house", "number", "place", "placeMissing", "question"]);
   }
   // Fransızca metinler tipografik kesme işareti kullanır.
   expect(JSON.stringify(fr.prashna)).not.toContain("'");
