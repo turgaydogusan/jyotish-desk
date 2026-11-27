@@ -122,4 +122,4 @@ adını, tarihini ve bulduğu farkları yazar.
 
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
-| — | — | Bekliyor (Plan 21 Task 8 Step 5) |
+| Claude Opus 5.5 (Plan 21 Task 8 gözden geçiren ajanı; Rust kaynağı okunmadan, ayrı bir Python betiğiyle) | 2026-11-27 | 14/14 örnek `input`'tan yeniden türetildi ve `expected` ile birebir uyuştu (lagna, burç türü ve doğuş biçimi, iki lord ve dignity, retro, yanma, kendralar, odak evi, bağlar ve ev sayıları, odak evindeki grahalar, Ay ve aldığı bakışlar); fark yok. Tablolar aynı kaynaktan (spec ve bu belge) geldiği için bu uyum aritmetiği ve okumayı doğrular, tabloları değil; tablo onayı Step 6'dadır. |
