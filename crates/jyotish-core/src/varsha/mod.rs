@@ -9,13 +9,17 @@
 //! muntha rasi çerçevesindedir (K5). Yorum ve hüküm yoktur: modül yalnızca anı, haritayı, burcu ve
 //! dönemleri döner. Adlar `jyotish_core` kökünden yeniden dışa aktarılmaz.
 
+mod collect;
 mod mudda;
+mod muntha;
 mod solar_return;
 
+pub use collect::{compute_varsha, VarshaReport, VarshaYear};
 pub use mudda::{
     mudda_dasha, mudda_days, mudda_first_lord, mudda_remainder, MuddaDasha, MUDDA_LEVELS,
     MUDDA_OFFSET, MUDDA_ORDER, MUDDA_TOTAL_DAYS,
 };
+pub use muntha::{muntha_sign, year_facts, Muntha, YearFacts};
 pub use solar_return::{
     completed_years_at, solar_return_jd, varsha_span, RETURN_BRACKET_DAYS, RETURN_RESOLUTION_DAYS,
     SIDEREAL_YEAR_DAYS,
