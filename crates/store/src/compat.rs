@@ -111,7 +111,8 @@ impl Store {
             lon: chart.birth.place.lon,
             settings,
             time_known: chart.birth.time_certainty != TimeCertainty::Unknown,
-            lagna_number: None,
+            // Sayı prashnası eş harita olarak da sayının lagnasıyla hesaplanır.
+            lagna_number: crate::prashna::load_prashna(&self.conn, id)?.and_then(|p| p.number),
         }))
     }
 

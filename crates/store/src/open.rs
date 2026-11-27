@@ -7,7 +7,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
 use crate::birth::{parse_birth, resolve_parsed};
-use crate::model::{ChartRecord, Client, Note, TzChoice};
+use crate::model::{ChartRecord, Client, Note, PrashnaMeta, TzChoice};
 use crate::notes::RECENT_NOTES;
 use crate::settings::SettingsLoad;
 use crate::view_state::ViewState;
@@ -41,6 +41,8 @@ pub struct OpenRecord {
     pub view_state: ViewState,
     /// En yeni önce, en çok `RECENT_NOTES`.
     pub recent_notes: Vec<Note>,
+    /// Harita prashnaysa yan kaydı (ileri modüller spec'i §11); değilse `None`.
+    pub prashna: Option<PrashnaMeta>,
     pub warnings: Vec<StoreWarning>,
 }
 
@@ -76,6 +78,7 @@ impl Store {
         let load = self.calc_settings(chart_id)?;
         let view_state = self.view_state(chart_id)?;
         let recent_notes = self.notes(client_id, RECENT_NOTES)?;
+        let prashna = self.prashna_meta(chart_id)?;
 
         // Ayar göçü, tzdb sürümü ve "son açılan" işaretleri tek işlemde yazılır: biri
         // başarısız olursa hiçbiri kalmaz (Plan 08 ertelenen madde 9).
@@ -101,6 +104,7 @@ impl Store {
             calc_settings,
             view_state,
             recent_notes,
+            prashna,
             warnings,
         })
     }

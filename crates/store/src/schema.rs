@@ -1,5 +1,6 @@
 //! SQLite şeması ve göçler (spec §5). Sürüm `PRAGMA user_version`'da tutulur
 //! (`rusqlite_migration`). Göçler yalnızca eklenir; yayımlanmış bir göç değiştirilmez.
+//! Sürüm 2 (Plan 21) `prashna` yan tablosunu ekler.
 
 use rusqlite_migration::{Migrations, M};
 
@@ -106,10 +107,24 @@ CREATE TRIGGER notes_au AFTER UPDATE OF body ON client_notes BEGIN
 END;
 ";
 
-const MIGRATION_LIST: &[M<'static>] = &[M::up(V1)];
+/// Göç 2: prashna yan tablosu (ileri modüller spec'i §11). Bir harita, bu tabloda satırı varsa
+/// prashnadır; `charts.kind` ve CHECK kısıtı değişmez (kısıtı değiştirmek tabloyu yeniden kurmayı
+/// gerektirirdi). Soru metni haritadan ayrı durur ve arama dizinine girmez. Harita silinince
+/// satır da silinir.
+const V2: &str = "
+CREATE TABLE prashna (
+    chart_id    INTEGER PRIMARY KEY REFERENCES charts(id) ON DELETE CASCADE,
+    question    TEXT NOT NULL DEFAULT '',
+    number      INTEGER CHECK (number IS NULL OR number BETWEEN 1 AND 108),
+    focus_house INTEGER CHECK (focus_house IS NULL OR focus_house BETWEEN 1 AND 12),
+    created_at  TEXT NOT NULL
+);
+";
+
+const MIGRATION_LIST: &[M<'static>] = &[M::up(V1), M::up(V2)];
 
 /// Bu sürümün şema sürümü (`MIGRATION_LIST.len()`).
-pub const SCHEMA_VERSION: usize = 1;
+pub const SCHEMA_VERSION: usize = 2;
 
 pub(crate) const MIGRATIONS: Migrations<'static> = Migrations::from_slice(MIGRATION_LIST);
 
@@ -121,5 +136,62 @@ mod tests {
     fn migrations_are_valid_and_counted() {
         assert_eq!(MIGRATIONS.validate(), Ok(()));
         assert_eq!(MIGRATION_LIST.len(), SCHEMA_VERSION);
+    }
+
+    /// Sürüm 1 veritabanı (yalnızca ilk göç) açılışta sürüm 2'ye çıkar: var olan haritalar
+    /// durur, hiçbiri prashna değildir ve yan tablo kısıtlarıyla gelir.
+    #[test]
+    fn a_version_one_database_gains_the_prashna_table() {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", true).unwrap();
+        Migrations::from_slice(&MIGRATION_LIST[..1])
+            .to_latest(&mut conn)
+            .unwrap();
+        let version = |c: &rusqlite::Connection| -> i64 {
+            c.query_row("PRAGMA user_version", [], |r| r.get(0))
+                .unwrap()
+        };
+        assert_eq!(version(&conn), 1);
+        conn.execute_batch(
+            "INSERT INTO clients (id, uuid, name, created_at, updated_at)
+             VALUES (1, 'c', 'Deneme', 't', 't');
+             INSERT INTO charts (id, uuid, client_id, label, kind, date, time_certainty,
+                place_name, country, admin1, lat, lon, tz_kind, birth_notes, resolved_utc,
+                resolved_jd_ut, resolved_offset_secs, resolved_abbrev, resolved_warnings_json,
+                tzdb_version, calc_settings_json, view_state_json, created_at, updated_at)
+             VALUES (7, 'h', 1, '', 'Event', '2000-01-01', 'Exact', '', '', '', 0, 0, 'Lmt', '',
+                'u', 2451545.0, 0, '', '[]', 'v', '{}', '{}', 't', 't');",
+        )
+        .unwrap();
+        MIGRATIONS.to_latest(&mut conn).unwrap();
+        assert_eq!(version(&conn), 2);
+        let count = |c: &rusqlite::Connection, sql: &str| -> i64 {
+            c.query_row(sql, [], |r| r.get(0)).unwrap()
+        };
+        assert_eq!(count(&conn, "SELECT count(*) FROM charts"), 1);
+        assert_eq!(count(&conn, "SELECT count(*) FROM prashna"), 0);
+        // Kısıtlar: sayı 1..=108, odak evi 1..=12, harita var olmalı.
+        let insert = |c: &rusqlite::Connection, values: &str| {
+            c.execute(
+                &format!(
+                    "INSERT INTO prashna (chart_id, number, focus_house, created_at) VALUES {values}"
+                ),
+                [],
+            )
+        };
+        assert!(insert(&conn, "(7, 109, NULL, 't')").is_err());
+        assert!(insert(&conn, "(7, 0, NULL, 't')").is_err());
+        assert!(insert(&conn, "(7, NULL, 13, 't')").is_err());
+        assert!(insert(&conn, "(8, NULL, NULL, 't')").is_err());
+        assert_eq!(insert(&conn, "(7, 108, 12, 't')"), Ok(1));
+        assert_eq!(
+            conn.query_row("SELECT question FROM prashna", [], |r| r
+                .get::<_, String>(0))
+                .unwrap(),
+            ""
+        );
+        // Harita silinince satır da silinir.
+        conn.execute("DELETE FROM charts WHERE id = 7", []).unwrap();
+        assert_eq!(count(&conn, "SELECT count(*) FROM prashna"), 0);
     }
 }

@@ -148,6 +148,32 @@ pub struct Note {
     pub updated_at: String,
 }
 
+/// Bir prashna haritasının yan kaydı (ileri modüller spec'i §11). Soru metni not gövdesi gibi
+/// hassastır: loglanmaz, hata iletisine girmez.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct PrashnaMeta {
+    /// En çok `MAX_QUESTION_CHARS` karakter; boş olabilir.
+    pub question: String,
+    /// Sayı prashnası: lagna bu sayıdan gelir (1..=108). Zaman prashnasında `None`.
+    pub number: Option<u8>,
+    /// Astrologun seçtiği ev (1..=12); seçilmemişse `None`.
+    pub focus_house: Option<u8>,
+    pub created_at: String,
+}
+
+/// Yeni prashna (store girdisi; IPC'yi geçmez: komut anı ve yeri çözüp bunu kurar).
+/// `client_id` boşsa prashna yerleşik "Prashna" danışanına eklenir.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NewPrashna {
+    pub client_id: Option<u32>,
+    /// Soru anı ve yeri; `time_certainty` `Exact` olmalıdır.
+    pub birth: BirthData,
+    pub number: Option<u8>,
+    pub question: String,
+    pub focus_house: Option<u8>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct NewChart {

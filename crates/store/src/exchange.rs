@@ -11,7 +11,10 @@ use uuid::Uuid;
 use crate::birth::{parse_birth, resolve_parsed, ParsedBirth};
 use crate::charts::{clean_name, insert_chart, insert_client, ChartRow};
 use crate::db::format_ts;
-use crate::model::{BirthData, ChartKind, Gender, ResolvedRecord, TzChoice};
+use crate::model::{BirthData, ChartKind, Gender, PrashnaMeta, ResolvedRecord, TzChoice};
+use crate::prashna::{
+    check_focus_house, check_number, clean_question, insert_prashna, load_prashna,
+};
 use crate::settings::{load_calc_value, SettingsLoad};
 use crate::view_state::{
     canonical_uuid, chart_view_json, parse_chara_path, parse_compat, parse_dasha_path, ViewState,
@@ -66,6 +69,19 @@ pub struct ExportChart {
     pub tags: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
+    /// Harita prashnaysa yan kaydı; değilse alan hiç yazılmaz (eski dosyalarda da yoktur).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prashna: Option<ExportPrashna>,
+}
+
+/// Prashna yan kaydının dosyadaki biçimi (ileri modüller spec'i §11). Soru metni not gövdesi
+/// gibi hassastır: yalnızca "notları dahil et" işaretliyse yazılır, değilse `null`'dır.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExportPrashna {
+    pub number: Option<u8>,
+    pub focus_house: Option<u8>,
+    pub question: Option<String>,
+    pub created_at: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -244,6 +260,12 @@ impl Store {
                     tags: ch.tags.clone(),
                     created_at: ch.created_at.clone(),
                     updated_at: ch.updated_at.clone(),
+                    prashna: load_prashna(&self.conn, ch.id)?.map(|p| ExportPrashna {
+                        number: p.number,
+                        focus_house: p.focus_house,
+                        question: opts.include_notes.then_some(p.question),
+                        created_at: p.created_at,
+                    }),
                 });
             }
             let notes = if opts.include_notes {
@@ -415,6 +437,23 @@ impl Store {
                 )?;
                 for t in crate::notes::normalize_tags(&ch.tags).map_err(|_| record("tags"))? {
                     crate::notes::attach_tag(&tx, chart_id, &t)?;
+                }
+                if let Some(p) = &ch.prashna {
+                    // Geçersiz sayı, odak evi ya da soru kaydın UUID'siyle reddedilir.
+                    check_number(p.number).map_err(|_| record("prashna"))?;
+                    check_focus_house(p.focus_house).map_err(|_| record("prashna"))?;
+                    let question = clean_question(p.question.as_deref().unwrap_or(""))
+                        .map_err(|_| record("prashna"))?;
+                    insert_prashna(
+                        &tx,
+                        chart_id,
+                        &PrashnaMeta {
+                            question,
+                            number: p.number,
+                            focus_house: p.focus_house,
+                            created_at: ts_or(&p.created_at, &now),
+                        },
+                    )?;
                 }
                 first_new_chart.get_or_insert(chart_id);
                 report.charts_added += 1;

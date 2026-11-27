@@ -197,12 +197,12 @@ mod tests {
             .query_row(
                 "SELECT count(*) FROM sqlite_master WHERE name IN
                  ('clients', 'charts', 'client_notes', 'tags', 'chart_tags', 'app_state',
-                  'clients_fts', 'notes_fts')",
+                  'clients_fts', 'notes_fts', 'prashna')",
                 [],
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(tables, 8);
+        assert_eq!(tables, 9);
     }
 
     #[test]
