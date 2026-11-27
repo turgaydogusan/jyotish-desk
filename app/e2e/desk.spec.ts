@@ -801,3 +801,145 @@ test("compat with a partner whose birth time is unknown: the report is marked ap
   await expect(sun.locator("th, td")).toHaveText(["Gü", "lagnadan — · Ay'dan 4", "lagnadan 10 · Ay'dan 6"]);
   await expect(compat.locator('.compat-facts li[data-fact="kuja-Bride"]')).toHaveText("Kuja dosha, Ayşe Yılmaz: lagnadan bilinmiyor, Ay'dan var, Venüs'ten var.");
 });
+
+test("muhurta day: a palette panel; the current place from the dialog, the day strip, the limbs and the hora table", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async () => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill("gün panchang");
+    await palette.getByRole("option", { name: /Gün panchangı panelini aç\/kapat/ }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  type DayCall = { at: unknown; place: { lat: number; lon: number; tz: unknown }; natal: unknown };
+  const dayCalls = async () => (await ipcCalls(page, "day_panchang")) as DayCall[];
+  type Saved = { viewState: { panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: Record<string, unknown> }[] }[] } } };
+  const savedPanel = async () => {
+    const layout = ((await ipcCalls(page, "save_view_state")).at(-1) as Saved | undefined)?.viewState.panel_layout;
+    return layout?.layouts.find((l) => l.id === layout.active_layout_id)?.panels.find((p) => p.kind === "muhurta_day");
+  };
+
+  await toggle();
+  const day = page.getByRole("region", { name: "Gün panchangı" });
+  await expect(day).toBeFocused();
+  await expect(day).toBeInViewport();
+  // Bulunulan yer seçilmemiş: panel yer ister, gün hesaplanmaz (ileri modüller spec'i K1).
+  await expect(day.getByRole("note")).toContainText("Bulunulan yer seçilmedi.");
+  expect(await dayCalls()).toHaveLength(0);
+
+  // Bulunulan yer penceresi: açık haritanın doğum yeri önerilir; seçim tercihlere yazılır.
+  // Klavyeyle açılır (WebKit tıklanan düğmeye odak vermez): pencere kapanınca odak düğmeye döner.
+  await day.getByRole("button", { name: "Bulunulan yeri seç" }).focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "Bulunulan yer" });
+  await dialog.getByRole("button", { name: /^Açık haritanın doğum yerini kullan/ }).click();
+  await expect(dialog.locator(".home-place-current")).toHaveText("Seçili yer: New Delhi, Delhi, India · Asia/Kolkata");
+  const prefs = (await ipcCalls(page, "set_app_prefs")).at(-1) as { prefs: { home_place: unknown } };
+  expect(prefs.prefs.home_place).toEqual(FIXTURE.muhurta.home_place);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(day.getByRole("button", { name: "Bulunulan yeri değiştir" })).toBeFocused();
+
+  // Gün: şerit, uzuvlar, kişiye bağlı etkenler ve hora tablosu; komuta yerin adı gitmez.
+  await expect(day.getByText("2026-11-25 · Budhavara · Çarşamba")).toBeVisible();
+  const strip = day.getByRole("list", { name: "Gündüzün sekiz dilimi" });
+  await expect(strip.getByRole("listitem")).toHaveCount(8);
+  await expect(strip.locator("li.is-marked")).toHaveText(["2Yama08:13–09:31", "4Guli10:49–12:07", "5Rahu12:07–13:26"]);
+  await expect(day.getByText(/^Abhijit 11:47–12:28/)).toBeVisible();
+  await expect(day.getByRole("table", { name: "Beş uzuv ve değişim saatleri" }).locator("tbody tr")).toHaveCount(12);
+  await expect(day.getByRole("table", { name: "Açık haritanın Ay'ına göre" }).locator("tbody tr")).toHaveCount(3);
+  const horas = day.getByRole("table", { name: "Hora tablosu" });
+  await expect(horas.locator("tbody tr")).toHaveCount(24);
+  const calls = await dayCalls();
+  expect(calls).toHaveLength(1);
+  expect(calls[0].at).toBe("Now");
+  expect(calls[0].place).toEqual(FIXTURE.muhurta.place);
+  expect(calls[0].natal).toEqual(FIXTURE.muhurta.natal);
+
+  // Ortak vurgu: hora lordu haritadaki grahayı vurgular.
+  await horas.getByRole("button", { name: "Jüpiter" }).first().click();
+  await expect(page.locator('svg [data-graha="Jupiter"]').first()).toHaveClass(/chart-planet--highlight/);
+  await expect(horas.locator("tr.is-highlighted")).toHaveCount(3);
+  await page.keyboard.press("Escape");
+
+  // Yer seçimi ve tarih bağı panelin ayarıdır: düzenle birlikte kaydedilir.
+  await day.getByRole("combobox", { name: "Yer" }).selectOption("chart");
+  await day.getByRole("combobox", { name: "Tarih bağı" }).selectOption("today");
+  await expect(day.getByRole("form", { name: "Transit anı" })).toHaveCount(0);
+  await expect.poll(async () => (await savedPanel())?.settings).toEqual({ place: "chart", link: "today" });
+
+  // Aynı komut paneli kaldırır ve odak gövdeye düşmez.
+  await toggle();
+  await expect(day).toHaveCount(0);
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+});
+
+test("muhurta search: the filter form, paged windows, a saved filter, and a row that moves the day panel to that moment", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const open = async (query: string, name: RegExp) => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill(query);
+    await palette.getByRole("option", { name }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  type SearchCall = { query: { from_date: string | null; to_date: string | null; place: unknown; criteria: Record<string, unknown>; natal: unknown }; cursor: { cursor: { chunk: number } } | null };
+  const searchCalls = async () => (await ipcCalls(page, "muhurta_search")) as SearchCall[];
+
+  await open("gün panchang", /Gün panchangı panelini aç\/kapat/);
+  const day = page.getByRole("region", { name: "Gün panchangı" });
+  await day.getByRole("combobox", { name: "Yer" }).selectOption("chart");
+  await expect(day.getByText("2026-11-25 · Budhavara · Çarşamba")).toBeVisible();
+  await open("muhurta ara", /Muhurta araması panelini aç\/kapat/);
+  const search = page.getByRole("region", { name: "Muhurta araması" });
+  await expect(search).toBeFocused();
+  // Panel açılınca arama yapılmaz; kayıtlı süzgeçler bir kez okunur.
+  expect(await searchCalls()).toHaveLength(0);
+  expect(await ipcCalls(page, "load_muhurta_filters")).toHaveLength(1);
+  await expect(search.getByText(/^Süzgeci kurup “Ara”ya basın\./)).toBeVisible();
+
+  // Süzgeç: yer, gün, gündüz, dışlanan dilim; koşullar görünür etiketli kutulardır.
+  await search.getByRole("combobox", { name: "Yer" }).selectOption("chart");
+  await search.getByRole("checkbox", { name: "Perşembe" }).check();
+  await search.getByRole("checkbox", { name: "Yalnızca gündüz" }).check();
+  await search.getByRole("checkbox", { name: "Rahu dilimi" }).check();
+  await search.getByText("Tithiler · kısıt yok").click();
+  await search.getByRole("checkbox", { name: "S2 Dwitiya" }).check();
+  await expect(search.getByText("Tithiler · 1 seçili")).toBeVisible();
+  await search.getByRole("checkbox", { name: "S2 Dwitiya" }).uncheck();
+
+  await search.getByRole("button", { name: "Ara" }).click();
+  await expect(search.locator("[data-summary]")).toHaveText("30 pencere · 2026-11-26 – 2027-01-31");
+  const results = search.getByRole("table", { name: "Bulunan pencereler" });
+  await expect(results.locator("tbody tr")).toHaveCount(30);
+  await expect(results.locator("tbody tr").first().locator("th, td")).toHaveText(["2026-11-26 08:14", "2026-11-26 09:32", "1 sa 17 dk", "Perşembe", "K2 Dwitiya", "Mrigashira 3", "Sadhya", "Garaja", "Akr"]);
+  // Üç dilim, her biri bir öncekinin imleciyle; tarihler boş (bugünden başlar), yerin adı gitmez.
+  const calls = await searchCalls();
+  expect(calls.map((c) => c.cursor?.cursor.chunk ?? null)).toEqual([null, 1, 2]);
+  expect(calls[0].query).toMatchObject({ from_date: null, to_date: null, place: FIXTURE.muhurta.place, natal: FIXTURE.muhurta.natal });
+  expect(calls[0].query.criteria).toMatchObject({ weekdays: ["Thursday"], daytime_only: true, exclude: ["RahuSegment"], tithis: [] });
+
+  // Süzgeç adlandırılıp kaydedilir: kayıt yalnızca ad ve koşul taşır.
+  await search.getByRole("textbox", { name: "Süzgeç adı" }).fill("Perşembe gündüzü");
+  await search.getByRole("button", { name: "Süzgeci kaydet" }).click();
+  await expect(search.getByRole("combobox", { name: "Kayıtlı süzgeç" })).toHaveValue("Perşembe gündüzü");
+  const savedFilters = (await ipcCalls(page, "save_muhurta_filters")).at(-1) as { filters: Record<string, unknown>[] };
+  expect(savedFilters.filters).toHaveLength(1);
+  expect(Object.keys(savedFilters.filters[0]).sort()).toEqual(["criteria", "name"]);
+
+  // Satırın başlangıcı transit tarihini o ana götürür: gün paneli o anı ister.
+  const before = (await ipcCalls(page, "day_panchang")).length;
+  const first = results.locator("tbody tr").first().getByRole("button");
+  await first.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(async () => (await ipcCalls(page, "day_panchang")).length).toBe(before + 1);
+  const moved = (await ipcCalls(page, "day_panchang")).at(-1) as { at: { Jd: number } };
+  expect(moved.at).toEqual({ Jd: FIXTURE.muhurta.pages[0].windows[0].start_jd_ut });
+  // Sonuç listesi yerinde durur ve odak satırdadır.
+  await expect(results.locator("tbody tr")).toHaveCount(30);
+  await expect(first).toBeFocused();
+});
