@@ -31,7 +31,9 @@ import type {
   MuhurtaSearchView,
   NakshatraNature,
   NatalMoon,
+  Navatara,
   OpenedClient,
+  PanchangExtras,
   PlaceHit,
   PrashnaFacts,
   PrefsLoad,
@@ -45,6 +47,7 @@ import type {
   TithiGroup,
   TransitView,
   Varga,
+  VimshopakaReport,
   YogaGroup,
   YogaReport,
 } from "../bindings";
@@ -74,6 +77,12 @@ export interface UiFixture {
   chara_dasha_at_children: SignDashaPeriod[];
   /** `compute_shadbala`, aynı girdiyle: yedi graha, zaman lordları, on iki bhava. */
   shadbala: ShadbalaReport;
+  /**
+   * Doğum anı ekleri (Plan 23), aynı girdiyle: `compute_panchang_extras`, `compute_navatara`
+   * (fikstürdeki transit anıyla: `transit.snapshot.jd_ut`) ve `compute_vimshopaka` dönüşleri;
+   * `schemes` Rust `VargaScheme::ALL`.
+   */
+  natal_extras: { panchang_extras: PanchangExtras; navatara: Navatara; vimshopaka: VimshopakaReport; schemes: string[] };
   /** `compute_yogas`, aynı girdiyle: 41 kural değerlendirilir. */
   yogas: YogaReport;
   /** `compute_yogas`, `time_known: false` ile: lagna isteyen 17 kural atlanır, kayıtlar yaklaşıktır. */

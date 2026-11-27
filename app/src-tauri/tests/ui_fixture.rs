@@ -29,6 +29,11 @@ use jyotish_desk_lib::module_commands::{
 use jyotish_desk_lib::muhurta_commands::{
     day_panchang_blocking, muhurta_search_blocking, MuhurtaPlace, MuhurtaQuery,
 };
+// Ayrı satır: ortak `use jyotish_core::{…}` listesi yeniden sarılmasın (eşzamanlı planlar).
+use jyotish_core::VargaScheme;
+use jyotish_desk_lib::natal_extras_commands::{
+    compute_navatara_blocking, compute_panchang_extras_blocking, compute_vimshopaka_blocking,
+};
 use jyotish_desk_lib::prashna_commands::{
     compute_prashna_facts_blocking, create_prashna_blocking, PrashnaMoment, PrashnaRequest,
 };
@@ -174,6 +179,15 @@ fn ui_fixture_is_up_to_date() {
         chara_at.cycle,
     )
     .expect("chara dasha children at the transit moment");
+    // Doğum anı ekleri (Plan 23): panchang ekleri, navatara (fikstürdeki transit anının
+    // taralarıyla) ve Vimshopaka bala; aynı girdiyle.
+    let panchang_extras =
+        compute_panchang_extras_blocking(&engine, module_input.clone()).expect("panchang extras");
+    let navatara =
+        compute_navatara_blocking(&engine, module_input.clone(), Some(transit.snapshot.jd_ut))
+            .expect("navatara");
+    let vimshopaka =
+        compute_vimshopaka_blocking(&engine, module_input.clone()).expect("vimshopaka");
     // Shadbala ve Bhava bala: aynı girdiyle (doğum saati biliniyor, Güneş doğup batıyor).
     let shadbala = compute_shadbala_blocking(&engine, module_input.clone())
         .expect("shadbala")
@@ -481,6 +495,12 @@ fn ui_fixture_is_up_to_date() {
         "chara_dasha_at": chara_at,
         "chara_dasha_at_children": chara_at_children,
         "shadbala": shadbala,
+        "natal_extras": {
+            "panchang_extras": panchang_extras,
+            "navatara": navatara,
+            "vimshopaka": vimshopaka,
+            "schemes": VargaScheme::ALL,
+        },
         "yogas": yogas,
         "yogas_time_unknown": yogas_time_unknown,
         "yoga_catalog": yoga_catalog,

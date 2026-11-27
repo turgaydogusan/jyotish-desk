@@ -83,6 +83,25 @@ export const commands = {
 	 */
 	computeCompat: (groom: ChartInput, bride: ChartInput, options?: InvokeOptions) => typedError<KutaReport, CommandError>(__TAURI_INVOKE("compute_compat", { groom, bride }, options)),
 	/**
+	 *  Panchang ekleri: yogi noktası, yogi, eş yogi, avayogi ve doğum tithisinin dagdha burçları.
+	 *  Lagna gerekmez; doğum saati bilinmiyorsa (`time_known == false`) değerler öğlen
+	 *  konumlarındandır ve sonuç `approximate` işaretlidir.
+	 */
+	computePanchangExtras: (input: ChartInput, options?: InvokeOptions) => typedError<PanchangExtras, CommandError>(__TAURI_INVOKE("compute_panchang_extras", { input }, options)),
+	/**
+	 *  Navatara: doğum Ay'ının nakshatrasından başlayan 27 satırlık tara tablosu (nakshatra, tara,
+	 *  tur, lord, o nakshatradaki doğum grahaları). `transit_jd_ut` verilirse (transit anı:
+	 *  `TransitView.snapshot.jd_ut`) o andaki dokuz grahanın tarası da döner; arayüz an hesabı
+	 *  yapmaz. Doğum saati bilinmiyorsa sonuç `approximate` işaretlidir.
+	 */
+	computeNavatara: (input: ChartInput, transitJdUt: number | null, options?: InvokeOptions) => typedError<Navatara, CommandError>(__TAURI_INVOKE("compute_navatara", { input, transitJdUt }, options)),
+	/**
+	 *  Vimshopaka bala: yedi grahanın on altı vargadaki burcu ve basamağı ile dört kümedeki
+	 *  (shadvarga, saptavarga, dashavarga, shodashavarga) yirmi üzerinden değeri. Lagna gerekmez;
+	 *  doğum saati bilinmiyorsa sonuç `approximate` işaretlidir.
+	 */
+	computeVimshopaka: (input: ChartInput, options?: InvokeOptions) => typedError<VimshopakaReport, CommandError>(__TAURI_INVOKE("compute_vimshopaka", { input }, options)),
+	/**
 	 *  Gün panchangı: `at` anını içeren gün (gün doğumundan sonraki gün doğumuna) için beş uzvun
 	 *  gün içindeki değerleri, günün dilimleri, işaretler ve (doğum Ay'ı verilirse) tara ve chandra
 	 *  bala. `at` transit anıdır ("şimdi" Rust'ta okunur). Yer kişisel veridir: loglanmaz.
@@ -886,6 +905,17 @@ export type GrahaShadbala = {
 	war: GrahaWar | null,
 };
 
+/**  Bir grahanın on altı vargası ve dört kümedeki değeri. */
+export type GrahaVimshopaka = {
+	graha: Graha,
+	/**  On altı varga, `Varga::ALL` sırasında. */
+	vargas: VimshopakaVarga[],
+	shadvarga: number | null,
+	saptavarga: number | null,
+	dashavarga: number | null,
+	shodashavarga: number | null,
+};
+
 /**  Graha savaşı işareti: `with` karşıdaki graha, `winner` kazanan. Güç aktarımı uygulanmaz. */
 export type GrahaWar = {
 	with: Graha,
@@ -1331,6 +1361,34 @@ export type NatalMoon = {
 
 export type Nature = "Benefic" | "Malefic";
 
+/**  `compute_navatara` sonucu. */
+export type Navatara = {
+	/**  Doğum Ay'ının nakshatrası, 1..=27. */
+	janma_nakshatra: number,
+	/**  27 satır; ilk satır doğum nakshatrasıdır, sonrakiler zodyak sırasıyla. */
+	rows: NavataraRow[],
+	/**  Geçiş anı verildiyse dokuz graha, `Graha::ALL` sırasında. */
+	transit: TransitTara[] | null,
+	/**  Geçiş anı, UT Jülyen günü. */
+	transit_jd_ut: number | null,
+	/**  Doğum saati bilinmiyor: Ay'ın nakshatrası öğlen konumundandır. */
+	approximate: boolean,
+	method: string,
+};
+
+/**  Tablonun bir satırı: bir nakshatra ve doğum nakshatrasına göre tarası. */
+export type NavataraRow = {
+	/**  1..=27. */
+	nakshatra: number,
+	tara: TaraBala,
+	/**  Sayımın turu, 1..=3. */
+	cycle: number,
+	/**  Nakshatranın Vimshottari lordu. */
+	lord: Graha,
+	/**  Bu nakshatrada duran doğum grahaları, `Graha::ALL` sırasında. */
+	grahas: Graha[],
+};
+
 export type NewChart = {
 	label: string,
 	kind: ChartKind,
@@ -1425,6 +1483,18 @@ export type Panchang = {
 	sunrise_jd_ut: number | null,
 	/**  O gün doğumundan sonraki ilk gün batımı (1 gün içinde); yoksa `None`. */
 	sunset_jd_ut: number | null,
+};
+
+/**  `compute_panchang_extras` sonucu: doğum anının beş ek panchang olgusu. */
+export type PanchangExtras = {
+	yogi: YogiFacts,
+	/**  Doğum tithisi, 1..=30; dagdha rasi buna bağlıdır. */
+	tithi: number,
+	/**  Zodyak sırasında; dolunay ve yeni ayda boş. */
+	dagdha_rasis: Sign[],
+	/**  Doğum saati bilinmiyor: değerler öğlen konumlarındandır (Ay günde yaklaşık 13° yürür). */
+	approximate: boolean,
+	method: string,
 };
 
 export type PanchangNakshatra = {
@@ -1858,6 +1928,18 @@ export type TransitSnapshot = {
 	warnings: ChartWarning[],
 };
 
+/**  Geçiş anındaki bir grahanın tarası. */
+export type TransitTara = {
+	graha: Graha,
+	/**  Grahanın geçiş anındaki nakshatrası, 1..=27. */
+	nakshatra: number,
+	/**  1..=4. */
+	pada: number,
+	tara: TaraBala,
+	/**  Sayımın turu, 1..=3. */
+	cycle: number,
+};
+
 /**  Transit konumları, anın UTC'si (RFC 3339) ve o andaki dasa yolu. */
 export type TransitView = {
 	snapshot: TransitSnapshot,
@@ -1953,6 +2035,29 @@ export type ViewState = {
 	compat_roles: CompatRoles,
 };
 
+/**  `compute_vimshopaka` sonucu. AI yorum paneli için sözleşmedir. */
+export type VimshopakaReport = {
+	/**  `VIMSHOPAKA_GRAHAS` sırasında yedi graha. */
+	grahas: GrahaVimshopaka[],
+	/**
+	 *  Doğum saati bilinmiyor: yüksek bölümlü vargalar (D16 ve üstü) birkaç dakikada burç
+	 *  değiştirir; değerler öğlen konumlarındandır.
+	 */
+	approximate: boolean,
+	method: string,
+};
+
+/**  Grahanın bir vargadaki yeri ve basamağı. */
+export type VimshopakaVarga = {
+	varga: Varga,
+	/**  Varga burcu. */
+	sign: Sign,
+	/**  Basamak: `OwnSign`, `GreatFriend`, `Friend`, `Neutral`, `Enemy` ya da `GreatEnemy`. */
+	relation: Dignity,
+	/**  Basamağın değeri: 20, 18, 15, 10, 7 ya da 5. */
+	points: number | null,
+};
+
 /**  Pencerenin başındaki beş uzuv ve lagna burcu. */
 export type WindowSnapshot = {
 	vara: Vara,
@@ -2009,6 +2114,28 @@ export type YogaReport = {
 	evaluated: number,
 	/**  Doğum saati bilinmediği için değerlendirilmeyen (lagna isteyen) kural sayısı. */
 	skipped_time_unknown: number,
+};
+
+/**  Yogi noktası ve ondan okunan üç graha. */
+export type YogiFacts = {
+	/**  Yogi noktasının sidereal boylamı, [0, 360). */
+	point_lon: number | null,
+	/**  Noktanın rasi çerçevesindeki burcu (K5). */
+	sign: Sign,
+	/**  Rasi çerçevesinde burç içi derece, [0, 30). */
+	deg_in_sign: number | null,
+	/**  Noktanın nakshatrası, 1..=27 (sidereal). */
+	nakshatra: number,
+	/**  1..=4. */
+	pada: number,
+	/**  Noktanın nakshatra lordu. */
+	yogi: Graha,
+	/**  Eş yogi: noktanın burcunun lordu. */
+	co_yogi: Graha,
+	/**  Yogi nakshatrasından altıncı nakshatra, 1..=27. */
+	avayogi_nakshatra: number,
+	/**  O nakshatranın lordu. */
+	avayogi: Graha,
 };
 
 export type ZodiacMode = 

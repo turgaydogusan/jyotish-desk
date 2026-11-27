@@ -101,6 +101,12 @@ export const api = {
   // Shadbala ve Bhava bala: `null` doğum saati bilinmeyen ya da o gün Güneş'in doğmadığı ya da
   // batmadığı haritadır.
   computeShadbala: (input: ChartInput) => wrap(() => commands.computeShadbala(input)),
+  // Doğum anı ekleri (Plan 23): üçü de lagna istemez; doğum saati bilinmiyorsa sonuç
+  // `approximate` işaretlidir. `transitJdUt` transit anıdır (`TransitView.snapshot.jd_ut`);
+  // `null` ise navatara yalnızca doğum tablosunu döner.
+  computePanchangExtras: (input: ChartInput) => wrap(() => commands.computePanchangExtras(input)),
+  computeNavatara: (input: ChartInput, transitJdUt: number | null) => wrap(() => commands.computeNavatara(input, transitJdUt)),
+  computeVimshopaka: (input: ChartInput) => wrap(() => commands.computeVimshopaka(input)),
   // Yogalar: doğum saati bilinmiyorsa rapor yine döner; lagna isteyen kurallar atlanmış,
   // diğer kayıtlar `approximate` işaretlidir.
   computeYogas: (input: ChartInput) => wrap(() => commands.computeYogas(input)),

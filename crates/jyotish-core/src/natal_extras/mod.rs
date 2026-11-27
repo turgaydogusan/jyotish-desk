@@ -4,11 +4,13 @@
 //! eklenmez, panel açıkken istenir (K1). Hiçbiri lagna istemez; doğum saati bilinmiyorsa değerler
 //! öğlen konumlarından gelir ve rapor `approximate` işaretini taşır.
 
+mod collect;
 pub mod dagdha;
 pub mod navatara;
 pub mod vimshopaka;
 pub mod yogi;
 
+pub use collect::{compute_navatara, compute_panchang_extras, compute_vimshopaka};
 pub use dagdha::{dagdha_rasis, panchang_extras, PanchangExtras, PANCHANG_EXTRAS_METHOD};
 pub use navatara::{
     navatara, navatara_rows, tara_cycle, transit_taras, Navatara, NavataraRow, TransitTara,

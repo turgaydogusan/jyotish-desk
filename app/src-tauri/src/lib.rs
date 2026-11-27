@@ -4,6 +4,7 @@ pub mod commands;
 pub mod data_dir;
 pub mod module_commands;
 pub mod muhurta_commands;
+pub mod natal_extras_commands;
 pub mod prashna_commands;
 pub mod search_commands;
 pub mod store_commands;
@@ -40,6 +41,9 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             module_commands::compute_shadbala,
             module_commands::compute_yogas,
             module_commands::compute_compat,
+            natal_extras_commands::compute_panchang_extras,
+            natal_extras_commands::compute_navatara,
+            natal_extras_commands::compute_vimshopaka,
             muhurta_commands::day_panchang,
             muhurta_commands::muhurta_search,
             prashna_commands::create_prashna,
