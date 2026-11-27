@@ -354,12 +354,13 @@ function Results({ search, stale, onRetry, onOpenChart, onTagged }: { search: Se
         <ul className="search-hits">
           {shown.map((h) => {
             const chart = h.chart_label === "" ? t("search.unlabeled") : h.chart_label;
+            const factsId = `${listId}-facts-${h.chart_id}`;
             return (
               <li key={h.chart_id}>
-                <button type="button" className="search-hit" aria-label={t("search.open", { client: h.client_name, chart })} onClick={() => onOpenChart(h.client_id, h.chart_id)}>
+                <button type="button" className="search-hit" aria-label={t("search.open", { client: h.client_name, chart })} aria-describedby={factsId} onClick={() => onOpenChart(h.client_id, h.chart_id)}>
                   <span className="search-hit-name">{h.client_name}</span>
                   <span className="search-hit-chart">{chart}</span>
-                  <span className="search-hit-facts">{hitSummary(t, sent, h.matched)}</span>
+                  <span className="search-hit-facts" id={factsId}>{hitSummary(t, sent, h.matched)}</span>
                 </button>
               </li>
             );

@@ -69,9 +69,11 @@ export function useChartSearch(): ChartSearch {
           }
           const page = r.data;
           cursor = page.next;
-          if (page.done) live.current = null;
+          // Imleci olmayan sayfa sonraki sayfayı soramaz: arama biter.
+          const finished = page.done || cursor === null;
+          if (finished) live.current = null;
           setState((s) => ({
-            status: page.done ? "done" : "running",
+            status: finished ? "done" : "running",
             query,
             hits: [...s.hits, ...page.hits],
             scanned: page.scanned,
@@ -80,7 +82,7 @@ export function useChartSearch(): ChartSearch {
             failed: page.failed,
             error: null,
           }));
-          if (page.done || cursor === null) return;
+          if (finished) return;
         }
       })();
     },

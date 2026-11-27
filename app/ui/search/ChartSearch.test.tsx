@@ -86,6 +86,8 @@ test("a search lists the matching charts and a result opens its chart", async ()
   expect(summary()).toBe("1 eşleşme / 2 harita tarandı");
   const hit = button("Örnek Danışan, etiketsiz harita: haritayı aç");
   expect(hit).toHaveTextContent("Ay Ter 5. ev; değil: Gü 1/10. ev");
+  // Eşleşme bilgisi ekran okuyucuya da ulaşır: ad etiketten, bilgi açıklamadan.
+  expect(hit).toHaveAccessibleDescription("Ay Ter 5. ev; değil: Gü 1/10. ev");
   fireEvent.click(hit);
   expect(onOpenChart).toHaveBeenCalledWith(FX.page.hits[0].client_id, FX.page.hits[0].chart_id);
 });

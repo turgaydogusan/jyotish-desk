@@ -145,3 +145,17 @@ test("closing the surface cancels a running search and reset clears the list", a
   view.unmount();
   expect(api.chartSearchCancel).toHaveBeenLastCalledWith(id);
 });
+
+test("a page that is not done but has no cursor ends the search instead of leaving it running", async () => {
+  const reply = page(1, false);
+  if (reply.status === "ok") reply.data.next = null;
+  vi.mocked(api.chartSearch).mockResolvedValueOnce(reply);
+  render(<Probe />);
+  await act(async () => search.start(QUERY));
+  expect(state()).toBe("done 1 500/1200 1");
+  expect(calls()).toHaveLength(1);
+  // Biten arama durdurulmaz; "Durdur" artık bir şey yapmaz.
+  act(() => search.stop());
+  expect(api.chartSearchCancel).not.toHaveBeenCalled();
+  expect(state()).toBe("done 1 500/1200 1");
+});
