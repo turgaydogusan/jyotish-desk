@@ -15,8 +15,8 @@ export function VarshaYearControls({ age, current, onChange }: { age: number | n
   const atMax = age === null || age >= MAX_VARSHA_AGE;
   return (
     <>
-      {/* Kapalı düğme yerel `disabled` değildir: odağı tutar, tıklamak yılı değiştirmez. */}
-      <button type="button" aria-disabled={atMin || undefined} onClick={() => step(-1)}>
+      {/* Kapalı düğme yerel `disabled` değildir: odağı tutar, tıklamak yılı değiştirmez; soluk çizilir (`varsha.css`). */}
+      <button type="button" className="varsha-step" aria-disabled={atMin || undefined} onClick={() => step(-1)}>
         {t("varsha.previous")}
       </button>
       <label htmlFor={`${id}-age`}>{t("varsha.age")}</label>
@@ -34,7 +34,7 @@ export function VarshaYearControls({ age, current, onChange }: { age: number | n
           if (e.target.value.trim() !== "" && isVarshaAge(next)) onChange(next);
         }}
       />
-      <button type="button" aria-disabled={atMax || undefined} onClick={() => step(1)}>
+      <button type="button" className="varsha-step" aria-disabled={atMax || undefined} onClick={() => step(1)}>
         {t("varsha.next")}
       </button>
       <button type="button" aria-pressed={current} onClick={() => onChange(null)}>

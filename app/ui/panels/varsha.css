@@ -26,3 +26,9 @@
   color: var(--text-2);
   font-size: var(--fs-table);
 }
+/* `aria-disabled` düğme odağı tutar ama iş yapmaz: soluk çizilir (uçtaki yıl düğmeleri, kayıt). */
+.varsha-step[aria-disabled="true"],
+.varsha-save button[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: default;
+}

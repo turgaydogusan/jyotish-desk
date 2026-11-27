@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 
@@ -347,4 +348,14 @@ test("the panel is registered, opens from the palette list, and its texts exist 
   expect(zoneLabel(19_800)).toBe("UTC+05:30");
   expect(zoneLabel(-12_600)).toBe("UTC-03:30");
   expect(zoneLabel(0)).toBe("UTC+00:00");
+});
+
+test("inert buttons are dimmed: the step buttons at the ends and the save button once it has saved", async () => {
+  renderPanel();
+  await facts();
+  // Kapalı düğme odağı tutar (`aria-disabled`); görünüşü de kapalı olduğunu söylemelidir.
+  for (const name of ["Önceki yıl", "Sonraki yıl"]) expect(screen.getByRole("button", { name })).toHaveClass("varsha-step");
+  expect(screen.getByRole("button", { name: "Olay haritası olarak kaydet" }).closest(".varsha-save")).not.toBeNull();
+  const css = readFileSync("ui/panels/varsha.css", "utf8");
+  expect(css).toMatch(/\.varsha-step\[aria-disabled="true"\],\s*\.varsha-save button\[aria-disabled="true"\]\s*\{[^}]*opacity:\s*0\.6;[^}]*cursor:\s*default;/);
 });
