@@ -10,8 +10,13 @@
 //! yoktur: modül yalnızca sınıfı ve kuralı sağlayan grahaları döner.
 
 mod baladi;
+mod lajjitadi;
 
 pub use baladi::{baladi, jagradadi, Baladi, Jagradadi, BALADI_SPAN_DEG};
+pub use lajjitadi::{
+    aspecting_grahas, conjunct_grahas, is_garvita, lajjitadi, Lajjitadi, LajjitadiHit,
+    LAJJITA_COMPANIONS, LAJJITA_HOUSE, WATER_SIGNS,
+};
 
 use crate::drishti::ASPECTING_GRAHAS;
 use crate::graha::Graha;
