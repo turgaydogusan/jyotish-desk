@@ -112,7 +112,8 @@ pub fn compute_shadbala<E: Ephemeris + ?Sized>(
     input: &ChartInput,
 ) -> Result<Option<ShadbalaReport>, CoreError> {
     let chart = compute_chart_for(eph, input)?;
-    if !input.time_known {
+    // Sayı prashnasında lagna sayıdan gelir, meridyen (MC) tanımsızdır: rapor yok.
+    if !input.time_known || input.lagna_number.is_some() {
         return Ok(None);
     }
     let Some(astro) = compute_shadbala_astro(eph, input, &chart)? else {
@@ -312,6 +313,21 @@ mod tests {
                 supported: 2
             })
         );
+    }
+
+    #[test]
+    fn no_report_on_a_number_prashna_but_a_bad_number_is_still_reported() {
+        let mut eph = FakeEph::default();
+        let mut numbered = input(CalcSettings::default(), true);
+        numbered.lagna_number = Some(30);
+        assert_eq!(compute_shadbala(&mut eph, &numbered), Ok(None));
+        for bad in [0, 109] {
+            numbered.lagna_number = Some(bad);
+            assert_eq!(
+                compute_shadbala(&mut eph, &numbered),
+                Err(CoreError::InvalidPrashnaInput("number"))
+            );
+        }
     }
 
     #[test]
