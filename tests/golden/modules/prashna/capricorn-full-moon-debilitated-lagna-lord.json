@@ -1,0 +1,129 @@
+{
+  "id": "capricorn-full-moon-debilitated-lagna-lord",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna 280°00′ sidereal → Oğlak 10°00′.",
+    "Oğlak: burç türü yürük; doğuş biçimi sırtla doğan.",
+    "Lagna lordu Satürn: Koç 15°00′; lagnadan 4. ev. Dignity: düşüş burcu Koç → Debilitated. Retro: hayır. Yanma: Güneş'e uzaklık 10°00′, orb 15° → yanık.",
+    "Kendralar. 1. ev Oğlak: Ketu (kötücül); 4. ev Koç: Güneş (kötücül), Satürn (kötücül); 7. ev Yengeç: Rahu (kötücül); 10. ev Terazi: Ay (kötücül).",
+    "Odak evi 9: Oğlak'dan 9. burç Başak; lordu Merkür.",
+    "Odak lordu Merkür: İkizler 5°00′; lagnadan 6. ev. Dignity: kendi burcu İkizler → OwnSign. Retro: hayır. Yanma: Güneş'e uzaklık 60°00′, orb 14° → yanık değil.",
+    "Bağ. Satürn Koç burcunda, Merkür İkizler burcunda. Aynı burç: hayır. Değişim (Satürn Merkür'in burcunda ve tersi): hayır. Satürn'in tam bakışları (3, 7, 10. burçlar): İkizler, Terazi, Oğlak → İkizler'a bakar. Merkür'in tam bakışları: Yay → Koç'a bakmaz. Sonuç: LagnaLordAspects.",
+    "Ev sayıları: odak lordu lagna lordundan 3. burçta; lagna lordu odak lordundan 11. burçta.",
+    "Odak evindeki grahalar (Başak): yok.",
+    "Ay 185°00′ → Terazi, lagnadan 10. ev; nakshatra 14. (Chitra), pada 4. Güneş'ten uzanım 180°00′ → tithi 16 (Krishna); Ay küçülüyor: kötücül.",
+    "Ay'ın burcuna (Terazi) tam bakışla bakanlar: Güneş (Koç'dan 7. burç), Jüpiter (Kova'dan 9. burç), Satürn (Koç'dan 7. burç)."
+  ],
+  "input": {
+    "lagna_lon": 280,
+    "number": null,
+    "focus_house": 9,
+    "grahas": {
+      "Sun": 5.0,
+      "Moon": 185.0,
+      "Mars": 220.0,
+      "Mercury": 65.0,
+      "Jupiter": 310.0,
+      "Venus": 40.0,
+      "Saturn": 15.0,
+      "Rahu": 100.0,
+      "Ketu": 280.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Capricorn",
+      "deg_in_sign": 10.0,
+      "kind": "Movable",
+      "rising": "BackFirst",
+      "lord": {
+        "graha": "Saturn",
+        "sign": "Aries",
+        "house": 4,
+        "dignity": "Debilitated",
+        "retrograde": false,
+        "combust": true
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Capricorn",
+          "grahas": [
+            [
+              "Ketu",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Aries",
+          "grahas": [
+            [
+              "Sun",
+              "Malefic"
+            ],
+            [
+              "Saturn",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 7,
+          "sign": "Cancer",
+          "grahas": [
+            [
+              "Rahu",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 10,
+          "sign": "Libra",
+          "grahas": [
+            [
+              "Moon",
+              "Malefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 9,
+      "sign": "Virgo",
+      "lord": {
+        "graha": "Mercury",
+        "sign": "Gemini",
+        "house": 6,
+        "dignity": "OwnSign",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [
+        "LagnaLordAspects"
+      ],
+      "focus_lord_from_lagna_lord": 3,
+      "lagna_lord_from_focus_lord": 11,
+      "occupants": []
+    },
+    "moon": {
+      "sign": "Libra",
+      "house": 10,
+      "nakshatra": 14,
+      "pada": 4,
+      "tithi": 16,
+      "paksha": "Krishna",
+      "aspected_by": [
+        "Sun",
+        "Jupiter",
+        "Saturn"
+      ]
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "id": "gemini-eighth-lord-aspects-the-lagna-lord",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna 75°00′ sidereal → İkizler 15°00′.",
+    "İkizler: burç türü çift doğalı; doğuş biçimi başla doğan.",
+    "Lagna lordu Merkür: Balık 15°00′; lagnadan 10. ev. Dignity: düşüş burcu Balık → Debilitated. Retro: hayır. Yanma: Güneş'e uzaklık 35°00′, orb 14° → yanık değil.",
+    "Kendralar. 1. ev İkizler: boş; 4. ev Başak: boş; 7. ev Yay: boş; 10. ev Balık: Merkür (iyicil).",
+    "Odak evi 8: İkizler'dan 8. burç Oğlak; lordu Satürn.",
+    "Odak lordu Satürn: Oğlak 15°00′; lagnadan 8. ev. Dignity: kendi burcu Oğlak → OwnSign. Retro: hayır. Yanma: Güneş'e uzaklık 25°00′, orb 15° → yanık değil.",
+    "Bağ. Merkür Balık burcunda, Satürn Oğlak burcunda. Aynı burç: hayır. Değişim (Merkür Satürn'in burcunda ve tersi): hayır. Merkür'in tam bakışları (7. burçlar): Başak → Oğlak'a bakmaz. Satürn'in tam bakışları: Balık, Yengeç, Terazi → Balık'a bakar. Sonuç: FocusLordAspects.",
+    "Ev sayıları: odak lordu lagna lordundan 11. burçta; lagna lordu odak lordundan 3. burçta.",
+    "Odak evindeki grahalar (Oğlak): Venüs (iyicil), Satürn (kötücül).",
+    "Ay 100°00′ → Yengeç, lagnadan 2. ev; nakshatra 8. (Pushya), pada 3. Güneş'ten uzanım 150°00′ → tithi 13 (Shukla); Ay büyüyor: iyicil.",
+    "Ay'ın burcuna (Yengeç) tam bakışla bakanlar: Venüs (Oğlak'dan 7. burç), Satürn (Oğlak'dan 7. burç)."
+  ],
+  "input": {
+    "lagna_lon": 75,
+    "number": null,
+    "focus_house": 8,
+    "grahas": {
+      "Sun": 310.0,
+      "Moon": 100.0,
+      "Mars": 40.0,
+      "Mercury": 345.0,
+      "Jupiter": 200.0,
+      "Venus": 280.0,
+      "Saturn": 285.0,
+      "Rahu": 10.0,
+      "Ketu": 190.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Gemini",
+      "deg_in_sign": 15.0,
+      "kind": "Dual",
+      "rising": "HeadFirst",
+      "lord": {
+        "graha": "Mercury",
+        "sign": "Pisces",
+        "house": 10,
+        "dignity": "Debilitated",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Gemini",
+          "grahas": []
+        },
+        {
+          "house": 4,
+          "sign": "Virgo",
+          "grahas": []
+        },
+        {
+          "house": 7,
+          "sign": "Sagittarius",
+          "grahas": []
+        },
+        {
+          "house": 10,
+          "sign": "Pisces",
+          "grahas": [
+            [
+              "Mercury",
+              "Benefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 8,
+      "sign": "Capricorn",
+      "lord": {
+        "graha": "Saturn",
+        "sign": "Capricorn",
+        "house": 8,
+        "dignity": "OwnSign",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [
+        "FocusLordAspects"
+      ],
+      "focus_lord_from_lagna_lord": 11,
+      "lagna_lord_from_focus_lord": 3,
+      "occupants": [
+        [
+          "Venus",
+          "Benefic"
+        ],
+        [
+          "Saturn",
+          "Malefic"
+        ]
+      ]
+    },
+    "moon": {
+      "sign": "Cancer",
+      "house": 2,
+      "nakshatra": 8,
+      "pada": 3,
+      "tithi": 13,
+      "paksha": "Shukla",
+      "aspected_by": [
+        "Venus",
+        "Saturn"
+      ]
+    }
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "id": "libra-retrograde-combust-lagna-lord",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna 190°00′ sidereal → Terazi 10°00′.",
+    "Terazi: burç türü yürük; doğuş biçimi başla doğan.",
+    "Lagna lordu Venüs: Terazi 14°00′; lagnadan 1. ev. Dignity: Terazi 0°–15° moolatrikona aralığı → Moolatrikona. Retro: evet. Yanma: Güneş'e uzaklık 6°00′, orb 8° → yanık.",
+    "Kendralar. 1. ev Terazi: Güneş (kötücül), Merkür (iyicil), Venüs (iyicil); 4. ev Oğlak: Mars (kötücül); 7. ev Koç: Jüpiter (iyicil); 10. ev Yengeç: Ay (kötücül).",
+    "Odak evi 11: Terazi'dan 11. burç Aslan; lordu Güneş.",
+    "Odak lordu Güneş: Terazi 20°00′; lagnadan 1. ev. Dignity: düşüş burcu Terazi → Debilitated. Retro: hayır. Yanma: Güneş yanmaz.",
+    "Bağ. Venüs Terazi burcunda, Güneş Terazi burcunda. Aynı burç: evet. Değişim (Venüs Güneş'in burcunda ve tersi): hayır. Venüs'in tam bakışları (7. burçlar): Koç → Terazi'a bakmaz. Güneş'in tam bakışları: Koç → Terazi'a bakmaz. Sonuç: Conjunct.",
+    "Ev sayıları: odak lordu lagna lordundan 1. burçta; lagna lordu odak lordundan 1. burçta.",
+    "Odak evindeki grahalar (Aslan): Rahu (kötücül).",
+    "Ay 95°00′ → Yengeç, lagnadan 10. ev; nakshatra 8. (Pushya), pada 1. Güneş'ten uzanım 255°00′ → tithi 22 (Krishna); Ay küçülüyor: kötücül.",
+    "Ay'ın burcuna (Yengeç) tam bakışla bakanlar: Mars (Oğlak'dan 7. burç)."
+  ],
+  "input": {
+    "lagna_lon": 190,
+    "number": null,
+    "focus_house": 11,
+    "grahas": {
+      "Sun": 200.0,
+      "Moon": 95.0,
+      "Mars": 280.0,
+      "Mercury": 185.0,
+      "Jupiter": 5.0,
+      "Venus": 194.0,
+      "Saturn": 340.0,
+      "Rahu": 130.0,
+      "Ketu": 310.0
+    },
+    "retrograde": [
+      "Venus"
+    ]
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Libra",
+      "deg_in_sign": 10.0,
+      "kind": "Movable",
+      "rising": "HeadFirst",
+      "lord": {
+        "graha": "Venus",
+        "sign": "Libra",
+        "house": 1,
+        "dignity": "Moolatrikona",
+        "retrograde": true,
+        "combust": true
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Libra",
+          "grahas": [
+            [
+              "Sun",
+              "Malefic"
+            ],
+            [
+              "Mercury",
+              "Benefic"
+            ],
+            [
+              "Venus",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Capricorn",
+          "grahas": [
+            [
+              "Mars",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 7,
+          "sign": "Aries",
+          "grahas": [
+            [
+              "Jupiter",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 10,
+          "sign": "Cancer",
+          "grahas": [
+            [
+              "Moon",
+              "Malefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 11,
+      "sign": "Leo",
+      "lord": {
+        "graha": "Sun",
+        "sign": "Libra",
+        "house": 1,
+        "dignity": "Debilitated",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [
+        "Conjunct"
+      ],
+      "focus_lord_from_lagna_lord": 1,
+      "lagna_lord_from_focus_lord": 1,
+      "occupants": [
+        [
+          "Rahu",
+          "Malefic"
+        ]
+      ]
+    },
+    "moon": {
+      "sign": "Cancer",
+      "house": 10,
+      "nakshatra": 8,
+      "pada": 1,
+      "tithi": 22,
+      "paksha": "Krishna",
+      "aspected_by": [
+        "Mars"
+      ]
+    }
+  }
+}

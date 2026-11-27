@@ -1,0 +1,132 @@
+{
+  "id": "number-1-aries-lords-together-in-capricorn",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Sayı 1: lagna = (1 − 1) × 3°20′ + 1°40′ = 1°40′ sidereal → Koç 1°40′ (1. navamsanın ortası).",
+    "Koç: burç türü yürük; doğuş biçimi sırtla doğan.",
+    "Lagna lordu Mars: Oğlak 10°00′; lagnadan 10. ev. Dignity: yücelme burcu Oğlak → Exalted. Retro: hayır. Yanma: Güneş'e uzaklık 120°00′, orb 17° → yanık değil.",
+    "Kendralar. 1. ev Koç: Venüs (iyicil); 4. ev Yengeç: Ay (iyicil); 7. ev Terazi: boş; 10. ev Oğlak: Mars (kötücül), Satürn (kötücül).",
+    "Odak evi 10: Koç'dan 10. burç Oğlak; lordu Satürn.",
+    "Odak lordu Satürn: Oğlak 20°00′; lagnadan 10. ev. Dignity: kendi burcu Oğlak → OwnSign. Retro: hayır. Yanma: Güneş'e uzaklık 110°00′, orb 15° → yanık değil.",
+    "Bağ. Mars Oğlak burcunda, Satürn Oğlak burcunda. Aynı burç: evet. Değişim (Mars Satürn'in burcunda ve tersi): hayır. Mars'in tam bakışları (4, 7, 8. burçlar): Koç, Yengeç, Aslan → Oğlak'a bakmaz. Satürn'in tam bakışları: Balık, Yengeç, Terazi → Oğlak'a bakmaz. Sonuç: Conjunct.",
+    "Ev sayıları: odak lordu lagna lordundan 1. burçta; lagna lordu odak lordundan 1. burçta.",
+    "Odak evindeki grahalar (Oğlak): Mars (kötücül), Satürn (kötücül).",
+    "Ay 100°00′ → Yengeç, lagnadan 4. ev; nakshatra 8. (Pushya), pada 3. Güneş'ten uzanım 60°00′ → tithi 6 (Shukla); Ay büyüyor: iyicil.",
+    "Ay'ın burcuna (Yengeç) tam bakışla bakanlar: Mars (Oğlak'dan 7. burç), Satürn (Oğlak'dan 7. burç)."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "number": 1,
+    "focus_house": 10,
+    "grahas": {
+      "Sun": 40.0,
+      "Moon": 100.0,
+      "Mars": 280.0,
+      "Mercury": 55.0,
+      "Jupiter": 130.0,
+      "Venus": 20.0,
+      "Saturn": 290.0,
+      "Rahu": 160.0,
+      "Ketu": 340.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Aries",
+      "deg_in_sign": 1.6666666666666667,
+      "kind": "Movable",
+      "rising": "BackFirst",
+      "lord": {
+        "graha": "Mars",
+        "sign": "Capricorn",
+        "house": 10,
+        "dignity": "Exalted",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Aries",
+          "grahas": [
+            [
+              "Venus",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Cancer",
+          "grahas": [
+            [
+              "Moon",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 7,
+          "sign": "Libra",
+          "grahas": []
+        },
+        {
+          "house": 10,
+          "sign": "Capricorn",
+          "grahas": [
+            [
+              "Mars",
+              "Malefic"
+            ],
+            [
+              "Saturn",
+              "Malefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 10,
+      "sign": "Capricorn",
+      "lord": {
+        "graha": "Saturn",
+        "sign": "Capricorn",
+        "house": 10,
+        "dignity": "OwnSign",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [
+        "Conjunct"
+      ],
+      "focus_lord_from_lagna_lord": 1,
+      "lagna_lord_from_focus_lord": 1,
+      "occupants": [
+        [
+          "Mars",
+          "Malefic"
+        ],
+        [
+          "Saturn",
+          "Malefic"
+        ]
+      ]
+    },
+    "moon": {
+      "sign": "Cancer",
+      "house": 4,
+      "nakshatra": 8,
+      "pada": 3,
+      "tithi": 6,
+      "paksha": "Shukla",
+      "aspected_by": [
+        "Mars",
+        "Saturn"
+      ]
+    }
+  }
+}

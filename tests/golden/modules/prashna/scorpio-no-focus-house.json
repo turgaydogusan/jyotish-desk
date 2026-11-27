@@ -1,0 +1,105 @@
+{
+  "id": "scorpio-no-focus-house",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna 220°00′ sidereal → Akrep 10°00′.",
+    "Akrep: burç türü sabit; doğuş biçimi başla doğan.",
+    "Lagna lordu Mars: Kova 0°00′; lagnadan 4. ev. Dignity: burcun lordu Satürn: doğal ilişki nötr; Satürn Yengeç burcunda, Kova'dan 6. burç → geçici düşman → Enemy → Enemy. Retro: hayır. Yanma: Güneş'e uzaklık 75°00′, orb 17° → yanık değil.",
+    "Kendralar. 1. ev Akrep: Jüpiter (iyicil); 4. ev Kova: Mars (kötücül); 7. ev Boğa: Merkür (iyicil), Venüs (iyicil); 10. ev Aslan: Ay (iyicil).",
+    "Odak evi seçilmedi: odak bölümü boştur.",
+    "Ay 135°00′ → Aslan, lagnadan 10. ev; nakshatra 11. (Purva Phalguni), pada 1. Güneş'ten uzanım 120°00′ → tithi 11 (Shukla); Ay büyüyor: iyicil.",
+    "Ay'ın burcuna (Aslan) tam bakışla bakanlar: Mars (Kova'dan 7. burç)."
+  ],
+  "input": {
+    "lagna_lon": 220,
+    "number": null,
+    "focus_house": null,
+    "grahas": {
+      "Sun": 15.0,
+      "Moon": 135.0,
+      "Mars": 300.0,
+      "Mercury": 30.0,
+      "Jupiter": 225.0,
+      "Venus": 50.0,
+      "Saturn": 100.0,
+      "Rahu": 250.0,
+      "Ketu": 70.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Scorpio",
+      "deg_in_sign": 10.0,
+      "kind": "Fixed",
+      "rising": "HeadFirst",
+      "lord": {
+        "graha": "Mars",
+        "sign": "Aquarius",
+        "house": 4,
+        "dignity": "Enemy",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Scorpio",
+          "grahas": [
+            [
+              "Jupiter",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Aquarius",
+          "grahas": [
+            [
+              "Mars",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 7,
+          "sign": "Taurus",
+          "grahas": [
+            [
+              "Mercury",
+              "Benefic"
+            ],
+            [
+              "Venus",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 10,
+          "sign": "Leo",
+          "grahas": [
+            [
+              "Moon",
+              "Benefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": null,
+    "moon": {
+      "sign": "Leo",
+      "house": 10,
+      "nakshatra": 11,
+      "pada": 1,
+      "tithi": 11,
+      "paksha": "Shukla",
+      "aspected_by": [
+        "Mars"
+      ]
+    }
+  }
+}

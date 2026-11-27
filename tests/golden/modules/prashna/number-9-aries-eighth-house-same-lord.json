@@ -1,0 +1,121 @@
+{
+  "id": "number-9-aries-eighth-house-same-lord",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Sayı 9: lagna = (9 − 1) × 3°20′ + 1°40′ = 28°20′ sidereal → Koç 28°20′ (9. navamsanın ortası).",
+    "Koç: burç türü yürük; doğuş biçimi sırtla doğan.",
+    "Lagna lordu Mars: Akrep 5°00′; lagnadan 8. ev. Dignity: kendi burcu Akrep → OwnSign. Retro: hayır. Yanma: Güneş'e uzaklık 95°00′, orb 17° → yanık değil.",
+    "Kendralar. 1. ev Koç: Ay (iyicil); 4. ev Yengeç: Jüpiter (iyicil); 7. ev Terazi: Satürn (kötücül); 10. ev Oğlak: boş.",
+    "Odak evi 8: Koç'dan 8. burç Akrep; lordu Mars.",
+    "Odak lordu Mars: Akrep 5°00′; lagnadan 8. ev. Dignity: kendi burcu Akrep → OwnSign. Retro: hayır. Yanma: Güneş'e uzaklık 95°00′, orb 17° → yanık değil.",
+    "İki evin lordu aynı grahadır: bağ aranmaz.",
+    "Ev sayıları: odak lordu lagna lordundan 1. burçta; lagna lordu odak lordundan 1. burçta.",
+    "Odak evindeki grahalar (Akrep): Mars (kötücül).",
+    "Ay 20°00′ → Koç, lagnadan 1. ev; nakshatra 2. (Bharani), pada 3. Güneş'ten uzanım 70°00′ → tithi 6 (Shukla); Ay büyüyor: iyicil.",
+    "Ay'ın burcuna (Koç) tam bakışla bakanlar: Satürn (Terazi'dan 7. burç)."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "number": 9,
+    "focus_house": 8,
+    "grahas": {
+      "Sun": 310.0,
+      "Moon": 20.0,
+      "Mars": 215.0,
+      "Mercury": 325.0,
+      "Jupiter": 95.0,
+      "Venus": 350.0,
+      "Saturn": 190.0,
+      "Rahu": 70.0,
+      "Ketu": 250.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Aries",
+      "deg_in_sign": 28.333333333333332,
+      "kind": "Movable",
+      "rising": "BackFirst",
+      "lord": {
+        "graha": "Mars",
+        "sign": "Scorpio",
+        "house": 8,
+        "dignity": "OwnSign",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Aries",
+          "grahas": [
+            [
+              "Moon",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Cancer",
+          "grahas": [
+            [
+              "Jupiter",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 7,
+          "sign": "Libra",
+          "grahas": [
+            [
+              "Saturn",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 10,
+          "sign": "Capricorn",
+          "grahas": []
+        }
+      ]
+    },
+    "focus": {
+      "house": 8,
+      "sign": "Scorpio",
+      "lord": {
+        "graha": "Mars",
+        "sign": "Scorpio",
+        "house": 8,
+        "dignity": "OwnSign",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": true,
+      "links": [],
+      "focus_lord_from_lagna_lord": 1,
+      "lagna_lord_from_focus_lord": 1,
+      "occupants": [
+        [
+          "Mars",
+          "Malefic"
+        ]
+      ]
+    },
+    "moon": {
+      "sign": "Aries",
+      "house": 1,
+      "nakshatra": 2,
+      "pada": 3,
+      "tithi": 6,
+      "paksha": "Shukla",
+      "aspected_by": [
+        "Saturn"
+      ]
+    }
+  }
+}

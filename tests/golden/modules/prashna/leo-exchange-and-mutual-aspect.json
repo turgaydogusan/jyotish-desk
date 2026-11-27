@@ -1,0 +1,132 @@
+{
+  "id": "leo-exchange-and-mutual-aspect",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna 130°00′ sidereal → Aslan 10°00′.",
+    "Aslan: burç türü sabit; doğuş biçimi başla doğan.",
+    "Lagna lordu Güneş: Kova 15°00′; lagnadan 7. ev. Dignity: burcun lordu Satürn: doğal ilişki düşman; Satürn Aslan burcunda, Kova'dan 7. burç → geçici düşman → GreatEnemy → GreatEnemy. Retro: hayır. Yanma: Güneş yanmaz.",
+    "Kendralar. 1. ev Aslan: Satürn (kötücül); 4. ev Akrep: boş; 7. ev Kova: Güneş (kötücül), Merkür (kötücül); 10. ev Boğa: Jüpiter (iyicil).",
+    "Odak evi 7: Aslan'dan 7. burç Kova; lordu Satürn.",
+    "Odak lordu Satürn: Aslan 5°00′; lagnadan 1. ev. Dignity: burcun lordu Güneş: doğal ilişki düşman; Güneş Kova burcunda, Aslan'dan 7. burç → geçici düşman → GreatEnemy → GreatEnemy. Retro: hayır. Yanma: Güneş'e uzaklık 170°00′, orb 15° → yanık değil.",
+    "Bağ. Güneş Kova burcunda, Satürn Aslan burcunda. Aynı burç: hayır. Değişim (Güneş Satürn'in burcunda ve tersi): evet. Güneş'in tam bakışları (7. burçlar): Aslan → Aslan'a bakar. Satürn'in tam bakışları: Terazi, Kova, Boğa → Kova'a bakar. Sonuç: Exchange, MutualAspect.",
+    "Ev sayıları: odak lordu lagna lordundan 7. burçta; lagna lordu odak lordundan 7. burçta.",
+    "Odak evindeki grahalar (Kova): Güneş (kötücül), Merkür (kötücül).",
+    "Ay 70°00′ → İkizler, lagnadan 11. ev; nakshatra 6. (Ardra), pada 2. Güneş'ten uzanım 115°00′ → tithi 10 (Shukla); Ay büyüyor: iyicil.",
+    "Ay'ın burcuna (İkizler) tam bakışla bakanlar: Mars (Yay'dan 7. burç)."
+  ],
+  "input": {
+    "lagna_lon": 130,
+    "number": null,
+    "focus_house": 7,
+    "grahas": {
+      "Sun": 315.0,
+      "Moon": 70.0,
+      "Mars": 250.0,
+      "Mercury": 300.0,
+      "Jupiter": 40.0,
+      "Venus": 350.0,
+      "Saturn": 125.0,
+      "Rahu": 190.0,
+      "Ketu": 10.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Leo",
+      "deg_in_sign": 10.0,
+      "kind": "Fixed",
+      "rising": "HeadFirst",
+      "lord": {
+        "graha": "Sun",
+        "sign": "Aquarius",
+        "house": 7,
+        "dignity": "GreatEnemy",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Leo",
+          "grahas": [
+            [
+              "Saturn",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Scorpio",
+          "grahas": []
+        },
+        {
+          "house": 7,
+          "sign": "Aquarius",
+          "grahas": [
+            [
+              "Sun",
+              "Malefic"
+            ],
+            [
+              "Mercury",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 10,
+          "sign": "Taurus",
+          "grahas": [
+            [
+              "Jupiter",
+              "Benefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 7,
+      "sign": "Aquarius",
+      "lord": {
+        "graha": "Saturn",
+        "sign": "Leo",
+        "house": 1,
+        "dignity": "GreatEnemy",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [
+        "Exchange",
+        "MutualAspect"
+      ],
+      "focus_lord_from_lagna_lord": 7,
+      "lagna_lord_from_focus_lord": 7,
+      "occupants": [
+        [
+          "Sun",
+          "Malefic"
+        ],
+        [
+          "Mercury",
+          "Malefic"
+        ]
+      ]
+    },
+    "moon": {
+      "sign": "Gemini",
+      "house": 11,
+      "nakshatra": 6,
+      "pada": 2,
+      "tithi": 10,
+      "paksha": "Shukla",
+      "aspected_by": [
+        "Mars"
+      ]
+    }
+  }
+}

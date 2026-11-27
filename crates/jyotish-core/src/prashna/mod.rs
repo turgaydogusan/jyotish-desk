@@ -4,6 +4,15 @@
 //!
 //! Bu dosya sayı prashnasının lagnasını verir: grahalar anın grahalarıdır, lagna 1–108
 //! arasındaki sayıdan gelir (`number_lagna_lon`). Harita `compute_chart_with_lagna` ile kurulur.
+//! Haritanın olguları `facts`'tedir.
+
+mod facts;
+
+pub use facts::{
+    compute_prashna_facts, lord_relation, moon_facts, prashna_facts, rising_mode, FocusFacts,
+    HouseOccupants, LagnaFacts, LordFacts, LordLink, LordRelation, MoonFacts, Occupant,
+    PrashnaFacts, RisingMode, PRASHNA_METHOD,
+};
 
 use crate::CoreError;
 

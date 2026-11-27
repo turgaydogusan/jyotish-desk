@@ -1,0 +1,119 @@
+{
+  "id": "number-54-virgo-mutual-aspect-with-the-seventh-lord",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Sayı 54: lagna = (54 − 1) × 3°20′ + 1°40′ = 178°20′ sidereal → Başak 28°20′ (54. navamsanın ortası).",
+    "Başak: burç türü çift doğalı; doğuş biçimi başla doğan.",
+    "Lagna lordu Merkür: İkizler 15°00′; lagnadan 10. ev. Dignity: kendi burcu İkizler → OwnSign. Retro: hayır. Yanma: Güneş'e uzaklık 55°00′, orb 14° → yanık değil.",
+    "Kendralar. 1. ev Başak: Venüs (iyicil); 4. ev Yay: Jüpiter (iyicil); 7. ev Balık: boş; 10. ev İkizler: Merkür (iyicil).",
+    "Odak evi 7: Başak'dan 7. burç Balık; lordu Jüpiter.",
+    "Odak lordu Jüpiter: Yay 15°00′; lagnadan 4. ev. Dignity: kendi burcu Yay → OwnSign. Retro: hayır. Yanma: Güneş'e uzaklık 125°00′, orb 11° → yanık değil.",
+    "Bağ. Merkür İkizler burcunda, Jüpiter Yay burcunda. Aynı burç: hayır. Değişim (Merkür Jüpiter'in burcunda ve tersi): hayır. Merkür'in tam bakışları (7. burçlar): Yay → Yay'a bakar. Jüpiter'in tam bakışları: Koç, İkizler, Aslan → İkizler'a bakar. Sonuç: MutualAspect.",
+    "Ev sayıları: odak lordu lagna lordundan 7. burçta; lagna lordu odak lordundan 7. burçta.",
+    "Odak evindeki grahalar (Balık): yok.",
+    "Ay 310°00′ → Kova, lagnadan 6. ev; nakshatra 24. (Shatabhisha), pada 2. Güneş'ten uzanım 180°00′ → tithi 16 (Krishna); Ay küçülüyor: kötücül.",
+    "Ay'ın burcuna (Kova) tam bakışla bakanlar: Güneş (Aslan'dan 7. burç), Mars (Yengeç'dan 8. burç)."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "number": 54,
+    "focus_house": 7,
+    "grahas": {
+      "Sun": 130.0,
+      "Moon": 310.0,
+      "Mars": 100.0,
+      "Mercury": 75.0,
+      "Jupiter": 255.0,
+      "Venus": 160.0,
+      "Saturn": 20.0,
+      "Rahu": 200.0,
+      "Ketu": 20.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Virgo",
+      "deg_in_sign": 28.333333333333332,
+      "kind": "Dual",
+      "rising": "HeadFirst",
+      "lord": {
+        "graha": "Mercury",
+        "sign": "Gemini",
+        "house": 10,
+        "dignity": "OwnSign",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Virgo",
+          "grahas": [
+            [
+              "Venus",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Sagittarius",
+          "grahas": [
+            [
+              "Jupiter",
+              "Benefic"
+            ]
+          ]
+        },
+        {
+          "house": 7,
+          "sign": "Pisces",
+          "grahas": []
+        },
+        {
+          "house": 10,
+          "sign": "Gemini",
+          "grahas": [
+            [
+              "Mercury",
+              "Benefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 7,
+      "sign": "Pisces",
+      "lord": {
+        "graha": "Jupiter",
+        "sign": "Sagittarius",
+        "house": 4,
+        "dignity": "OwnSign",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [
+        "MutualAspect"
+      ],
+      "focus_lord_from_lagna_lord": 7,
+      "lagna_lord_from_focus_lord": 7,
+      "occupants": []
+    },
+    "moon": {
+      "sign": "Aquarius",
+      "house": 6,
+      "nakshatra": 24,
+      "pada": 2,
+      "tithi": 16,
+      "paksha": "Krishna",
+      "aspected_by": [
+        "Sun",
+        "Mars"
+      ]
+    }
+  }
+}

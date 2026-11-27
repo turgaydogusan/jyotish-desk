@@ -1916,10 +1916,15 @@ mod prashna_properties {
 
     use crate::chart::{compute_chart, compute_chart_with_lagna};
     use crate::fake::FakeEph;
+    use crate::graha::Graha;
     use crate::houses::{whole_sign_cusps, whole_sign_house};
-    use crate::positions::{compute_positions, ChartInput};
-    use crate::prashna::{number_lagna_lon, PRASHNA_NUMBER_MAX};
-    use crate::settings::{CalcSettings, HouseSystem, ZodiacMode};
+    use crate::lordship::{house_lord, house_sign};
+    use crate::nature::{moon_is_waxing, nature};
+    use crate::panchang::Paksha;
+    use crate::positions::{compute_positions, ChartInput, Positions};
+    use crate::prashna::{number_lagna_lon, prashna_facts, LordLink, PRASHNA_NUMBER_MAX};
+    use crate::settings::{CalcSettings, CombustionOrbs, HouseSystem, ZodiacMode};
+    use crate::yogas::yogas;
     use crate::zodiac::Sign;
 
     const JD: f64 = 2_451_545.0;
@@ -2019,6 +2024,76 @@ mod prashna_properties {
             let p = compute_positions(&mut eph, &input).unwrap();
             prop_assert_eq!(p.lagna_lon, Some(lagna));
             prop_assert_eq!(p.lagna_sign, Some(c.lagna.sign));
+        }
+
+        /// Olguların iç tutarlılığı: her graha lagnadan sayılan evindedir, kendralar yalnızca
+        /// 1, 4, 7 ve 10. evlerin grahalarını taşır, iki lordun ev sayıları birbirinin
+        /// tümleyenidir ve bağlar kendi tanımlarını sağlar.
+        #[test]
+        fn facts_are_consistent(
+            lons in proptest::array::uniform9(0.0f64..360.0),
+            lagna in 0.0f64..360.0,
+            focus in 1u8..=12,
+        ) {
+            let p = Positions::synthetic(Some(lagna), lons);
+            let f = prashna_facts(&p, &CombustionOrbs::default(), Some(focus)).unwrap();
+            let l = f.lagna.unwrap();
+            let lagna_sign = p.lagna_sign.unwrap();
+            prop_assert_eq!(l.sign, lagna_sign);
+            prop_assert_eq!(l.lord.graha, house_lord(lagna_sign, 1));
+            prop_assert_eq!(l.lord.sign, p.sign_of(l.lord.graha));
+            prop_assert_eq!(Some(l.lord.house), p.house_of(l.lord.graha));
+            let in_kendras: Vec<Graha> = l
+                .kendras
+                .iter()
+                .flat_map(|k| k.grahas.iter().map(|o| o.graha))
+                .collect();
+            for g in Graha::ALL {
+                let house = p.house_of(g).unwrap();
+                prop_assert_eq!(in_kendras.contains(&g), matches!(house, 1 | 4 | 7 | 10));
+            }
+            for k in &l.kendras {
+                prop_assert_eq!(k.sign, house_sign(lagna_sign, k.house));
+                for o in &k.grahas {
+                    prop_assert_eq!(p.sign_of(o.graha), k.sign);
+                    prop_assert_eq!(o.nature, nature(o.graha, &p));
+                }
+            }
+            let fo = f.focus.unwrap();
+            prop_assert_eq!(fo.sign, house_sign(lagna_sign, focus));
+            prop_assert_eq!(fo.lord.graha, house_lord(lagna_sign, focus));
+            let r = &fo.relation;
+            let (a, b) = (r.focus_lord_from_lagna_lord, r.lagna_lord_from_focus_lord);
+            // Aynı burç 1 ve 1; değilse iki sayım 14'e tamamlanır.
+            prop_assert!((a == 1 && b == 1) || a + b == 14);
+            prop_assert_eq!(r.same_graha, l.lord.graha == fo.lord.graha);
+            if r.same_graha {
+                prop_assert!(r.links.is_empty());
+            }
+            prop_assert_eq!(r.links.contains(&LordLink::Conjunct), !r.same_graha && a == 1);
+            let one_way = [LordLink::LagnaLordAspects, LordLink::FocusLordAspects];
+            let aspect_links = r
+                .links
+                .iter()
+                .filter(|k| **k == LordLink::MutualAspect || one_way.contains(k))
+                .count();
+            prop_assert!(aspect_links <= 1);
+            // Birlikte duran iki graha birbirinin burcuna bakmaz ve değişimde olamaz.
+            if r.links.contains(&LordLink::Conjunct) {
+                prop_assert_eq!(r.links.len(), 1);
+            }
+            let mut sorted = r.links.clone();
+            sorted.sort_by_key(|k| LordLink::ALL.iter().position(|x| x == k));
+            prop_assert_eq!(&sorted, &r.links);
+            // Ay: ev, tithi ve paksha birbirini tutar.
+            prop_assert_eq!(f.moon.house, p.house_of(Graha::Moon));
+            prop_assert_eq!(f.moon.paksha == Paksha::Shukla, moon_is_waxing(&p));
+            prop_assert!(!f.moon.aspected_by.contains(&Graha::Moon));
+            prop_assert_eq!(&f.yogas, &yogas(&p));
+            // Lagnasız haritada lagnaya bağlı hiçbir şey yoktur.
+            let hidden = prashna_facts(&p.clone().without_lagna(), &CombustionOrbs::default(), Some(focus)).unwrap();
+            prop_assert!(hidden.lagna.is_none() && hidden.focus.is_none());
+            prop_assert_eq!(hidden.moon.house, None);
         }
 
         /// Spec §11: `compute_chart_with_lagna` gerçek lagna verildiğinde `compute_chart` ile

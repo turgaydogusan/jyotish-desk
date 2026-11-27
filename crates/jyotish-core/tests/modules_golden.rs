@@ -19,6 +19,10 @@ use jyotish_core::{
     CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, KUTA_METHOD, SHADBALA_GRAHAS,
     SHADBALA_METHOD, YOGA_CATALOG, YOGA_CATALOG_VERSION, YOGA_CONDITIONS,
 };
+use jyotish_core::{
+    number_lagna_lon, prashna_facts, rising_mode, CombustionOrbs, CoreError, Dignity, LordLink,
+    Paksha, RisingMode, SignKind, PRASHNA_METHOD,
+};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
@@ -31,6 +35,7 @@ const MIN_SHADBALA: usize = 4;
 const MIN_YOGAS: usize = 15;
 const MIN_KUTA: usize = 8;
 const MIN_MUHURTA: usize = 7;
+const MIN_PRASHNA: usize = 14;
 /// El hesabı ile motor arasındaki en büyük fark, virupa.
 const VIRUPA_TOL: f64 = 1e-9;
 /// Shadbala çalışma kâğıdının toleransı, virupa (ileri modüller spec'i §7 "Test").
@@ -1702,4 +1707,331 @@ fn muhurta_fixtures_cover_the_required_cases() {
         (spec.expected.abhijit.from_min, spec.expected.abhijit.to_min),
         (696.0, 744.0)
     );
+}
+
+/// Prashna örneklerinin girdisi: sentetik konumlar ve sorunun seçimleri. Lagna ya `lagna_lon`
+/// ile verilir ya da `number` ile (sayı prashnası: lagna sayıdan türetilir); ikisi birlikte
+/// yazılmaz. `retrograde` listesindeki grahaların hızı eksidir.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PrashnaInput {
+    lagna_lon: Option<f64>,
+    number: Option<u8>,
+    focus_house: Option<u8>,
+    grahas: BTreeMap<Graha, f64>,
+    retrograde: Vec<Graha>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct ExpectedLord {
+    graha: Graha,
+    sign: Sign,
+    house: u8,
+    dignity: Option<Dignity>,
+    retrograde: bool,
+    combust: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedKendra {
+    house: u8,
+    sign: Sign,
+    grahas: Vec<(Graha, Nature)>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedLagna {
+    sign: Sign,
+    /// Lagnanın burç içi derecesi (sayı prashnasında navamsanın ortası).
+    deg_in_sign: f64,
+    kind: SignKind,
+    rising: RisingMode,
+    lord: ExpectedLord,
+    kendras: Vec<ExpectedKendra>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedFocus {
+    house: u8,
+    sign: Sign,
+    lord: ExpectedLord,
+    same_graha: bool,
+    links: Vec<LordLink>,
+    focus_lord_from_lagna_lord: u8,
+    lagna_lord_from_focus_lord: u8,
+    occupants: Vec<(Graha, Nature)>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExpectedMoon {
+    sign: Sign,
+    house: Option<u8>,
+    nakshatra: u8,
+    pada: u8,
+    tithi: u8,
+    paksha: Paksha,
+    aspected_by: Vec<Graha>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PrashnaExpected {
+    lagna: Option<ExpectedLagna>,
+    focus: Option<ExpectedFocus>,
+    moon: ExpectedMoon,
+}
+
+/// Lagnanın burç içi derecesinde el hesabı ile motor arasındaki en büyük fark.
+const LAGNA_DEG_TOL: f64 = 1e-9;
+
+fn prashna_fixtures() -> Vec<(Fixture<PrashnaExpected, PrashnaInput>, Positions)> {
+    load_raw::<PrashnaExpected, PrashnaInput>("prashna", MIN_PRASHNA)
+        .into_iter()
+        .map(|f| {
+            let id = &f.id;
+            let i = &f.input;
+            assert_eq!(i.grahas.len(), 9, "{id}: all nine grahas are required");
+            assert!(
+                i.lagna_lon.is_none() || i.number.is_none(),
+                "{id}: the lagna comes from the longitude or from the number, not both"
+            );
+            let lagna = match i.number {
+                Some(n) => Some(number_lagna_lon(n).unwrap_or_else(|e| panic!("{id}: {e}"))),
+                None => i.lagna_lon,
+            };
+            let mut positions =
+                Positions::synthetic(lagna, std::array::from_fn(|k| i.grahas[&Graha::ALL[k]]));
+            for g in &i.retrograde {
+                positions.grahas[*g as usize].speed = -1.0;
+            }
+            (f, positions)
+        })
+        .collect()
+}
+
+fn lord_of(l: &jyotish_core::LordFacts) -> ExpectedLord {
+    ExpectedLord {
+        graha: l.graha,
+        sign: l.sign,
+        house: l.house,
+        dignity: l.dignity,
+        retrograde: l.retrograde,
+        combust: l.combust,
+    }
+}
+
+fn occupants_of(list: &[jyotish_core::Occupant]) -> Vec<(Graha, Nature)> {
+    list.iter().map(|o| (o.graha, o.nature)).collect()
+}
+
+#[test]
+fn prashna_hand_fixtures() {
+    // Yanma orbları v1'in varsayılanlarıdır (el örnekleri bu orblarla türetilmiştir).
+    let orbs = CombustionOrbs::default();
+    for (f, positions) in prashna_fixtures() {
+        let id = &f.id;
+        let got = prashna_facts(&positions, &orbs, f.input.focus_house)
+            .unwrap_or_else(|e| panic!("{id}: {e}"));
+        assert_eq!(got.method, PRASHNA_METHOD, "{id}");
+        assert!(got.warnings.is_empty(), "{id}");
+        assert_eq!(got.yogas, yogas(&positions), "{id}: yoga list");
+
+        match (&f.expected.lagna, &got.lagna) {
+            (None, None) => assert!(positions.lagna_lon.is_none(), "{id}"),
+            (Some(want), Some(have)) => {
+                assert_eq!(
+                    (have.sign, have.kind, have.rising),
+                    (want.sign, want.kind, want.rising),
+                    "{id}: lagna"
+                );
+                let lon = positions.lagna_lon.expect("lagna");
+                assert_eq!(Sign::of(lon), want.sign, "{id}: lagna sign");
+                assert!(
+                    (jyotish_core::deg_in_sign(lon) - want.deg_in_sign).abs() < LAGNA_DEG_TOL,
+                    "{id}: lagna degree"
+                );
+                assert_eq!(lord_of(&have.lord), want.lord, "{id}: lagna lord");
+                assert_eq!(have.kendras.len(), 4, "{id}");
+                assert_eq!(want.kendras.len(), 4, "{id}: four kendras");
+                for (h, w) in have.kendras.iter().zip(&want.kendras) {
+                    assert_eq!((h.house, h.sign), (w.house, w.sign), "{id}: kendra");
+                    assert_eq!(occupants_of(&h.grahas), w.grahas, "{id}: house {}", w.house);
+                }
+            }
+            (want, have) => panic!(
+                "{id}: lagna expected {}, got {}",
+                want.is_some(),
+                have.is_some()
+            ),
+        }
+
+        match (&f.expected.focus, &got.focus) {
+            (None, None) => {}
+            (Some(want), Some(have)) => {
+                assert_eq!(Some(want.house), f.input.focus_house, "{id}");
+                assert_eq!(
+                    (have.house, have.sign),
+                    (want.house, want.sign),
+                    "{id}: focus"
+                );
+                assert_eq!(lord_of(&have.lord), want.lord, "{id}: focus lord");
+                assert_eq!(have.relation.same_graha, want.same_graha, "{id}");
+                assert_eq!(have.relation.links, want.links, "{id}: links");
+                assert_eq!(
+                    (
+                        have.relation.focus_lord_from_lagna_lord,
+                        have.relation.lagna_lord_from_focus_lord
+                    ),
+                    (
+                        want.focus_lord_from_lagna_lord,
+                        want.lagna_lord_from_focus_lord
+                    ),
+                    "{id}: counts"
+                );
+                assert_eq!(occupants_of(&have.occupants), want.occupants, "{id}");
+            }
+            (want, have) => panic!(
+                "{id}: focus expected {}, got {}",
+                want.is_some(),
+                have.is_some()
+            ),
+        }
+
+        let (m, w) = (&got.moon, &f.expected.moon);
+        assert_eq!(
+            (m.sign, m.house, m.nakshatra, m.pada, m.tithi, m.paksha),
+            (w.sign, w.house, w.nakshatra, w.pada, w.tithi, w.paksha),
+            "{id}: moon"
+        );
+        assert_eq!(m.aspected_by, w.aspected_by, "{id}: aspects on the moon");
+    }
+}
+
+/// Sayı → lagna eşlemesinin elle yazılmış ikinci tablosu (spec §11 "Test"): sayı, burç, derece,
+/// dakika. Örneklerin `deg_in_sign` değeri de bu tabloyla karşılaştırılır.
+const HAND_NUMBER_LAGNA: [(u8, Sign, f64, f64); 5] = [
+    (1, Sign::Aries, 1.0, 40.0),
+    (9, Sign::Aries, 28.0, 20.0),
+    (10, Sign::Taurus, 1.0, 40.0),
+    (54, Sign::Virgo, 28.0, 20.0),
+    (108, Sign::Pisces, 28.0, 20.0),
+];
+
+/// On iki burcun doğuş biçiminin elle yazılmış ikinci tablosu (spec §11), burç sırasıyla.
+const HAND_RISING: [(Sign, RisingMode); 12] = [
+    (Sign::Aries, RisingMode::BackFirst),
+    (Sign::Taurus, RisingMode::BackFirst),
+    (Sign::Gemini, RisingMode::HeadFirst),
+    (Sign::Cancer, RisingMode::BackFirst),
+    (Sign::Leo, RisingMode::HeadFirst),
+    (Sign::Virgo, RisingMode::HeadFirst),
+    (Sign::Libra, RisingMode::HeadFirst),
+    (Sign::Scorpio, RisingMode::HeadFirst),
+    (Sign::Sagittarius, RisingMode::BackFirst),
+    (Sign::Capricorn, RisingMode::BackFirst),
+    (Sign::Aquarius, RisingMode::HeadFirst),
+    (Sign::Pisces, RisingMode::BothWays),
+];
+
+#[test]
+fn prashna_fixtures_cover_the_required_cases() {
+    let fixtures = prashna_fixtures();
+    // Sayı → lagna: 1, 9, 10, 54, 108; sınır dışı sayılar hatadır.
+    for (n, sign, deg, min) in HAND_NUMBER_LAGNA {
+        let (f, _) = fixtures
+            .iter()
+            .find(|(f, _)| f.input.number == Some(n))
+            .unwrap_or_else(|| panic!("no fixture with the number {n}"));
+        let lagna = f.expected.lagna.as_ref().expect("a number gives a lagna");
+        assert_eq!(lagna.sign, sign, "{}", f.id);
+        assert!(
+            (lagna.deg_in_sign - (deg + min / 60.0)).abs() < LAGNA_DEG_TOL,
+            "{}",
+            f.id
+        );
+    }
+    for bad in [0, 109] {
+        assert_eq!(
+            number_lagna_lon(bad),
+            Err(CoreError::InvalidPrashnaInput("number"))
+        );
+    }
+    // On iki burcun doğuş biçimi: her burç bir örneğin lagnasıdır ve el tablosuyla aynıdır.
+    for (sign, rising) in HAND_RISING {
+        assert_eq!(rising_mode(sign), rising, "{sign:?}");
+        let (f, _) = fixtures
+            .iter()
+            .find(|(f, _)| f.expected.lagna.as_ref().is_some_and(|l| l.sign == sign))
+            .unwrap_or_else(|| panic!("no fixture with the lagna {sign:?}"));
+        assert_eq!(
+            f.expected.lagna.as_ref().unwrap().rising,
+            rising,
+            "{}",
+            f.id
+        );
+    }
+    // Lord ilişkilerinin beş türü (tek yönlü bakışın iki yönü ayrı), "hiçbiri" ve aynı graha.
+    let focuses: Vec<&ExpectedFocus> = fixtures
+        .iter()
+        .filter_map(|(f, _)| f.expected.focus.as_ref())
+        .collect();
+    for link in LordLink::ALL {
+        assert!(
+            focuses.iter().any(|f| f.links.contains(&link)),
+            "no fixture with {link:?}"
+        );
+    }
+    assert!(focuses.iter().any(|f| f.links.is_empty() && !f.same_graha));
+    assert!(focuses.iter().any(|f| f.same_graha));
+    assert!(
+        focuses.iter().any(|f| f.links.len() > 1),
+        "two links at once"
+    );
+    // Odak evi seçilmemiş ve lagnasız (saat bilinmiyor) örnekler.
+    assert!(fixtures
+        .iter()
+        .any(|(f, _)| f.input.focus_house.is_none() && f.expected.lagna.is_some()));
+    assert!(fixtures.iter().any(|(f, _)| {
+        f.expected.lagna.is_none() && f.expected.focus.is_none() && f.expected.moon.house.is_none()
+    }));
+    // Retro ve yanık lord; iki paksha; kendrada iki sınıftan graha ve düğüm.
+    let lords: Vec<&ExpectedLord> = fixtures
+        .iter()
+        .filter_map(|(f, _)| f.expected.lagna.as_ref())
+        .map(|l| &l.lord)
+        .chain(focuses.iter().map(|f| &f.lord))
+        .collect();
+    assert!(lords.iter().any(|l| l.retrograde));
+    assert!(lords.iter().any(|l| l.combust));
+    for want in [
+        Dignity::Exalted,
+        Dignity::Debilitated,
+        Dignity::Moolatrikona,
+        Dignity::OwnSign,
+    ] {
+        assert!(lords.iter().any(|l| l.dignity == Some(want)), "{want:?}");
+    }
+    for paksha in [Paksha::Shukla, Paksha::Krishna] {
+        assert!(fixtures
+            .iter()
+            .any(|(f, _)| f.expected.moon.paksha == paksha));
+    }
+    assert!(fixtures
+        .iter()
+        .any(|(f, _)| !f.expected.moon.aspected_by.is_empty()));
+    let in_kendras: Vec<(Graha, Nature)> = fixtures
+        .iter()
+        .filter_map(|(f, _)| f.expected.lagna.as_ref())
+        .flat_map(|l| l.kendras.iter().flat_map(|k| k.grahas.clone()))
+        .collect();
+    for nature in [Nature::Benefic, Nature::Malefic] {
+        assert!(in_kendras.iter().any(|(_, n)| *n == nature));
+    }
+    assert!(in_kendras.contains(&(Graha::Mercury, Nature::Malefic)));
+    assert!(in_kendras.iter().any(|(g, _)| g.is_node()));
 }

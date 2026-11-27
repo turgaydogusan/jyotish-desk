@@ -1,0 +1,40 @@
+{
+  "id": "time-unknown-moon-only",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna yok (saat bilinmiyor): lagnaya bağlı bölümler boştur.",
+    "Ay 40°00′ → Boğa; nakshatra 4. (Rohini), pada 1. Güneş'ten uzanım 300°00′ → tithi 26 (Krishna); Ay küçülüyor: kötücül.",
+    "Ay'ın burcuna (Boğa) tam bakışla bakanlar: yok."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "number": null,
+    "focus_house": 5,
+    "grahas": {
+      "Sun": 100.0,
+      "Moon": 40.0,
+      "Mars": 10.0,
+      "Mercury": 115.0,
+      "Jupiter": 250.0,
+      "Venus": 80.0,
+      "Saturn": 300.0,
+      "Rahu": 200.0,
+      "Ketu": 20.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": null,
+    "focus": null,
+    "moon": {
+      "sign": "Taurus",
+      "house": null,
+      "nakshatra": 4,
+      "pada": 1,
+      "tithi": 26,
+      "paksha": "Krishna",
+      "aspected_by": []
+    }
+  }
+}

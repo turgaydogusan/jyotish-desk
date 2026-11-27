@@ -1,0 +1,111 @@
+{
+  "id": "cancer-waning-moon-no-relation",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna 100°00′ sidereal → Yengeç 10°00′.",
+    "Yengeç: burç türü yürük; doğuş biçimi sırtla doğan.",
+    "Lagna lordu Ay: Akrep 10°00′; lagnadan 5. ev. Dignity: düşüş burcu Akrep → Debilitated. Retro: hayır. Yanma: Güneş'e uzaklık 30°00′, orb 12° → yanık değil.",
+    "Kendralar. 1. ev Yengeç: boş; 4. ev Terazi: boş; 7. ev Oğlak: boş; 10. ev Koç: Jüpiter (iyicil).",
+    "Odak evi 2: Yengeç'dan 2. burç Aslan; lordu Güneş.",
+    "Odak lordu Güneş: Yay 10°00′; lagnadan 6. ev. Dignity: burcun lordu Jüpiter: doğal ilişki dost; Jüpiter Koç burcunda, Yay'dan 5. burç → geçici düşman → Neutral → Neutral. Retro: hayır. Yanma: Güneş yanmaz.",
+    "Bağ. Ay Akrep burcunda, Güneş Yay burcunda. Aynı burç: hayır. Değişim (Ay Güneş'in burcunda ve tersi): hayır. Ay'in tam bakışları (7. burçlar): Boğa → Yay'a bakmaz. Güneş'in tam bakışları: İkizler → Akrep'a bakmaz. Sonuç: hiçbiri.",
+    "Ev sayıları: odak lordu lagna lordundan 2. burçta; lagna lordu odak lordundan 12. burçta.",
+    "Odak evindeki grahalar (Aslan): Mars (kötücül).",
+    "Ay 220°00′ → Akrep, lagnadan 5. ev; nakshatra 17. (Anuradha), pada 3. Güneş'ten uzanım 330°00′ → tithi 28 (Krishna); Ay küçülüyor: kötücül.",
+    "Ay'ın burcuna (Akrep) tam bakışla bakanlar: Mars (Aslan'dan 4. burç)."
+  ],
+  "input": {
+    "lagna_lon": 100,
+    "number": null,
+    "focus_house": 2,
+    "grahas": {
+      "Sun": 250.0,
+      "Moon": 220.0,
+      "Mars": 130.0,
+      "Mercury": 265.0,
+      "Jupiter": 10.0,
+      "Venus": 300.0,
+      "Saturn": 75.0,
+      "Rahu": 40.0,
+      "Ketu": 220.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Cancer",
+      "deg_in_sign": 10.0,
+      "kind": "Movable",
+      "rising": "BackFirst",
+      "lord": {
+        "graha": "Moon",
+        "sign": "Scorpio",
+        "house": 5,
+        "dignity": "Debilitated",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Cancer",
+          "grahas": []
+        },
+        {
+          "house": 4,
+          "sign": "Libra",
+          "grahas": []
+        },
+        {
+          "house": 7,
+          "sign": "Capricorn",
+          "grahas": []
+        },
+        {
+          "house": 10,
+          "sign": "Aries",
+          "grahas": [
+            [
+              "Jupiter",
+              "Benefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 2,
+      "sign": "Leo",
+      "lord": {
+        "graha": "Sun",
+        "sign": "Sagittarius",
+        "house": 6,
+        "dignity": "Neutral",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [],
+      "focus_lord_from_lagna_lord": 2,
+      "lagna_lord_from_focus_lord": 12,
+      "occupants": [
+        [
+          "Mars",
+          "Malefic"
+        ]
+      ]
+    },
+    "moon": {
+      "sign": "Scorpio",
+      "house": 5,
+      "nakshatra": 17,
+      "pada": 3,
+      "tithi": 28,
+      "paksha": "Krishna",
+      "aspected_by": [
+        "Mars"
+      ]
+    }
+  }
+}

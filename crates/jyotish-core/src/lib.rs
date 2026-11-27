@@ -92,7 +92,11 @@ pub use panchang::{
     END_BISECTIONS, END_SEARCH_DAYS, KARANA_SPAN_DEG, SUNRISE_WINDOW_DAYS, TITHI_SPAN_DEG,
 };
 pub use positions::{compute_positions, ChartInput, GrahaPoint, Positions};
-pub use prashna::{number_lagna_lon, PRASHNA_NUMBER_MAX};
+pub use prashna::{
+    compute_prashna_facts, lord_relation, moon_facts, number_lagna_lon, prashna_facts, rising_mode,
+    FocusFacts, HouseOccupants, LagnaFacts, LordFacts, LordLink, LordRelation, MoonFacts, Occupant,
+    PrashnaFacts, RisingMode, PRASHNA_METHOD, PRASHNA_NUMBER_MAX,
+};
 pub use settings::{
     AdvancedSettings, AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, KarakaScheme,
     NodeKind, SunriseDef, ZodiacMode, CALC_SETTINGS_SCHEMA_VERSION, JD_UT_RANGE,

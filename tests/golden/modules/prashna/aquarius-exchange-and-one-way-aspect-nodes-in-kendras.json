@@ -1,0 +1,124 @@
+{
+  "id": "aquarius-exchange-and-one-way-aspect-nodes-in-kendras",
+  "source": "hand",
+  "rule_ref": "BPHS, burç nitelikleri, graha nitelikleri ve bakışlar bölümleri; prashna derlemelerinin sayı yöntemi (alıntı yapılmaz); ileri modüller spec'i §11",
+  "derivation": [
+    "Lagna 310°00′ sidereal → Kova 10°00′.",
+    "Kova: burç türü sabit; doğuş biçimi başla doğan.",
+    "Lagna lordu Satürn: Akrep 15°00′; lagnadan 10. ev. Dignity: burcun lordu Mars: doğal ilişki düşman; Mars Oğlak burcunda, Akrep'dan 3. burç → geçici dost → Neutral → Neutral. Retro: hayır. Yanma: Güneş'e uzaklık 155°00′, orb 15° → yanık değil.",
+    "Kendralar. 1. ev Kova: Rahu (kötücül); 4. ev Boğa: boş; 7. ev Aslan: Ay (iyicil), Ketu (kötücül); 10. ev Akrep: Satürn (kötücül).",
+    "Odak evi 3: Kova'dan 3. burç Koç; lordu Mars.",
+    "Odak lordu Mars: Oğlak 15°00′; lagnadan 12. ev. Dignity: yücelme burcu Oğlak → Exalted. Retro: hayır. Yanma: Güneş'e uzaklık 145°00′, orb 17° → yanık değil.",
+    "Bağ. Satürn Akrep burcunda, Mars Oğlak burcunda. Aynı burç: hayır. Değişim (Satürn Mars'in burcunda ve tersi): evet. Satürn'in tam bakışları (3, 7, 10. burçlar): Oğlak, Boğa, Aslan → Oğlak'a bakar. Mars'in tam bakışları: Koç, Yengeç, Aslan → Akrep'a bakmaz. Sonuç: Exchange, LagnaLordAspects.",
+    "Ev sayıları: odak lordu lagna lordundan 3. burçta; lagna lordu odak lordundan 11. burçta.",
+    "Odak evindeki grahalar (Koç): yok.",
+    "Ay 130°00′ → Aslan, lagnadan 7. ev; nakshatra 10. (Magha), pada 4. Güneş'ten uzanım 60°00′ → tithi 6 (Shukla); Ay büyüyor: iyicil.",
+    "Ay'ın burcuna (Aslan) tam bakışla bakanlar: Mars (Oğlak'dan 8. burç), Satürn (Akrep'dan 10. burç)."
+  ],
+  "input": {
+    "lagna_lon": 310,
+    "number": null,
+    "focus_house": 3,
+    "grahas": {
+      "Sun": 70.0,
+      "Moon": 130.0,
+      "Mars": 285.0,
+      "Mercury": 85.0,
+      "Jupiter": 190.0,
+      "Venus": 100.0,
+      "Saturn": 225.0,
+      "Rahu": 305.0,
+      "Ketu": 125.0
+    },
+    "retrograde": []
+  },
+  "expected": {
+    "lagna": {
+      "sign": "Aquarius",
+      "deg_in_sign": 10.0,
+      "kind": "Fixed",
+      "rising": "HeadFirst",
+      "lord": {
+        "graha": "Saturn",
+        "sign": "Scorpio",
+        "house": 10,
+        "dignity": "Neutral",
+        "retrograde": false,
+        "combust": false
+      },
+      "kendras": [
+        {
+          "house": 1,
+          "sign": "Aquarius",
+          "grahas": [
+            [
+              "Rahu",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 4,
+          "sign": "Taurus",
+          "grahas": []
+        },
+        {
+          "house": 7,
+          "sign": "Leo",
+          "grahas": [
+            [
+              "Moon",
+              "Benefic"
+            ],
+            [
+              "Ketu",
+              "Malefic"
+            ]
+          ]
+        },
+        {
+          "house": 10,
+          "sign": "Scorpio",
+          "grahas": [
+            [
+              "Saturn",
+              "Malefic"
+            ]
+          ]
+        }
+      ]
+    },
+    "focus": {
+      "house": 3,
+      "sign": "Aries",
+      "lord": {
+        "graha": "Mars",
+        "sign": "Capricorn",
+        "house": 12,
+        "dignity": "Exalted",
+        "retrograde": false,
+        "combust": false
+      },
+      "same_graha": false,
+      "links": [
+        "Exchange",
+        "LagnaLordAspects"
+      ],
+      "focus_lord_from_lagna_lord": 3,
+      "lagna_lord_from_focus_lord": 11,
+      "occupants": []
+    },
+    "moon": {
+      "sign": "Leo",
+      "house": 7,
+      "nakshatra": 10,
+      "pada": 4,
+      "tithi": 6,
+      "paksha": "Shukla",
+      "aspected_by": [
+        "Mars",
+        "Saturn"
+      ]
+    }
+  }
+}

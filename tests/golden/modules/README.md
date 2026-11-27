@@ -55,6 +55,7 @@ doğum anı ve 365,25 günlük yıl kullanır, tarihleri el yıllarının biriki
 | `yogas` | `hits` (raporun bütün kayıtları, katalog sırasıyla: `id`, `grahas`, `houses`, `relations`, `conditions`), `absent` (bu örneğin "oluşmayan durum" olarak gösterdiği kurallar), `cancelled` (iptal örnekleri), `evaluated`, `skipped_time_unknown` | 15 |
 | `kuta` | `scores` (sekiz kuta, tablo sırasıyla: `kuta`, `score`, `groom_class`, `bride_class`), `total`, `bhakoot_exception`, `nadi_exception`, `kuja_dosha` (`[damat rolü, gelin rolü]`), `overlay` (`groom` ve `bride`: dokuzar satır `[diğer tarafın lagnasından ev ya da null, Ay'ından ev]`), `approximate` | 8 |
 | `muhurta` | `eighth_min`, `rahu`, `yamaganda`, `gulika` (`segment`, `from_min`, `to_min`), `abhijit` (`from_min`, `to_min`), `abhijit_weekday_exception`, `hora_min`, `hora_lords` (24), `tithi_group`, `nakshatra_nature`, `tara` (`number`, `favourable`), `chandra` (`house`, `favourable`) | 7 |
+| `prashna` | `lagna` (`sign`, `deg_in_sign`, `kind`, `rising`, `lord`, dört `kendras`; lagna yoksa `null`), `focus` (`house`, `sign`, `lord`, `same_graha`, `links`, iki ev sayısı, `occupants`; odak evi ya da lagna yoksa `null`), `moon` (`sign`, `house`, `nakshatra`, `pada`, `tithi`, `paksha`, `aspected_by`) | 14 |
 
 Shadbala örnekleri çalışma kâğıdıdır (tasarım belgesi §7 "Test"): `shadbala/WORKSHEET.md` her
 kalemin aritmetiğini adım adım yazar, JSON dosyaları aynı girdiyi ve sonuçları taşır. Tolerans
@@ -89,5 +90,15 @@ ile chandra balayı, Çarşamba istisnasını ve 59, 60 ve 61 dakikalık horalar
 tasarım belgesinin örneğinin (06:00–18:00 Pazartesi) aralarında bulunduğunu sabitler. Okuma
 kuralları, motorun tabloları, sahibin onayını bekleyen varyant noktaları ve bağımsız gözden
 geçirmenin kaydı `muhurta/REVIEW.md`'dedir.
+
+Prashna örnekleri (tasarım belgesi §11 "Test") girdiye üç alan ekler ve `advanced` taşımaz:
+`number` (sayı prashnası: lagna sayıdan türetilir; o zaman `lagna_lon` `null` yazılır),
+`focus_house` (astrologun seçtiği ev; `null` olabilir) ve `retrograde` (hızı eksi sayılan
+grahalar). `lord` nesnesi `graha`, `sign`, `house`, `dignity`, `retrograde` ve `combust` taşır
+(yanma v1'in varsayılan orblarıyladır); kendra ve odak evi listeleri `[graha, sınıf]` çiftleridir.
+Ayrı bir test örneklerin beş sayıyı (1, 9, 10, 54, 108), on iki lagna burcunu, lord ilişkisinin
+beş bağını, "hiçbiri"ni ve aynı grahayı, odak evi seçilmemiş ve lagnasız haritayı, retro ve yanık
+lordu ve iki pakshayı kapsadığını sabitler. Okuma kuralları, motorun tabloları, sahibin onayını
+bekleyen varyant noktaları ve bağımsız gözden geçirmenin kaydı `prashna/REVIEW.md`'dedir.
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.
