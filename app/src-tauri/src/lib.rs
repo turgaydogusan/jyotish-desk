@@ -11,6 +11,7 @@ pub mod prashna_commands;
 pub mod search_commands;
 pub mod store_commands;
 pub mod transit_commands;
+pub mod transit_tools_commands;
 pub mod update_commands;
 
 use std::sync::{Arc, Mutex};
@@ -35,6 +36,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::compute_chart,
             commands::compute_transits,
             transit_commands::transits_at,
+            transit_tools_commands::sankranti::sankranti_list,
             bhava_commands::compute_bhava_table,
             bhava_commands::compute_sudarshana,
             commands::dasha_children,

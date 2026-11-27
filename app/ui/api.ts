@@ -70,6 +70,9 @@ export const api = {
   getAppPrefs: () => wrap(() => commands.getAppPrefs()),
   setAppPrefs: (prefs: AppPrefs) => wrap(() => commands.setAppPrefs(prefs)),
   transitsAt: (at: TransitAt, settings: CalcSettings, natalBhavas: Bhavas, seed: DashaSeed) => wrap(() => commands.transitsAt(at, settings, natalBhavas, seed)),
+  // Geçiş araçları (yol haritası Plan 26). `year` boşsa yerin bugünkü yılıdır ("bugün" Rust'ta
+  // okunur). Yer kişisel veridir: loglanmaz.
+  sankrantiList: (year: number | null, place: MuhurtaPlace, settings: CalcSettings) => wrap(() => commands.sankrantiList(year, place, settings)),
   deleteClient: (clientId: number) => wrap(() => commands.deleteClient(clientId)),
   deleteChart: (chartId: number) => wrap(() => commands.deleteChart(chartId)),
   listClients: (limit: number) => wrap(() => commands.listClients(limit)),

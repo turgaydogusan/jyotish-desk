@@ -23,6 +23,12 @@ export const commands = {
 	/**  Açık haritanın transitleri. `settings`, `natal_bhavas` ve `seed` açık haritadan gelir. */
 	transitsAt: (at: TransitAt, settings: CalcSettings, natalBhavas: Bhavas, seed: DashaSeed, options?: InvokeOptions) => typedError<TransitView, CommandError>(__TAURI_INVOKE("transits_at", { at, settings, natalBhavas, seed }, options)),
 	/**
+	 *  Sankranti listesi: yerin `year` takvim yılında Güneş'in sidereal burç girişleri (haritanın
+	 *  zodyak kipi ne olursa olsun seçili ayanamsayla sidereal) ve her giriş anının tithisi, varası
+	 *  ve Ay nakshatrası. `year` boşsa yerin bugünkü yılı ("bugün" Rust'ta okunur). Yer loglanmaz.
+	 */
+	sankrantiList: (year: number | null, place: MuhurtaPlace, settings: CalcSettings, options?: InvokeOptions) => typedError<SankrantiListView, CommandError>(__TAURI_INVOKE("sankranti_list", { year, place, settings }, options)),
+	/**
 	 *  Bhava tablosu: haritanın ev sisteminde on iki bhavanın başlangıcı, ortası ve bitişi (burç,
 	 *  derece, nakshatra, pada, burç lordu, nakshatra lordu) ve dokuz grahanın bhavası ile bhava
 	 *  başlangıcına ve ortasına uzaklığı. Doğum saati bilinmiyorsa (`time_known == false`) `null`
@@ -1801,6 +1807,40 @@ export type ResolvedRecord = {
  *  doğan (prishthodaya), iki yönlü (ubhayodaya).
  */
 export type RisingMode = "HeadFirst" | "BackFirst" | "BothWays";
+
+/**  Güneş'in bir sidereal burca girişi ve o anın olguları. */
+export type Sankranti = {
+	jd_ut: number | null,
+	/**  Girilen sidereal burç. */
+	sign: Sign,
+	/**  Giriş anının tithisi, 1..=30. */
+	tithi: number,
+	paksha: Paksha,
+	/**  Giriş anını içeren günün varası (gün, yerin gün doğumunda başlar). */
+	vara: Vara,
+	/**  Giriş anında Ay'ın nakshatrası (1..=27) ve padası (1..=4). */
+	nakshatra: number,
+	pada: number,
+};
+
+export type SankrantiListView = {
+	/**  Listenin yılı (yıl verilmediyse yerin bugünkü yılı). */
+	year: number,
+	/**  Zaman sırasıyla; olağan bir yılda on iki satır. */
+	rows: SankrantiView[],
+	/**  Yılın uçları: yerin 1 Ocak 00:00'ı ve sonraki 1 Ocak 00:00'ı. */
+	from_jd_ut: number | null,
+	to_jd_ut: number | null,
+	/**  `LowPrecision` ya da `SunriseUnavailable`. */
+	warnings: ChartWarning[],
+	method: string,
+};
+
+/**  Bir Sankranti ve o andaki UTC ofseti (saat, yerin diliminde gösterilir). */
+export type SankrantiView = {
+	sankranti: Sankranti,
+	offset_secs: number,
+};
 
 /**  "Aramayı sakla"nın girdisi. */
 export type SaveSearchRequest = {
