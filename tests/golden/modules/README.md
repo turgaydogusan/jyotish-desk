@@ -56,6 +56,7 @@ doğum anı ve 365,25 günlük yıl kullanır, tarihleri el yıllarının biriki
 | `kuta` | `scores` (sekiz kuta, tablo sırasıyla: `kuta`, `score`, `groom_class`, `bride_class`), `total`, `bhakoot_exception`, `nadi_exception`, `kuja_dosha` (`[damat rolü, gelin rolü]`), `overlay` (`groom` ve `bride`: dokuzar satır `[diğer tarafın lagnasından ev ya da null, Ay'ından ev]`), `approximate` | 8 |
 | `muhurta` | `eighth_min`, `rahu`, `yamaganda`, `gulika` (`segment`, `from_min`, `to_min`), `abhijit` (`from_min`, `to_min`), `abhijit_weekday_exception`, `hora_min`, `hora_lords` (24), `tithi_group`, `nakshatra_nature`, `tara` (`number`, `favourable`), `chandra` (`house`, `favourable`) | 7 |
 | `prashna` | `lagna` (`sign`, `deg_in_sign`, `kind`, `rising`, `lord`, dört `kendras`; lagna yoksa `null`), `focus` (`house`, `sign`, `lord`, `same_graha`, `links`, iki ev sayısı, `occupants`; odak evi ya da lagna yoksa `null`), `moon` (`sign`, `house`, `nakshatra`, `pada`, `tithi`, `paksha`, `aspected_by`) | 14 |
+| `avastha` (alt klasörler: `lajjitadi`, `shayanadi`) | `lajjitadi/`: `baladi`, `jagradadi`, `lajjitadi` (yedi graha; durum ve kuralı sağlayan grahalar), `absent`; `shayanadi/`: `basis` (`birth_nakshatra`, `ghatis`, `lagna_sign_number`), `grahas` (yedi graha: `state`, `nakshatra`, `navamsa`, `total`); Shayanadi hesaplanmıyorsa `expected` `null` | 7 + 6 |
 
 Shadbala örnekleri çalışma kâğıdıdır (tasarım belgesi §7 "Test"): `shadbala/WORKSHEET.md` her
 kalemin aritmetiğini adım adım yazar, JSON dosyaları aynı girdiyi ve sonuçları taşır. Tolerans
@@ -100,5 +101,15 @@ Ayrı bir test örneklerin beş sayıyı (1, 9, 10, 54, 108), on iki lagna burcu
 beş bağını, "hiçbiri"ni ve aynı grahayı, odak evi seçilmemiş ve lagnasız haritayı, retro ve yanık
 lordu ve iki pakshayı kapsadığını sabitler. Okuma kuralları, motorun tabloları, sahibin onayını
 bekleyen varyant noktaları ve bağımsız gözden geçirmenin kaydı `prashna/REVIEW.md`'dedir.
+
+Avastha örnekleri (yol haritası §4.4, Plan 24) ayrı bir test dosyasıyla yüklenir
+(`crates/jyotish-core/tests/avastha_golden.rs`) ve iki alt klasörde durur. `lajjitadi/` örnekleri
+ortak girdiyi (`lagna_lon`, `grahas`) kullanır; `shayanadi/` örnekleri girdiye
+`minutes_since_sunrise` ekler (gün doğumundan doğuma geçen dakika; `null` o gün gün doğumu olmayan
+yerdir). Ayrı testler altı Lajjitadi durumunun her birinin en az bir örnekte oluştuğunu ve en az
+birinde "oluşmayan" olarak gösterildiğini, beş Baladi basamağının tek ve çift burçta, on iki
+Shayanadi durumunun ve artanın sıfır olduğu durumun örneklerde bulunduğunu sabitler. Okuma
+kuralları, motorun tabloları, sahibin onayını bekleyen varyant noktaları ve gözden geçirme kaydı
+`avastha/REVIEW.md`'dedir.
 
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.
