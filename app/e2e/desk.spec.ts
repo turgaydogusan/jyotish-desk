@@ -1239,3 +1239,75 @@ test("event search: the panel from the palette, the event list in the chart's ti
   await expect(panel).toHaveCount(0);
   expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
 });
+
+test("natal extras: panchang additions, navatara with the transit taras and vimshopaka bala from the palette", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async (query: string, name: RegExp) => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill(query);
+    await palette.getByRole("option", { name }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  // Üç rapor da panel açılmadan istenmez (K1).
+  for (const cmd of ["compute_panchang_extras", "compute_navatara", "compute_vimshopaka"]) expect(await ipcCalls(page, cmd)).toHaveLength(0);
+
+  // Panchang paneli: beş uzvun altında panchang ekleri.
+  await toggle("panchang", /Panchang panelini aç\/kapat/);
+  const panchang = page.getByRole("region", { name: "Panchang", exact: true });
+  const extras = panchang.getByRole("table", { name: "Panchang ekleri" });
+  await expect(extras.locator('tr[data-extra="yogi_point"] td')).toHaveText("Ter 9°19′ · Swati · pada 1");
+  await expect(extras.locator('tr[data-extra="yogi"] td')).toHaveText("Rahu");
+  await expect(extras.locator('tr[data-extra="avayogi"] td')).toHaveText("Venüs · Purva Ashadha");
+  await expect(extras.locator('tr[data-extra="dagdha"] td')).toHaveText("Yay, Bal");
+  await expect(panchang.getByText(/^Doğrulanmamış tablo: dagdha rasi tablosu/)).toBeVisible();
+  expect(await ipcCalls(page, "compute_panchang_extras")).toHaveLength(1);
+
+  // Navatara: doğum tablosu ve transit anının taraları; an Rust'a transit deposundan gider.
+  await toggle("navatara", /Navatara panelini aç\/kapat/);
+  const navatara = page.getByRole("region", { name: "Navatara" });
+  await expect(navatara).toBeFocused();
+  const natal = navatara.getByRole("table", { name: /^Navatara: doğum nakshatrası Swati/ });
+  await expect(natal.locator('tbody tr[data-tara="1"] td')).toHaveText(["Swati (Ay)", "Shatabhisha", "Ardra", "Rahu", "elverişli kümede değil"]);
+  const transit = navatara.getByRole("table", { name: /^Transit grahalarının tarası,/ });
+  await expect(transit.locator('tbody tr[data-graha="Moon"] td')).toHaveText(["Rohini · pada 4", "8 · Mitra", "2", "elverişli kümede"]);
+  const navataraCalls = (await ipcCalls(page, "compute_navatara")) as { transitJdUt: number | null }[];
+  expect(navataraCalls.at(-1)?.transitJdUt).toBe(FIXTURE.transit.snapshot.jd_ut);
+  // Ortak vurgu: tablodaki Ay, haritadaki Ay'ı vurgular.
+  await natal.locator('tbody tr[data-tara="1"]').getByRole("button", { name: "Ay" }).hover();
+  await expect(page.locator('svg [data-graha="Moon"]').first()).toHaveClass(/chart-planet--highlight/);
+  await expect(natal.locator('tbody tr[data-tara="8"]')).toHaveClass(/is-highlighted/);
+
+  // Vimshopaka bala: özet ve varga görünümü; ayar düzenle birlikte saklanır.
+  await toggle("vimshopaka", /Vimshopaka bala panelini aç\/kapat/);
+  const vimshopaka = page.getByRole("region", { name: "Vimshopaka bala" });
+  await expect(vimshopaka).toBeFocused();
+  const summary = vimshopaka.getByRole("table", { name: /^Vimshopaka bala: yedi grahanın dört varga kümesindeki değeri/ });
+  await expect(summary.locator('tbody tr[data-graha="Jupiter"] td')).toHaveText(["17.200", "17.200", "14.150", "13.700"]);
+  await vimshopaka.getByRole("combobox", { name: "Ayrıntı" }).selectOption("vargas");
+  const vargas = vimshopaka.getByRole("table", { name: "On altı vargada burç ve basamak değeri" });
+  await expect(vargas.locator('tbody tr[data-graha="Sun"] td[data-varga="D9"]')).toHaveText("Asl 20");
+  await expect(vimshopaka.getByText(/^Doğrulanmamış tablo: küme ağırlıkları/)).toBeVisible();
+  expect(await ipcCalls(page, "compute_vimshopaka")).toHaveLength(1);
+  await expect
+    .poll(async () => {
+      const saved = (await ipcCalls(page, "save_view_state")).at(-1) as { viewState: { panel_layout: { active_layout_id: string; layouts: { id: string; panels: { kind: string; settings: unknown }[] }[] } } } | undefined;
+      const layout = saved?.viewState.panel_layout;
+      return layout?.layouts
+        .find((l) => l.id === layout.active_layout_id)
+        ?.panels.filter((p) => p.kind === "navatara" || p.kind === "vimshopaka")
+        .map((p) => [p.kind, p.settings]);
+    })
+    .toEqual([
+      ["navatara", {}],
+      ["vimshopaka", { detail: "vargas" }],
+    ]);
+
+  // Aynı komut paneli kaldırır; odak gövdeye düşmez.
+  await toggle("navatara", /Navatara panelini aç\/kapat/);
+  await expect(navatara).toHaveCount(0);
+  await expect(vimshopaka).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+});

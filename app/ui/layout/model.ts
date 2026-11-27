@@ -25,6 +25,7 @@ export const PANEL_KINDS = [
   "prashna_facts",
   "event_search",
   "navatara",
+  "vimshopaka",
 ] as const;
 export type KnownPanelKind = (typeof PANEL_KINDS)[number];
 
@@ -56,6 +57,7 @@ export const MODULE_PANELS = [
   { kind: "event_search", w: 7, h: 18 },
   // Doğum anı ekleri (Plan 23).
   { kind: "navatara", w: 7, h: 16 },
+  { kind: "vimshopaka", w: 7, h: 12 },
 ] as const satisfies readonly { kind: KnownPanelKind; w: number; h: number }[];
 export type ModulePanelKind = (typeof MODULE_PANELS)[number]["kind"];
 

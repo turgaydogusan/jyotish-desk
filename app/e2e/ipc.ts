@@ -132,6 +132,7 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         // yalnızca doğum tablosunu döner (Rust'taki gibi).
         compute_panchang_extras: () => fixture.natal_extras.panchang_extras,
         compute_navatara: (args) => (args.transitJdUt === null ? { ...fixture.natal_extras.navatara, transit: null, transit_jd_ut: null } : fixture.natal_extras.navatara),
+        compute_vimshopaka: () => fixture.natal_extras.vimshopaka,
         // Yogalar: fikstürdeki iki gerçek sonuç (doğum saati bilinen ve bilinmeyen girdi).
         compute_yogas: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.yogas : fixture.yogas_time_unknown),
         // Uyum: eş haritanın girdisi ve kısa kimliği; başka kimlik `null` döner (harita yok).

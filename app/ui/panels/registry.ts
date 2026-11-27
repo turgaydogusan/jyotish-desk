@@ -24,6 +24,7 @@ import { PrashnaFactsPanel } from "./PrashnaFactsPanel";
 import { ShadbalaPanel } from "./ShadbalaPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
+import { VimshopakaPanel } from "./VimshopakaPanel";
 import { YogasPanel } from "./YogasPanel";
 
 export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
@@ -62,6 +63,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   event_search: { titleKey: "panel.event_search", component: EventSearchPanel },
   // Doğum anı ekleri (Plan 23).
   navatara: { titleKey: "panel.navatara", component: NavataraPanel },
+  vimshopaka: { titleKey: "panel.vimshopaka", component: VimshopakaPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

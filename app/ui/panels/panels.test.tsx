@@ -26,6 +26,7 @@ import { PanchangPanel } from "./PanchangPanel";
 import { panelDefinition, PANEL_REGISTRY } from "./registry";
 import { ShadbalaPanel } from "./ShadbalaPanel";
 import { UnavailablePanel } from "./UnavailablePanel";
+import { VimshopakaPanel } from "./VimshopakaPanel";
 import { YogasPanel } from "./YogasPanel";
 
 const chartPanel = (settings: Record<string, unknown> = { varga: "D1", style: "north" }): Panel => ({
@@ -62,6 +63,7 @@ test("registry covers every catalog kind", () => {
   expect(PANEL_REGISTRY.muhurta_search.component).toBe(MuhurtaSearchPanel);
   expect(PANEL_REGISTRY.event_search.component).toBe(EventSearchPanel);
   expect(PANEL_REGISTRY.navatara.component).toBe(NavataraPanel);
+  expect(PANEL_REGISTRY.vimshopaka.component).toBe(VimshopakaPanel);
   // Kataloğun her türü uygulanmıştır: yer tutucu yoktur.
   for (const kind of PANEL_KINDS) expect(PANEL_REGISTRY[kind].component, kind).not.toBe(UnavailablePanel);
   expect(panelDefinition("yoga_list")).toMatchObject({ titleKey: "panel.unknown", component: UnavailablePanel });
