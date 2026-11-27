@@ -149,6 +149,20 @@ test("format errors stay in the form, focus the first invalid field and clear wh
   expect(within(dialog()).queryByText(/Düzeltilmesi gereken/)).toBeNull();
 });
 
+test("a time error from Rust while the moment is now is shown by the moment choice and takes focus", async () => {
+  vi.mocked(api.createPrashna).mockResolvedValueOnce({ status: "error", error: { code: "invalid_prashna_input", params: { field: "at" } } });
+  renderForm();
+  submit();
+  await wait();
+  expect(onClose).not.toHaveBeenCalled();
+  expect(within(dialog()).getByText(/Bu an bu yerde çözülemedi\./)).toBeInTheDocument();
+  expect(field("Şimdi")).toHaveAttribute("aria-invalid", "true");
+  expect(field("Şimdi")).toHaveAccessibleDescription(/Bu an bu yerde çözülemedi\./);
+  expect(document.activeElement).toBe(field("Şimdi"));
+  fireEvent.click(field("Başka bir an"));
+  expect(within(dialog()).queryByText(/Bu an bu yerde çözülemedi\./)).toBeNull();
+});
+
 test("a field error from Rust is shown on its field with a static message; other errors are a form alert", async () => {
   vi.mocked(api.createPrashna).mockResolvedValueOnce({ status: "error", error: { code: "invalid_prashna_input", params: { field: "at" } } });
   renderForm();

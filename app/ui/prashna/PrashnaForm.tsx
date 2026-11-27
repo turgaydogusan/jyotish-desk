@@ -127,11 +127,13 @@ export function PrashnaForm({ onClose, onCreated }: PrashnaFormProps) {
           <legend>{t("prashna.form.moment")}</legend>
           {(["now", "local"] as const).map((m, i) => (
             <label key={m} className="choice">
-              <input type="radio" name={`${id}-moment`} checked={draft.moment === m} data-autofocus={i === 0 ? true : undefined} onChange={() => update({ moment: m }, "at")} />
+              <input type="radio" name={`${id}-moment`} checked={draft.moment === m} data-autofocus={i === 0 ? true : undefined} {...(m === "now" && draft.moment === "now" ? describe("at") : {})} onChange={() => update({ moment: m }, "at")} />
               {t(`prashna.form.moment_${m}`)}
             </label>
           ))}
         </fieldset>
+        {/* "Şimdi" iken `at` hatası (saat okunamadı vb.) tarih alanı olmadığı için burada görünür. */}
+        {draft.moment === "now" && errorLine("at")}
         {draft.moment === "local" && (
           <>
             <div className="form-row">
