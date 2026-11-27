@@ -163,3 +163,8 @@ pub use yogas::{
     YOGA_GRAHAS,
 };
 pub use zodiac::{angular_distance, deg_in_sign, nakshatra_pada, normalize, Sign};
+
+// Geçiş araçları (yol haritası Plan 26). Ayrı blok, dosyanın sonunda: eşzamanlı planların
+// alfabetik gruplardaki ve dosya başındaki ekleriyle aynı satırlara dokunmaz.
+pub mod transit_tools;
+pub use transit_tools::NAKSHATRA_LORDS;

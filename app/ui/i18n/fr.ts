@@ -855,6 +855,8 @@ export const fr: Messages = {
       HouseFromNatalMoon: "{{graha}} : maison {{house}} depuis la Lune natale",
     },
     method: "Méthode : {{method}}. Les instants sont dans le fuseau du lieu choisi ; l’instant d’une ligne change la date de transit.",
+    lordOf: "maître {{graha}}",
+    moonPreset: "Préréglage : entrées de la Lune dans les nakshatras",
   },
   bhavaTable: {
     caption: "Table des bhavas : {{point}}, nakshatra, maîtres et arc des douze bhavas",
@@ -920,6 +922,7 @@ export const fr: Messages = {
     approx: "approximatif",
     karaka: "Karaka",
     baladi: "Baladi",
+    nakshatraLord: "Maître du nakshatra",
   },
   errors: {
     dasha_empty: "Les sous-périodes de cette période n’ont pas pu être chargées.",
@@ -1381,6 +1384,7 @@ export const fr: Messages = {
     shownNow: "Maintenant : {{when}}",
     shown: "Moment affiché : {{when}}",
     caption: "Positions des transits, {{when}}",
+    nakshatraLord: "Maître du nakshatra",
     col: { graha: "Graha", sign: "Signe", degree: "Degré", nakshatra: "Nakshatra", house: "Maison natale", retro: "Rétro" },
   },
 };

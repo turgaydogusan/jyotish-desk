@@ -1,10 +1,12 @@
 // Transit tablosu (UI spec §3.3). Konumlar ve natal evler Rust'tan (`transits_at`); saat
 // bilinmiyorsa natal ev gösterilmez (spec §7). Retro düz "R", düğümlerde yok (spec §2.3).
+// Nakshatra lordu Rust'ın tablosundan okunur (`nakshatraLord`; Plan 26).
 import { useTranslation } from "react-i18next";
 import { signIndex } from "../chart/adapter";
 import { RETRO_MARK, showsRetro, type GrahaId } from "../chart/types";
 import { formatDegree } from "../panels/format";
 import { nakshatraName } from "../panels/labels";
+import { nakshatraLord } from "../panels/nakshatraLord";
 import { PanelError, usePanelLoadPhase } from "../panels/states";
 import type { PanelProps } from "../panels/types";
 import { timeUnknown } from "../session/birth";
@@ -21,6 +23,10 @@ export function TransitTablePanel(_: PanelProps) {
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
   const unknown = timeUnknown(opened);
   const view = transit.view;
+  const lordName = (nakshatra: number) => {
+    const lord = nakshatraLord(nakshatra);
+    return lord === null ? "—" : t(`grahaName.${lord}`);
+  };
   return (
     <div className="transit-panel">
       <TransitDate />
@@ -36,6 +42,7 @@ export function TransitTablePanel(_: PanelProps) {
                 <th scope="col">{t("transit.col.sign")}</th>
                 <th scope="col">{t("transit.col.degree")}</th>
                 <th scope="col">{t("transit.col.nakshatra")}</th>
+                <th scope="col">{t("transit.nakshatraLord")}</th>
                 <th scope="col">{t("transit.col.house")}</th>
                 <th scope="col">{t("transit.col.retro")}</th>
               </tr>
@@ -49,6 +56,7 @@ export function TransitTablePanel(_: PanelProps) {
                   <td>
                     {nakshatraName(g.nakshatra)} {g.pada}
                   </td>
+                  <td data-nakshatra-lord={g.graha}>{lordName(g.nakshatra)}</td>
                   <td className="num">{unknown ? "—" : g.natal_house}</td>
                   <td>{showsRetro(g.graha as GrahaId, g.retrograde) ? RETRO_MARK : ""}</td>
                 </tr>

@@ -248,6 +248,9 @@ export const commands = {
 	installUpdate: (version: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("install_update", { version }, options)),
 };
 
+/* Constants */
+export const NAKSHATRA_LORDS = ["Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury","Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury","Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury"] as const;
+
 /* Types */
 /**
  *  İleri modüllerin ayarları (ileri modüller spec'i K7). Yalnızca en az iki uygulanmış seçeneği

@@ -14,6 +14,7 @@ import { BALADI_NAMES } from "./avasthaLabels";
 import { APPROX_COLUMNS, grahaCellText, lagnaCellText, NUMERIC_COLUMNS as NUMERIC } from "./grahaCells";
 import { GRAHA_COLUMNS, grahaColumns, toggleColumn, type GrahaColumn } from "./grahaColumns";
 import { KARAKA_ROLES } from "./labels";
+import { nakshatraLord } from "./nakshatraLord";
 import "./panels.css";
 import { PanelError } from "./states";
 import type { PanelProps } from "./types";
@@ -44,7 +45,9 @@ function grahaCell(t: TFunction, g: GrahaPosition, column: GrahaColumn, approx: 
  * chara karaka rolünü `compute_jaimini`'den okur; açık değilken komut çağrılmaz. Sütun
  * `columns` listesinde değildir: baskı tablosu o listeyi kullanır ve değişmez (K10). İsteğe
  * bağlı "Baladi" sütunu (`settings.baladi`) aynı kalıptır: değer `compute_avasthas`'tan okunur,
- * açık değilken komut çağrılmaz; Rahu, Ketu ve lagna satırında boştur.
+ * açık değilken komut çağrılmaz; Rahu, Ketu ve lagna satırında boştur. İsteğe bağlı "Nakshatra
+ * lordu" sütunu (`settings.nakshatraLord`; Plan 26) komut çağırmaz: lord, satırın nakshatra
+ * numarasıyla Rust'ın tablosundan okunur (`nakshatraLord`); lagna satırında da doludur.
  */
 export function GrahaTablePanel({ panel }: PanelProps) {
   const { t } = useTranslation();
@@ -55,6 +58,11 @@ export function GrahaTablePanel({ panel }: PanelProps) {
   const jaimini = useJaimini(opened, karakaOn);
   const baladiOn = panel.settings.baladi === true;
   const avasthas = useAvasthas(opened, baladiOn);
+  const lordOn = panel.settings.nakshatraLord === true;
+  const lordName = (nakshatra: number) => {
+    const lord = nakshatraLord(nakshatra);
+    return lord === null ? "—" : t(`grahaName.${lord}`);
+  };
 
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
   if (opened.chart.grahas.length === 0) return <p className="panel-message">{t("table.empty")}</p>;
@@ -91,6 +99,10 @@ export function GrahaTablePanel({ panel }: PanelProps) {
             <input type="checkbox" checked={baladiOn} onChange={(e) => setPanelSettings(panel.id, { baladi: e.target.checked })} />
             {t("table.baladi")}
           </label>
+          <label>
+            <input type="checkbox" checked={lordOn} onChange={(e) => setPanelSettings(panel.id, { nakshatraLord: e.target.checked })} />
+            {t("table.nakshatraLord")}
+          </label>
         </fieldset>
       </details>
       {jaimini.error && <PanelError error={jaimini.error} onRetry={jaimini.retry} />}
@@ -106,6 +118,7 @@ export function GrahaTablePanel({ panel }: PanelProps) {
             ))}
             {karakaOn && <th scope="col">{t("table.karaka")}</th>}
             {baladiOn && <th scope="col">{t("table.baladi")}</th>}
+            {lordOn && <th scope="col">{t("table.nakshatraLord")}</th>}
           </tr>
         </thead>
         <tbody>
@@ -119,6 +132,7 @@ export function GrahaTablePanel({ panel }: PanelProps) {
               ))}
               {karakaOn && <td />}
               {baladiOn && <td />}
+              {lordOn && <td data-nakshatra-lord="lagna">{lordName(opened.chart.lagna.nakshatra)}</td>}
             </tr>
           )}
           {opened.chart.grahas.map((g) => {
@@ -170,6 +184,14 @@ export function GrahaTablePanel({ panel }: PanelProps) {
                         {baladi.get(g.graha)}
                       </Approx>
                     )}
+                  </td>
+                )}
+                {lordOn && (
+                  <td data-nakshatra-lord={g.graha}>
+                    {/* Ay'ın nakshatrası yaklaşık dereceden çıkar: lordu da "≈" taşır (K2). */}
+                    <Approx on={approx} label={t("table.approx")}>
+                      {lordName(g.nakshatra)}
+                    </Approx>
                   </td>
                 )}
               </tr>

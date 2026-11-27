@@ -28,6 +28,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
         .disable_serde_phases()
+        // Nakshatra lordları tablosu (Plan 26): arayüz lordu bu sabitten okur, türetmez (C4).
+        .constant("NAKSHATRA_LORDS", jyotish_core::NAKSHATRA_LORDS)
         .commands(tauri_specta::collect_commands![
             commands::engine_status,
             commands::compute_chart,

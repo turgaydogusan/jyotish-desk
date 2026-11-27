@@ -5,6 +5,9 @@
 // Olay bir olgudur: "iyi" ya da "kötü" hükmü ve açıklama metni yoktur. Retro düz `R`'dir.
 // Arama durumu ve sonuç sayısı hep DOM'da duran tek bir `role="status"` bölgesindedir. Liste,
 // başlatıldığı isteğin kopyasına bağlıdır (D24): yeni arama başlayınca önceki liste kalkar.
+// Nakshatra girişi satırı girilen nakshatranın lordunu da yazar (Plan 26): lord Rust'ın tablosundan
+// okunur. "Hazır seçim" düğmesi tür ve graha seçimini Ay'ın nakshatra girişlerine çevirir; aramayı
+// başlatmaz.
 import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import type { CommandError, EventSearchSpec, Graha, OpenedClient, SkyEventKind, SkyEventView } from "../bindings";
@@ -23,6 +26,7 @@ import { useTransitControl } from "../transit/store";
 import { useLayoutStore } from "../view/store";
 import { formatJdClock, formatJdDate, formatJdMinute } from "./format";
 import { nakshatraName } from "./labels";
+import { nakshatraLord } from "./nakshatraLord";
 import { PlaceControls, PlaceMissing, usePanelPlace } from "./MuhurtaPlace";
 import "./panels.css";
 import { PanelError, usePanelLoadPhase } from "./states";
@@ -147,6 +151,9 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
             {t("eventSearch.run")}
           </button>
           {running && <StopButton onStop={search.stop} fallback={runButton} />}
+          <button type="button" onClick={() => setPanelSettings(panel.id, { kinds: ["NakshatraIngress"], grahas: ["Moon"] })}>
+            {t("eventSearch.moonPreset")}
+          </button>
         </div>
         {!ready && <div id={`${id}-why`}>{why !== null ? <p className="chart-toolbar-hint">{t(`eventSearch.why.${why}`)}</p> : <PlaceMissing choice={place.choice} />}</div>}
       </form>
@@ -227,7 +234,15 @@ function Results({ search, stale, statusId }: { search: EventSearch; stale: bool
         return t(`eventSearch.event.${e.kind}`, { graha: name(a) });
     }
   };
-  const where = ({ event: e }: SkyEventView) => [e.sign === null ? null : t(`sign.${signIndex(e.sign)}`), e.nakshatra === null ? null : nakshatraName(e.nakshatra)].filter((x) => x !== null).join(" · ");
+  // Yalnızca nakshatra girişi satırında: girilen nakshatranın lordu.
+  const lord = ({ event: e }: SkyEventView) => {
+    const graha = e.kind === "NakshatraIngress" ? nakshatraLord(e.nakshatra) : null;
+    return graha === null ? null : t("eventSearch.lordOf", { graha: name(graha) });
+  };
+  const where = (row: SkyEventView) => {
+    const e = row.event;
+    return [e.sign === null ? null : t(`sign.${signIndex(e.sign)}`), e.nakshatra === null ? null : nakshatraName(e.nakshatra), lord(row)].filter((x) => x !== null).join(" · ");
+  };
   const day = (jd: number | null, offset: number) => formatJdDate(jd, offset);
   // Kesilen liste son olayın anına dek taranmıştır: an, o olayın kendi ofsetiyle yazılır.
   const until = formatJdMinute(view.scanned_to_jd_ut, view.events.at(-1)?.offset_secs ?? view.to_offset_secs);

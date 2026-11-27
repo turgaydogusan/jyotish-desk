@@ -855,6 +855,8 @@ export const en: Messages = {
       HouseFromNatalMoon: "{{graha}}: house {{house}} from the natal Moon",
     },
     method: "Method: {{method}}. Moments are in the time zone of the selected place; the moment in a row changes the transit date.",
+    lordOf: "lord {{graha}}",
+    moonPreset: "Preset: the Moon's nakshatra ingresses",
   },
   bhavaTable: {
     caption: "Bhava table: {{point}} point, nakshatra, lords and arc of the twelve bhavas",
@@ -920,6 +922,7 @@ export const en: Messages = {
     approx: "approximate",
     karaka: "Karaka",
     baladi: "Baladi",
+    nakshatraLord: "Nakshatra lord",
   },
   errors: {
     dasha_empty: "The sub-periods of this period could not be loaded.",
@@ -1381,6 +1384,7 @@ export const en: Messages = {
     shownNow: "Now: {{when}}",
     shown: "Shown moment: {{when}}",
     caption: "Transit positions, {{when}}",
+    nakshatraLord: "Nakshatra lord",
     col: { graha: "Graha", sign: "Sign", degree: "Degree", nakshatra: "Nakshatra", house: "Natal house", retro: "Retro" },
   },
 };

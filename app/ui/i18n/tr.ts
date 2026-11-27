@@ -854,6 +854,8 @@ export const tr = {
       HouseFromNatalMoon: "{{graha}}: doğum Ay'ından {{house}}. ev",
     },
     method: "Yöntem: {{method}}. Anlar seçilen yerin saat dilimindedir; satırdaki an transit tarihini değiştirir.",
+    lordOf: "lordu {{graha}}",
+    moonPreset: "Hazır seçim: Ay'ın nakshatra girişleri",
   },
   bhavaTable: {
     caption: "Bhava tablosu: on iki bhavanın {{point}} noktası, nakshatrası, lordları ve yayı",
@@ -919,6 +921,7 @@ export const tr = {
     approx: "yaklaşık",
     karaka: "Karaka",
     baladi: "Baladi",
+    nakshatraLord: "Nakshatra lordu",
   },
   errors: {
     dasha_empty: "Bu dönemin alt dönemleri alınamadı.",
@@ -1380,6 +1383,7 @@ export const tr = {
     shownNow: "Şimdi: {{when}}",
     shown: "Gösterilen an: {{when}}",
     caption: "Transit konumları, {{when}}",
+    nakshatraLord: "Nakshatra lordu",
     col: { graha: "Graha", sign: "Burç", degree: "Derece", nakshatra: "Nakshatra", house: "Natal ev", retro: "Retro" },
   },
 };
