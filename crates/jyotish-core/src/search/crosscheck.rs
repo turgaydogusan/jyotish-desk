@@ -4,6 +4,7 @@
 
 use ephemeris::Body;
 use proptest::prelude::*;
+use proptest::test_runner::TestCaseError;
 
 use crate::chart::{compute_chart_for, Chart};
 use crate::dignity::Dignity;
@@ -20,7 +21,7 @@ use crate::varga::Varga;
 use crate::yogas::{compute_yogas, YOGA_CATALOG};
 use crate::zodiac::Sign;
 
-use super::eval::{evaluate, search_facts, Outcome};
+use super::eval::{evaluate, search_facts, MatchFact, Outcome, SearchFacts};
 use super::query::{date_noon_jd, ChartQuery, Condition, GrahaFlag, QueryCondition, QueryScope};
 
 const JD: f64 = 2_451_545.0;
@@ -188,36 +189,66 @@ fn pos(chart: &Chart, graha: Graha) -> &crate::graha::GrahaPosition {
     &chart.grahas[graha as usize]
 }
 
-/// Tam yol: koşulun haritada tutup tutmadığı, v1 haritasından ve modül toplayıcılarından
-/// okunarak. Evler lagnadan burç evidir (K4).
-fn full_holds(eph: &mut FakeEph, cond: &Condition, input: &ChartInput, now: f64) -> bool {
+/// Tam yol: koşul haritada tutuyorsa beklenen olgu (`condition` 0, `negated` yanlış), tutmuyorsa
+/// `None`. Her alan v1 haritasından ve modül toplayıcılarından okunur; evler lagnadan burç
+/// evidir (K4).
+fn full_fact(
+    eph: &mut FakeEph,
+    cond: &Condition,
+    input: &ChartInput,
+    now: f64,
+) -> Option<MatchFact> {
     let chart = compute_chart_for(eph, input).unwrap();
     let lagna = input.time_known.then_some(chart.lagna.sign);
     let house = |g: Graha| lagna.map(|l| whole_sign_house(pos(&chart, g).sign, l));
     let varga_chart = |v: Varga| chart.vargas.iter().find(|c| c.varga == v).unwrap();
+    let placed = |g: Graha| MatchFact {
+        grahas: vec![g],
+        sign: Some(pos(&chart, g).sign),
+        house: house(g),
+        retrograde: pos(&chart, g).retrograde && !g.is_node(),
+        ..MatchFact::default()
+    };
     match cond {
         Condition::GrahaInSign {
             graha,
             signs,
             varga,
         } => {
-            let placement = varga_chart(*varga)
+            let sign = varga_chart(*varga)
                 .placements
                 .iter()
                 .find(|p| p.graha == *graha)
-                .unwrap();
-            signs.contains(&placement.sign)
+                .unwrap()
+                .sign;
+            signs.contains(&sign).then(|| {
+                if *varga == Varga::D1 {
+                    placed(*graha)
+                } else {
+                    MatchFact {
+                        grahas: vec![*graha],
+                        sign: Some(sign),
+                        ..MatchFact::default()
+                    }
+                }
+            })
         }
-        Condition::GrahaInHouse { graha, houses } => {
-            house(*graha).is_some_and(|h| houses.contains(&h))
-        }
+        Condition::GrahaInHouse { graha, houses } => house(*graha)
+            .is_some_and(|h| houses.contains(&h))
+            .then(|| placed(*graha)),
         Condition::GrahaInNakshatra {
             graha,
             nakshatras,
             padas,
         } => {
             let g = pos(&chart, *graha);
-            nakshatras.contains(&g.nakshatra) && (padas.is_empty() || padas.contains(&g.pada))
+            (nakshatras.contains(&g.nakshatra) && (padas.is_empty() || padas.contains(&g.pada)))
+                .then(|| MatchFact {
+                    grahas: vec![*graha],
+                    nakshatra: Some(g.nakshatra),
+                    pada: Some(g.pada),
+                    ..MatchFact::default()
+                })
         }
         Condition::GrahaState {
             graha,
@@ -225,53 +256,155 @@ fn full_holds(eph: &mut FakeEph, cond: &Condition, input: &ChartInput, now: f64)
             dignities,
         } => {
             let g = pos(&chart, *graha);
-            flags.iter().any(|f| match f {
-                GrahaFlag::Retrograde => g.retrograde && !graha.is_node(),
-                GrahaFlag::Combust => g.combust,
-                GrahaFlag::Vargottama => g.vargottama,
-            }) || g.dignity.is_some_and(|d| dignities.contains(&d))
+            let held: Vec<GrahaFlag> = flags
+                .iter()
+                .copied()
+                .filter(|f| match f {
+                    GrahaFlag::Retrograde => g.retrograde && !graha.is_node(),
+                    GrahaFlag::Combust => g.combust,
+                    GrahaFlag::Vargottama => g.vargottama,
+                })
+                .collect();
+            let own = g.dignity.filter(|d| dignities.contains(d));
+            (!held.is_empty() || own.is_some()).then(|| MatchFact {
+                flags: held,
+                dignity: own,
+                ..placed(*graha)
+            })
         }
         Condition::LagnaInSign { signs, varga } => {
-            input.time_known && signs.contains(&varga_chart(*varga).lagna_sign)
+            let sign = varga_chart(*varga).lagna_sign;
+            (input.time_known && signs.contains(&sign)).then(|| MatchFact {
+                sign: Some(sign),
+                ..MatchFact::default()
+            })
         }
-        Condition::Conjunction { grahas } => grahas
-            .iter()
-            .all(|g| pos(&chart, *g).sign == pos(&chart, grahas[0]).sign),
+        Condition::Conjunction { grahas } => {
+            let sign = pos(&chart, grahas[0]).sign;
+            grahas
+                .iter()
+                .all(|g| pos(&chart, *g).sign == sign)
+                .then(|| MatchFact {
+                    grahas: grahas.clone(),
+                    sign: Some(sign),
+                    house: lagna.map(|l| whole_sign_house(sign, l)),
+                    ..MatchFact::default()
+                })
+        }
         Condition::GrahaAspects { from, to } => compute_drishti(eph, input)
             .unwrap()
             .sign_aspects
             .iter()
-            .any(|a| a.graha == *from && a.occupants.contains(to)),
-        Condition::HouseLordInHouse { lord_of, houses } => lagna
-            .is_some_and(|l| house(house_lord(l, *lord_of)).is_some_and(|h| houses.contains(&h))),
+            .any(|a| a.graha == *from && a.occupants.contains(to))
+            .then(|| MatchFact {
+                grahas: vec![*from, *to],
+                ..MatchFact::default()
+            }),
+        Condition::HouseLordInHouse { lord_of, houses } => lagna.and_then(|l| {
+            let lord = house_lord(l, *lord_of);
+            house(lord)
+                .is_some_and(|h| houses.contains(&h))
+                .then(|| placed(lord))
+        }),
         Condition::MoonPhase { tithis, paksha } => {
             let t = &chart.panchang.tithi;
-            tithis.contains(&t.no) || *paksha == Some(t.paksha)
+            (tithis.contains(&t.no) || *paksha == Some(t.paksha)).then(|| MatchFact {
+                tithi: Some(t.no),
+                ..MatchFact::default()
+            })
         }
         Condition::DashaAt { date, level, lords } => {
             let at = date.as_deref().map_or(now, |d| date_noon_jd(d).unwrap());
+            // Doğumdan önceki an dönem sayılmaz: ağacın ilk dönemi doğumdan önce başlar.
             chart
                 .dasha
                 .periods
                 .iter()
                 .find(|p| p.level == *level && p.start_jd_ut <= at && at < p.end_jd_ut)
-                .is_some_and(|p| lords.contains(p.lords.last().unwrap()))
+                .filter(|p| at >= input.jd_ut && lords.contains(p.lords.last().unwrap()))
+                .map(|p| MatchFact {
+                    grahas: p.lords.clone(),
+                    ..MatchFact::default()
+                })
         }
         Condition::CharaKaraka { role, grahas } => compute_jaimini(eph, input)
             .unwrap()
             .karakas
             .iter()
-            .any(|k| k.role == *role && grahas.contains(&k.graha)),
+            .find(|k| k.role == *role && grahas.contains(&k.graha))
+            .map(|k| MatchFact {
+                grahas: vec![k.graha],
+                ..MatchFact::default()
+            }),
         Condition::ArudhaInSign { pada, signs } => compute_jaimini(eph, input)
             .unwrap()
             .arudhas
-            .is_some_and(|a| signs.contains(&a[usize::from(*pada) - 1].sign)),
-        Condition::YogaPresent { ids } => compute_yogas(eph, input)
-            .unwrap()
-            .hits
-            .iter()
-            .any(|h| ids.contains(&h.id)),
+            .map(|a| a[usize::from(*pada) - 1].sign)
+            .filter(|s| signs.contains(s))
+            .map(|sign| MatchFact {
+                sign: Some(sign),
+                ..MatchFact::default()
+            }),
+        Condition::YogaPresent { ids } => {
+            let hits = compute_yogas(eph, input).unwrap().hits;
+            let formed: Vec<String> = ids
+                .iter()
+                .filter(|id| hits.iter().any(|h| h.id == **id))
+                .cloned()
+                .collect();
+            (!formed.is_empty()).then(|| MatchFact {
+                yogas: formed,
+                ..MatchFact::default()
+            })
+        }
     }
+}
+
+fn full_holds(eph: &mut FakeEph, cond: &Condition, input: &ChartInput, now: f64) -> bool {
+    full_fact(eph, cond, input, now).is_some()
+}
+
+fn single(cond: &Condition, negate: bool) -> ChartQuery {
+    ChartQuery {
+        all_of: vec![QueryCondition {
+            cond: cond.clone(),
+            negate,
+        }],
+        scope: QueryScope::default(),
+    }
+}
+
+/// Tek koşullu sorgunun iki kutbu da tam yolla aynıdır ve tutan koşulun olgusu, alan alan,
+/// haritanın gösterdiğidir.
+fn check_single(
+    eph: &mut FakeEph,
+    cond: &Condition,
+    input: &ChartInput,
+    facts: &SearchFacts,
+    now: f64,
+) -> Result<(), TestCaseError> {
+    let plain = evaluate(&single(cond, false), facts, now).unwrap();
+    let negated = evaluate(&single(cond, true), facts, now).unwrap();
+    if !input.time_known && cond.needs_lagna() {
+        prop_assert_eq!(&plain, &Outcome::TimeUnknown, "{:?}", cond);
+        prop_assert_eq!(&negated, &Outcome::TimeUnknown, "{:?}", cond);
+        return Ok(());
+    }
+    match full_fact(eph, cond, input, now) {
+        Some(fact) => {
+            prop_assert_eq!(&plain, &Outcome::Match(vec![fact]), "{:?}", cond);
+            prop_assert_eq!(&negated, &Outcome::NoMatch, "{:?}", cond);
+        }
+        None => {
+            prop_assert_eq!(&plain, &Outcome::NoMatch, "{:?}", cond);
+            let only_negated = MatchFact {
+                negated: true,
+                ..MatchFact::default()
+            };
+            prop_assert_eq!(&negated, &Outcome::Match(vec![only_negated]), "{:?}", cond);
+        }
+    }
+    Ok(())
 }
 
 proptest! {
@@ -334,6 +467,91 @@ proptest! {
                 }
             }
             other => prop_assert!(false, "light and full paths disagree: {:?}", other),
+        }
+    }
+
+    /// Her koşul tek başına, iki kutbuyla ve olgusunun bütün alanlarıyla denetlenir: birleşik
+    /// sorgu bir koşulun yanlışını bir başka koşulun arkasında saklayabilir.
+    #[test]
+    fn each_condition_alone_agrees_in_both_polarities_and_reports_the_chart_facts(
+        lons in proptest::array::uniform7(0.0f64..360.0),
+        speeds in proptest::array::uniform7(-1.0f64..1.0),
+        asc in 0.0f64..360.0,
+        node in 0.0f64..360.0,
+        ayanamsa in 20.0f64..26.0,
+        days in -20_000.0f64..20_000.0,
+        now_years in -10.0f64..110.0,
+        settings in settings(),
+        time_known in any::<bool>(),
+        number in proptest::option::weighted(0.2, 1u8..=108),
+        conds in proptest::collection::vec(condition(), 6),
+    ) {
+        let mut speeds = speeds;
+        speeds[1] = 13.2;
+        let mut eph = sky(lons, speeds, asc, node, ayanamsa);
+        let input = ChartInput {
+            jd_ut: JD + days,
+            lat: 41.0,
+            lon: 29.0,
+            settings,
+            time_known,
+            lagna_number: number,
+        };
+        let now = input.jd_ut + now_years * 365.25;
+        let facts = search_facts(&mut eph, &input).unwrap();
+        for cond in &conds {
+            check_single(&mut eph, cond, &input, &facts, now)?;
+        }
+    }
+
+    /// Ayara ve Güneş'e yakınlığa bağlı olgular her haritada eksiksiz sorulur: her grahanın
+    /// durumu (retro, yanık, vargottama; grahalar Güneş'in ±20° yakınında ve iki yönde, yani
+    /// yanma orblarının iki yanında), her karaka rolü ve her arudha padası. Rastgele sorgu bu
+    /// köşelere seyrek düşer.
+    #[test]
+    fn states_karakas_and_arudhas_agree_on_every_graha_role_and_pada(
+        sun in 0.0f64..360.0,
+        offsets in proptest::array::uniform6(-20.0f64..20.0),
+        speeds in proptest::array::uniform7(-1.0f64..1.0),
+        asc in 0.0f64..360.0,
+        node in 0.0f64..360.0,
+        ayanamsa in 20.0f64..26.0,
+        settings in settings(),
+        time_known in any::<bool>(),
+    ) {
+        let mut lons = [sun; 7];
+        for (lon, offset) in lons[1..].iter_mut().zip(offsets) {
+            *lon = (sun + offset).rem_euclid(360.0);
+        }
+        let mut speeds = speeds;
+        speeds[1] = 13.2;
+        let mut eph = sky(lons, speeds, asc, node, ayanamsa);
+        let input = ChartInput {
+            jd_ut: JD,
+            lat: 41.0,
+            lon: 29.0,
+            settings,
+            time_known,
+            lagna_number: None,
+        };
+        let facts = search_facts(&mut eph, &input).unwrap();
+        for graha in Graha::ALL {
+            let mut flags = GrahaFlag::ALL.to_vec();
+            if graha.is_node() {
+                flags.retain(|f| *f != GrahaFlag::Retrograde);
+            }
+            let cond = Condition::GrahaState { graha, flags, dignities: DIGNITIES.to_vec() };
+            check_single(&mut eph, &cond, &input, &facts, JD)?;
+            for role in EIGHT_KARAKA_ROLES {
+                let cond = Condition::CharaKaraka { role, grahas: vec![graha] };
+                check_single(&mut eph, &cond, &input, &facts, JD)?;
+            }
+        }
+        for pada in 1u8..=12 {
+            for half in [&Sign::ALL[..6], &Sign::ALL[6..]] {
+                let cond = Condition::ArudhaInSign { pada, signs: half.to_vec() };
+                check_single(&mut eph, &cond, &input, &facts, JD)?;
+            }
         }
     }
 

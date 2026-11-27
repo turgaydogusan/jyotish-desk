@@ -155,7 +155,14 @@ impl EventSpec {
             return Err(invalid("grahas"));
         }
         let uses_grahas = self.kinds.iter().any(|k| k.uses_grahas());
-        let pairless = self.has(SkyEventKind::Conjunction) && self.grahas.len() < 2;
+        // Kavuşum en az bir aranabilir çift ister; Rahu ile Ketu çifti aranmaz (hep karşı
+        // karşıyadır), yani yalnızca ikisi seçiliyse aranacak çift yoktur.
+        let pair = self.grahas.iter().enumerate().any(|(i, a)| {
+            self.grahas[i + 1..]
+                .iter()
+                .any(|b| !(a.is_node() && b.is_node()))
+        });
+        let pairless = self.has(SkyEventKind::Conjunction) && !pair;
         if (uses_grahas && self.grahas.is_empty()) || pairless {
             return Err(invalid("grahas"));
         }
@@ -806,6 +813,16 @@ mod tests {
         assert_eq!(
             field(spec(30.0, &[SkyEventKind::Conjunction], &[Graha::Sun]).validate(false)),
             "grahas"
+        );
+        // Yalnızca Rahu ile Ketu: aranacak çift yoktur. Üçüncü bir grahayla çift vardır.
+        let conj = [SkyEventKind::Conjunction];
+        assert_eq!(
+            field(spec(30.0, &conj, &[Graha::Rahu, Graha::Ketu]).validate(false)),
+            "grahas"
+        );
+        assert_eq!(
+            spec(30.0, &conj, &[Graha::Rahu, Graha::Ketu, Graha::Sun]).validate(false),
+            Ok(())
         );
         // Açık harita isteyen türler haritasız reddedilir.
         for kind in [

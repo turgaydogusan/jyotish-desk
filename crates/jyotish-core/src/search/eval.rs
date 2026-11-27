@@ -335,13 +335,15 @@ fn holds(
                 None => now_jd_ut,
             };
             let path = dasha_path_at(&facts.seed, at, *level)?;
-            // An 120 yıllık döngünün dışındaysa yol kısadır: koşul tutmaz.
-            (path.len() == usize::from(*level) && lords.contains(&path[path.len() - 1])).then(
-                || MatchFact {
-                    grahas: path,
-                    ..MatchFact::default()
-                },
-            )
+            // An 120 yıllık döngünün dışındaysa yol kısadır: koşul tutmaz. Doğumdan önceki an
+            // da tutmaz: ilk dönem doğumdan önce başlar ama harita o gün henüz yoktur.
+            (at >= facts.seed.birth_jd_ut
+                && path.len() == usize::from(*level)
+                && lords.contains(&path[path.len() - 1]))
+            .then(|| MatchFact {
+                grahas: path,
+                ..MatchFact::default()
+            })
         }
         Condition::CharaKaraka { role, grahas } => chara_karakas(p, facts.karaka_scheme)
             .into_iter()
@@ -670,6 +672,12 @@ mod tests {
         // Doğumdan önceki an döngünün dışındadır: yol boştur, koşul tutmaz.
         assert_eq!(
             run(dasha(Some("1990-01-01"), 1, &Graha::ALL)),
+            Outcome::NoMatch
+        );
+        // 1999-06-15 Satürn mahadashasının içindedir (dönem doğumdan 2,375 yıl önce başlar)
+        // ama doğumdan öncedir: harita o gün yoktur, koşul tutmaz.
+        assert_eq!(
+            run(dasha(Some("1999-06-15"), 1, &Graha::ALL)),
             Outcome::NoMatch
         );
         // Aramanın anı `now_jd_ut`'dir: 20 yıl sonra Merkür.

@@ -27,6 +27,9 @@ pub const MAX_SCOPE_TAGS: usize = 16;
 pub const MAX_SCOPE_TAG_CHARS: usize = 64;
 /// Bir `YogaPresent` koşulundaki en çok yoga kimliği.
 pub const MAX_YOGA_IDS: usize = 16;
+/// Bir koşulun değer kümesindeki en çok öğe (en geniş küme 30 tithidir). Yinelenen değer
+/// zararsızdır ama bozuk bir kayıt kümeyi sınırsız uzatamaz.
+pub const MAX_SET_VALUES: usize = 32;
 /// `DashaAt` koşulunun en derin seviyesi (1 maha, 2 antar, 3 pratyantar).
 pub const MAX_SEARCH_DASHA_LEVEL: u8 = 3;
 
@@ -157,7 +160,7 @@ fn check_set<T: PartialEq>(
     field: &'static str,
     ok: impl Fn(&T) -> bool,
 ) -> Result<(), CoreError> {
-    if values.is_empty() || !values.iter().all(ok) {
+    if values.is_empty() || values.len() > MAX_SET_VALUES || !values.iter().all(ok) {
         return Err(invalid(field));
     }
     Ok(())
@@ -213,7 +216,7 @@ impl Condition {
                 nakshatras, padas, ..
             } => {
                 check_set(nakshatras, "nakshatras", |n| (1..=27).contains(n))?;
-                if padas.iter().any(|p| !(1..=4).contains(p)) {
+                if padas.len() > MAX_SET_VALUES || padas.iter().any(|p| !(1..=4).contains(p)) {
                     return Err(invalid("padas"));
                 }
                 Ok(())
@@ -226,7 +229,8 @@ impl Condition {
                 let empty = flags.is_empty() && dignities.is_empty();
                 // Retro, Rahu ve Ketu için sunulmaz (UI spec §2.3).
                 let node_retro = graha.is_node() && flags.contains(&GrahaFlag::Retrograde);
-                if empty || node_retro {
+                let long = flags.len().max(dignities.len()) > MAX_SET_VALUES;
+                if empty || long || node_retro {
                     return Err(invalid("states"));
                 }
                 Ok(())
@@ -253,7 +257,8 @@ impl Condition {
             }
             Condition::MoonPhase { tithis, paksha } => {
                 let empty = tithis.is_empty() && paksha.is_none();
-                if empty || tithis.iter().any(|t| !(1..=30).contains(t)) {
+                let long = tithis.len() > MAX_SET_VALUES;
+                if empty || long || tithis.iter().any(|t| !(1..=30).contains(t)) {
                     return Err(invalid("tithis"));
                 }
                 Ok(())
@@ -533,6 +538,15 @@ mod tests {
                 "signs",
             ),
             (Condition::YogaPresent { ids: Vec::new() }, "yogas"),
+            // Değer kümesi sınırsız uzayamaz.
+            (mars_in(vec![Sign::Aries; MAX_SET_VALUES + 1]), "signs"),
+            (
+                Condition::MoonPhase {
+                    tithis: vec![1; MAX_SET_VALUES + 1],
+                    paksha: None,
+                },
+                "tithis",
+            ),
             (
                 Condition::YogaPresent {
                     ids: vec!["no.such_rule".into()],
