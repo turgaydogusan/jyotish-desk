@@ -22,6 +22,7 @@ import { PanchangPanel } from "./PanchangPanel";
 import { EventSearchPanel } from "./EventSearchPanel";
 import { PrashnaFactsPanel } from "./PrashnaFactsPanel";
 import { ShadbalaPanel } from "./ShadbalaPanel";
+import { SudarshanaPanel } from "./SudarshanaPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
 import { YogasPanel } from "./YogasPanel";
@@ -51,6 +52,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   bhava_bala: { titleKey: "panel.bhava_bala", component: BhavaBalaPanel },
   // Bhava tablosu (yol haritası Plan 25).
   bhava_table: { titleKey: "panel.bhava_table", component: BhavaTablePanel },
+  // Sudarshana chakra (yol haritası Plan 25).
+  sudarshana: { titleKey: "panel.sudarshana", component: SudarshanaPanel },
   // Yogalar (Plan 18).
   yogas: { titleKey: "panel.yogas", component: YogasPanel },
   // Uyum (Plan 19).

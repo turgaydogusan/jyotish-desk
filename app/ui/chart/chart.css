@@ -82,3 +82,15 @@
   fill: var(--text-2);
   pointer-events: none;
 }
+
+/* Sudarshana chakra: burç numarası halkanın iç şeridinde, küçük ve ikincil tonda. */
+.sudarshana-sign {
+  fill: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.sudarshana-hub {
+  fill: var(--panel);
+  stroke: var(--ink);
+  stroke-width: 0.4;
+}

@@ -430,3 +430,11 @@
   max-height: 24em;
   overflow: auto;
 }
+
+/* Sudarshana chakra: çizim panelin genişliğine sığan bir karedir; tablo altında kayar. */
+.sudarshana-figure {
+  width: 100%;
+  max-width: 34rem;
+  aspect-ratio: 1;
+  margin: 0 auto;
+}

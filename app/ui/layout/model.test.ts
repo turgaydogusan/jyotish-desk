@@ -48,6 +48,7 @@ test("catalog has the seven v1 panel kinds and the module panels", () => {
     "shadbala",
     "bhava_bala",
     "bhava_table",
+    "sudarshana",
     "yogas",
     "compat",
     "muhurta_day",
@@ -61,7 +62,7 @@ test("catalog has the seven v1 panel kinds and the module panels", () => {
 });
 
 test("module panels are known kinds, listed once, with a size the grid accepts", () => {
-  expect(MODULE_PANELS.map((m) => m.kind)).toEqual(["panchang", "ashtakavarga", "drishti", "jaimini_karakas", "arudha", "argala", "shadbala", "bhava_bala", "bhava_table", "yogas", "compat", "muhurta_day", "muhurta_search", "prashna_facts", "event_search"]);
+  expect(MODULE_PANELS.map((m) => m.kind)).toEqual(["panchang", "ashtakavarga", "drishti", "jaimini_karakas", "arudha", "argala", "shadbala", "bhava_bala", "bhava_table", "sudarshana", "yogas", "compat", "muhurta_day", "muhurta_search", "prashna_facts", "event_search"]);
   for (const m of MODULE_PANELS) {
     expect(isKnownPanelKind(m.kind)).toBe(true);
     expect(m.w).toBeGreaterThanOrEqual(minSize(m.kind).w);
