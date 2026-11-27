@@ -25,6 +25,7 @@ export const PANEL_KINDS = [
   "compat",
   "muhurta_day",
   "muhurta_search",
+  "calendar",
   "prashna_facts",
   "event_search",
   "navatara",
@@ -60,6 +61,8 @@ export const MODULE_PANELS = [
   // Muhurta (Plan 20).
   { kind: "muhurta_day", w: 7, h: 18 },
   { kind: "muhurta_search", w: 8, h: 18 },
+  // Transit takvimi (yol haritası Plan 29).
+  { kind: "calendar", w: 9, h: 24 },
   // Prashna (Plan 21).
   { kind: "prashna_facts", w: 7, h: 20 },
   // Olay araması (Plan 22).
