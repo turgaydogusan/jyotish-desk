@@ -38,6 +38,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             transit_commands::transits_at,
             transit_tools_commands::sankranti::sankranti_list,
             transit_tools_commands::ephemeris::ephemeris_month,
+            transit_tools_commands::step::transit_step,
             bhava_commands::compute_bhava_table,
             bhava_commands::compute_sudarshana,
             commands::dasha_children,

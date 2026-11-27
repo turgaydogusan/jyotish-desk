@@ -1,4 +1,5 @@
-//! Geçiş araçlarının komutları (yol haritası Plan 26): Sankranti listesi ve efemeris tablosu.
+//! Geçiş araçlarının komutları (yol haritası Plan 26): Sankranti listesi, efemeris tablosu ve
+//! geçiş anının adımı.
 //! Kalıp muhurta komutlarıyla aynıdır: hesap motor iş parçacığında, komut gövdesi `blocking`
 //! havuzunda, hata `CommandError`; sonuç saklanmaz (K1). "Bu yıl", "bu ay", önceki ve sonraki
 //! ay Rust'ta okunur; arayüz tarih hesabı yapmaz (C4).
@@ -8,6 +9,7 @@
 
 pub mod ephemeris;
 pub mod sankranti;
+pub mod step;
 
 use crate::commands::CommandError;
 

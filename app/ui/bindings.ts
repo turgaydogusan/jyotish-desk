@@ -36,6 +36,12 @@ export const commands = {
 	 */
 	ephemerisMonth: (month: MonthId | null, place: MuhurtaPlace, settings: CalcSettings, options?: InvokeOptions) => typedError<EphemerisMonthView, CommandError>(__TAURI_INVOKE("ephemeris_month", { month, place, settings }, options)),
 	/**
+	 *  Geçiş anının adımı: `request.jd_ut` anından `count` birim sonraki (eksi: önceki) an. Saat adımı
+	 *  mutlaktır; gün, hafta, ay ve yıl adımı `request.tz` dilimindeki duvar saatini korur. Saf
+	 *  hesaptır, motora gitmez. An ve dilim loglanmaz.
+	 */
+	transitStep: (request: TransitStepRequest, options?: InvokeOptions) => typedError<TransitStepView, CommandError>(__TAURI_INVOKE("transit_step", { request }, options)),
+	/**
 	 *  Bhava tablosu: haritanın ev sisteminde on iki bhavanın başlangıcı, ortası ve bitişi (burç,
 	 *  derece, nakshatra, pada, burç lordu, nakshatra lordu) ve dokuz grahanın bhavası ile bhava
 	 *  başlangıcına ve ortasına uzaklığı. Doğum saati bilinmiyorsa (`time_known == false`) `null`
@@ -2044,6 +2050,9 @@ export type SkyEventView = {
 	offset_secs: number,
 };
 
+/**  Adım birimi. */
+export type StepUnit = "Hour" | "Day" | "Week" | "Month" | "Year";
+
 /**  Sthana bala (konum gücü) kalemleri, virupa. */
 export type SthanaBala = {
 	uccha: number | null,
@@ -2207,6 +2216,25 @@ export type TransitSnapshot = {
 	grahas: TransitGraha[],
 	/**  Yalnızca `LowPrecision` olabilir. */
 	warnings: ChartWarning[],
+};
+
+/**
+ *  Adımın girdisi. `jd_ut` gösterilen transit anıdır (`TransitView.snapshot.jd_ut`); `count`
+ *  adım sayısıdır (eksi: geri; sıfır olamaz); `tz` duvar saatinin okunduğu IANA dilimidir
+ *  (tarayıcının dilimi; yol ya da adres değildir).
+ */
+export type TransitStepRequest = {
+	jd_ut: number | null,
+	unit: StepUnit,
+	count: number,
+	tz: string,
+};
+
+/**  Varılan an; arayüz onu `TransitAt::Jd` olarak geri verir. */
+export type TransitStepView = {
+	jd_ut: number | null,
+	/**  Anın UTC yazımı (RFC 3339). */
+	utc: string,
 };
 
 /**  Geçiş anındaki bir grahanın tarası. */

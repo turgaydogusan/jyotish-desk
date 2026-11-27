@@ -1408,6 +1408,14 @@ export const tr = {
     field: { month: "ay", place: "yer" },
     method: "Yöntem: {{method}}. Burç ve derece haritanın zodyak kipindedir; nakshatra sidereal boylamdandır. Gün, transit tarihini o günün başına götürür.",
   },
+  transitStep: {
+    group: "Transit anını adımla",
+    unit: "Adım birimi",
+    units: { Hour: "Saat", Day: "Gün", Week: "Hafta", Month: "Ay", Year: "Yıl" },
+    back: "Bir adım geri",
+    forward: "Bir adım ileri",
+    field: { jd_ut: "an", count: "adım sayısı", tz: "saat dilimi", range: "tarih aralığı (1–2999 yılları)" },
+  },
   transit: {
     date: "Transit anı",
     dateLabel: "Tarih",

@@ -123,6 +123,13 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         sankranti_list: (args) => ({ ...fixture.transit_tools.sankranti.list, year: args.year ?? fixture.transit_tools.sankranti.list.year }),
         // Tablo aya göre yeniden hesaplanmaz: istenen ay yanıtın `month` alanına yazılır.
         ephemeris_month: (args) => ({ ...fixture.transit_tools.ephemeris.month, month: args.month ?? fixture.transit_tools.ephemeris.month.month }),
+        // Adım aritmetiği taklit edilmez (Rust testlerindedir): her birim sabit bir gün sayısıdır.
+        transit_step: (args) => {
+          const request = args.request as { jd_ut: number; unit: "Hour" | "Day" | "Week" | "Month" | "Year"; count: number };
+          const days = { Hour: 1 / 24, Day: 1, Week: 7, Month: 30, Year: 365 }[request.unit];
+          const jd = request.jd_ut + request.count * days;
+          return { jd_ut: jd, utc: new Date((jd - 2440587.5) * 86_400_000).toISOString() };
+        },
         // Bakış tablosu yeniden hesaplanmaz: fikstürdeki gerçek sonuç döner.
         compute_drishti: () => fixture.drishti,
         // Bhava tablosu ve Sudarshana chakra (Plan 25): fikstürdeki gerçek sonuçlar. Tablo

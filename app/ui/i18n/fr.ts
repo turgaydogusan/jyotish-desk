@@ -1409,6 +1409,14 @@ export const fr: Messages = {
     field: { month: "mois", place: "lieu" },
     method: "Méthode : {{method}}. Le signe et le degré suivent le mode zodiacal du thème ; le nakshatra vient de la longitude sidérale. Un jour place la date de transit au début de ce jour.",
   },
+  transitStep: {
+    group: "Avancer le moment du transit pas à pas",
+    unit: "Unité du pas",
+    units: { Hour: "Heure", Day: "Jour", Week: "Semaine", Month: "Mois", Year: "Année" },
+    back: "Un pas en arrière",
+    forward: "Un pas en avant",
+    field: { jd_ut: "moment", count: "nombre de pas", tz: "fuseau horaire", range: "plage de dates (années 1–2999)" },
+  },
   transit: {
     date: "Moment du transit",
     dateLabel: "Date",

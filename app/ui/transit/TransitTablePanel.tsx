@@ -1,6 +1,7 @@
 // Transit tablosu (UI spec §3.3). Konumlar ve natal evler Rust'tan (`transits_at`); saat
 // bilinmiyorsa natal ev gösterilmez (spec §7). Retro düz "R", düğümlerde yok (spec §2.3).
-// Nakshatra lordu Rust'ın tablosundan okunur (`nakshatraLord`; Plan 26).
+// Nakshatra lordu Rust'ın tablosundan okunur (`nakshatraLord`; Plan 26). Tarih kutularının
+// altındaki adım denetimleri anı birim birim yürütür (`TransitStepper`).
 import { useTranslation } from "react-i18next";
 import { signIndex } from "../chart/adapter";
 import { RETRO_MARK, showsRetro, type GrahaId } from "../chart/types";
@@ -13,6 +14,7 @@ import { timeUnknown } from "../session/birth";
 import { useSession } from "../session/store";
 import { browserTimeZone, formatMoment, useTransit } from "./store";
 import { TransitDate } from "./TransitDate";
+import { TransitStepper } from "./TransitStepper";
 import "./transit.css";
 
 export function TransitTablePanel(_: PanelProps) {
@@ -30,6 +32,7 @@ export function TransitTablePanel(_: PanelProps) {
   return (
     <div className="transit-panel">
       <TransitDate />
+      <TransitStepper />
       {transit.error ? (
         <PanelError error={transit.error} onRetry={transit.retry} />
       ) : (

@@ -34,6 +34,7 @@ import {
   type Sign,
   type TagChartsRequest,
   type TransitAt,
+  type TransitStepRequest,
   type ViewState,
 } from "./bindings";
 
@@ -76,6 +77,8 @@ export const api = {
   sankrantiList: (year: number | null, place: MuhurtaPlace, settings: CalcSettings) => wrap(() => commands.sankrantiList(year, place, settings)),
   // `month` boşsa yerin bugünkü ayıdır; önceki ve sonraki ay yanıtla gelir (arayüz tarih hesabı yapmaz).
   ephemerisMonth: (month: MonthId | null, place: MuhurtaPlace, settings: CalcSettings) => wrap(() => commands.ephemerisMonth(month, place, settings)),
+  // Adım aritmetiği Rust'tadır; `request.tz` tarayıcının IANA dilimidir (yol ya da adres değil, C2′).
+  transitStep: (request: TransitStepRequest) => wrap(() => commands.transitStep(request)),
   deleteClient: (clientId: number) => wrap(() => commands.deleteClient(clientId)),
   deleteChart: (chartId: number) => wrap(() => commands.deleteChart(chartId)),
   listClients: (limit: number) => wrap(() => commands.listClients(limit)),

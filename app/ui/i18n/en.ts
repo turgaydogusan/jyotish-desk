@@ -1409,6 +1409,14 @@ export const en: Messages = {
     field: { month: "month", place: "place" },
     method: "Method: {{method}}. Sign and degree follow the chart's zodiac mode; the nakshatra is from the sidereal longitude. A day moves the transit date to the start of that day.",
   },
+  transitStep: {
+    group: "Step the transit moment",
+    unit: "Step unit",
+    units: { Hour: "Hour", Day: "Day", Week: "Week", Month: "Month", Year: "Year" },
+    back: "One step back",
+    forward: "One step forward",
+    field: { jd_ut: "moment", count: "step count", tz: "time zone", range: "date range (years 1–2999)" },
+  },
   transit: {
     date: "Transit moment",
     dateLabel: "Date",

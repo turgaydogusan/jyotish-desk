@@ -92,3 +92,32 @@ Vimshottari sırasının üç kez yazılmış biçimidir ve testte o sırayla ka
 - [ ] Satır saatinin seçilen yerin yerel gece yarısı olması (öteki okuma: 00:00 UT).
 - [ ] Varsayılan yerin bulunulan yer olması (öteki okuma: haritanın doğum yeri).
 - [ ] Burç ve derecenin haritanın zodyak kipini izlemesi (tropikal-rasi kipinde tropikal).
+
+## 4. Geçiş anının adımı ve oynatma
+
+### 4.1 Okuma kuralları
+
+1. **Birimler.** Saat, gün, hafta, ay, yıl. Varsayılan birim gündür. Her tıklama bir adımdır.
+2. **Saat adımı mutlaktır:** tam 3 600 saniye; yaz saati geçişinde de böyledir.
+3. **Gün, hafta, ay ve yıl adımı duvar saatini korur.** An, tarayıcının saat dilimindeki takvim
+   tarihine ve saatine çevrilir; takvimde yürünür; aynı duvar saati yeniden çözülür. Yaz saati
+   geçişinden geçen bir gün adımı 23 ya da 25 saat sürer.
+4. **Ay sonu.** Varılan ayda o gün yoksa ayın son günü alınır: 31 Ocak + 1 ay = 28 Şubat (artık
+   yılda 29 Şubat); 29 Şubat ± 1 yıl = 28 Şubat. Bu yüzden ay adımı her zaman geri alınamaz:
+   31 Ocak → 28 Şubat → 28 Ocak.
+5. **Yaz saati boşluğu.** Varılan duvar saati yoksa (ör. 02:30, saatlerin 02:00'den 03:00'e
+   atladığı gün) boşluk kadar ileri alınır: 03:30. Örtüşmede (aynı duvar saati iki kez) önceki an
+   alınır. İkisi de transit anının v1 kuralıdır.
+6. **Aralık.** 1–2999 yılları; dışına çıkan adım `invalid_transit_input { field: "range" }` verir
+   ve an değişmez.
+7. **Çıkış anı.** Transit deposunun anıdır: an bir Jülyen günüyse o, "şimdi" ya da yazılmış bir
+   duvar saatiyse gösterilen yanıtın anı. İlk adımdan sonra an "şimdi" olmaktan çıkar.
+8. **Eşzamanlılık.** Bir adım isteği sürerken yeni adım başlatılmaz. İstek sürerken an başka bir
+   yoldan değişirse, harita değişirse ya da panel kapanırsa geç gelen yanıt düşürülür.
+
+### 4.2 Onay bekleyen noktalar (sahibi)
+
+- [ ] Gün ve hafta adımının duvar saatini koruması (öteki okuma: tam 24 ve 168 saat).
+- [ ] Duvar saatinin tarayıcının diliminde okunması (öteki okuma: haritanın ya da bulunulan
+      yerin dilimi).
+- [ ] Ay sonunda ayın son gününe düşme ve boşlukta ileri alma.
