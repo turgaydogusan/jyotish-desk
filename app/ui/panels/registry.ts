@@ -17,6 +17,7 @@ import { GrahaTablePanel } from "./GrahaTablePanel";
 import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { MuhurtaDayPanel } from "./MuhurtaDayPanel";
 import { MuhurtaSearchPanel } from "./MuhurtaSearchPanel";
+import { NavataraPanel } from "./NavataraPanel";
 import { PanchangPanel } from "./PanchangPanel";
 import { EventSearchPanel } from "./EventSearchPanel";
 import { PrashnaFactsPanel } from "./PrashnaFactsPanel";
@@ -59,6 +60,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   prashna_facts: { titleKey: "panel.prashna_facts", component: PrashnaFactsPanel },
   // Olay araması (Plan 22).
   event_search: { titleKey: "panel.event_search", component: EventSearchPanel },
+  // Doğum anı ekleri (Plan 23).
+  navatara: { titleKey: "panel.navatara", component: NavataraPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

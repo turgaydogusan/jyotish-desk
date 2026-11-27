@@ -1,5 +1,6 @@
 // Panchang paneli (ileri modüller spec'i §4): doğum anının beş uzvu, bitiş saatleri, gün doğumu
-// ve batımı. Değerler `Chart.panchang`'tan hazır gelir (v1'den beri hesaplanır); komut çağırmaz.
+// ve batımı. Değerler `Chart.panchang`'tan hazır gelir (v1'den beri hesaplanır). Altındaki
+// panchang ekleri (yogi, avayogi, dagdha rasi; Plan 23) ayrı bir komuttan gelir: `PanchangExtras`.
 // Saatler doğumun çözülmüş ofsetinde gösterilir. Ortak vurgu: Ay vurgulanınca Ay'a bağlı
 // satırlar, Güneş vurgulanınca Güneş'e bağlı satırlar `--select` zemin alır.
 import type { TFunction } from "i18next";
@@ -13,6 +14,7 @@ import { useSession } from "../session/store";
 import { Approx } from "./Approx";
 import { formatJdMinute } from "./format";
 import { nakshatraName, nityaYogaName, tithiInPaksha, tithiName, VARA_NAMES } from "./labels";
+import { PanchangExtrasSection } from "./PanchangExtras";
 import "./panels.css";
 import type { PanelProps } from "./types";
 
@@ -107,6 +109,7 @@ export function PanchangPanel(_: PanelProps) {
           <strong>{t("badge.SunriseUnavailable")}</strong>: {t("badgeHint.SunriseUnavailable")}
         </p>
       )}
+      <PanchangExtrasSection opened={opened} />
     </div>
   );
 }

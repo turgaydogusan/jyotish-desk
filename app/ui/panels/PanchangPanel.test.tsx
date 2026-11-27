@@ -1,5 +1,12 @@
 import { fireEvent, screen } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
+
+// Panelin ikinci tablosu (panchang ekleri) bir komuttan gelir; bu dosya beş uzvu sınar, ekleri
+// `PanchangExtras.test.tsx` sınar.
+vi.mock("../api", () => ({
+  api: { computePanchangExtras: vi.fn(async () => ({ status: "ok", data: (await import("../test/fixture")).fixture().natal_extras.panchang_extras })) },
+}));
+
 import { useHighlight } from "../highlight/store";
 import { setLanguage } from "../i18n";
 import type { Panel } from "../layout/model";

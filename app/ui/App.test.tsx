@@ -5,6 +5,7 @@ vi.mock("./api", () => ({
   api: {
     transitsAt: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().transit })),
     computeDrishti: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().drishti })),
+    computePanchangExtras: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().natal_extras.panchang_extras })),
     printWindow: vi.fn(async () => ({ status: "ok", data: null })),
     previewMoment: vi.fn(async () => ({ status: "error", error: { code: "invalid_input", params: { field: "birth.date" } } })),
     searchPlaces: vi.fn(async () => ({ status: "ok", data: [] })),
