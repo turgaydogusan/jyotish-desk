@@ -213,11 +213,11 @@ pub fn value_at<T: Copy>(series: &[Interval<T>], jd_ut: f64) -> Option<T> {
     series.get(i).filter(|x| x.contains(jd_ut)).map(|x| x.value)
 }
 
-fn sidereal(settings: &CalcSettings) -> Zodiac {
+pub(crate) fn sidereal(settings: &CalcSettings) -> Zodiac {
     Zodiac::Sidereal(settings.ayanamsa.sidereal_mode())
 }
 
-fn lon_of<E: Ephemeris + ?Sized>(
+pub(crate) fn lon_of<E: Ephemeris + ?Sized>(
     eph: &mut E,
     jd_ut: f64,
     body: Body,
@@ -297,7 +297,7 @@ pub fn nitya_yoga_series<E: Ephemeris + ?Sized>(
 }
 
 /// Grahanın ephemeris cismi ve boylamına eklenen açı (Ketu, Rahu'nun karşısıdır).
-fn graha_body(graha: Graha, settings: &CalcSettings) -> (Body, f64) {
+pub(crate) fn graha_body(graha: Graha, settings: &CalcSettings) -> (Body, f64) {
     match graha {
         Graha::Sun => (Body::Sun, 0.0),
         Graha::Moon => (Body::Moon, 0.0),

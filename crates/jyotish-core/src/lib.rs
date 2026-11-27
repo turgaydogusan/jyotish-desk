@@ -8,7 +8,7 @@
 //! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`. Uyum (Alt proje 3.6): `kuta`.
 //! Muhurta (Alt proje 3.7): `timeline` (aralık dizileri) ve `muhurta` (gün panchangı, arama).
 //! Prashna (Alt proje 3.8): `prashna` (sayı prashnasının lagnası, soru haritasının olguları).
-//! Arama (Alt proje 3.9): `search` (harita araması sorgusu ve hafif yol).
+//! Arama (Alt proje 3.9): `search` (harita araması sorgusu ve hafif yol, olay araması).
 
 pub mod ashtakavarga;
 mod chart;
@@ -100,9 +100,12 @@ pub use prashna::{
     PrashnaFacts, RisingMode, PRASHNA_METHOD, PRASHNA_NUMBER_MAX,
 };
 pub use search::{
-    date_noon_jd, evaluate, search_facts, ChartQuery, Condition, GrahaFlag, MatchFact, Outcome,
-    QueryCondition, QueryScope, ScopeKind, SearchFacts, MAX_CONDITIONS, MAX_SCOPE_TAGS,
-    MAX_SCOPE_TAG_CHARS, MAX_SEARCH_DASHA_LEVEL, MAX_YOGA_IDS, SEARCH_METHOD,
+    date_noon_jd, evaluate, event_chunks, event_search, event_search_chunk, search_facts,
+    ChartQuery, Condition, EventSpec, GrahaFlag, MatchFact, Outcome, QueryCondition, QueryScope,
+    ScopeKind, SearchFacts, SkyEvent, SkyEventKind, EVENT_CHUNK_DAYS, EVENT_MAX_RANGE_DAYS,
+    EVENT_METHOD, EVENT_MOON_CHUNK_DAYS, EVENT_MOON_MAX_RANGE_DAYS, HOUSE_CHANGE_GRAHAS,
+    MAX_CONDITIONS, MAX_SCOPE_TAGS, MAX_SCOPE_TAG_CHARS, MAX_SEARCH_DASHA_LEVEL, MAX_SKY_EVENTS,
+    MAX_YOGA_IDS, SEARCH_METHOD,
 };
 pub use settings::{
     AdvancedSettings, AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, KarakaScheme,
