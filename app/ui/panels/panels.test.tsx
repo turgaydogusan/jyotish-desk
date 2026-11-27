@@ -12,6 +12,7 @@ import { ArgalaPanel } from "./ArgalaPanel";
 import { ArudhaPanel } from "./ArudhaPanel";
 import { AshtakavargaPanel } from "./AshtakavargaPanel";
 import { BhavaBalaPanel } from "./BhavaBalaPanel";
+import { BhavaTablePanel } from "./BhavaTablePanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel } from "./ChartPanel";
 import { CompatPanel } from "./CompatPanel";
@@ -55,6 +56,7 @@ test("registry covers every catalog kind", () => {
   expect(PANEL_REGISTRY.argala.component).toBe(ArgalaPanel);
   expect(PANEL_REGISTRY.shadbala.component).toBe(ShadbalaPanel);
   expect(PANEL_REGISTRY.bhava_bala.component).toBe(BhavaBalaPanel);
+  expect(PANEL_REGISTRY.bhava_table.component).toBe(BhavaTablePanel);
   expect(PANEL_REGISTRY.yogas.component).toBe(YogasPanel);
   expect(PANEL_REGISTRY.compat.component).toBe(CompatPanel);
   expect(PANEL_REGISTRY.muhurta_day.component).toBe(MuhurtaDayPanel);
