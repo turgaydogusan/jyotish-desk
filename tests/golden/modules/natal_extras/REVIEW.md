@@ -116,3 +116,63 @@ Aynı tablo burçtan okunur; testteki `BY_SIGN` listesi budur. Toplam 30 hücre 
 
 - [ ] Navataranın lagna nakshatrasından da sayılıp sayılmayacağı (öneri: yalnızca Ay).
 - [ ] Janma tarasının elverişli kümede sayılmaması (muhurta tablosunun aynı noktası).
+
+## 3. Vimshopaka bala (yöntem `vimshopaka.bphs_v1`)
+
+### 3.1 Okuma kuralları
+
+1. **Grahalar.** Değer yedi grahaya verilir (Güneş … Satürn); Rahu ve Ketu'ya verilmez.
+2. **Basamak.** Graha her vargada, o vargadaki burcuna göre altı basamaktan birini alır (3.3).
+   Kendi burcu, grahanın sahibi olduğu burçtur (Güneş ve Ay için tek burç, ötekiler için iki).
+3. **Bileşik ilişki.** Graha kendi burcunda değilse varga burcunun lorduyla bileşik ilişkisine
+   (panchadha maitri) bakılır: doğal ilişki ile geçici dostluğun birleşimi. **Geçici dostluk her
+   vargada D1 burçlarından okunur:** lordun D1 burcu, grahanın D1 burcundan 2, 3, 4, 10, 11 ya da
+   12. burçsa dosttur. Shadbala'nın saptavargaja kalemindeki okumanın aynısıdır.
+4. **Yücelme ve moolatrikona ayrı basamak değildir.** Yücelme burcundaki graha, o burcun lorduyla
+   ilişkisinden okunur. Moolatrikona burcu altı graha için zaten kendi burcudur; Ay'ın
+   moolatrikona burcu Boğa'dır ve Venüs'le ilişkiden okunur. Düşüş için de ayrı basamak yoktur.
+5. **Vargalar** rasi çerçevesindeki boylamdan hesaplanır (K5); v1'in on altı varga tanımı
+   kullanılır.
+6. **Kümenin değeri** = Σ (varga ağırlığı × basamak değeri) / 20. En düşük 5, en yüksek 20; her
+   değer 0,025'in katıdır.
+7. **Doğum saati bilinmiyorsa** rapor yine verilir ve "yaklaşık" işaretini taşır; saat "yaklaşık"
+   girilmişse panel D16 ve üstü vargaların saate duyarlı olduğunu söyler.
+
+### 3.2 Varga ağırlıkları (bellekten; onay bekler)
+
+Motorun tabloları: `crates/jyotish-core/src/natal_extras/vimshopaka.rs`, `SHADVARGA`,
+`SAPTAVARGA`, `DASHAVARGA`, `SHODASHAVARGA`.
+
+| Varga | Shadvarga | Saptavarga | Dashavarga | Shodashavarga |
+|---|---|---|---|---|
+| D1 | 6 | 5 | 3 | 3½ |
+| D2 | 2 | 2 | 1½ | 1 |
+| D3 | 4 | 3 | 1½ | 1 |
+| D4 | – | – | – | ½ |
+| D7 | – | 2½ | 1½ | ½ |
+| D9 | 5 | 4½ | 1½ | 3 |
+| D10 | – | – | 1½ | ½ |
+| D12 | 2 | 2 | 1½ | ½ |
+| D16 | – | – | 1½ | 2 |
+| D20 | – | – | – | ½ |
+| D24 | – | – | – | ½ |
+| D27 | – | – | – | ½ |
+| D30 | 1 | 1 | 1½ | 1 |
+| D40 | – | – | – | ½ |
+| D45 | – | – | – | ½ |
+| D60 | – | – | 5 | 4 |
+| **Toplam** | 20 | 20 | 20 | 20 |
+
+### 3.3 Basamaklar (bellekten; onay bekler)
+
+| Basamak | Kendi burcu | Çok dost | Dost | Nötr | Düşman | Çok düşman |
+|---|---|---|---|---|---|---|
+| Değer | 20 | 18 | 15 | 10 | 7 | 5 |
+
+### 3.4 Onay bekleyen noktalar (sahibi)
+
+- [ ] Dört kümenin ağırlıkları, hücre hücre (her sütunun toplamı 20).
+- [ ] Altı basamağın değerleri (20, 18, 15, 10, 7, 5).
+- [ ] Yücelme ve moolatrikonanın ayrı basamak olmaması (öteki okuma: ikisi de 20 sayılır).
+- [ ] Geçici dostluğun her vargada D1 burçlarından okunması (öteki okuma: o vargadan).
+- [ ] Rahu ve Ketu'ya değer verilmemesi.

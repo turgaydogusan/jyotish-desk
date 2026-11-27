@@ -91,9 +91,11 @@ pub use muhurta::{
 };
 pub use natal_extras::{
     avayogi_nakshatra, dagdha_rasis, nakshatra_lord, navatara, navatara_rows, panchang_extras,
-    rasi_frame_offset, tara_cycle, transit_taras, yogi_facts, yogi_point, Navatara, NavataraRow,
-    PanchangExtras, TransitTara, YogiFacts, AVAYOGI_COUNT, NAVATARA_METHOD, PANCHANG_EXTRAS_METHOD,
-    YOGI_ARC_DEG,
+    rasi_frame_offset, rung_points, tara_cycle, transit_taras, varga_relation, vimshopaka,
+    vimshopaka_score, yogi_facts, yogi_point, GrahaVimshopaka, Navatara, NavataraRow,
+    PanchangExtras, TransitTara, VargaScheme, VimshopakaReport, VimshopakaVarga, YogiFacts,
+    AVAYOGI_COUNT, NAVATARA_METHOD, PANCHANG_EXTRAS_METHOD, VIMSHOPAKA_GRAHAS, VIMSHOPAKA_MAX,
+    VIMSHOPAKA_METHOD, YOGI_ARC_DEG,
 };
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};
 pub use panchang::{
