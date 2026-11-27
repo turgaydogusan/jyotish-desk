@@ -11,8 +11,13 @@
 //! hükmü yoktur. Sonuç saklanmaz (K1). Adlar `jyotish_core` kökünden yeniden dışa aktarılmaz;
 //! tüketiciler `jyotish_core::calendar::…` yolunu kullanır.
 
+mod events;
 mod grid;
 
+pub use events::{
+    assign_events, calendar_month, calendar_slice, CalendarDay, CalendarFilter, CalendarSlice,
+    CalendarSpec, CALENDAR_DEFAULT_KINDS, CALENDAR_KINDS, CALENDAR_MAX_EVENTS,
+};
 pub use grid::{
     calendar_slices, check_spans, day_facts, fallback_moment, sunrise_in, DayFacts, DaySpan,
     CALENDAR_MAX_DAYS, CALENDAR_SLICE_DAYS, MAX_DAY_SPAN_DAYS,
