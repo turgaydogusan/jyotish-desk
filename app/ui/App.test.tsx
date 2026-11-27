@@ -9,6 +9,7 @@ vi.mock("./api", () => ({
     previewMoment: vi.fn(async () => ({ status: "error", error: { code: "invalid_input", params: { field: "birth.date" } } })),
     searchPlaces: vi.fn(async () => ({ status: "ok", data: [] })),
     createClient: vi.fn(),
+    createPrashna: vi.fn(),
     updateChart: vi.fn(),
     saveViewState: vi.fn(async () => ({ status: "ok", data: null })),
     savePanelLayout: vi.fn(async () => ({ status: "ok", data: null })),
@@ -549,4 +550,38 @@ test("the palette opens About too", async () => {
   fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "hakkında" } });
   fireEvent.click(await within(palette).findByRole("option", { name: /Hakkında ve güncellemeler/ }));
   expect(await screen.findByRole("dialog", { name: "Jyotish Desk hakkında" })).toBeInTheDocument();
+});
+
+test("Cmd+Shift+P and the palette open the new prashna sheet, with or without an open chart; not in print view", async () => {
+  const { unmount } = renderApp({ opened: null });
+  fireEvent.keyDown(window, { key: "P", metaKey: true, shiftKey: true });
+  let sheet = screen.getByRole("dialog", { name: "Yeni prashna" });
+  // Açık danışan yok: prashna yerleşik danışana gider ve bunu form söyler.
+  expect(within(sheet).queryByRole("checkbox")).toBeNull();
+  fireEvent.click(within(sheet).getByRole("button", { name: "Vazgeç" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  // Paletten: komut açık harita olmadan da vardır.
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "prashna" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /Yeni prashna/ }));
+  expect(screen.getByRole("dialog", { name: "Yeni prashna" })).toBeInTheDocument();
+  unmount();
+
+  renderApp();
+  // Kısayol yazı alanından da çalışır; pencere açıkken ikinci basış yok sayılır (modal).
+  fireEvent.keyDown(window, { key: "p", metaKey: true, shiftKey: true });
+  sheet = screen.getByRole("dialog", { name: "Yeni prashna" });
+  expect(within(sheet).getByRole("checkbox", { name: "“Örnek Danışan” danışanına ekle" })).toBeChecked();
+  fireEvent.keyDown(window, { key: "P", metaKey: true, shiftKey: true });
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  fireEvent.click(within(sheet).getByRole("button", { name: "Vazgeç" }));
+  // Baskı önizlemesinde tuş tüketilir ama pencere açılmaz; ⌘P'nin anlamı değişmez.
+  fireEvent.keyDown(window, { key: "p", metaKey: true });
+  expect(printToolbar()).toBeInTheDocument();
+  const ev = new KeyboardEvent("keydown", { key: "P", metaKey: true, shiftKey: true, cancelable: true });
+  window.dispatchEvent(ev);
+  expect(ev.defaultPrevented).toBe(true);
+  expect(screen.queryByRole("dialog", { name: "Yeni prashna" })).toBeNull();
+  expect(api.createPrashna).not.toHaveBeenCalled();
 });

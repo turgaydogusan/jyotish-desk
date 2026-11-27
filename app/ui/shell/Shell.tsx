@@ -19,6 +19,7 @@ import { leaveNotes, leavePanel, leaveSidebar, MAIN_ID } from "./focus";
 import { HelpDialog } from "./HelpDialog";
 import { NoticeBar, useNotices } from "./notices";
 import { loadSidebarOpen, saveSidebarOpen } from "./sidebarPref";
+import { PrashnaForm } from "../prashna/PrashnaForm";
 import { PrintView } from "../print/PrintView";
 import "./shell.css";
 import { TopBar } from "./TopBar";
@@ -34,6 +35,7 @@ export function Shell() {
   const [settings, setSettings] = useState(false);
   const [about, setAbout] = useState(false);
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
+  const [prashna, setPrashna] = useState(false);
   const [sidebar, setSidebar] = useState(() => loadSidebarOpen());
   // Açık/kapalı durumu bir sonraki açılışta da geçerlidir (Plan 12 D11).
   useEffect(() => saveSidebarOpen(sidebar), [sidebar]);
@@ -120,6 +122,10 @@ export function Shell() {
       } else if (command?.id === "newChart") {
         e.preventDefault();
         setForm("new");
+      } else if (command?.id === "newPrashna") {
+        // ⌘⇧P her zaman tüketilir; baskı önizlemesinde (pano yokken) pencere açılmaz.
+        e.preventDefault();
+        if (!now.printView) setPrashna(true);
       } else if (command?.id === "editChart" && now.opened) {
         e.preventDefault();
         setForm("edit");
@@ -167,6 +173,7 @@ export function Shell() {
           return setForm(item.command === "newChart" ? "new" : item.command === "addChart" ? "add" : "edit");
         }
         // Kısayollarındaki gibi: baskı görünümünde (pano ve kenar çubuğu yokken) yok sayılır.
+        if (item.command === "newPrashna") return printView ? undefined : setPrashna(true);
         if (item.command === "settings") return setSettings(true);
         if (item.command === "print") return printView ? undefined : togglePrint();
         if (item.command === "toggleNotes") {
@@ -208,6 +215,7 @@ export function Shell() {
       {settings && <SettingsDialog onClose={() => setSettings(false)} />}
       {about && <AboutDialog onClose={() => setAbout(false)} />}
       {form && <BirthForm mode={form} onClose={() => setForm(null)} />}
+      {prashna && <PrashnaForm onClose={() => setPrashna(false)} />}
     </div>
   );
 }

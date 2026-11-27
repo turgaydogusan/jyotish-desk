@@ -1,0 +1,10 @@
+/* "Yeni prashna" formu ve prashna olguları paneli. Renk yalnızca belirteçlerden gelir. */
+.prashna-form textarea {
+  resize: vertical;
+}
+
+.prashna-place {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+}

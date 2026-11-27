@@ -90,6 +90,8 @@ export function Palette({ onClose, onRun }: PaletteProps) {
   const items = useMemo(() => {
     const commands: { command: PaletteCommand; label: string }[] = [
       { command: "newChart", label: t("palette.command.newChart") },
+      // Açık harita gerekmez: danışan seçili değilse prashna yerleşik danışana eklenir.
+      { command: "newPrashna", label: t("palette.command.newPrashna") },
       ...(opened
         ? [
             { command: "addChart" as const, label: t("palette.command.addChart") },

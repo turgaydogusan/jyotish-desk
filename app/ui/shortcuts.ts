@@ -7,6 +7,7 @@ export type Command =
   | { id: "selectLayout"; index: number }
   | { id: "toggleNotes" }
   | { id: "newChart" }
+  | { id: "newPrashna" }
   | { id: "editChart" }
   | { id: "settings" }
   | { id: "print" }
@@ -16,7 +17,7 @@ export type Command =
 
 export interface ShortcutInfo {
   /** i18n anahtarı: `shortcuts.<id>`. */
-  id: "palette" | "sidebar" | "selectLayout" | "toggleNotes" | "newChart" | "editChart" | "settings" | "print" | "help" | "escape" | "movePanel" | "resizePanel" | "tree";
+  id: "palette" | "sidebar" | "selectLayout" | "toggleNotes" | "newChart" | "newPrashna" | "editChart" | "settings" | "print" | "help" | "escape" | "movePanel" | "resizePanel" | "tree";
   keys: string;
 }
 
@@ -29,6 +30,7 @@ export const SHORTCUT_LIST: readonly ShortcutInfo[] = [
   { id: "print", keys: "⌘P" },
   { id: "selectLayout", keys: "⌘1 … ⌘9" },
   { id: "toggleNotes", keys: "⌘⇧N" },
+  { id: "newPrashna", keys: "⌘⇧P" },
   { id: "help", keys: "?" },
   { id: "escape", keys: "Esc" },
   { id: "movePanel", keys: "⌥ ←↑→↓" },
@@ -55,7 +57,11 @@ export function matchShortcut(e: KeyboardEvent): Command | null {
   if (e.repeat || e.isComposing || e.keyCode === 229 || modalOpen()) return null;
   if (e.ctrlKey || e.altKey) return null;
   if (e.metaKey) {
-    if (e.shiftKey) return e.key.toLowerCase() === "n" ? { id: "toggleNotes" } : null;
+    if (e.shiftKey) {
+      const shifted = e.key.toLowerCase();
+      // ⌘⇧P "Yeni prashna"dır (ileri modüller spec'i §11); ⌘P baskıdır.
+      return shifted === "n" ? { id: "toggleNotes" } : shifted === "p" ? { id: "newPrashna" } : null;
+    }
     // Önizlemenin ardındaki düzen görünmeden değişmesin (Plan 04 incelemesi M4).
     if (/^Digit[1-9]$/.test(e.code)) return printPreviewOpen() ? null : { id: "selectLayout", index: Number(e.code.slice(5)) - 1 };
     if (e.code === "Backslash" || e.key === "\\") return { id: "sidebar" };

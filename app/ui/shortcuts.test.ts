@@ -15,7 +15,9 @@ test("global commands", () => {
   expect(key({ key: "e", metaKey: true })).toEqual({ id: "editChart" });
   expect(key({ key: "k", metaKey: true })).toEqual({ id: "palette" });
   expect(key({ key: "p", metaKey: true })).toEqual({ id: "print" });
-  expect(key({ key: "P", metaKey: true, shiftKey: true })).toBeNull();
+  expect(key({ key: "P", metaKey: true, shiftKey: true })).toEqual({ id: "newPrashna" });
+  expect(key({ key: "p", metaKey: true, shiftKey: true })).toEqual({ id: "newPrashna" });
+  expect(key({ key: "K", metaKey: true, shiftKey: true })).toBeNull();
   expect(key({ key: "\\", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });
   expect(key({ key: ",", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });
   expect(key({ key: "?", shiftKey: true })).toEqual({ id: "help" });
