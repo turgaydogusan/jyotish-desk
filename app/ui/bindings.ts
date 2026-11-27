@@ -41,6 +41,22 @@ export const commands = {
 	 */
 	dashaChildren: (seed: DashaSeed, path: Graha[], options?: InvokeOptions) => typedError<DashaPeriod[], CommandError>(__TAURI_INVOKE("dasha_children", { seed, path }, options)),
 	/**
+	 *  Varshaphala: `age` yaşının (tamamlanan yıl; `null` ise şu anda süren yılın) yıllık haritası,
+	 *  munthası ve mudda dasası. `input` açık haritanın girdisidir; `place` yıllık haritanın yeridir
+	 *  (doğum yeri ya da bulunulan yer) ve saat dilimi anların gösterileceği ofseti verir. Doğum
+	 *  saati bilinmiyorsa (`time_known == false`) yıllık harita ve muntha `null` döner. Girdi ve yer
+	 *  loglanmaz.
+	 */
+	computeVarsha: (input: ChartInput, age: number | null, place: MuhurtaPlace, options?: InvokeOptions) => typedError<VarshaView, CommandError>(__TAURI_INVOKE("compute_varsha", { input, age, place }, options)),
+	/**
+	 *  `age` yaşının yıllık haritasını kaynak haritanın danışanına olay haritası olarak kaydeder
+	 *  (`ChartKind::Event`; etiket `Varshaphala <tarih>`). Yer doğum yeridir; `home` doğruysa
+	 *  tercihlerdeki bulunulan yerdir. Kaynak haritanın ayarları yeni haritaya kopyalanır. Harita
+	 *  açılmaz: dönen kayıt yalnızca bildirilir. Doğum saati bilinmeyen harita ve seçilmemiş
+	 *  bulunulan yer `invalid_input` ile reddedilir.
+	 */
+	saveVarshaChart: (chartId: number, age: number, home: boolean, options?: InvokeOptions) => typedError<ChartRecord, CommandError>(__TAURI_INVOKE("save_varsha_chart", { chartId, age, home }, options)),
+	/**
 	 *  macOS'ta sistem print penceresini açar; kullanıcı oradan "PDF olarak kaydet"i seçer.
 	 *  Senkron komut: print işlemi ana iş parçacığında çalışmalıdır.
 	 */
@@ -1354,6 +1370,22 @@ export type MoonFacts = {
 	aspected_by: Graha[],
 };
 
+/**  Bir yılın mudda dasası. */
+export type MuddaDasha = {
+	/**  Doğum nakshatrası (Ay), 1..=27. */
+	birth_nakshatra: number,
+	/**  Tamamlanan yıl. */
+	age: number,
+	/**  İlk lord kuralının bölümden artanı, 0..=8. */
+	remainder: number,
+	first_lord: Graha,
+	/**
+	 *  Dönemler ve alt dönemleri, ön-sırada (her dönemin ardından dokuz alt dönemi): 9 + 81.
+	 *  `lords` kökten yoldur; zamanlar UT Jülyen günüdür.
+	 */
+	periods: DashaPeriod[],
+};
+
 /**
  *  Süzgecin saklanabilen kısmı: koşullar. Boş küme "kısıt yok" demektir. Tarih aralığı, yer ve
  *  kişi burada değildir (kayıtlı süzgeç kişi ve yer verisi taşımaz).
@@ -1457,6 +1489,17 @@ export type MuhurtaWindowView = {
 	start_offset_secs: number,
 	end_offset_secs: number,
 	snapshot: WindowSnapshot,
+};
+
+/**  Yılın munthası. */
+export type Muntha = {
+	sign: Sign,
+	/**  Muntha burcunun lordu. */
+	lord: Graha,
+	/**  Doğum lagnasından sayılan burç evi, 1..=12. */
+	natal_house: number,
+	/**  Yıllık haritanın lagnasından sayılan burç evi, 1..=12. */
+	annual_house: number,
 };
 
 /**  Nakshatranın doğası (muhurta sınıfı). */
@@ -2190,6 +2233,41 @@ export type VargaPlacement = {
 	deg: number | null,
 };
 
+/**  `compute_varsha` sonucu. */
+export type VarshaReport = {
+	/**  Tamamlanan yıl: yıl, `age`. dönüşle başlar. */
+	age: number,
+	/**  Yılın başı: Güneş'in doğumdaki sidereal boylamına döndüğü an. */
+	start_jd_ut: number | null,
+	/**  Yılın sonu: sonraki dönüş. */
+	end_jd_ut: number | null,
+	/**
+	 *  Yanlışsa doğum saati bilinmiyordur: yıllık harita ve lagnaya bağlı olgular verilmez;
+	 *  dönüş anı ve mudda dasa yaklaşıktır (Güneş'in ve Ay'ın doğumdaki yeri gün içinde değişir).
+	 */
+	time_known: boolean,
+	/**
+	 *  Yıllık harita: dönüş anında, istenen yerde, doğum haritasının ayarlarıyla. Doğum saati
+	 *  bilinmiyorsa `None`.
+	 */
+	chart: Chart | null,
+	/**
+	 *  Yılın lagnaya bağlı olguları (yıllık lagna, doğum lagnası, muntha); doğum saati
+	 *  bilinmiyorsa `None`.
+	 */
+	facts: YearFacts | null,
+	mudda: MuddaDasha,
+	/**  Doğum haritasının ya da yıllık haritanın konum duyarlılığı uyarısı (`LowPrecision`). */
+	warnings: ChartWarning[],
+	method: string,
+};
+
+/**  Rapor ve yıllık haritanın yerinin yıl başındaki UTC ofseti (anlar bu ofsetle gösterilir). */
+export type VarshaView = {
+	report: VarshaReport,
+	offset_secs: number,
+};
+
 export type ViewState = {
 	schema_version: number,
 	/**
@@ -2247,6 +2325,17 @@ export type WindowSnapshot = {
 	karana: number,
 	karana_name: KaranaName,
 	lagna_sign: Sign,
+};
+
+/**  Yılın lagnaya bağlı olguları; doğum saati bilinmiyorsa hiçbiri verilmez (K2). */
+export type YearFacts = {
+	/**  Yıllık haritanın lagna burcu ve lordu. */
+	lagna_sign: Sign,
+	lagna_lord: Graha,
+	/**  Doğum haritasının lagna burcu ve lordu. */
+	natal_lagna_sign: Sign,
+	natal_lagna_lord: Graha,
+	muntha: Muntha,
 };
 
 export type YogaGroup = "Mahapurusha" | "Lunar" | "Solar" | "Raja" | "Dhana" | "Exchange" | "ViparitaRaja" | "NeechaBhanga" | "NabhasaCount" | "NabhasaAshraya" | "Dosha";

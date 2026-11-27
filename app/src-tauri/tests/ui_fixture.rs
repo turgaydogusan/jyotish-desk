@@ -224,6 +224,46 @@ fn ui_fixture_is_up_to_date() {
         },
     )
     .expect("avasthas without a birth time");
+    // Varshaphala (Plan 27). Açık haritanın girdisiyle, doğum yerinde (Delhi, Asia/Kolkata) ve
+    // fikstürün sabit saatinde: süren yıl (yaş verilmeden; 26), sonraki yıl (27) ve doğum saati
+    // bilinmeyen girdiyle süren yıl (yıllık harita ve muntha yok). Kendi bloğundadır: ortak `use`
+    // listesine ve öteki hesaplara dokunmaz.
+    let varsha = {
+        use jyotish_core::varsha::{MAX_VARSHA_AGE, MUDDA_ORDER};
+        use jyotish_desk_lib::varsha_commands::compute_varsha_blocking;
+        let now = Timestamp::from_second(1_795_600_800).expect("timestamp");
+        let place = MuhurtaPlace {
+            lat: module_input.lat,
+            lon: module_input.lon,
+            tz: opened.chart_record.birth.tz.clone(),
+        };
+        let view_of = |input: ChartInput, age: Option<u8>| {
+            compute_varsha_blocking(&engine, input, age, place.clone(), now).expect("varsha")
+        };
+        let current = view_of(module_input.clone(), None);
+        assert_eq!(
+            current.report.age, 26,
+            "the fixture clock is in the 27th year"
+        );
+        assert!(current.report.chart.is_some() && current.report.facts.is_some());
+        let next = view_of(module_input.clone(), Some(27));
+        assert_eq!(next.report.start_jd_ut, current.report.end_jd_ut);
+        let time_unknown = view_of(
+            ChartInput {
+                time_known: false,
+                ..module_input.clone()
+            },
+            None,
+        );
+        assert!(time_unknown.report.chart.is_none() && time_unknown.report.facts.is_none());
+        json!({
+            "current": current,
+            "next": next,
+            "time_unknown": time_unknown,
+            "mudda_order": MUDDA_ORDER,
+            "max_age": MAX_VARSHA_AGE,
+        })
+    };
     let yoga_catalog: Vec<Value> = YOGA_CATALOG
         .iter()
         .map(|r| json!({ "id": r.id, "group": r.group }))
@@ -595,6 +635,7 @@ fn ui_fixture_is_up_to_date() {
             "lajjitadi": Lajjitadi::ALL,
             "shayanadi": Shayanadi::ALL,
         },
+        "varsha": varsha,
         "compat": {
             "partner_uuid": partner.chart_record.uuid,
             "brief": partner_brief,
