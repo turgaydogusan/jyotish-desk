@@ -18,6 +18,13 @@ export interface ChartPlanet {
   retrograde: boolean;
   combust?: boolean;
   vargottama?: boolean;
+  /**
+   * Chalit görünümü: grahanın çizildiği hücrenin burcu (bhavasının numarasını taşıyan hücre).
+   * Yoksa graha kendi burcunun hücresine çizilir.
+   */
+  cell?: number;
+  /** Chalit görünümü: graha burcunun evinden başka bir bhavadadır; `SHIFT_MARK` ile işaretlenir. */
+  shifted?: boolean;
 }
 
 /** Bir burca yazılan kısa işaret (ör. arudha pada "AL", "A2"); etkileşimsizdir. */
@@ -62,10 +69,15 @@ export interface ChartLabels {
   combust: string;
   /** Erişilebilir adda alt çizgi yerine okunan sözcük (örn. "vargottama"). */
   vargottama: string;
+  /** Erişilebilir adda `*` yerine okunan sözcük (chalit görünümü; örn. "bhavası farklı"). */
+  shifted?: string;
 }
 
 /** Retro işareti: harita etiketinde ve gezegen tablosunda düz "R" (spec §2.3). */
 export const RETRO_MARK = "R";
+
+/** Burç evinden başka bir bhavadaki grahanın işareti (chalit görünümü ve bhava tablosu). */
+export const SHIFT_MARK = "*";
 
 /**
  * Retro işareti Rahu ve Ketu'da gösterilmez (kullanıcı kararı): ortalama düğüm hep geri gider.

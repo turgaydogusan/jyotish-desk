@@ -18,6 +18,8 @@ export const PANEL_KINDS = [
   "argala",
   "shadbala",
   "bhava_bala",
+  "bhava_table",
+  "sudarshana",
   "yogas",
   "avastha",
   "compat",
@@ -45,6 +47,10 @@ export const MODULE_PANELS = [
   // Shadbala ve Bhava bala (Plan 17).
   { kind: "shadbala", w: 8, h: 12 },
   { kind: "bhava_bala", w: 6, h: 14 },
+  // Bhava tablosu (yol haritası Plan 25).
+  { kind: "bhava_table", w: 7, h: 20 },
+  // Sudarshana chakra (yol haritası Plan 25).
+  { kind: "sudarshana", w: 6, h: 24 },
   // Yogalar (Plan 18).
   { kind: "yogas", w: 7, h: 14 },
   // Avasthalar (Plan 24).

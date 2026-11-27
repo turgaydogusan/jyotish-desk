@@ -36,3 +36,41 @@ for (const sheet of ["cover", "charts", "dasha", "grahas"] as const) {
     await expect(page.locator(`[data-page="${sheet}"]`)).toHaveScreenshot(`print-${sheet}.png`);
   });
 }
+
+// Chalit görünümü (yol haritası Plan 25): Placidus ayarlı Delhi haritası, üç biçim, açık tema.
+// Merkür, Jüpiter ve Venüs burç evinden bir önceki bhavanın hücresinde, `*` işaretiyle.
+for (const style of ["north", "south", "circle"] as const) {
+  test(`chalit ${style}`, async ({ page }) => {
+    await mockIpc(page, { session: true, placidus: true });
+    await page.addInitScript(() => localStorage.setItem("jyotish-desk.theme.v1", "light"));
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+    await page.keyboard.press("Meta+Backslash");
+    await expect(page.getByRole("complementary", { name: "Danışanlar" })).toHaveCount(0);
+    const chart = page.getByRole("region", { name: "Harita D1", exact: true });
+    await chart.getByRole("combobox", { name: "Biçim" }).selectOption(style);
+    await chart.getByRole("checkbox", { name: "Bhava chalit" }).check();
+    await expect(chart.locator("svg.chart [data-shifted]")).toHaveCount(3);
+    await expect(chart.locator("svg.chart")).toHaveScreenshot(`chalit-${style}.png`);
+  });
+}
+
+// Sudarshana chakra (yol haritası Plan 25): gerçek Delhi haritası, açık ve koyu tema.
+for (const theme of ["light", "dark"] as const) {
+  test(`sudarshana ${theme}`, async ({ page }) => {
+    await mockIpc(page, { session: true });
+    await page.addInitScript((t) => localStorage.setItem("jyotish-desk.theme.v1", t), theme);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+    await page.keyboard.press("Meta+Backslash");
+    await expect(page.getByRole("complementary", { name: "Danışanlar" })).toHaveCount(0);
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill("sudarshana");
+    await palette.getByRole("option", { name: /Sudarshana chakra panelini aç\/kapat/ }).click();
+    const svg = page.getByRole("region", { name: "Sudarshana chakra" }).locator("svg.sudarshana");
+    await expect(svg.locator(".chart-planet")).toHaveCount(27);
+    await svg.scrollIntoViewIfNeeded();
+    await expect(svg).toHaveScreenshot(`sudarshana-${theme}.png`);
+  });
+}

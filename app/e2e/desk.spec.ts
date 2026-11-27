@@ -1311,3 +1311,112 @@ test("natal extras: panchang additions, navatara with the transit taras and vims
   await expect(vimshopaka).toBeVisible();
   expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
 });
+
+// Bhava tablosu, chalit görünümü ve Sudarshana chakra (yol haritası Plan 25).
+test("bhava table and chalit: a palette panel with the cusps of a Placidus chart; the chart panel redraws the grahas by bhava", async ({ page }) => {
+  await mockIpc(page, { session: true, placidus: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  type BhavaCall = { input: { jd_ut: number; time_known: boolean; settings: { house_system: string } } };
+  const calls = async () => (await ipcCalls(page, "compute_bhava_table")) as BhavaCall[];
+  // Tablo panel açılmadan istenmez (K1).
+  expect(await calls()).toHaveLength(0);
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await palette.getByRole("combobox").fill("bhava tablosu");
+  await palette.getByRole("option", { name: /Bhava tablosu panelini aç\/kapat/ }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const panel = page.getByRole("region", { name: "Bhava tablosu" });
+  await expect(panel).toBeFocused();
+  const bhavas = panel.getByRole("table", { name: /^Bhava tablosu: on iki bhavanın başlangıç noktası/ });
+  await expect(bhavas.locator('tbody tr[data-house="1"]').locator("th, td")).toHaveText(["1", "İki 16°20′", "Ardra", "3", "Merkür", "Rahu", "22°37′"]);
+  expect((await calls()).map((c) => [c.input.jd_ut, c.input.time_known, c.input.settings.house_system])).toEqual([[2451545, true, "Placidus"]]);
+  // Burç evinden başka bir bhavadaki graha `*` taşır; işaret sözle de okunur.
+  const grahas = panel.getByRole("table", { name: /^Grahaların bhavası/ });
+  await expect(grahas.locator('tbody tr[data-graha="Mercury"]').locator("th, td")).toHaveText(["Merkür", "7", "6* burç evinden farklı", "24°07′", "—"]);
+  await expect(grahas.locator('tbody tr[data-graha="Sun"]').locator("th, td")).toHaveText(["Güneş", "7", "7", "0°10′", "—"]);
+  await expect(panel.getByText("* Graha, burcunun evinden başka bir bhavadadır.")).toBeVisible();
+  // Placidus'ta orta yoktur: nokta ayarı bunu söyler ve yeni istek yapmaz.
+  await panel.getByRole("combobox", { name: "Nokta" }).selectOption("mid");
+  await expect(panel.getByRole("note")).toHaveText("Placidus'ta bhava ortası tanımlanmaz: nokta bhavanın başlangıcıdır.");
+  await panel.getByRole("combobox", { name: "Nokta" }).selectOption("end");
+  await expect(panel.getByRole("table", { name: /^Bhava tablosu: on iki bhavanın bitiş noktası/ }).locator('tbody tr[data-house="1"] td').first()).toHaveText("Yen 8°57′");
+  expect(await calls()).toHaveLength(1);
+
+  // Harita panelinde chalit görünümü: grahalar bhavalarına göre yerleşir; istek yapılmaz.
+  const chart = page.getByRole("region", { name: "Harita D1", exact: true });
+  const mercury = chart.locator('svg.chart [data-graha="Mercury"]');
+  await expect(mercury).toHaveAttribute("data-house", "7");
+  await chart.getByRole("checkbox", { name: "Bhava chalit" }).check();
+  await expect(chart.getByRole("group", { name: "Bhava chalit haritası" })).toBeVisible();
+  await expect(mercury).toHaveAttribute("data-house", "6");
+  await expect(mercury).toHaveAttribute("data-shifted", "true");
+  await expect(chart.locator("svg.chart [data-shifted]")).toHaveCount(3);
+  await expect(chart.locator('svg.chart [data-graha="Sun"]')).toHaveAttribute("data-house", "7");
+  await expect(chart.getByText(/^Hücreler bhavadır \(Placidus\)/)).toBeVisible();
+  // Ortak vurgu: tablodaki 6. bhava, haritada o hücreyi ve tablodaki grahasını vurgular.
+  await panel.getByRole("table", { name: /^Bhava tablosu:/ }).getByRole("button", { name: "6. bhava" }).hover();
+  await expect(chart.locator('svg.chart g.chart-house[data-house="6"]')).toHaveClass(/chart-house--highlight/);
+  await expect(grahas.locator('tbody tr[data-graha="Mercury"]')).toHaveClass(/is-highlighted/);
+  expect(await calls()).toHaveLength(1);
+  // Görünüm ve nokta ayarı düzenle birlikte kaydedilir.
+  await expect
+    .poll(async () => {
+      const saved = (await ipcCalls(page, "save_view_state")).at(-1) as { viewState: { panel_layout: { active_layout_id: string; layouts: { id: string; panels: { id: string; kind: string; settings: Record<string, unknown> }[] }[] } } } | undefined;
+      const layout = saved?.viewState.panel_layout;
+      const panels = layout?.layouts.find((l) => l.id === layout.active_layout_id)?.panels ?? [];
+      return [panels.find((p) => p.id === "d1")?.settings.chalit, panels.find((p) => p.kind === "bhava_table")?.settings];
+    })
+    .toEqual([true, { point: "end" }]);
+});
+
+test("sudarshana: a palette panel with three rings and their table; the table drives the shared highlight", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  expect(await ipcCalls(page, "compute_sudarshana")).toHaveLength(0);
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await palette.getByRole("combobox").fill("sudarshana");
+  await palette.getByRole("option", { name: /Sudarshana chakra panelini aç\/kapat/ }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const panel = page.getByRole("region", { name: "Sudarshana chakra" });
+  await expect(panel).toBeFocused();
+  const svg = panel.getByRole("img", { name: "Sudarshana chakra: içten dışa lagna, Ay ve Güneş için üç halka" });
+  await expect(svg).toBeVisible();
+  await expect(svg.locator("path.chart-cell")).toHaveCount(36);
+  await expect(svg.locator(".chart-planet")).toHaveCount(27);
+  await expect(svg.locator(".chart-mark")).toHaveText("Lg");
+  expect(((await ipcCalls(page, "compute_sudarshana")) as { input: { time_known: boolean } }[]).map((c) => c.input.time_known)).toEqual([true]);
+  // Tablo çizimin karşılığıdır: 7. ev lagnadan Yay (Güneş, Merkür), Ay'dan Koç, Güneş'ten İkizler.
+  const table = panel.getByRole("table", { name: /^Sudarshana chakra: on iki evin/ });
+  await expect(table.locator('tbody tr[data-house="7"]').locator("th, td")).toHaveText(["7", "Yay Gü Me", "Koç Jü Sa", "İki"]);
+  // Klavyeyle: tablodaki Güneş düğmesi sabitlenir; üç halkada ve D1 haritasında vurgulanır.
+  const sun = table.locator('tbody tr[data-house="7"]').getByRole("button", { name: "Güneş" });
+  await sun.focus();
+  await page.keyboard.press("Enter");
+  await expect(sun).toHaveAttribute("aria-pressed", "true");
+  await expect(svg.locator(".chart-planet--highlight")).toHaveCount(3);
+  await expect(page.getByRole("region", { name: "Harita D1", exact: true }).locator('svg.chart [data-graha="Sun"]')).toHaveClass(/chart-planet--highlight/);
+  await page.keyboard.press("Escape");
+  await expect(svg.locator(".chart-planet--highlight")).toHaveCount(0);
+  // Çizimde sekme durağı yoktur.
+  await expect(svg.locator("[tabindex]")).toHaveCount(0);
+});
+
+test("sudarshana with an unknown birth time: the lagna ring is not drawn and the Moon is marked approximate", async ({ page }) => {
+  await mockIpc(page, { session: true, unknownTime: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await palette.getByRole("combobox").fill("sudarshana");
+  await palette.getByRole("option", { name: /Sudarshana chakra panelini aç\/kapat/ }).click();
+  const panel = page.getByRole("region", { name: "Sudarshana chakra" });
+  await expect(panel.getByRole("note")).toHaveText("Doğum saati bilinmiyor: lagna halkası çizilmiyor. Ay'ın burcu yaklaşıktır (≈).");
+  const svg = panel.getByRole("img");
+  await expect(svg.locator("path.chart-cell")).toHaveCount(24);
+  await expect(svg.locator('[data-ring="0"]')).toHaveCount(0);
+  await expect(panel.locator('tbody tr[data-house="1"]').locator("th, td")).toHaveText(["1", "—", "Ter Ay", "Yay Gü Me"]);
+  expect(((await ipcCalls(page, "compute_sudarshana")) as { input: { time_known: boolean } }[]).map((c) => c.input.time_known)).toEqual([false]);
+});

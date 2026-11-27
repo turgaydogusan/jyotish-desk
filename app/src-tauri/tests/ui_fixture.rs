@@ -499,8 +499,71 @@ fn ui_fixture_is_up_to_date() {
             "the fixture range has a {kind:?}"
         );
     }
+    // Bhava tablosu ve Sudarshana chakra (Plan 25). Açık haritanın girdisiyle (tam burç) tablo ve
+    // chakra; aynı an ve yer için Sripati tablosu (bhava ortalarıyla) ile Placidus haritası ve
+    // tablosu (chalit görünümünün verisi: üç graha burç evinden başka bir bhavadadır); kutup
+    // dairesinde Placidus (Porphyry'ye düşer; tests/golden/tromso-2050-12-21.json anı); doğum
+    // saati bilinmeyen girdiyle chakra (lagna halkası yok).
+    let bhava = {
+        use jyotish_core::{CalcSettings, HouseSystem};
+        use jyotish_desk_lib::bhava_commands::{
+            compute_bhava_table_blocking, compute_sudarshana_blocking,
+        };
+        use jyotish_desk_lib::commands::compute_chart_for_blocking;
+        let with_system = |system: HouseSystem| ChartInput {
+            settings: CalcSettings {
+                house_system: system,
+                ..module_input.settings.clone()
+            },
+            ..module_input.clone()
+        };
+        let table_of = |input: ChartInput| {
+            compute_bhava_table_blocking(&engine, input)
+                .expect("bhava table")
+                .expect("time known")
+        };
+        let table = table_of(module_input.clone());
+        let table_sripati = table_of(with_system(HouseSystem::Sripati));
+        let placidus = with_system(HouseSystem::Placidus);
+        let chart_placidus =
+            compute_chart_for_blocking(&engine, placidus.clone()).expect("placidus chart");
+        let table_placidus = table_of(placidus.clone());
+        assert_eq!(
+            table_placidus.grahas.iter().filter(|g| g.shifted).count(),
+            3,
+            "three grahas of the fixture chart are outside their sign house"
+        );
+        let table_placidus_polar = table_of(ChartInput {
+            jd_ut: 2_470_162.260_416_666_5,
+            lat: 69.6492,
+            lon: 18.9553,
+            ..placidus
+        });
+        assert!(table_placidus_polar.porphyry_fallback);
+        let sudarshana =
+            compute_sudarshana_blocking(&engine, module_input.clone()).expect("sudarshana");
+        let sudarshana_time_unknown = compute_sudarshana_blocking(
+            &engine,
+            ChartInput {
+                time_known: false,
+                ..module_input.clone()
+            },
+        )
+        .expect("sudarshana without a birth time");
+        json!({
+            "chart_placidus": chart_placidus,
+            "table": table,
+            "table_sripati": table_sripati,
+            "table_placidus": table_placidus,
+            "table_placidus_polar": table_placidus_polar,
+            "sudarshana": sudarshana,
+            "sudarshana_time_unknown": sudarshana_time_unknown,
+            "sudarshana_refs": jyotish_core::SudarshanaRef::ALL,
+        })
+    };
     let value = json!({
         "opened": opened,
+        "bhava": bhava,
         "dasha_children": { "path": path, "periods": children },
         "places": places,
         "preview": preview,

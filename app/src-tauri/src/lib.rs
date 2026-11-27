@@ -1,5 +1,6 @@
 pub mod atlas_commands;
 pub mod avastha_commands;
+pub mod bhava_commands;
 pub mod client_commands;
 pub mod commands;
 pub mod data_dir;
@@ -32,6 +33,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::compute_chart,
             commands::compute_transits,
             transit_commands::transits_at,
+            bhava_commands::compute_bhava_table,
+            bhava_commands::compute_sudarshana,
             commands::dasha_children,
             commands::print_window,
             avastha_commands::compute_avasthas,

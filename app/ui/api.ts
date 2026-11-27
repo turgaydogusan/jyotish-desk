@@ -92,6 +92,10 @@ export const api = {
   // İleri modüller: sonuç saklanmaz, panel açıkken istenir (ileri modüller spec'i K1). Girdi
   // `modules/input.ts`'teki `chartInput(opened)` ile kurulur.
   computeDrishti: (input: ChartInput) => wrap(() => commands.computeDrishti(input)),
+  // Bhava tablosu ve Sudarshana chakra (Plan 25). Tablo: `null` doğum saati bilinmeyen haritadır.
+  // Chakra saat bilinmese de döner; lagna halkasının evleri `null`, sonuç `approximate` olur.
+  computeBhavaTable: (input: ChartInput) => wrap(() => commands.computeBhavaTable(input)),
+  computeSudarshana: (input: ChartInput) => wrap(() => commands.computeSudarshana(input)),
   computeJaimini: (input: ChartInput) => wrap(() => commands.computeJaimini(input)),
   // Chara dasha: `null` doğum saati bilinmeyen haritadır. `path` dönemin `signs`'ı, `cycle`
   // çevrimidir; `charaDashaAt` transit anının dönem yolunu verir (arayüz tarih karşılaştırmaz).
