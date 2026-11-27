@@ -4,8 +4,10 @@
 //! eklenmez, panel açıkken istenir (K1). Hiçbiri lagna istemez; doğum saati bilinmiyorsa değerler
 //! öğlen konumlarından gelir ve rapor `approximate` işaretini taşır.
 
+pub mod dagdha;
 pub mod yogi;
 
+pub use dagdha::{dagdha_rasis, panchang_extras, PanchangExtras, PANCHANG_EXTRAS_METHOD};
 pub use yogi::{
     avayogi_nakshatra, nakshatra_lord, rasi_frame_offset, yogi_facts, yogi_point, YogiFacts,
     AVAYOGI_COUNT, YOGI_ARC_DEG,
