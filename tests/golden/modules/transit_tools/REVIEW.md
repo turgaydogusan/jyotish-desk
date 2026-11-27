@@ -114,7 +114,8 @@ Vimshottari sırasının üç kez yazılmış biçimidir ve testte o sırayla ka
    atladığı gün) boşluk kadar ileri alınır: 03:30. Örtüşmede (aynı duvar saati iki kez) önceki an
    alınır. İkisi de transit anının v1 kuralıdır.
 6. **Aralık.** 1–2999 yılları; dışına çıkan adım `invalid_transit_input { field: "range" }` verir
-   ve an değişmez.
+   ve an değişmez. Saat adımı da bu aralıktadır: sınır Jülyen gün sınırı değil, yıl aralığıdır
+   (574914c); sonuç 0001 öncesine ya da 2999 sonrasına düşecekse adım reddedilir.
 7. **Çıkış anı.** Transit deposunun anıdır: an bir Jülyen günüyse o, "şimdi" ya da yazılmış bir
    duvar saatiyse gösterilen yanıtın anı. İlk adımdan sonra an "şimdi" olmaktan çıkar.
 8. **Eşzamanlılık.** Bir adım isteği sürerken yeni adım başlatılmaz. İstek sürerken an başka bir
@@ -149,3 +150,119 @@ Vimshottari sırasının üç kez yazılmış biçimidir ve testte o sırayla ka
 - [ ] Geri oynatmanın olmaması.
 - [ ] Elle seçilen anın oynatmayı durdurmaması.
 - [ ] Denetimlerin yalnızca Transit tablosu panelinde durması (harita panelinde ayrı düğme yok).
+
+## 5. Elle denetim kaydı (Plan 26 Task 8)
+
+Her maddenin başında, otomatik bir karşılığı olup olmadığı yazılıdır. **[otomatik]** maddelerin
+karşılığı testlerdedir; yürüten ajan testin adını göstererek işaretler. **[insan]** maddeler
+yalnızca gerçek uygulamaya (ya da isterse basılı bir efemerise) bakan bir insan tarafından
+doğrulanır ve sahibine devredilir; devir sonraki planı engellemez (Y3). Gerçek uygulamada yalnızca
+deneme danışanları kullanılır.
+
+- [x] **[otomatik]** Nakshatra lordları tablosu Vimshottari sırasının üç kez yazılmış biçimidir;
+  hesap fonksiyonuyla ve doğum dasasının lorduyla 27 nakshatrada aynıdır; arayüzün okuduğu sabit,
+  fikstürdeki Rust lordlarıyla aynıdır. (`lords.rs` üç test; `nakshatraLord.test.ts` üç test;
+  `tests/bindings.rs`)
+- [x] **[otomatik]** Geçiş tablosu her satırda nakshatra lordunu yazar; graha tablosunda sütun
+  isteğe bağlıdır, varsayılan olarak gizlidir, lagna satırını da doldurur ve doğum saati
+  bilinmiyorsa Ay'ın lordu "≈" taşır; olay aramasında yalnızca nakshatra girişi satırı lordu
+  yazar ve sütun sayısı değişmez; hazır seçim aramayı başlatmaz. (`TransitTablePanel.test.tsx ›
+  the nakshatra lord column …`; `GrahaTableNakshatraLord.test.tsx` beş test;
+  `EventSearchLords.test.tsx` dört test)
+- [x] **[otomatik]** Sankranti: bir yılda on iki giriş, aritmetiğin verdiği anlarda ve burç
+  sırasıyla; giriş anında Güneş burcun başındadır; iki el örneği tithiyi, varayı ve Ay'ın
+  nakshatrasını verir; liste tropikal-rasi kipinde de sidereal girişlerdir; aralıklar boşluksuz
+  birleşir. (`sankranti.rs` yedi test)
+- [x] **[otomatik]** Sankranti komutu gerçek motorla: 2026 için on iki giriş, ilki Ocak ortasında
+  Oğlak; anlar ephemeris'in sidereal Güneş boylamıyla ve olay aramasının Güneş burç girişleriyle
+  aynıdır; tithi, vara ve nakshatra v1'in panchangıdır; yıl verilmezse yerin bugünkü yılıdır;
+  kutup gecesindeki giriş `SunriseUnavailable` uyarısı taşır; hata yalnızca alan adını taşır; bir
+  yıl 100 ms'nin altındadır. (`tests/sankranti.rs`)
+- [x] **[otomatik]** Efemeris tablosu: satır, anının dokuz grahasıdır ve v1'in transit hesabıyla
+  iki zodyak kipinde aynıdır; giriş işareti girilen burcu, dönüş işareti dönülen yönü taşır;
+  düğümlerin yönü işaretlenmez; kapatan an satır olmaz; bozuk anlar alan adıyla reddedilir; satır
+  günün ilk geçerli yerel anında başlar ve zonun atladığı gün satır vermez (9105210).
+  (`ephemeris_table.rs` yedi test)
+- [x] **[otomatik]** Efemeris komutu gerçek motorla: Kasım 2026 otuz satırdır ve her satır yerin
+  gece yarısındadır; konumlar transit komutuyla, işaretler `timeline` dizilerinin sınırlarıyla üç
+  ayda, iki zodyak kipinde ve gerçek düğümle aynıdır; ay verilmezse yerin bugünkü ayıdır; önceki
+  ve sonraki ay yıl sınırını geçer ve aralığın ucunda durur; yaz saati gece yarısında başlayan
+  yerde gün 23 saattir; dosyaların dışındaki yıl `LowPrecision` taşır; bir ay 100 ms'nin
+  altındadır. (`tests/ephemeris_table.rs`; `transit_tools_commands/ephemeris.rs ›
+  months_step_across_the_year_and_stop_at_the_range_ends`)
+- [x] **[otomatik]** Adım aritmetiği: saat adımı tam 3 600 saniyedir ve sonucu yıl aralığında
+  tutar (574914c); gün ve hafta adımı duvar saatini korur (yaz saati geçişinde 23 saat; bir hafta
+  ve bir saat); ay ve yıl adımı ayın son gününe düşer; boşluğa düşen duvar saati ileri alınır,
+  örtüşmede önceki an alınır; hata yalnızca alan adını taşır; aralığın ucunda adım reddedilir.
+  (`transit_tools_commands/step.rs` beş test)
+- [x] **[otomatik]** Sankranti paneli: yer seçilmeden istek gitmez; "bu yıl" Rust'ta okunur; on
+  iki satır yerin saatiyle yazılır; yazılan yıl gönderilince istenir, geçersiz yıl gönderilmez;
+  başka yıl okunurken tablo yerinde durur; satırdaki an transit tarihini taşır; uyarılar ve
+  tropikal harita notu sözle yazılır; hata alan adını arayüz dilinde söyler.
+  (`SankrantiPanel.test.tsx` on test; e2e `sankranti: …`)
+- [x] **[otomatik]** Efemeris paneli: bir gün bir satırdır; sütun başlıkları ekran okuyucuya tam
+  adı okur; retro düz "R"dir ve düğümlerde yazılmaz; giriş ve dönüş işaretleri simge ve sözdür ve
+  Rust'ın işaretlediği hücrelerdedir; "Nakshatra" kutusu istek başlatmaz ve düzenle birlikte
+  saklanır; önceki, sonraki ve "bu ay" Rust'ın döndürdüğü aylarla çalışır; aralığın ucundaki
+  düğme odakta durur ve bir şey yapmaz. (`EphemerisPanel.test.tsx` on test; e2e `ephemeris: …`)
+- [x] **[otomatik]** Adım düğmeleri: adım Rust'a gösterilen an, birim ve tarayıcının dilimiyle
+  sorulur; sonraki adım, transitleri gelmeden de varılan andan çıkar; istek sürerken tıklama yok
+  sayılır; an başka bir yoldan değişmişse ya da bileşen kalkmışsa geç yanıt düşer; hata alan
+  adını söyler ve yeniden denenir. (`TransitStepper.test.tsx` on bir test; e2e `transit steps: …`)
+- [x] **[otomatik]** Oynatma: aralık başına bir adım; önceki anın transitleri gelmeden adım
+  planlanmaz; hız ve birim seçilir; adım ya da transit hatası, bileşenin kalkması, başka harita
+  ve "hareketi azalt" oynatmayı durdurur; elle seçilen an yeni çıkış noktasıdır; "hareketi azalt"
+  açıkken oynatma düğmesi yoktur ve adım düğmeleri çalışır. (`TransitPlayback.test.tsx` on bir
+  test; e2e `transit steps: …` iki akış)
+- [x] **[otomatik]** İki yeni panel paletten eklenir ve çıkarılır; liste ve tablo panel açılmadan
+  istenmez; var olan on beş görsel temel değişmez. (`panels.test.tsx`, `model.test.ts`; üç e2e
+  dosyası; `pnpm e2e:visual`)
+- [x] **[otomatik]** Her metin üç dilde vardır; Fransızca metinlerde düz kesme işareti yoktur.
+  (`i18n.test.ts`; beş panel ve bileşen testinin dil testleri)
+- [ ] **[insan]** Sankranti listesinin tropikal haritada da sidereal verilmesi onaylanır (2.2);
+  varanın gün doğumuna göre okunması onaylanır.
+- [ ] **[insan]** Efemeris satırının saati (yerel gece yarısı ya da 00:00 UT) ve varsayılan yer
+  için karar verilir (3.2). İstenirse basılı bir efemerisle birkaç satır karşılaştırılır
+  (karşılaştırırken satır saati ve ayanamsa eşitlenir).
+- [ ] **[insan]** Gerçek uygulamada oynatma: üç hız okunur mu, varsayılan hız uygun mu; adım
+  birimleri yeterli mi (4.4). Harita panelindeki geçiş halkası ile tablo birlikte ilerler;
+  oynatma sürerken başka bir danışan açmak beklemez.
+- [ ] **[insan]** Gerçek uygulamada macOS "Hareketi azalt" (Erişilebilirlik › Ekran) açılınca
+  oynatma düğmesi gider ve satır görünür; oynatma sürerken açılınca oynatma durur.
+- [ ] **[insan]** Gerçek uygulamada Efemeris paneli: on iki sütunluk panelde tablo okunur; dar
+  panelde yana kayar; "Nakshatra" açıkken satır yüksekliği kabul edilir; açık ve koyu temada, üç
+  dilde okunur.
+- [ ] **[insan]** Gerçek uygulamada geçiş tablosu: yeni "Nakshatra lordu" sütunuyla tablo
+  varsayılan panel genişliğine sığar; graha tablosunda sütun "Sütunlar"dan açılır.
+- [ ] **[insan]** VoiceOver: iki yeni tablo başlıklarıyla duyurulur; efemeris işaretleri sözle
+  okunur; oynatma sürerken "Gösterilen an" duyurusu rahatsız edici değildir (ediciyse karar
+  olarak yazılır).
+- [ ] **[insan]** Denetim boyunca terminalde (Rust ve Vite çıktısı) danışan adı, doğum verisi,
+  koordinat, yer ya da dosya yolu görünmez.
+
+### 5.1 Yürütülen el denetiminin kaydı
+
+Gözden geçiren bir insan değildir: görev gözden geçirmeleri, yazan oturumdan ayrı model
+oturumlarıdır. Bu kayıt insan denetiminin yerine geçmez ve yukarıdaki **[insan]** maddeleri ile
+onay noktaları açık kalır. Aşağıdaki değerler `python3` ve `zoneinfo` ile kuraldan, motorun
+çıktısına bakılmadan yeniden türetilmiştir; yürüten ajan gerçek uygulamayı çalıştırmamış ve
+sonuçları başka bir yazılımla ya da çevrimiçi kaynakla karşılaştırmamıştır.
+
+- **Ay aritmetiği (`MonthId`).** Aralık → Ocak (yıl artar), Ocak → Aralık (yıl azalır), 0001/01 ve
+  2999/12 uçlarında durma ve artık yılda Şubat'ın 29 gün olması.
+- **Yaz saati ve atlanan günler (efemeris satırları).** São Paulo (2017-10-15: gece yarısı yok,
+  satır 01:00 yerel), Apia (2011-12-30 yok: satır yazılmaz), Kiritimati (1994-12-31 yok: satır
+  yazılmaz) ve Havana (saat geri alınırken 00:00 iki kez: önceki an). İlk geçerli an kuralı ve
+  atlanan gün kuralı (9105210) bu değerlerle uyuşmuştur.
+- **Adım aritmetiği.** 28 durum: Berlin'de boşluk ve örtüşme, 31 Ocak + 1 ay, 29 Şubat + yıllar,
+  New York, Lord Howe (yarım saatlik yaz saati), Kiritimati ve 500. yıl. Saat adımının yıl
+  aralığında kalması (574914c) ayrıca incelenmiştir.
+- **Kapsam dışı.** Sankranti anlarının ve efemeris konumlarının astronomik doğruluğu bu kayıtta
+  yeniden türetilmemiştir; o denetim motorun çapraz testlerine ve sahibine kalmıştır.
+
+## 6. Gözden geçirme kaydı
+
+| Tarih | Gözden geçiren | Kapsam | Sonuç |
+|---|---|---|---|
+| | | El örneklerinin kuraldan yeniden türetilmesi (Sankranti'nin iki girişi, efemerisin satır ve işaret örnekleri, adım aritmetiğinin takvim örnekleri) | |
+| | | Sahibinin okuma seçimleri onayı (1.1, 2.2, 3.2, 4.2, 4.4) | |

@@ -122,4 +122,13 @@ Gerçek motorla çapraz denetim `app/src-tauri/tests/natal_extras.rs` ve
 sahibin onayını bekleyen noktalar, denetim maddeleri ve gözden geçirme kaydı
 `natal_extras/REVIEW.md` ve `bhava/REVIEW.md`'dedir.
 
+Geçiş araçları (yol haritası §4.7–§4.10, Plan 26) da bu dizinde JSON örneği taşımaz:
+`transit_tools/` klasöründe yalnızca `REVIEW.md` vardır ve hiçbir test bu klasörü yüklemez. El
+örnekleri birim testleridir (`crates/jyotish-core/src/transit_tools/` ve
+`app/src-tauri/src/transit_tools_commands/step.rs` içindeki `mod tests`). Gerçek motorla çapraz
+denetim `app/src-tauri/tests/sankranti.rs` ve `app/src-tauri/tests/ephemeris_table.rs`
+dosyalarındadır; bu iki test arayüz fikstürlerini de üretir
+(`app/ui/test/fixtures/sankranti.json`, `ephemeris.json`). Okuma kuralları, sahibin onayını
+bekleyen seçimler ve denetim maddeleri `transit_tools/REVIEW.md`'dedir.
+
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.
