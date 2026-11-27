@@ -672,6 +672,7 @@ mod tests {
             lon: 29.0,
             settings,
             time_known,
+            lagna_number: None,
         };
         let mut eph = FakeEph::default();
         let s = CalcSettings::default();

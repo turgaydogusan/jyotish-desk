@@ -6,7 +6,7 @@ import { timeUnknown } from "../session/birth";
 /** Açık haritanın modül girdisi: hesaplanan haritanın anı, konumu ve ayarları. */
 export function chartInput(opened: OpenedClient): ChartInput {
   const { chart } = opened;
-  return { jd_ut: chart.jd_ut, lat: chart.geo_lat, lon: chart.geo_lon, settings: chart.meta.settings, time_known: !timeUnknown(opened) };
+  return { jd_ut: chart.jd_ut, lat: chart.geo_lat, lon: chart.geo_lon, settings: chart.meta.settings, time_known: !timeUnknown(opened), lagna_number: null };
 }
 
 /**

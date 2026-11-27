@@ -19,7 +19,7 @@
 use ephemeris::Ephemeris;
 use serde::{Deserialize, Serialize};
 
-use crate::chart::compute_chart;
+use crate::chart::compute_chart_for;
 use crate::positions::{ChartInput, Positions};
 use crate::zodiac::Sign;
 use crate::CoreError;
@@ -271,7 +271,7 @@ pub fn compute_chara_dasha<E: Ephemeris + ?Sized>(
     eph: &mut E,
     input: &ChartInput,
 ) -> Result<Option<CharaDasha>, CoreError> {
-    let chart = compute_chart(eph, input.jd_ut, input.lat, input.lon, &input.settings)?;
+    let chart = compute_chart_for(eph, input)?;
     if !input.time_known {
         return Ok(None);
     }
@@ -312,6 +312,7 @@ pub fn compute_chara_dasha_at<E: Ephemeris + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chart::compute_chart;
     use crate::fake::FakeEph;
     use crate::settings::{AdvancedSettings, CalcSettings, KarakaScheme};
     use Sign::*;
@@ -697,6 +698,7 @@ mod tests {
             lon: 29.0,
             settings,
             time_known,
+            lagna_number: None,
         }
     }
 

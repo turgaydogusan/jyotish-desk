@@ -4,7 +4,7 @@
 
 use ephemeris::{Body, Ephemeris, HouseSystem, Zodiac};
 
-use crate::chart::{compute_chart, finite, Chart, ChartWarning};
+use crate::chart::{compute_chart_for, finite, Chart, ChartWarning};
 use crate::graha::Graha;
 use crate::panchang::{following_sunrise, vara_at};
 use crate::positions::{ChartInput, Positions};
@@ -111,7 +111,7 @@ pub fn compute_shadbala<E: Ephemeris + ?Sized>(
     eph: &mut E,
     input: &ChartInput,
 ) -> Result<Option<ShadbalaReport>, CoreError> {
-    let chart = compute_chart(eph, input.jd_ut, input.lat, input.lon, &input.settings)?;
+    let chart = compute_chart_for(eph, input)?;
     if !input.time_known {
         return Ok(None);
     }
@@ -134,6 +134,7 @@ pub fn compute_shadbala<E: Ephemeris + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chart::compute_chart;
     use crate::fake::FakeEph;
     use crate::panchang::Vara;
     use crate::settings::{CalcSettings, ZodiacMode};
@@ -149,11 +150,12 @@ mod tests {
             lon: 29.0,
             settings,
             time_known,
+            lagna_number: None,
         }
     }
 
     fn astro_of(eph: &mut FakeEph, input: &ChartInput) -> Option<ShadbalaAstro> {
-        let chart = compute_chart(eph, input.jd_ut, input.lat, input.lon, &input.settings).unwrap();
+        let chart = compute_chart_for(eph, input).unwrap();
         compute_shadbala_astro(eph, input, &chart).unwrap()
     }
 

@@ -5,7 +5,7 @@ import { chartInput, inputKey } from "./input";
 test("module input is the computed chart's moment, place and settings", () => {
   const opened = fixture().opened;
   const input = chartInput(opened);
-  expect(input).toEqual({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true });
+  expect(input).toEqual({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true, lagna_number: null });
   // Hesapta kullanılan ayarlar: haritanın `meta.settings` kopyası, `advanced` bloğuyla.
   expect(input.settings.schema_version).toBe(2);
   expect(input.settings.advanced).toEqual({ karaka_scheme: "Eight", jaimini_co_lords: true });

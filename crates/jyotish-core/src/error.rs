@@ -27,4 +27,7 @@ pub enum CoreError {
     /// (değer taşımaz).
     #[error("invalid muhurta input: {0}")]
     InvalidMuhurtaInput(&'static str),
+    /// Prashna girdisi geçersiz (sayı, odak evi, lagna); alan adını taşır (değer taşımaz).
+    #[error("invalid prashna input: {0}")]
+    InvalidPrashnaInput(&'static str),
 }

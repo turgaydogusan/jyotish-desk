@@ -7,6 +7,7 @@
 //! çekirdeği (Alt proje 3.2) ve chara dasha (Alt proje 3.3): `jaimini`. Shadbala ve Bhava bala
 //! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`. Uyum (Alt proje 3.6): `kuta`.
 //! Muhurta (Alt proje 3.7): `timeline` (aralık dizileri) ve `muhurta` (gün panchangı, arama).
+//! Prashna (Alt proje 3.8): `prashna` (sayı prashnasının lagnası, soru haritasının olguları).
 
 pub mod ashtakavarga;
 mod chart;
@@ -26,6 +27,7 @@ pub mod muhurta;
 pub mod nature;
 pub mod panchang;
 pub mod positions;
+pub mod prashna;
 #[cfg(test)]
 mod proptests;
 pub mod settings;
@@ -39,7 +41,10 @@ pub mod zodiac;
 pub use ashtakavarga::{
     compute_ashtakavarga, Ashtakavarga, ASHTAKAVARGA_GRAHAS, BAV_TOTALS, SAV_TOTAL,
 };
-pub use chart::{compute_chart, Chart, ChartMeta, ChartWarning, ENGINE_VERSION};
+pub use chart::{
+    compute_chart, compute_chart_for, compute_chart_with_lagna, Chart, ChartMeta, ChartWarning,
+    ENGINE_VERSION,
+};
 pub use combustion::is_combust;
 pub use dasha::{
     birth_dasha, dasha_children, dasha_path_at, mahadashas, vimshottari, vimshottari_years, Dasha,
@@ -87,6 +92,7 @@ pub use panchang::{
     END_BISECTIONS, END_SEARCH_DAYS, KARANA_SPAN_DEG, SUNRISE_WINDOW_DAYS, TITHI_SPAN_DEG,
 };
 pub use positions::{compute_positions, ChartInput, GrahaPoint, Positions};
+pub use prashna::{number_lagna_lon, PRASHNA_NUMBER_MAX};
 pub use settings::{
     AdvancedSettings, AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, KarakaScheme,
     NodeKind, SunriseDef, ZodiacMode, CALC_SETTINGS_SCHEMA_VERSION, JD_UT_RANGE,

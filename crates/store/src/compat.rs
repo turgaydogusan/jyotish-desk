@@ -111,6 +111,7 @@ impl Store {
             lon: chart.birth.place.lon,
             settings,
             time_known: chart.birth.time_certainty != TimeCertainty::Unknown,
+            lagna_number: None,
         }))
     }
 
@@ -334,9 +335,10 @@ mod tests {
                 lon: a.birth.place.lon,
                 settings: raman,
                 time_known: true,
+                lagna_number: None,
             }
         );
-        // Dönen değer ad, not, yer adı, tarih metni ve saat dilimi taşımaz: yalnızca beş alan.
+        // Dönen değer ad, not, yer adı, tarih metni ve saat dilimi taşımaz: yalnızca altı alan.
         let json = serde_json::to_value(&input).unwrap();
         let mut keys: Vec<&str> = json
             .as_object()
@@ -345,7 +347,17 @@ mod tests {
             .map(String::as_str)
             .collect();
         keys.sort_unstable();
-        assert_eq!(keys, ["jd_ut", "lat", "lon", "settings", "time_known"]);
+        assert_eq!(
+            keys,
+            [
+                "jd_ut",
+                "lagna_number",
+                "lat",
+                "lon",
+                "settings",
+                "time_known"
+            ]
+        );
         let text = json.to_string();
         for private in ["Ayşe", "gizli", "New Delhi", "Asia/Kolkata", "2000-01-01"] {
             assert!(!text.contains(private), "{private}");

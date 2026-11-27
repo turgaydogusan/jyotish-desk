@@ -33,7 +33,7 @@ test("asks for the open chart's report and lists the eight karakas in role order
   const table = await karakaTable();
   const opened = fixture().opened;
   expect(api.computeJaimini).toHaveBeenCalledTimes(1);
-  expect(api.computeJaimini).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true });
+  expect(api.computeJaimini).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true, lagna_number: null });
   expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Rol", "Graha", "Burç", "Derece"]);
   const rows = within(table).getAllByRole("row").slice(1);
   // Delhi fikstürü, sekizli şema: Rahu'nun gerçek derecesi 11°11′, etkin derecesi 30° − 11°11′.

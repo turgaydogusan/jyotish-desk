@@ -88,6 +88,9 @@ impl From<CoreError> for CommandError {
             CoreError::InvalidMuhurtaInput(field) => {
                 Self::new("invalid_muhurta_input", &[("field", field.to_owned())])
             }
+            CoreError::InvalidPrashnaInput(field) => {
+                Self::new("invalid_prashna_input", &[("field", field.to_owned())])
+            }
         }
     }
 }
@@ -248,6 +251,11 @@ mod tests {
         // Yalnızca alan adı: yer ve tarih hata parametresine girmez.
         assert_eq!(e.params.len(), 1);
         assert_eq!(e.params["field"], "place");
+        let e = CommandError::from(CoreError::InvalidPrashnaInput("number"));
+        assert_eq!(e.code, "invalid_prashna_input");
+        // Yalnızca alan adı: sayı, soru, yer ve an hata parametresine girmez.
+        assert_eq!(e.params.len(), 1);
+        assert_eq!(e.params["field"], "number");
     }
 
     #[test]

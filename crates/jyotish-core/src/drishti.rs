@@ -180,6 +180,7 @@ mod tests {
             lon: 29.0,
             settings: CalcSettings::default(),
             time_known: true,
+            lagna_number: None,
         };
         let table = compute_drishti(&mut eph, &input).unwrap();
         let positions = compute_positions(&mut eph, &input).unwrap();

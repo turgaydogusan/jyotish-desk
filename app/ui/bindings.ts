@@ -378,6 +378,13 @@ export type ChartInput = {
 	lon: number | null,
 	settings: CalcSettings,
 	time_known: boolean,
+	/**
+	 *  Sayı prashnası (ileri modüller spec'i §11): doluysa lagna bu sayıdan gelir (1..=108,
+	 *  `number_lagna_lon`) ve evler o lagnadan burç evidir; grahalar anın grahalarıdır. Diğer
+	 *  her haritada `None`. `time_known` kuralı değişmez: yanlışsa lagnaya bağlı çıktı yine
+	 *  boştur (soru anı her zaman bilinir; arayüz sayı prashnasında `true` gönderir).
+	 */
+	lagna_number: number | null,
 };
 
 export type ChartKind = "Natal" | 

@@ -74,7 +74,7 @@ const BACKEND_CODES = [
   "store_sqlite", "store_migration", "store_json", "store_too_new", "store_unavailable", "not_found", "invalid_input",
   "unknown_time_zone", "nonexistent_local_time", "ambiguous_local_time", "offset_out_of_range", "longitude_out_of_range",
   "date_out_of_range", "last_chart", "unsupported_schema_version", "invalid_settings", "invalid_location", "invalid_julian_day",
-  "non_finite_result", "invalid_dasha_input", "panchang_search", "invalid_transit_input", "invalid_muhurta_input",
+  "non_finite_result", "invalid_dasha_input", "panchang_search", "invalid_transit_input", "invalid_muhurta_input", "invalid_prashna_input",
   "atlas_unavailable", "atlas_sqlite", "atlas_io", "atlas_schema",
   "file_io", "dialog_path", "import_too_large", "import_format", "import_version", "import_record",
   "prefs_too_new",

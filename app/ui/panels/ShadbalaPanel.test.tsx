@@ -43,7 +43,7 @@ test("summary: seven grahas with the six strengths, total, required value, ratio
   const table = await summary();
   const opened = fixture().opened;
   expect(api.computeShadbala).toHaveBeenCalledTimes(1);
-  expect(api.computeShadbala).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true });
+  expect(api.computeShadbala).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true, lagna_number: null });
   expect(cells(within(table).getAllByRole("row")[0])).toEqual(["Graha", "Sthana", "Dig", "Zaman gücü", "Cheshta", "Naisargika", "Drik", "Toplam", "Gerekli", "Oran", "Sıra"]);
   // Delhi fikstürü, virupa, bir ondalık; oran iki ondalık.
   expect(bodyRows(table)).toEqual([

@@ -58,7 +58,7 @@ test("chara, antar (default): the twelve sub-periods of the dasha at the transit
   renderStrip();
   const items = await buttons();
   const opened = fixture().opened;
-  const input = { jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true };
+  const input = { jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true, lagna_number: null };
   expect(api.computeCharaDasha).toHaveBeenCalledWith(input);
   // Güncel dönem Rust'tan gelir: transit anı (`snapshot.jd_ut`) ile sorulur.
   expect(api.charaDashaAt).toHaveBeenCalledTimes(1);

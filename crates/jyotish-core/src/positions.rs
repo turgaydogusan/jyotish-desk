@@ -5,7 +5,7 @@
 use ephemeris::Ephemeris;
 use serde::{Deserialize, Serialize};
 
-use crate::chart::{compute_chart, Chart};
+use crate::chart::{compute_chart_for, Chart};
 use crate::graha::Graha;
 use crate::settings::CalcSettings;
 use crate::zodiac::{deg_in_sign, normalize, Sign};
@@ -24,6 +24,11 @@ pub struct ChartInput {
     pub lon: f64,
     pub settings: CalcSettings,
     pub time_known: bool,
+    /// Sayı prashnası (ileri modüller spec'i §11): doluysa lagna bu sayıdan gelir (1..=108,
+    /// `number_lagna_lon`) ve evler o lagnadan burç evidir; grahalar anın grahalarıdır. Diğer
+    /// her haritada `None`. `time_known` kuralı değişmez: yanlışsa lagnaya bağlı çıktı yine
+    /// boştur (soru anı her zaman bilinir; arayüz sayı prashnasında `true` gönderir).
+    pub lagna_number: Option<u8>,
 }
 
 /// Bir grahanın modüllerin kullandığı konumu.
@@ -139,12 +144,13 @@ impl Positions {
 }
 
 /// Toplayıcı: temel haritayı hesaplar ve konumlara indirger. `input.time_known` yanlışsa
-/// lagna boştur. Ayar, an ve konum denetimi `compute_chart`'ınkidir.
+/// lagna boştur; sayı prashnasında (`input.lagna_number`) lagna sayıdan gelir
+/// (`compute_chart_for`). Ayar, an ve konum denetimi `compute_chart`'ınkidir.
 pub fn compute_positions<E: Ephemeris + ?Sized>(
     eph: &mut E,
     input: &ChartInput,
 ) -> Result<Positions, CoreError> {
-    let chart = compute_chart(eph, input.jd_ut, input.lat, input.lon, &input.settings)?;
+    let chart = compute_chart_for(eph, input)?;
     let positions = Positions::from(&chart);
     Ok(if input.time_known {
         positions
@@ -156,6 +162,7 @@ pub fn compute_positions<E: Ephemeris + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chart::compute_chart;
     use crate::fake::FakeEph;
     use crate::settings::ZodiacMode;
 
@@ -168,6 +175,7 @@ mod tests {
             lon: 29.0,
             settings,
             time_known,
+            lagna_number: None,
         }
     }
 
@@ -237,6 +245,31 @@ mod tests {
         // Lagna tropikal 70° (İkizler); sidereal boylamı 46°.
         assert_eq!(p.lagna_sign, Some(Sign::Gemini));
         assert!((p.lagna_lon.unwrap() - 46.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_lagna_number_moves_the_lagna_and_keeps_the_grahas() {
+        let mut eph = FakeEph::default();
+        let s = CalcSettings::default();
+        let plain = compute_positions(&mut eph, &input(s.clone(), true)).unwrap();
+        // 30. sayı: 98°20′ sidereal, Yengeç.
+        let mut numbered = input(s, true);
+        numbered.lagna_number = Some(30);
+        let p = compute_positions(&mut eph, &numbered).unwrap();
+        assert!((p.lagna_lon.unwrap() - 5900.0 / 60.0).abs() < 1e-12);
+        assert_eq!(p.lagna_sign, Some(Sign::Cancer));
+        assert_eq!(p.grahas, plain.grahas);
+        // FakeEph'te Ay sidereal 71° (İkizler): Yengeç lagnasından 12. ev.
+        assert_eq!(p.house_of(Graha::Moon), Some(12));
+        // `time_known` kuralı değişmez.
+        numbered.time_known = false;
+        let hidden = compute_positions(&mut eph, &numbered).unwrap();
+        assert_eq!((hidden.lagna_lon, hidden.lagna_sign), (None, None));
+        numbered.lagna_number = Some(0);
+        assert_eq!(
+            compute_positions(&mut eph, &numbered),
+            Err(CoreError::InvalidPrashnaInput("number"))
+        );
     }
 
     #[test]

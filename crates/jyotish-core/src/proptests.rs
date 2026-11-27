@@ -1909,3 +1909,151 @@ mod muhurta_properties {
         }
     }
 }
+
+mod prashna_properties {
+    use ephemeris::Body;
+    use proptest::prelude::*;
+
+    use crate::chart::{compute_chart, compute_chart_with_lagna};
+    use crate::fake::FakeEph;
+    use crate::houses::{whole_sign_cusps, whole_sign_house};
+    use crate::positions::{compute_positions, ChartInput};
+    use crate::prashna::{number_lagna_lon, PRASHNA_NUMBER_MAX};
+    use crate::settings::{CalcSettings, HouseSystem, ZodiacMode};
+    use crate::zodiac::Sign;
+
+    const JD: f64 = 2_451_545.0;
+    const PLANETS: [Body; 7] = [
+        Body::Sun,
+        Body::Moon,
+        Body::Mars,
+        Body::Mercury,
+        Body::Jupiter,
+        Body::Venus,
+        Body::Saturn,
+    ];
+    const SPEEDS: [f64; 7] = [0.98, 13.2, 0.6, 1.2, -0.1, 1.1, 0.05];
+
+    fn sky(lons: [f64; 7], asc: f64, node: f64, ayanamsa: f64) -> FakeEph {
+        let mut eph = FakeEph {
+            asc,
+            ayanamsa,
+            ..FakeEph::default()
+        };
+        for ((body, lon), speed) in PLANETS.iter().zip(lons).zip(SPEEDS) {
+            eph = eph.with(*body, lon, speed);
+        }
+        eph.with(Body::MeanNode, node, -0.053)
+    }
+
+    fn settings(tropical: bool, house_system: HouseSystem) -> CalcSettings {
+        CalcSettings {
+            zodiac: if tropical {
+                ZodiacMode::TropicalRasiSiderealNakshatra
+            } else {
+                ZodiacMode::Sidereal
+            },
+            house_system,
+            ..CalcSettings::default()
+        }
+    }
+
+    fn house_systems() -> impl Strategy<Value = HouseSystem> {
+        prop_oneof![
+            Just(HouseSystem::WholeSign),
+            Just(HouseSystem::Sripati),
+            Just(HouseSystem::Placidus),
+        ]
+    }
+
+    proptest! {
+        /// Spec §11: sayı prashnasında grahaların boylamı aynı anın zaman prashnasıyla aynıdır;
+        /// yalnızca lagna ve evler değişir.
+        #[test]
+        fn a_number_changes_only_the_lagna_and_the_houses(
+            lons in proptest::array::uniform7(0.0f64..360.0),
+            asc in 0.0f64..360.0,
+            node in 0.0f64..360.0,
+            ayanamsa in 20.0f64..26.0,
+            number in 1u8..=PRASHNA_NUMBER_MAX,
+            tropical in any::<bool>(),
+            house_system in house_systems(),
+        ) {
+            let mut eph = sky(lons, asc, node, ayanamsa);
+            let s = settings(tropical, house_system);
+            let time = compute_chart(&mut eph, JD, 10.0, 20.0, &s).unwrap();
+            let lagna = number_lagna_lon(number).unwrap();
+            let c = compute_chart_with_lagna(&mut eph, JD, 10.0, 20.0, &s, lagna).unwrap();
+            prop_assert_eq!(c.lagna.sidereal_lon, lagna);
+            prop_assert_eq!(
+                (u16::from(c.lagna.nakshatra) - 1) * 4 + u16::from(c.lagna.pada),
+                u16::from(number)
+            );
+            prop_assert_eq!(c.lagna.sign, Sign::of(c.lagna.lon));
+            if !tropical {
+                prop_assert_eq!(c.lagna.sign.index(), usize::from(number - 1) / 9);
+            }
+            prop_assert_eq!(c.bhavas.system, HouseSystem::WholeSign);
+            prop_assert_eq!(&c.bhavas.cusps, &whole_sign_cusps(c.lagna.sign));
+            for (a, b) in c.grahas.iter().zip(&time.grahas) {
+                prop_assert_eq!(a.graha, b.graha);
+                prop_assert_eq!(a.lon, b.lon);
+                prop_assert_eq!(a.sidereal_lon, b.sidereal_lon);
+                prop_assert_eq!(a.speed, b.speed);
+                prop_assert_eq!((a.sign, a.nakshatra, a.pada), (b.sign, b.nakshatra, b.pada));
+                prop_assert_eq!((a.retrograde, a.combust, a.dignity), (b.retrograde, b.combust, b.dignity));
+                prop_assert_eq!(a.house, whole_sign_house(a.sign, c.lagna.sign));
+            }
+            prop_assert_eq!(&c.dasha, &time.dasha);
+            prop_assert_eq!(&c.panchang, &time.panchang);
+            prop_assert_eq!(c.ayanamsa_deg, time.ayanamsa_deg);
+            // Modül girdisi aynı haritayı görür.
+            let input = ChartInput {
+                jd_ut: JD,
+                lat: 10.0,
+                lon: 20.0,
+                settings: s,
+                time_known: true,
+                lagna_number: Some(number),
+            };
+            let p = compute_positions(&mut eph, &input).unwrap();
+            prop_assert_eq!(p.lagna_lon, Some(lagna));
+            prop_assert_eq!(p.lagna_sign, Some(c.lagna.sign));
+        }
+
+        /// Spec §11: `compute_chart_with_lagna` gerçek lagna verildiğinde `compute_chart` ile
+        /// aynı haritayı döner. Burç evi sisteminde ve sidereal kipte eşitlik bit bittir;
+        /// tropikal-rasi kipinde lagnanın rasi boylamı `sidereal + ayanamsa` ile yeniden
+        /// kurulur (yuvarlama payı) ve burç sınırına bu paydan yakın lagnalar atlanır.
+        #[test]
+        fn the_real_lagna_gives_the_chart_of_compute_chart(
+            lons in proptest::array::uniform7(0.0f64..360.0),
+            asc in 0.0f64..360.0,
+            node in 0.0f64..360.0,
+            ayanamsa in 20.0f64..26.0,
+            tropical in any::<bool>(),
+        ) {
+            let mut eph = sky(lons, asc, node, ayanamsa);
+            let s = settings(tropical, HouseSystem::WholeSign);
+            let base = compute_chart(&mut eph, JD, 10.0, 20.0, &s).unwrap();
+            let again =
+                compute_chart_with_lagna(&mut eph, JD, 10.0, 20.0, &s, base.lagna.sidereal_lon)
+                    .unwrap();
+            if tropical {
+                let d = base.lagna.deg_in_sign;
+                prop_assume!(d > 1e-6 && d < 30.0 - 1e-6);
+                prop_assert!((again.lagna.lon - base.lagna.lon).abs() < 1e-9);
+                prop_assert_eq!(again.lagna.sidereal_lon, base.lagna.sidereal_lon);
+                prop_assert_eq!(again.lagna.sign, base.lagna.sign);
+                prop_assert_eq!(&again.grahas, &base.grahas);
+                prop_assert_eq!(&again.bhavas, &base.bhavas);
+                prop_assert_eq!(&again.ashtakavarga, &base.ashtakavarga);
+                prop_assert_eq!(&again.dasha, &base.dasha);
+                prop_assert_eq!(&again.panchang, &base.panchang);
+                prop_assert_eq!(&again.meta, &base.meta);
+            } else {
+                prop_assert_eq!(&again, &base);
+            }
+        }
+    }
+}

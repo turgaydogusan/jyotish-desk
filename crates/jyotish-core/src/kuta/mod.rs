@@ -502,6 +502,7 @@ mod tests {
             lon: 29.0,
             settings,
             time_known,
+            lagna_number: None,
         }
     }
 

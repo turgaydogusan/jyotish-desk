@@ -139,6 +139,7 @@ fn ui_fixture_is_up_to_date() {
         lon: opened.chart.geo_lon,
         settings: opened.chart.meta.settings.clone(),
         time_known: true,
+        lagna_number: None,
     };
     let drishti = compute_drishti_blocking(&engine, module_input.clone()).expect("drishti");
     let jaimini = compute_jaimini_blocking(&engine, module_input.clone()).expect("jaimini");
@@ -174,6 +175,7 @@ fn ui_fixture_is_up_to_date() {
         &engine,
         ChartInput {
             time_known: false,
+            lagna_number: None,
             ..module_input.clone()
         },
     )
@@ -221,6 +223,7 @@ fn ui_fixture_is_up_to_date() {
         module_input.clone(),
         ChartInput {
             time_known: false,
+            lagna_number: None,
             ..partner_input.clone()
         },
     )

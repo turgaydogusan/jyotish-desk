@@ -14,7 +14,7 @@ mod rashi;
 use ephemeris::Ephemeris;
 use serde::{Deserialize, Serialize};
 
-use crate::chart::{compute_chart, ChartWarning};
+use crate::chart::{compute_chart_for, ChartWarning};
 use crate::drishti::SignAspect;
 use crate::positions::{ChartInput, Positions};
 use crate::settings::{AdvancedSettings, KarakaScheme};
@@ -96,7 +96,7 @@ pub fn compute_jaimini<E: Ephemeris + ?Sized>(
     eph: &mut E,
     input: &ChartInput,
 ) -> Result<JaiminiReport, CoreError> {
-    let chart = compute_chart(eph, input.jd_ut, input.lat, input.lon, &input.settings)?;
+    let chart = compute_chart_for(eph, input)?;
     let positions = Positions::from(&chart);
     let positions = if input.time_known {
         positions
@@ -117,6 +117,7 @@ pub fn compute_jaimini<E: Ephemeris + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chart::compute_chart;
     use crate::fake::FakeEph;
     use crate::graha::Graha;
     use crate::settings::CalcSettings;
@@ -133,6 +134,7 @@ mod tests {
                 ..CalcSettings::default()
             },
             time_known,
+            lagna_number: None,
         }
     }
 

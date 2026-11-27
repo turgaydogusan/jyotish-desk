@@ -35,7 +35,7 @@ test("asks for the open chart's aspects and marks full sign aspects, seven rows 
   await screen.findByRole("table", { name: "Graha bakışları: satırlar bakan, sütunlar bakılan graha" });
   const opened = fixture().opened;
   expect(api.computeDrishti).toHaveBeenCalledTimes(1);
-  expect(api.computeDrishti).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true });
+  expect(api.computeDrishti).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true, lagna_number: null });
   expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Bakan", "Gü", "Ay", "Ma", "Me", "Jü", "Ve", "Sa", "Ra", "Ke"]);
   expect(screen.getAllByRole("rowheader").map((h) => h.textContent)).toEqual(["Güneş", "Ay", "Mars", "Merkür", "Jüpiter", "Venüs", "Satürn"]);
   // Delhi fikstürü: Ay Terazi'den Koç'a (Jüpiter, Satürn); Jüpiter Koç'tan Terazi'ye (Ay) ve
@@ -182,7 +182,7 @@ test("rashi drishti: nine rows by nine columns from the Jaimini report, marked b
   renderPanel({ kind: "rashi" });
   await screen.findByRole("table", { name: "Rashi drishti: satırlar bakan, sütunlar bakılan graha" });
   expect(api.computeJaimini).toHaveBeenCalledTimes(1);
-  expect(api.computeJaimini).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: fixture().opened.chart.meta.settings, time_known: true });
+  expect(api.computeJaimini).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: fixture().opened.chart.meta.settings, time_known: true, lagna_number: null });
   expect(api.computeDrishti).not.toHaveBeenCalled();
   // Rashi drishtide düğümler de bakar: dokuz satır. Virupa değeri yoktur: "Değer" seçici çizilmez.
   expect(screen.getAllByRole("rowheader").map((h) => h.textContent)).toEqual(["Güneş", "Ay", "Mars", "Merkür", "Jüpiter", "Venüs", "Satürn", "Rahu", "Ketu"]);

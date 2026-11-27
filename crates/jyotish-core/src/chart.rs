@@ -11,6 +11,8 @@ use crate::dignity::{dignity, sign_lord};
 use crate::graha::{Graha, GrahaPosition};
 use crate::houses::{house_from_cusps, whole_sign_cusps, whole_sign_house, Bhavas, Lagna};
 use crate::panchang::{compute_panchang, Panchang};
+use crate::positions::ChartInput;
+use crate::prashna::number_lagna_lon;
 use crate::settings::{CalcSettings, HouseSystem, NodeKind, ZodiacMode, JD_UT_RANGE};
 use crate::varga::{all_vargas, is_vargottama, VargaChart};
 use crate::zodiac::{deg_in_sign, nakshatra_pada, normalize, Sign};
@@ -189,6 +191,75 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
     geo_lon: f64,
     settings: &CalcSettings,
 ) -> Result<Chart, CoreError> {
+    chart_with(eph, jd_ut, geo_lat, geo_lon, settings, None)
+}
+
+/// Lagnası verilen harita (ileri modüller spec'i §11, sayı prashnası): grahalar, dasha ve
+/// panchang `compute_chart` ile aynıdır; lagna `lagna_sidereal_lon`'dur (sidereal boylam) ve
+/// ev sistemi ayarı ne olursa olsun evler bu lagnadan sayılan burç evleridir
+/// (`bhavas.system` `WholeSign` döner). Ephemeris'ten ev istenmez; `PlacidusPolarFallback`
+/// uyarısı bu yolda üretilmez. Sonlu olmayan lagna `InvalidPrashnaInput("lagna")`'dır.
+pub fn compute_chart_with_lagna<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    jd_ut: f64,
+    geo_lat: f64,
+    geo_lon: f64,
+    settings: &CalcSettings,
+    lagna_sidereal_lon: f64,
+) -> Result<Chart, CoreError> {
+    if !lagna_sidereal_lon.is_finite() {
+        return Err(CoreError::InvalidPrashnaInput("lagna"));
+    }
+    chart_with(
+        eph,
+        jd_ut,
+        geo_lat,
+        geo_lon,
+        settings,
+        Some(normalize(lagna_sidereal_lon)),
+    )
+}
+
+/// `ChartInput`'un haritası: `lagna_number` doluysa sayı prashnasının lagnasıyla
+/// (`number_lagna_lon`), değilse `compute_chart`. Modül toplayıcıları haritayı buradan alır;
+/// böylece sayı prashnasında her modül, haritanın gösterdiği lagnayı kullanır.
+pub fn compute_chart_for<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    input: &ChartInput,
+) -> Result<Chart, CoreError> {
+    match input.lagna_number {
+        None => compute_chart(eph, input.jd_ut, input.lat, input.lon, &input.settings),
+        Some(number) => {
+            // Sayı, ephemeris sorulmadan önce denetlenir.
+            let lagna = number_lagna_lon(number)?;
+            compute_chart_with_lagna(
+                eph,
+                input.jd_ut,
+                input.lat,
+                input.lon,
+                &input.settings,
+                lagna,
+            )
+        }
+    }
+}
+
+/// Sidereal boylamın rasi çerçevesindeki karşılığı (`to_sidereal`'in tersi).
+pub(crate) fn from_sidereal(zodiac: ZodiacMode, sidereal_lon: f64, ayanamsa_deg: f64) -> f64 {
+    match zodiac {
+        ZodiacMode::Sidereal => sidereal_lon,
+        ZodiacMode::TropicalRasiSiderealNakshatra => normalize(sidereal_lon + ayanamsa_deg),
+    }
+}
+
+fn chart_with<E: Ephemeris + ?Sized>(
+    eph: &mut E,
+    jd_ut: f64,
+    geo_lat: f64,
+    geo_lon: f64,
+    settings: &CalcSettings,
+    lagna_sidereal_lon: Option<f64>,
+) -> Result<Chart, CoreError> {
     settings.validate()?;
     check_moment(jd_ut, geo_lat, geo_lon)?;
 
@@ -203,24 +274,36 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         warnings.push(ChartWarning::LowPrecision);
     }
 
-    let houses = eph.houses(
-        jd_ut,
-        geo_lat,
-        geo_lon,
-        settings.house_system.ephemeris_system(),
-        frame,
-    )?;
-    finite(houses.asc, "lagna")?;
-    for c in houses.cusps {
-        finite(c, "bhavas")?;
-    }
-    if houses.porphyry_fallback {
-        warnings.push(ChartWarning::PlacidusPolarFallback);
-    }
-    let lagna = Lagna::new(houses.asc, sidereal(houses.asc));
-    let cusps = match settings.house_system {
-        HouseSystem::WholeSign => whole_sign_cusps(lagna.sign),
-        HouseSystem::Sripati | HouseSystem::Placidus => houses.cusps.to_vec(),
+    let (lagna, cusps, house_system) = match lagna_sidereal_lon {
+        Some(sidereal_lon) => {
+            // Verilen lagna: evler bu lagnadan burç evidir; ephemeris'ten ev istenmez.
+            let lon = from_sidereal(settings.zodiac, sidereal_lon, ayanamsa.deg);
+            let lagna = Lagna::new(lon, sidereal_lon);
+            let cusps = whole_sign_cusps(lagna.sign);
+            (lagna, cusps, HouseSystem::WholeSign)
+        }
+        None => {
+            let houses = eph.houses(
+                jd_ut,
+                geo_lat,
+                geo_lon,
+                settings.house_system.ephemeris_system(),
+                frame,
+            )?;
+            finite(houses.asc, "lagna")?;
+            for c in houses.cusps {
+                finite(c, "bhavas")?;
+            }
+            if houses.porphyry_fallback {
+                warnings.push(ChartWarning::PlacidusPolarFallback);
+            }
+            let lagna = Lagna::new(houses.asc, sidereal(houses.asc));
+            let cusps = match settings.house_system {
+                HouseSystem::WholeSign => whole_sign_cusps(lagna.sign),
+                HouseSystem::Sripati | HouseSystem::Placidus => houses.cusps.to_vec(),
+            };
+            (lagna, cusps, settings.house_system)
+        }
     };
 
     let sun_lon = raw[0].lon;
@@ -254,7 +337,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
                     &settings.combustion_orbs,
                 ),
                 dignity: dignity(r.graha, sign, deg, lord_sign),
-                house: match settings.house_system {
+                house: match house_system {
                     HouseSystem::WholeSign => whole_sign_house(sign, lagna.sign),
                     HouseSystem::Sripati | HouseSystem::Placidus => house_from_cusps(r.lon, &cusps),
                 },
@@ -292,7 +375,7 @@ pub fn compute_chart<E: Ephemeris + ?Sized>(
         lagna,
         grahas,
         bhavas: Bhavas {
-            system: settings.house_system,
+            system: house_system,
             cusps,
         },
         vargas,
@@ -659,6 +742,158 @@ mod tests {
             t.ashtakavarga.sav,
             [30, 26, 27, 26, 31, 33, 28, 30, 28, 24, 28, 26]
         );
+    }
+
+    /// Sayı prashnasının haritası (spec §11): grahalar, dasha ve panchang değişmez; lagna
+    /// verilen sidereal boylamdır ve evler ondan sayılan burç evleridir.
+    #[test]
+    fn a_given_lagna_changes_only_the_lagna_and_the_houses() {
+        let mut eph = FakeEph::default();
+        let s = CalcSettings::default();
+        let base = chart(&mut eph, &s);
+        // 100° sidereal: Yengeç 10°; Pushya'nın 3. padası.
+        let c = compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, 100.0).unwrap();
+        assert_eq!(c.lagna, Lagna::new(100.0, 100.0));
+        assert_eq!(c.lagna.sign, Sign::Cancer);
+        assert_eq!((c.lagna.nakshatra, c.lagna.pada), (8, 3));
+        assert_eq!(c.bhavas.system, HouseSystem::WholeSign);
+        assert_eq!(c.bhavas.cusps, whole_sign_cusps(Sign::Cancer));
+        for (a, b) in c.grahas.iter().zip(&base.grahas) {
+            // Ev dışında her alan aynıdır.
+            let mut same_house = a.clone();
+            same_house.house = b.house;
+            assert_eq!(&same_house, b, "{:?}", a.graha);
+            assert_eq!(a.house, whole_sign_house(a.sign, Sign::Cancer));
+        }
+        assert_eq!((c.jd_ut, c.geo_lat, c.geo_lon), (JD, 41.0, 29.0));
+        assert_eq!(c.ayanamsa_deg, base.ayanamsa_deg);
+        assert_eq!(c.dasha, base.dasha);
+        assert_eq!(c.panchang, base.panchang);
+        assert_eq!(c.meta, base.meta);
+        // Lagnaya bağlı türevler yeni lagnadan gelir.
+        assert_eq!(
+            c.ashtakavarga,
+            compute_ashtakavarga(std::array::from_fn(|i| c.grahas[i].sign), Sign::Cancer)
+        );
+        let points: Vec<(Graha, f64)> = c.grahas.iter().map(|g| (g.graha, g.lon)).collect();
+        assert_eq!(c.vargas, all_vargas(100.0, &points));
+        // 0..360 dışındaki boylam sarılır.
+        let wrapped = compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, 460.0).unwrap();
+        assert_eq!(wrapped, c);
+    }
+
+    #[test]
+    fn the_real_lagna_gives_the_same_chart() {
+        let mut eph = FakeEph::default();
+        let s = CalcSettings::default();
+        let base = chart(&mut eph, &s);
+        let again = compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, base.lagna.sidereal_lon)
+            .unwrap();
+        assert_eq!(again, base);
+    }
+
+    #[test]
+    fn a_given_lagna_is_sidereal_in_the_tropical_rasi_mode() {
+        // FakeEph: ayanamsa 24°. Sidereal 100° → rasi çerçevesinde 124° (Aslan 4°).
+        let mut eph = FakeEph::default();
+        let s = tropical_rasi();
+        let c = compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, 100.0).unwrap();
+        assert_eq!(c.lagna.sidereal_lon, 100.0);
+        assert!((c.lagna.lon - 124.0).abs() < 1e-9);
+        assert_eq!(c.lagna.sign, Sign::Leo);
+        // Nakshatra sidereal boylamdandır.
+        assert_eq!((c.lagna.nakshatra, c.lagna.pada), (8, 3));
+        assert_eq!(c.bhavas.cusps, whole_sign_cusps(Sign::Leo));
+        // Gerçek lagna bu kipte de aynı haritayı verir (boylam yuvarlama payıyla).
+        let base = chart(&mut eph, &s);
+        let again = compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, base.lagna.sidereal_lon)
+            .unwrap();
+        assert!((again.lagna.lon - base.lagna.lon).abs() < 1e-9);
+        assert_eq!(again.lagna.sign, base.lagna.sign);
+        assert_eq!(again.grahas, base.grahas);
+        assert_eq!(again.bhavas, base.bhavas);
+    }
+
+    #[test]
+    fn a_given_lagna_ignores_the_house_system_and_asks_for_no_houses() {
+        let s = CalcSettings {
+            house_system: HouseSystem::Placidus,
+            ..CalcSettings::default()
+        };
+        let mut eph = FakeEph {
+            porphyry_fallback: true,
+            ..FakeEph::default()
+        };
+        let c = compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, 100.0).unwrap();
+        assert_eq!(eph.last_house_system, None);
+        assert_eq!(c.bhavas.system, HouseSystem::WholeSign);
+        assert_eq!(c.bhavas.cusps, whole_sign_cusps(Sign::Cancer));
+        assert!(!c
+            .meta
+            .warnings
+            .contains(&ChartWarning::PlacidusPolarFallback));
+        // Ayarın kopyası değişmez: harita hangi ayarla kurulduğunu söyler.
+        assert_eq!(c.meta.settings.house_system, HouseSystem::Placidus);
+        for g in &c.grahas {
+            assert_eq!(g.house, whole_sign_house(g.sign, Sign::Cancer));
+        }
+    }
+
+    #[test]
+    fn a_given_lagna_is_validated_like_the_chart_and_by_field_name() {
+        let mut eph = FakeEph::default();
+        let s = CalcSettings::default();
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert_eq!(
+                compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, bad),
+                Err(CoreError::InvalidPrashnaInput("lagna"))
+            );
+        }
+        assert_eq!(
+            compute_chart_with_lagna(&mut eph, JD, 91.0, 0.0, &s, 100.0),
+            Err(CoreError::InvalidLocation {
+                lat: 91.0,
+                lon: 0.0
+            })
+        );
+        assert!(matches!(
+            compute_chart_with_lagna(&mut eph, f64::NAN, 0.0, 0.0, &s, 100.0),
+            Err(CoreError::InvalidJulianDay(_))
+        ));
+    }
+
+    #[test]
+    fn the_chart_of_an_input_follows_the_lagna_number() {
+        let mut eph = FakeEph::default();
+        let s = CalcSettings::default();
+        let mut input = ChartInput {
+            jd_ut: JD,
+            lat: 41.0,
+            lon: 29.0,
+            settings: s.clone(),
+            time_known: true,
+            lagna_number: None,
+        };
+        assert_eq!(
+            compute_chart_for(&mut eph, &input).unwrap(),
+            chart(&mut eph, &s)
+        );
+        // 30. sayı: (30 − 1) × 3°20′ + 1°40′ = 98°20′ → Yengeç 8°20′.
+        input.lagna_number = Some(30);
+        let c = compute_chart_for(&mut eph, &input).unwrap();
+        assert_eq!(c.lagna.sign, Sign::Cancer);
+        assert!((c.lagna.deg_in_sign - (8.0 + 20.0 / 60.0)).abs() < 1e-9);
+        assert_eq!(
+            c,
+            compute_chart_with_lagna(&mut eph, JD, 41.0, 29.0, &s, 5900.0 / 60.0).unwrap()
+        );
+        for bad in [0, 109] {
+            input.lagna_number = Some(bad);
+            assert_eq!(
+                compute_chart_for(&mut eph, &input),
+                Err(CoreError::InvalidPrashnaInput("number"))
+            );
+        }
     }
 
     #[test]

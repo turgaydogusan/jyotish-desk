@@ -57,7 +57,7 @@ test("chara: direction and the twelve years in a header line; rows carry sign ab
   await tree();
   const opened = fixture().opened;
   expect(api.computeCharaDasha).toHaveBeenCalledTimes(1);
-  expect(api.computeCharaDasha).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true });
+  expect(api.computeCharaDasha).toHaveBeenCalledWith({ jd_ut: 2451545, lat: 28.6139, lon: 77.209, settings: opened.chart.meta.settings, time_known: true, lagna_number: null });
   expect(screen.getByRole("combobox", { name: "Sistem" })).toHaveDisplayValue("Chara dasha");
   // Delhi fikstürü: lagna İkizler, 9. burç Kova (ters sayan): geri.
   expect(screen.getByText("Yön: geri")).toBeInTheDocument();

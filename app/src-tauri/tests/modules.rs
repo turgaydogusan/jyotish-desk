@@ -61,6 +61,7 @@ fn golden_inputs() -> Vec<(String, ChartInput)> {
                 lon: num("lon"),
                 settings: serde_json::from_value(v["settings"].clone()).expect("settings"),
                 time_known: true,
+                lagna_number: None,
             };
             (v["id"].as_str().expect("id").to_owned(), input)
         })
@@ -132,6 +133,7 @@ fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         // Bakış tablosu lagnaya bağlı değildir: saat bilinmese de aynıdır.
         let unknown = ChartInput {
             time_known: false,
+            lagna_number: None,
             ..input.clone()
         };
         assert_eq!(
@@ -330,6 +332,7 @@ fn jaimini_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
             engine,
             ChartInput {
                 time_known: false,
+                lagna_number: None,
                 ..input.clone()
             },
         )
@@ -525,6 +528,7 @@ fn chara_dasha_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         // Saat bilinmiyorsa dasha Rust'ta boş döner (K2): sıra lagnaya bağlıdır.
         let unknown = ChartInput {
             time_known: false,
+            lagna_number: None,
             ..input.clone()
         };
         assert_eq!(
@@ -816,6 +820,7 @@ fn shadbala_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
         // Doğum saati bilinmiyorsa rapor yoktur (K2).
         let unknown = ChartInput {
             time_known: false,
+            lagna_number: None,
             ..input.clone()
         };
         assert_eq!(
@@ -1024,6 +1029,7 @@ fn shadbala_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     let bad_place = ChartInput {
         lat: 91.0,
         time_known: false,
+        lagna_number: None,
         ..delhi.clone()
     };
     assert_eq!(
@@ -1230,6 +1236,7 @@ fn yogas_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
             engine,
             ChartInput {
                 time_known: false,
+                lagna_number: None,
                 ..input.clone()
             },
         )
@@ -1269,6 +1276,7 @@ fn yogas_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     let bad_place = ChartInput {
         lat: 91.0,
         time_known: false,
+        lagna_number: None,
         ..delhi.clone()
     };
     assert_eq!(
@@ -1503,6 +1511,7 @@ fn compat_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     for (id, input) in inputs {
         let unknown = ChartInput {
             time_known: false,
+            lagna_number: None,
             ..input.clone()
         };
         let report = compute_compat_blocking(engine, delhi.clone(), unknown.clone())
@@ -1574,6 +1583,7 @@ fn compat_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     let bad_place = ChartInput {
         lat: 91.0,
         time_known: false,
+        lagna_number: None,
         ..delhi.clone()
     };
     for (groom, bride) in [(&bad_place, &istanbul), (&istanbul, &bad_place)] {
@@ -1624,6 +1634,7 @@ fn compat_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     );
     let unknown = |input: &ChartInput| ChartInput {
         time_known: false,
+        lagna_number: None,
         ..input.clone()
     };
     let (median, max) = median_of_15(|| {
