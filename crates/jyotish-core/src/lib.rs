@@ -11,13 +11,15 @@
 //! Arama (Alt proje 3.9): `search` (harita araması sorgusu ve hafif yol, olay araması).
 
 // Bhava tablosu ve Sudarshana chakra (yol haritası Plan 25). Ayrı blok: paralel planların
-// alfabetik sıradaki eklemeleriyle aynı satırlara dokunmaz.
+// alfabetik sıradaki eklemeleriyle aynı satırlara dokunmaz. `bhava::nakshatra_lord` kökten dışa
+// aktarılmaz: Plan 23 aynı adı `natal_extras`'tan köke çıkarır ve iki `pub use` birleşince
+// derlenmez (E0252); modül yolu (`jyotish_core::bhava::nakshatra_lord`) açıktır.
 pub mod bhava;
 pub use bhava::{
-    bhava_point, bhava_table, compute_bhava_table, compute_sudarshana, nakshatra_lord,
-    porphyry_points, sandhis_from_mids, signed_arc, sudarshana, whole_sign_mids, BhavaPoint,
-    BhavaRow, BhavaTable, GrahaBhava, SudarshanaChakra, SudarshanaHouse, SudarshanaRef,
-    SudarshanaRing, BHAVA_METHOD, SUDARSHANA_METHOD,
+    bhava_point, bhava_table, compute_bhava_table, compute_sudarshana, porphyry_points,
+    sandhis_from_mids, signed_arc, sudarshana, whole_sign_mids, BhavaPoint, BhavaRow, BhavaTable,
+    GrahaBhava, SudarshanaChakra, SudarshanaHouse, SudarshanaRef, SudarshanaRing, BHAVA_METHOD,
+    SUDARSHANA_METHOD,
 };
 
 pub mod ashtakavarga;
