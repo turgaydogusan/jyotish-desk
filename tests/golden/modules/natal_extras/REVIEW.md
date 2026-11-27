@@ -91,3 +91,28 @@ Aynı tablo burçtan okunur; testteki `BY_SIGN` listesi budur. Toplam 30 hücre 
 - [ ] Yogi noktasının sabit yayı (93°20′).
 - [ ] Avayoginin sayımı (yogi nakshatrasından altıncı nakshatra).
 - [ ] Eş yoginin burcunun tropikal-rasi kipinde rasi çerçevesinden okunması (K5).
+
+## 2. Navatara (yöntem `navatara.moon_v1`)
+
+### 2.1 Okuma kuralları
+
+1. **Sayım** doğum Ay'ının nakshatrasından başlar ve onu da sayar (aynı nakshatra 1).
+2. **Tara** sayımın dokuzlu döngüdeki yeridir (10 → 1, 19 → 1); **tur** sayımın hangi dokuzlukta
+   olduğudur: 1–9 birinci, 10–18 ikinci, 19–27 üçüncü tur.
+3. **Adlar ve elverişli küme** muhurta modülününkidir (`../muhurta/REVIEW.md`, kural 7): 1 Janma,
+   2 Sampat, 3 Vipat, 4 Kshema, 5 Pratyak, 6 Sadhana, 7 Naidhana, 8 Mitra, 9 Parama Mitra;
+   elverişli küme {2, 4, 6, 8, 9}. Bu modül yeni tablo getirmez; o tablonun onayı burada da
+   geçerlidir.
+4. **Satır** nakshatranın Vimshottari lordunu ve o nakshatrada duran doğum grahalarını taşır.
+   Bir taranın üç nakshatrası aynı lordu taşır (dokuz nakshatra arayla).
+5. **Geçiş tarası.** Seçilen andaki dokuz grahanın sidereal nakshatrası, doğum nakshatrasından
+   aynı sayımla okunur. Geçiş anı haritanın kendi ayarlarıyla (ayanamsa, düğüm türü) hesaplanır.
+6. **Sayım yalnızca Ay'dandır.** Lagna nakshatrasından sayım uygulanmamıştır; istenirse ikinci
+   okuma olarak eklenir ve o zaman ayar olur (Y5).
+7. **Doğum saati bilinmiyorsa** Ay'ın nakshatrası öğlen konumundandır; Ay o gün nakshatra
+   değiştiriyorsa bütün tablo bir nakshatra kayar. Panel bunu söyler.
+
+### 2.2 Onay bekleyen noktalar (sahibi)
+
+- [ ] Navataranın lagna nakshatrasından da sayılıp sayılmayacağı (öneri: yalnızca Ay).
+- [ ] Janma tarasının elverişli kümede sayılmaması (muhurta tablosunun aynı noktası).

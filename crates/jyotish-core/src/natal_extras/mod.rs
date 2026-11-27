@@ -5,9 +5,14 @@
 //! öğlen konumlarından gelir ve rapor `approximate` işaretini taşır.
 
 pub mod dagdha;
+pub mod navatara;
 pub mod yogi;
 
 pub use dagdha::{dagdha_rasis, panchang_extras, PanchangExtras, PANCHANG_EXTRAS_METHOD};
+pub use navatara::{
+    navatara, navatara_rows, tara_cycle, transit_taras, Navatara, NavataraRow, TransitTara,
+    NAVATARA_METHOD,
+};
 pub use yogi::{
     avayogi_nakshatra, nakshatra_lord, rasi_frame_offset, yogi_facts, yogi_point, YogiFacts,
     AVAYOGI_COUNT, YOGI_ARC_DEG,

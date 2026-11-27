@@ -90,8 +90,9 @@ pub use muhurta::{
     MUHURTA_MAX_RANGE_DAYS, MUHURTA_METHOD,
 };
 pub use natal_extras::{
-    avayogi_nakshatra, dagdha_rasis, nakshatra_lord, panchang_extras, rasi_frame_offset,
-    yogi_facts, yogi_point, PanchangExtras, YogiFacts, AVAYOGI_COUNT, PANCHANG_EXTRAS_METHOD,
+    avayogi_nakshatra, dagdha_rasis, nakshatra_lord, navatara, navatara_rows, panchang_extras,
+    rasi_frame_offset, tara_cycle, transit_taras, yogi_facts, yogi_point, Navatara, NavataraRow,
+    PanchangExtras, TransitTara, YogiFacts, AVAYOGI_COUNT, NAVATARA_METHOD, PANCHANG_EXTRAS_METHOD,
     YOGI_ARC_DEG,
 };
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};
