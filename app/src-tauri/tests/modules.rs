@@ -4,17 +4,26 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use atlas::Timestamp;
 use ephemeris::{Body, Engine, Ephemeris, SwissEph, Zodiac};
 use jyotish_core::kuta::{gana_of, nadi_of, varna_of, yoni_of};
+use jyotish_core::muhurta::{is_panchaka, is_rikta, is_vishti};
+use jyotish_core::timeline::{
+    graha_motion_series, graha_nakshatra_series, graha_sign_series, karana_series, lagna_sign_at,
+    lagna_sign_series, nakshatra_series, nitya_yoga_series, tithi_series, vara_series, Motion,
+    NakshatraPada, STATION_GRAHAS,
+};
 use jyotish_core::{
     chara_dasha, cheshta_from, co_lords, compute_panchang, compute_shadbala_astro,
     graha_aspect_signs, house_lord, house_sign, jaimini_report, kuja_dosha, kuta_report,
     mean_longitudes, rashi_drishti_signs, shadbala, sign_dasha_children, sign_dasha_path_at,
-    sphuta_drishti, sun_entry_before, vara_lord, yoga_rule, yogas, AdvancedSettings, CalcSettings,
-    Chart, ChartInput, ChartWarning, Dignity, Graha, HouseSystem, KarakaRole, KarakaScheme, Kuta,
-    KutaRole, MoonDayChange, Positions, Sign, SignDashaPeriod, Varga, YogaGroup, ASPECTING_GRAHAS,
-    CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, KUTA_METHOD, MAX_SUNRISE_GAP_DAYS,
-    SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS, SHADBALA_METHOD, YOGA_CATALOG, YOGA_CATALOG_VERSION,
+    sphuta_drishti, sun_entry_before, vara_lord, window_snapshot, yoga_rule, yogas,
+    AdvancedSettings, CalcSettings, Chart, ChartInput, ChartWarning, Dignity, Graha, HouseSystem,
+    KarakaRole, KarakaScheme, Kuta, KutaRole, MoonDayChange, MuhurtaCriteria, MuhurtaFlag,
+    NatalMoon, NodeKind, Positions, Sign, SignDashaPeriod, Vara, Varga, YogaGroup,
+    ASPECTING_GRAHAS, CHARA_DASHA_METHOD, DRISHTI_METHOD, JAIMINI_METHOD, KUTA_METHOD,
+    MAX_SUNRISE_GAP_DAYS, MUHURTA_METHOD, SEVEN_KARAKA_ROLES, SHADBALA_GRAHAS, SHADBALA_METHOD,
+    YOGA_CATALOG, YOGA_CATALOG_VERSION,
 };
 use jyotish_desk_lib::commands::compute_chart_blocking;
 use jyotish_desk_lib::module_commands::{
@@ -22,7 +31,13 @@ use jyotish_desk_lib::module_commands::{
     compute_compat_blocking, compute_drishti_blocking, compute_jaimini_blocking,
     compute_shadbala_blocking, compute_yogas_blocking,
 };
+use jyotish_desk_lib::muhurta_commands::{
+    day_panchang_blocking, muhurta_search_blocking, MuhurtaPlace, MuhurtaQuery, MuhurtaSearchView,
+    MuhurtaWindowView,
+};
+use jyotish_desk_lib::transit_commands::TransitAt;
 use serde_json::Value;
+use store::TzChoice;
 
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -66,6 +81,8 @@ fn module_commands_run_on_the_engine_thread_and_map_errors() {
     shadbala_checks(&engine, &inputs);
     yogas_checks(&engine, &inputs);
     compat_checks(&engine, &inputs);
+    timeline_checks(&engine, &inputs);
+    muhurta_checks(&engine, &inputs);
 }
 
 fn drishti_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
@@ -1616,5 +1633,662 @@ fn compat_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
     assert!(
         median <= Duration::from_millis(20),
         "compute_compat (both times unknown) median {median:?}"
+    );
+}
+
+const SECOND: f64 = 1.0 / 86_400.0;
+
+/// Zaman çizelgesi çekirdeği, gerçek ephemeris'le (ileri modüller spec'i §10 "Test"): v1
+/// panchangıyla çapraz denetim ve astronomik olgular.
+fn timeline_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    // Çapraz denetim (asıl güvence): beş golden anın çevresindeki altı günde, aralıkların
+    // içinden örneklenen anlarda `compute_panchang` aynı beş uzvu verir; aralığın sonu onun
+    // bitiş anıyla 1 saniye içinde örtüşür. Tromsø örneği kutup gecesindedir: vara dizisi
+    // 06:00 yerel ortalama saat kuralını yürür.
+    for (id, input) in inputs {
+        let (id, input) = (id.clone(), input.clone());
+        let checked = engine
+            .call(move |se: &mut SwissEph| {
+                let s = &input.settings;
+                let (lat, lon) = (input.lat, input.lon);
+                let (from, to) = (input.jd_ut - 3.0, input.jd_ut + 3.0);
+                let tithis = tithi_series(se, s, from, to).expect("tithis");
+                let karanas = karana_series(se, s, from, to).expect("karanas");
+                let nakshatras = nakshatra_series(se, s, from, to).expect("nakshatras");
+                let yogas = nitya_yoga_series(se, s, from, to).expect("yogas");
+                let varas = vara_series(se, s, lat, lon, from, to).expect("varas");
+                for series_ends in [
+                    (tithis[0].start_jd_ut, tithis[tithis.len() - 1].end_jd_ut),
+                    (karanas[0].start_jd_ut, karanas[karanas.len() - 1].end_jd_ut),
+                    (
+                        nakshatras[0].start_jd_ut,
+                        nakshatras[nakshatras.len() - 1].end_jd_ut,
+                    ),
+                    (yogas[0].start_jd_ut, yogas[yogas.len() - 1].end_jd_ut),
+                    (varas[0].start_jd_ut, varas[varas.len() - 1].end_jd_ut),
+                ] {
+                    assert_eq!(series_ends, (from, to), "{id}: series cover the span");
+                }
+                let mut ends = 0;
+                for k in 0..120 {
+                    let jd = from + 0.011 + 0.0499 * f64::from(k);
+                    let p = compute_panchang(se, jd, lat, lon, s).expect("panchang");
+                    let at = |what: &str| format!("{id}: {what} at +{:.4}", jd - from);
+                    let t = tithis.iter().find(|i| i.contains(jd)).expect("tithi");
+                    let ka = karanas.iter().find(|i| i.contains(jd)).expect("karana");
+                    let n = nakshatras
+                        .iter()
+                        .find(|i| i.contains(jd))
+                        .expect("nakshatra");
+                    let y = yogas.iter().find(|i| i.contains(jd)).expect("yoga");
+                    let v = varas.iter().find(|i| i.contains(jd)).expect("vara");
+                    assert_eq!(t.value, p.tithi.no, "{}", at("tithi"));
+                    assert_eq!(ka.value, p.karana.no, "{}", at("karana"));
+                    assert_eq!(
+                        (n.value.nakshatra, n.value.pada),
+                        (p.nakshatra.no, p.nakshatra.pada),
+                        "{}",
+                        at("nakshatra")
+                    );
+                    assert_eq!(y.value, p.yoga.no, "{}", at("yoga"));
+                    assert_eq!(v.value, p.vara, "{}", at("vara"));
+                    let nakshatra_end = nakshatras
+                        .iter()
+                        .rfind(|i| i.value.nakshatra == n.value.nakshatra)
+                        .expect("nakshatra end")
+                        .end_jd_ut;
+                    for (end, want, what) in [
+                        (t.end_jd_ut, p.tithi.ends_jd_ut, "tithi end"),
+                        (ka.end_jd_ut, p.karana.ends_jd_ut, "karana end"),
+                        (y.end_jd_ut, p.yoga.ends_jd_ut, "yoga end"),
+                        (nakshatra_end, p.nakshatra.ends_jd_ut, "nakshatra end"),
+                    ] {
+                        // Aralığın kırpılan ucu gerçek bir sınır değildir.
+                        if end < to {
+                            assert!((end - want).abs() <= SECOND, "{}", at(what));
+                            ends += 1;
+                        }
+                    }
+                }
+                ends
+            })
+            .expect("engine");
+        assert!(checked > 300, "{checked} boundaries compared");
+    }
+
+    // Astronomik olgular: bulunan burç ve nakshatra girişinde boylam sınırın 1″ içindedir;
+    // dönüş anında hız işaret değiştirir; lagna burcu sınırın iki yanında farklıdır.
+    let delhi = inputs
+        .iter()
+        .find(|(id, _)| id == "new-delhi-2000-01-01")
+        .expect("delhi fixture")
+        .1
+        .clone();
+    engine
+        .call(move |se: &mut SwissEph| {
+            let arcsecond = 1.0 / 3600.0;
+            let off_grid = |lon: f64, span: f64| {
+                let r = lon.rem_euclid(span);
+                r.min(span - r)
+            };
+            let (from, to) = (delhi.jd_ut, delhi.jd_ut + 800.0);
+            for node in [NodeKind::Mean, NodeKind::True] {
+                let s = CalcSettings {
+                    node,
+                    ..delhi.settings.clone()
+                };
+                let sidereal = Zodiac::Sidereal(s.ayanamsa.sidereal_mode());
+                let bodies = [
+                    (Graha::Sun, Body::Sun, 0.0),
+                    (Graha::Moon, Body::Moon, 0.0),
+                    (Graha::Mars, Body::Mars, 0.0),
+                    (Graha::Mercury, Body::Mercury, 0.0),
+                    (Graha::Jupiter, Body::Jupiter, 0.0),
+                    (Graha::Venus, Body::Venus, 0.0),
+                    (Graha::Saturn, Body::Saturn, 0.0),
+                    (Graha::Rahu, s.node.body(), 0.0),
+                    (Graha::Ketu, s.node.body(), 180.0),
+                ];
+                for (graha, body, shift) in bodies {
+                    // Gerçek düğüm 800 günde yüzlerce kez yön değiştirir; ortalama düğümle
+                    // denetlemek yeterlidir.
+                    if node == NodeKind::True && !graha.is_node() {
+                        continue;
+                    }
+                    let span_days = if graha == Graha::Moon { 60.0 } else { 800.0 };
+                    let to = from + span_days;
+                    let signs = graha_sign_series(se, &s, graha, from, to).expect("signs");
+                    assert!(signs.len() > 1, "{graha:?}: at least one ingress");
+                    for i in &signs[1..] {
+                        let lon = se.body(i.start_jd_ut, body, sidereal).expect("lon").lon + shift;
+                        assert!(
+                            off_grid(lon, 30.0) < arcsecond,
+                            "{graha:?} sign ingress at {lon}"
+                        );
+                        assert_eq!(Sign::of(lon), i.value, "{graha:?}");
+                    }
+                    let naks = graha_nakshatra_series(se, &s, graha, from, to).expect("naks");
+                    assert!(naks.len() >= signs.len(), "{graha:?}");
+                    for i in &naks[1..] {
+                        let lon = se.body(i.start_jd_ut, body, sidereal).expect("lon").lon + shift;
+                        assert!(
+                            off_grid(lon, 40.0 / 3.0) < arcsecond,
+                            "{graha:?} nakshatra ingress at {lon}"
+                        );
+                    }
+                }
+            }
+            let s = delhi.settings.clone();
+            let sidereal = Zodiac::Sidereal(s.ayanamsa.sidereal_mode());
+            // 800 günde her grahanın en az bir retro dönemi vardır (Mars ~26 ayda bir).
+            for (graha, body) in [
+                (Graha::Mars, Body::Mars),
+                (Graha::Mercury, Body::Mercury),
+                (Graha::Jupiter, Body::Jupiter),
+                (Graha::Venus, Body::Venus),
+                (Graha::Saturn, Body::Saturn),
+            ] {
+                assert!(STATION_GRAHAS.contains(&graha));
+                let motion = graha_motion_series(se, &s, graha, from, to).expect("motion");
+                assert!(motion.len() >= 3, "{graha:?}: {} intervals", motion.len());
+                for w in motion.windows(2) {
+                    assert_ne!(w[0].value, w[1].value);
+                    let station = w[1].start_jd_ut;
+                    let before = se.body(station - 0.02, body, sidereal).expect("speed");
+                    let after = se.body(station + 0.02, body, sidereal).expect("speed");
+                    assert!(
+                        before.lon_speed * after.lon_speed < 0.0,
+                        "{graha:?}: speed changes sign at the station"
+                    );
+                    assert_eq!(after.lon_speed < 0.0, w[1].value == Motion::Retrograde);
+                }
+            }
+            // Merkür yılda üç kez geri gider: 800 günde en az altı retro dönemi.
+            let mercury = graha_motion_series(se, &s, Graha::Mercury, from, to).expect("motion");
+            let retro = mercury
+                .iter()
+                .filter(|i| i.value == Motion::Retrograde)
+                .count();
+            assert!((6..=8).contains(&retro), "{retro} mercury retrogrades");
+            assert_eq!(
+                graha_motion_series(se, &s, Graha::Rahu, from, to)
+                    .unwrap_err()
+                    .to_string(),
+                "invalid muhurta input: graha"
+            );
+
+            // Lagna: 3 günde 36 burç değişimi; sınırın 1 saniye öncesinde önceki burç.
+            let (lat, lon) = (delhi.lat, delhi.lon);
+            let lagnas = lagna_sign_series(se, &s, lat, lon, from, from + 3.0).expect("lagna");
+            assert!((36..=38).contains(&lagnas.len()), "{}", lagnas.len());
+            for w in lagnas.windows(2) {
+                let at = w[1].start_jd_ut;
+                assert_eq!(lagna_sign_at(se, &s, at, lat, lon).unwrap(), w[1].value);
+                assert_eq!(
+                    lagna_sign_at(se, &s, at - SECOND, lat, lon).unwrap(),
+                    w[0].value
+                );
+                assert_eq!(w[1].value.index(), (w[0].value.index() + 1) % 12);
+            }
+        })
+        .expect("engine");
+}
+
+fn fixed_place(input: &ChartInput) -> MuhurtaPlace {
+    MuhurtaPlace {
+        lat: input.lat,
+        lon: input.lon,
+        tz: TzChoice::Fixed(0),
+    }
+}
+
+/// Bir aramanın bütün dilimleri; her dilimin süresiyle.
+fn search_all(
+    engine: &Engine,
+    query: &MuhurtaQuery,
+    settings: &CalcSettings,
+    now: Timestamp,
+) -> (Vec<MuhurtaWindowView>, Vec<Duration>, MuhurtaSearchView) {
+    let mut windows = Vec::new();
+    let mut times = Vec::new();
+    let mut cursor = None;
+    loop {
+        let t = Instant::now();
+        let page = muhurta_search_blocking(engine, query.clone(), settings.clone(), cursor, now)
+            .unwrap_or_else(|e| panic!("search: {} {:?}", e.code, e.params));
+        times.push(t.elapsed());
+        assert_eq!(page.scanned as usize, times.len());
+        assert_eq!(page.method, MUHURTA_METHOD);
+        windows.extend(page.windows.iter().copied());
+        match page.next {
+            Some(next) => cursor = Some(next),
+            None => {
+                assert_eq!(page.scanned, page.chunks);
+                return (windows, times, page);
+            }
+        }
+    }
+}
+
+fn muhurta_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
+    let now: Timestamp = "2026-11-26T12:00:00Z".parse().expect("timestamp");
+
+    // Gün panchangı: golden anı içeren gün. Vara, gün doğumu ve batımı v1 haritasının
+    // panchangıyla aynıdır; doğum Ay'ı o anın Ay'ıysa tara Janma (1), chandra bala 1. evdir.
+    for (id, input) in inputs {
+        let chart = compute_chart_blocking(
+            engine,
+            input.jd_ut,
+            input.lat,
+            input.lon,
+            input.settings.clone(),
+        )
+        .expect("chart");
+        let moon = &chart.grahas[Graha::Moon as usize];
+        let natal = NatalMoon {
+            nakshatra: moon.nakshatra,
+            sign: moon.sign,
+        };
+        let view = day_panchang_blocking(
+            engine,
+            TransitAt::Jd(input.jd_ut),
+            now,
+            fixed_place(input),
+            input.settings.clone(),
+            Some(natal),
+        )
+        .unwrap_or_else(|e| panic!("{id}: {}", e.code));
+        let d = &view.day;
+        assert_eq!(view.offset_secs, 0, "{id}");
+        assert_eq!(d.method, MUHURTA_METHOD, "{id}");
+        assert!(
+            d.day_start_jd_ut <= input.jd_ut && input.jd_ut < d.day_end_jd_ut,
+            "{id}: the day contains the moment"
+        );
+        assert_eq!(d.vara, chart.panchang.vara, "{id}: vara");
+        let polar = chart
+            .meta
+            .warnings
+            .contains(&ChartWarning::SunriseUnavailable);
+        assert_eq!(
+            d.warnings.contains(&ChartWarning::SunriseUnavailable),
+            polar,
+            "{id}"
+        );
+        if polar {
+            // Kutup gecesi: dilimler yok, uzuvlar var; gün 24 saattir.
+            assert!(d.segments.is_none() && d.sunrise_jd_ut.is_none(), "{id}");
+            assert!(
+                (d.day_end_jd_ut - d.day_start_jd_ut - 1.0).abs() < 1e-9,
+                "{id}"
+            );
+        } else {
+            assert_eq!(d.sunrise_jd_ut, chart.panchang.sunrise_jd_ut, "{id}");
+            assert_eq!(d.sunset_jd_ut, chart.panchang.sunset_jd_ut, "{id}");
+            let seg = d.segments.as_ref().expect("segments");
+            assert_eq!(seg.eighths.len(), 8, "{id}");
+            assert_eq!(seg.horas.len(), 24, "{id}");
+            assert_eq!(seg.horas[0].value, vara_lord(d.vara), "{id}");
+            assert_eq!(Some(seg.eighths[7].end_jd_ut), d.sunset_jd_ut, "{id}");
+            assert_eq!(seg.horas[23].end_jd_ut, d.day_end_jd_ut, "{id}");
+        }
+        let at = |jd: f64| move |i: &&jyotish_core::Interval<_>| i.contains(jd);
+        let tithi = d.tithis.iter().find(at(input.jd_ut)).expect("tithi").value;
+        assert_eq!(
+            (tithi.no, tithi.paksha),
+            (chart.panchang.tithi.no, chart.panchang.tithi.paksha),
+            "{id}"
+        );
+        let nakshatra = d.nakshatras.iter().find(|i| i.contains(input.jd_ut));
+        let nakshatra = nakshatra.expect("nakshatra").value;
+        assert_eq!((nakshatra.no, nakshatra.pada), (moon.nakshatra, moon.pada));
+        let karana = d.karanas.iter().find(|i| i.contains(input.jd_ut));
+        assert_eq!(
+            karana.expect("karana").value.name,
+            chart.panchang.karana.name,
+            "{id}"
+        );
+        let yoga = d.yogas.iter().find(|i| i.contains(input.jd_ut));
+        assert_eq!(yoga.expect("yoga").value, chart.panchang.yoga.no, "{id}");
+        let personal = d.personal.as_ref().expect("personal");
+        let tara = personal.tara.iter().find(|i| i.contains(input.jd_ut));
+        assert_eq!(tara.expect("tara").value.number, 1, "{id}: janma tara");
+        let chandra = personal.chandra.iter().find(|i| i.contains(input.jd_ut));
+        assert_eq!(chandra.expect("chandra").value.house, 1, "{id}");
+        // Yanık Jüpiter ya da Venüs işareti, haritanın yanma olgusuyla aynıdır.
+        for (flag, graha) in [
+            (MuhurtaFlag::JupiterCombust, Graha::Jupiter),
+            (MuhurtaFlag::VenusCombust, Graha::Venus),
+        ] {
+            let flagged = d
+                .flags
+                .iter()
+                .any(|f| f.value == flag && f.contains(input.jd_ut));
+            assert_eq!(
+                flagged, chart.grahas[graha as usize].combust,
+                "{id}: {flag:?}"
+            );
+        }
+        // Doğum Ay'ı verilmezse kişiye bağlı etken yoktur.
+        let plain = day_panchang_blocking(
+            engine,
+            TransitAt::Jd(input.jd_ut),
+            now,
+            fixed_place(input),
+            input.settings.clone(),
+            None,
+        )
+        .expect("day");
+        assert_eq!(plain.day.personal, None, "{id}");
+        assert_eq!(plain.day.tithis, d.tithis, "{id}");
+    }
+
+    let delhi = inputs
+        .iter()
+        .find(|(id, _)| id == "new-delhi-2000-01-01")
+        .expect("delhi fixture")
+        .1
+        .clone();
+    let kolkata_time = MuhurtaPlace {
+        lat: delhi.lat,
+        lon: delhi.lon,
+        tz: TzChoice::Iana("Asia/Kolkata".into()),
+    };
+    // "Şimdi" Rust'ta okunur; saatler yerin ofsetiyle gösterilir (+05:30).
+    let today = day_panchang_blocking(
+        engine,
+        TransitAt::Now,
+        now,
+        kolkata_time.clone(),
+        delhi.settings.clone(),
+        None,
+    )
+    .expect("today");
+    assert_eq!(today.offset_secs, 19_800);
+    // 2026-11-26 12:00 UTC = JD 2461371.0; Delhi'de Perşembe, gün doğumundan sonra.
+    assert!(today.day.day_start_jd_ut <= 2_461_371.0 && 2_461_371.0 < today.day.day_end_jd_ut);
+    assert_eq!(today.day.vara, Vara::Thursday);
+
+    // Hatalar alan adıyla döner; yer ve tarih hata parametresine girmez.
+    let bad_place = MuhurtaPlace {
+        lat: 95.0,
+        ..kolkata_time.clone()
+    };
+    let e = day_panchang_blocking(
+        engine,
+        TransitAt::Now,
+        now,
+        bad_place,
+        delhi.settings.clone(),
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(e.code, "invalid_muhurta_input");
+    assert_eq!(e.params.len(), 1);
+    assert_eq!(e.params["field"], "place");
+    let bad_natal = NatalMoon {
+        nakshatra: 0,
+        sign: Sign::Aries,
+    };
+    let e = day_panchang_blocking(
+        engine,
+        TransitAt::Now,
+        now,
+        kolkata_time.clone(),
+        delhi.settings.clone(),
+        Some(bad_natal),
+    )
+    .unwrap_err();
+    assert_eq!(
+        (e.code.as_str(), e.params["field"].as_str()),
+        ("invalid_muhurta_input", "natal")
+    );
+    let old = CalcSettings {
+        schema_version: 1,
+        ..CalcSettings::default()
+    };
+    assert_eq!(
+        day_panchang_blocking(engine, TransitAt::Now, now, kolkata_time.clone(), old, None)
+            .unwrap_err()
+            .code,
+        "unsupported_schema_version"
+    );
+
+    // Performans: spec §15 "day_panchang ≤ 50 ms".
+    let (median, max) = median_of_15(|| {
+        day_panchang_blocking(
+            engine,
+            TransitAt::Jd(delhi.jd_ut),
+            now,
+            kolkata_time.clone(),
+            delhi.settings.clone(),
+            Some(NatalMoon {
+                nakshatra: 15,
+                sign: Sign::Libra,
+            }),
+        )
+        .expect("day");
+    });
+    eprintln!("day_panchang median {median:?}, max {max:?}");
+    assert!(
+        median <= Duration::from_millis(50),
+        "day_panchang median {median:?}"
+    );
+
+    // Arama: 366 gün, lagna süzgeci olmadan. Bütün diğer koşullar etkin (her dizi hesaplanır).
+    let natal = NatalMoon {
+        nakshatra: 15,
+        sign: Sign::Libra,
+    };
+    let criteria = MuhurtaCriteria {
+        weekdays: vec![Vara::Monday, Vara::Wednesday, Vara::Thursday, Vara::Friday],
+        tithis: (1..=30).filter(|t| t % 15 != 0).collect(),
+        nakshatras: (1..=27).filter(|n| n % 3 != 0).collect(),
+        lagna_signs: Vec::new(),
+        daytime_only: true,
+        min_minutes: 30,
+        exclude: MuhurtaFlag::ALL.to_vec(),
+        require_tara: true,
+        require_chandra: true,
+    };
+    let query = MuhurtaQuery {
+        from_date: Some("2026-01-01".into()),
+        to_date: Some("2027-01-01".into()),
+        place: kolkata_time.clone(),
+        criteria: criteria.clone(),
+        natal: Some(natal),
+    };
+    let s = delhi.settings.clone();
+    let started = Instant::now();
+    let (windows, times, last) = search_all(engine, &query, &s, now);
+    let total = started.elapsed();
+    let slowest = times.iter().max().copied().unwrap_or_default();
+    eprintln!(
+        "muhurta_search (366 days) total {total:?}, first page {:?}, slowest page {slowest:?}, {} windows",
+        times[0],
+        windows.len()
+    );
+    assert_eq!(times.len(), 12, "twelve chunks for 366 days");
+    assert_eq!(last.chunks, 12);
+    // 2026-01-01 00:00 +05:30 = 2025-12-31 18:30 UTC.
+    assert!((last.from_jd_ut - 2_461_041.270_833_333).abs() < 1e-6);
+    assert!((last.to_jd_ut - last.from_jd_ut - 366.0).abs() < 1e-9);
+    assert_eq!(
+        (last.from_offset_secs, last.to_offset_secs),
+        (19_800, 19_800)
+    );
+    assert!(total <= Duration::from_secs(2), "366 days {total:?}");
+    assert!(
+        times[0] <= Duration::from_millis(500),
+        "first page {:?}",
+        times[0]
+    );
+    // Motor iş parçacığı dilim aralarında bırakılır: araya giren hesap en çok bir dilim bekler.
+    assert!(
+        slowest <= Duration::from_millis(300),
+        "slowest page {slowest:?}"
+    );
+    assert!(windows.len() > 20, "{} windows", windows.len());
+    let check = |windows: &[MuhurtaWindowView], lagna: &[Sign]| {
+        let windows = windows.to_vec();
+        let (lat, lon) = (delhi.lat, delhi.lon);
+        let (s, c) = (delhi.settings.clone(), criteria.clone());
+        let lagna = lagna.to_vec();
+        engine
+            .call(move |se: &mut SwissEph| {
+                let mut previous_end = f64::MIN;
+                for w in &windows {
+                    assert!(previous_end <= w.start_jd_ut, "ordered and disjoint");
+                    previous_end = w.end_jd_ut;
+                    assert!(
+                        w.end_jd_ut - w.start_jd_ut >= 30.0 / 1440.0,
+                        "minimum length"
+                    );
+                    assert_eq!(w.start_offset_secs, 19_800);
+                    // Başlangıç anının özeti, noktasal hesapla aynıdır.
+                    let at_start = window_snapshot(se, &s, w.start_jd_ut, lat, lon).unwrap();
+                    assert_eq!(w.snapshot, at_start);
+                    for jd in [
+                        w.start_jd_ut + SECOND,
+                        0.5 * (w.start_jd_ut + w.end_jd_ut),
+                        w.end_jd_ut - SECOND,
+                    ] {
+                        let x = window_snapshot(se, &s, jd, lat, lon).unwrap();
+                        let p = compute_panchang(se, jd, lat, lon, &s).unwrap();
+                        assert_eq!((x.vara, x.tithi, x.yoga), (p.vara, p.tithi.no, p.yoga.no));
+                        assert!(c.weekdays.contains(&x.vara), "weekday at {jd}");
+                        assert!(c.tithis.contains(&x.tithi) && !is_rikta(x.tithi));
+                        assert!(c.nakshatras.contains(&x.nakshatra));
+                        assert!(!is_vishti(x.karana) && x.yoga != 17 && x.yoga != 27);
+                        assert!(!is_panchaka(NakshatraPada {
+                            nakshatra: x.nakshatra,
+                            pada: x.pada
+                        }));
+                        let (rise, set) = (p.sunrise_jd_ut.unwrap(), p.sunset_jd_ut.unwrap());
+                        assert!(rise <= jd && jd < set, "daytime at {jd}");
+                        // Rahu dilimi: Pazartesi 2., Çarşamba 5., Perşembe 6., Cuma 4.
+                        let eighth = ((jd - rise) / (set - rise) * 8.0).floor() as u8 + 1;
+                        let rahu = match x.vara {
+                            Vara::Monday => 2,
+                            Vara::Wednesday => 5,
+                            Vara::Thursday => 6,
+                            _ => 4,
+                        };
+                        assert_ne!(eighth, rahu, "rahu segment at {jd}");
+                        if !lagna.is_empty() {
+                            assert!(lagna.contains(&x.lagna_sign), "lagna at {jd}");
+                        }
+                    }
+                }
+            })
+            .expect("engine");
+    };
+    check(&windows, &[]);
+
+    // Lagna süzgeciyle: bütçe ≤ 5 sn; pencereler ilk aramanınkilerin içindedir.
+    let lagna = vec![Sign::Taurus, Sign::Leo, Sign::Scorpio, Sign::Aquarius];
+    let with_lagna = MuhurtaQuery {
+        criteria: MuhurtaCriteria {
+            lagna_signs: lagna.clone(),
+            ..criteria.clone()
+        },
+        ..query.clone()
+    };
+    let started = Instant::now();
+    let (lagna_windows, times, _) = search_all(engine, &with_lagna, &s, now);
+    let total = started.elapsed();
+    let slowest = times.iter().max().copied().unwrap_or_default();
+    eprintln!(
+        "muhurta_search (366 days, lagna) total {total:?}, first page {:?}, slowest page {slowest:?}, {} windows",
+        times[0],
+        lagna_windows.len()
+    );
+    assert!(
+        total <= Duration::from_secs(5),
+        "366 days with lagna {total:?}"
+    );
+    assert!(
+        times[0] <= Duration::from_millis(500),
+        "first page {:?}",
+        times[0]
+    );
+    assert!(
+        slowest <= Duration::from_millis(300),
+        "slowest page {slowest:?}"
+    );
+    assert!(!lagna_windows.is_empty());
+    check(&lagna_windows, &lagna);
+    for w in &lagna_windows {
+        assert!(
+            windows
+                .iter()
+                .any(|outer| outer.start_jd_ut <= w.start_jd_ut && w.end_jd_ut <= outer.end_jd_ut),
+            "a lagna window lies inside a window of the wider search"
+        );
+    }
+    // En pahalı durum: yalnızca lagna koşulu (hiçbir koşul aralığı daraltmaz).
+    let only_lagna = MuhurtaQuery {
+        criteria: MuhurtaCriteria {
+            lagna_signs: vec![Sign::Leo],
+            ..MuhurtaCriteria::default()
+        },
+        natal: None,
+        ..query.clone()
+    };
+    let started = Instant::now();
+    let (leo, times, _) = search_all(engine, &only_lagna, &s, now);
+    let total = started.elapsed();
+    let slowest = times.iter().max().copied().unwrap_or_default();
+    eprintln!(
+        "muhurta_search (366 days, lagna only) total {total:?}, slowest page {slowest:?}, {} windows",
+        leo.len()
+    );
+    // Yıldız günü 23 sa 56 dk: 366 günde lagna Aslan'a 367 kez girer.
+    assert!((366..=368).contains(&leo.len()), "{}", leo.len());
+    assert!(total <= Duration::from_secs(5), "lagna only {total:?}");
+    assert!(
+        slowest <= Duration::from_millis(300),
+        "slowest page {slowest:?}"
+    );
+
+    // Tarihsiz arama bugünden başlar ve 31 gün sürer (tek dilim).
+    let default_range = MuhurtaQuery {
+        from_date: None,
+        to_date: None,
+        ..only_lagna.clone()
+    };
+    let page = muhurta_search_blocking(engine, default_range, s.clone(), None, now).expect("page");
+    assert_eq!((page.scanned, page.chunks, page.next), (1, 1, None));
+    // 2026-11-26 00:00 +05:30.
+    assert!((page.from_jd_ut - 2_461_370.270_833_333).abs() < 1e-6);
+    assert!((page.to_jd_ut - page.from_jd_ut - 31.0).abs() < 1e-9);
+
+    // Hatalar: 366 günü aşan aralık, ters aralık, kişisiz kişi koşulu.
+    let field = |q: MuhurtaQuery| {
+        let e = muhurta_search_blocking(engine, q, s.clone(), None, now).unwrap_err();
+        assert_eq!(e.code, "invalid_muhurta_input");
+        assert_eq!(e.params.len(), 1, "{:?}", e.params);
+        e.params["field"].clone()
+    };
+    assert_eq!(
+        field(MuhurtaQuery {
+            to_date: Some("2027-01-02".into()),
+            ..query.clone()
+        }),
+        "range"
+    );
+    assert_eq!(
+        field(MuhurtaQuery {
+            to_date: Some("2025-12-30".into()),
+            ..query.clone()
+        }),
+        "range"
+    );
+    assert_eq!(
+        field(MuhurtaQuery {
+            natal: None,
+            ..query.clone()
+        }),
+        "natal"
     );
 }

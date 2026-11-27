@@ -3,6 +3,7 @@ pub mod client_commands;
 pub mod commands;
 pub mod data_dir;
 pub mod module_commands;
+pub mod muhurta_commands;
 pub mod store_commands;
 pub mod transit_commands;
 pub mod update_commands;
@@ -37,6 +38,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             module_commands::compute_shadbala,
             module_commands::compute_yogas,
             module_commands::compute_compat,
+            muhurta_commands::day_panchang,
+            muhurta_commands::muhurta_search,
             client_commands::open_client,
             client_commands::restore_session,
             client_commands::create_client,
@@ -62,6 +65,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             store_commands::list_tags,
             store_commands::get_app_prefs,
             store_commands::set_app_prefs,
+            store_commands::load_muhurta_filters,
+            store_commands::save_muhurta_filters,
             store_commands::load_panel_layout,
             store_commands::save_panel_layout,
             store_commands::export_clients_json,

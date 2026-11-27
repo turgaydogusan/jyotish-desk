@@ -12,7 +12,7 @@ use serde::Serialize;
 use specta::Type;
 use store::{
     AppPrefs, ChartBrief, ChartRecord, Client, ExportOptions, Gender, ImportReport, Note,
-    PanelLayout, PrefsLoad, SearchHit, Store, TagCount,
+    PanelLayout, PrefsLoad, SavedMuhurtaFilter, SearchHit, Store, TagCount,
 };
 use tauri::{AppHandle, State, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, FilePath};
@@ -432,6 +432,26 @@ pub async fn set_app_prefs(
     prefs: AppPrefs,
 ) -> Result<(), CommandError> {
     with_store(&store, move |s| s.set_app_prefs(&prefs)).await
+}
+
+/// Kayıtlı muhurta süzgeçleri (ad ve koşullar; yer, tarih ve kişi kaydedilmez). Kayıt yoksa ya
+/// da okunamıyorsa liste boştur.
+#[tauri::command]
+#[specta::specta]
+pub async fn load_muhurta_filters(
+    store: State<'_, StoreState>,
+) -> Result<Vec<SavedMuhurtaFilter>, CommandError> {
+    with_store(&store, |s| s.muhurta_filters()).await
+}
+
+/// Kayıtlı süzgeç listesinin tamamını yazar ve saklanan (kanonik) listeyi döner.
+#[tauri::command]
+#[specta::specta]
+pub async fn save_muhurta_filters(
+    store: State<'_, StoreState>,
+    filters: Vec<SavedMuhurtaFilter>,
+) -> Result<Vec<SavedMuhurtaFilter>, CommandError> {
+    with_store(&store, move |s| s.save_muhurta_filters(&filters)).await
 }
 
 /// Kullanıcının pano düzeni (`app_state`); kayıt yoksa ya da okunamazsa `None`.

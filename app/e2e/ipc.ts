@@ -40,6 +40,10 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
       let noteSeq = 0;
       // Etiketler bellek içi: harita kimliği → etiketler (Rust normalleştirmesi taklit edilmez).
       const tags: Record<number, string[]> = {};
+      // Tercihler ve kayıtlı muhurta süzgeçleri bellek içi: bulunulan yer penceresi ve süzgeç
+      // kaydı gerçek bir gidiş dönüş görür.
+      let prefs = fixture.prefs.prefs;
+      let muhurtaFilters: unknown[] = [];
       const chartOf = (clientId: number) => opened[clientId].chart_record.id;
       const stamp = () => new Date(Date.UTC(2026, 10, 25, 10, 0, noteSeq)).toISOString();
       const respond: Record<string, (args: Record<string, unknown>) => unknown> = {
@@ -83,8 +87,11 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         },
         restore_session: () => (session ? fixture.opened : null),
         load_panel_layout: () => null,
-        get_app_prefs: () => fixture.prefs,
-        set_app_prefs: () => null,
+        get_app_prefs: () => ({ ...fixture.prefs, prefs }),
+        set_app_prefs: (args) => {
+          prefs = args.prefs as typeof prefs;
+          return null;
+        },
         // Yeniden hesap taklit edilmez: aynı harita, yeni ayarların kopyasıyla döner.
         save_calc_settings: (args) => ({ ...fixture.opened.chart, meta: { ...fixture.opened.chart.meta, settings: args.settings } }),
         save_panel_layout: () => null,
@@ -135,6 +142,18 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
             return fixture.compat.report_swapped;
           }
           return bride.time_known ? fixture.compat.report : fixture.compat.report_time_unknown;
+        },
+        // Muhurta: gün yeniden hesaplanmaz, fikstürdeki gerçek gün döner. Arama fikstürün üç
+        // dilimini imlecin sırasıyla verir (ilk çağrıda imleç yoktur).
+        day_panchang: () => fixture.muhurta.day,
+        muhurta_search: (args) => {
+          const cursor = args.cursor as { cursor: { chunk: number } } | null;
+          return fixture.muhurta.pages[cursor === null ? 0 : cursor.cursor.chunk];
+        },
+        load_muhurta_filters: () => muhurtaFilters,
+        save_muhurta_filters: (args) => {
+          muhurtaFilters = args.filters as unknown[];
+          return muhurtaFilters;
         },
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.

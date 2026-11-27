@@ -76,6 +76,18 @@ export const commands = {
 	 *  değiştirip değiştirmediği `moon_day_change`'dedir. Girdiler doğum verisidir: loglanmaz.
 	 */
 	computeCompat: (groom: ChartInput, bride: ChartInput, options?: InvokeOptions) => typedError<KutaReport, CommandError>(__TAURI_INVOKE("compute_compat", { groom, bride }, options)),
+	/**
+	 *  Gün panchangı: `at` anını içeren gün (gün doğumundan sonraki gün doğumuna) için beş uzvun
+	 *  gün içindeki değerleri, günün dilimleri, işaretler ve (doğum Ay'ı verilirse) tara ve chandra
+	 *  bala. `at` transit anıdır ("şimdi" Rust'ta okunur). Yer kişisel veridir: loglanmaz.
+	 */
+	dayPanchang: (at: TransitAt, place: MuhurtaPlace, settings: CalcSettings, natal: NatalMoon | null, options?: InvokeOptions) => typedError<DayPanchangView, CommandError>(__TAURI_INVOKE("day_panchang", { at, place, settings, natal }, options)),
+	/**
+	 *  Muhurta araması, bir dilim: süzgece uyan zaman pencereleri. İlk çağrıda `cursor` boştur;
+	 *  dönen `next` bir sonraki çağrıya olduğu gibi verilir, `null` ise arama bitmiştir. Pencere
+	 *  dilim sınırını aşarsa kapandığı dilimde verilir. Yer ve doğum Ay'ı loglanmaz.
+	 */
+	muhurtaSearch: (query: MuhurtaQuery, settings: CalcSettings, cursor: MuhurtaPageCursor | null, options?: InvokeOptions) => typedError<MuhurtaSearchView, CommandError>(__TAURI_INVOKE("muhurta_search", { query, settings, cursor }, options)),
 	openClient: (clientId: number, chartId: number | null, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("open_client", { clientId, chartId }, options)),
 	restoreSession: (options?: InvokeOptions) => typedError<OpenedClient | null, CommandError>(__TAURI_INVOKE("restore_session", undefined, options)),
 	createClient: (input: NewClient, options?: InvokeOptions) => typedError<OpenedClient, CommandError>(__TAURI_INVOKE("create_client", { input }, options)),
@@ -111,6 +123,13 @@ export const commands = {
 	listTags: (options?: InvokeOptions) => typedError<TagCount[], CommandError>(__TAURI_INVOKE("list_tags", undefined, options)),
 	getAppPrefs: (options?: InvokeOptions) => typedError<PrefsLoad, CommandError>(__TAURI_INVOKE("get_app_prefs", undefined, options)),
 	setAppPrefs: (prefs: AppPrefs, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("set_app_prefs", { prefs }, options)),
+	/**
+	 *  Kayıtlı muhurta süzgeçleri (ad ve koşullar; yer, tarih ve kişi kaydedilmez). Kayıt yoksa ya
+	 *  da okunamıyorsa liste boştur.
+	 */
+	loadMuhurtaFilters: (options?: InvokeOptions) => typedError<SavedMuhurtaFilter[], CommandError>(__TAURI_INVOKE("load_muhurta_filters", undefined, options)),
+	/**  Kayıtlı süzgeç listesinin tamamını yazar ve saklanan (kanonik) listeyi döner. */
+	saveMuhurtaFilters: (filters: SavedMuhurtaFilter[], options?: InvokeOptions) => typedError<SavedMuhurtaFilter[], CommandError>(__TAURI_INVOKE("save_muhurta_filters", { filters }, options)),
 	/**  Kullanıcının pano düzeni (`app_state`); kayıt yoksa ya da okunamazsa `None`. */
 	loadPanelLayout: (options?: InvokeOptions) => typedError<PanelLayout | null, CommandError>(__TAURI_INVOKE("load_panel_layout", undefined, options)),
 	/**  Açık harita olmadan düzen kaydı (otomatik kayıt); `None` kayıtlı düzeni siler. */
@@ -277,6 +296,15 @@ export type CalcSettings = {
 	combustion_orbs: CombustionOrbs,
 	sunrise_def: SunriseDef,
 	advanced: AdvancedSettings,
+};
+
+/**
+ *  Chandra bala: geçiş Ay'ının doğum Ay burcundan sayılan evi ve elverişli kümede olup
+ *  olmadığı. İki burç da rasi çerçevesindedir (K5).
+ */
+export type ChandraBala = {
+	house: number,
+	favourable: boolean,
 };
 
 /**  `compute_chara_dasha` sonucu. */
@@ -463,6 +491,79 @@ export type DashaSeed = {
 	year_days: number | null,
 };
 
+export type DayKarana = {
+	/**  1..=60. */
+	no: number,
+	name: KaranaName,
+};
+
+export type DayNakshatra = {
+	/**  Ay'ın nakshatrası, 1..=27. */
+	no: number,
+	/**  1..=4. */
+	pada: number,
+	nature: NakshatraNature,
+};
+
+/**
+ *  Bir günün panchangı. Bütün aralık dizileri `[day_start_jd_ut, day_end_jd_ut]`'ye kırpılmıştır
+ *  ve onu boşluksuz böler.
+ */
+export type DayPanchang = {
+	/**  Günün başı: gün doğumu; yoksa 06:00 yerel ortalama saat. */
+	day_start_jd_ut: number | null,
+	/**  Günün sonu: sonraki gün doğumu; yoksa başından 24 saat sonrası. */
+	day_end_jd_ut: number | null,
+	/**  Üçü birlikte dolu ya da birlikte boştur. */
+	sunrise_jd_ut: number | null,
+	sunset_jd_ut: number | null,
+	next_sunrise_jd_ut: number | null,
+	vara: Vara,
+	tithis: Interval<DayTithi>[],
+	nakshatras: Interval<DayNakshatra>[],
+	yogas: Interval<number>[],
+	karanas: Interval<DayKarana>[],
+	/**  Doğuşu ve batışı olmayan günde `None`. */
+	segments: DaySegments | null,
+	/**  `DAY_FLAG_KINDS` sırasında, her işaretin gün içindeki aralıkları. */
+	flags: Interval<MuhurtaFlag>[],
+	/**  Doğum Ay'ı verilmediyse `None`. */
+	personal: PersonalFactors | null,
+	/**  `SunriseUnavailable` ya da `LowPrecision`. */
+	warnings: ChartWarning[],
+	method: string,
+};
+
+/**  Gün panchangı ve günün başındaki UTC ofseti (saatler bu ofsetle gösterilir). */
+export type DayPanchangView = {
+	day: DayPanchang,
+	offset_secs: number,
+};
+
+/**
+ *  Günün dilimleri. `rahu`, `yamaganda` ve `gulika`'nın değeri dilimin sırasıdır (1..=8),
+ *  `abhijit`'in değeri muhurtanın sırasıdır (8).
+ */
+export type DaySegments = {
+	/**  Gündüzün sekiz eşit dilimi, sırayla. */
+	eighths: Interval<number>[],
+	rahu: Interval<number>,
+	yamaganda: Interval<number>,
+	gulika: Interval<number>,
+	abhijit: Interval<number>,
+	/**  Çarşamba: bazı derlemeler o gün Abhijit'i kullanmaz. Olgudur; dilim yine verilir. */
+	abhijit_weekday_exception: boolean,
+	/**  24 saat dilimi ve lordları: gün doğumundan sonraki gün doğumuna. */
+	horas: Interval<Graha>[],
+};
+
+export type DayTithi = {
+	/**  1..=30. */
+	no: number,
+	paksha: Paksha,
+	group: TithiGroup,
+};
+
 export type Dignity = "Exalted" | "Moolatrikona" | "OwnSign" | "GreatFriend" | "Friend" | "Neutral" | "Enemy" | "GreatEnemy" | "Debilitated";
 
 /**  `compute_drishti` sonucu. */
@@ -604,6 +705,13 @@ export type ImportWarningCode =
 "CalcSettingsReset" | 
 /**  JHD: saat dilimi ofseti ile boylam 60°'den fazla uyuşmuyor; işaret kuralı şüpheli. */
 "JhdOffsetLongitudeMismatch";
+
+/**  `[start_jd_ut, end_jd_ut)` boyunca geçerli değer. */
+export type Interval<T> = {
+	value: T,
+	start_jd_ut: number | null,
+	end_jd_ut: number | null,
+};
 
 /**
  *  `compute_jaimini` sonucu. AI yorum paneli için sözleşmedir: alan adları değişirse AI
@@ -756,6 +864,136 @@ export type MoonDayChange = {
 	sign: boolean,
 };
 
+/**
+ *  Süzgecin saklanabilen kısmı: koşullar. Boş küme "kısıt yok" demektir. Tarih aralığı, yer ve
+ *  kişi burada değildir (kayıtlı süzgeç kişi ve yer verisi taşımaz).
+ */
+export type MuhurtaCriteria = {
+	weekdays: Vara[],
+	/**  1..=30 (1–15 Shukla, 16–30 Krishna). */
+	tithis: number[],
+	/**  1..=27. */
+	nakshatras: number[],
+	lagna_signs: Sign[],
+	/**  Yalnızca gün doğumu ile batımı arası. */
+	daytime_only: boolean,
+	/**  Pencerenin en kısa süresi, dakika; 0 kısıt yok. */
+	min_minutes: number,
+	exclude: MuhurtaFlag[],
+	/**  Tara bala elverişli (doğum Ay'ı gerekir). */
+	require_tara: boolean,
+	/**  Chandra bala elverişli (doğum Ay'ı gerekir). */
+	require_chandra: boolean,
+};
+
+/**  Sonraki dilimin imleci. Arayüz bunu olduğu gibi geri gönderir. */
+export type MuhurtaCursor = {
+	/**  Hesaplanacak dilimin sırası, 0'dan. */
+	chunk: number,
+	/**  Önceki dilimin sonunda açık duran pencerenin başı. */
+	open_start_jd_ut: number | null,
+};
+
+/**  Muhurta işaretleri. Gün panchangında aralık olarak listelenir, aramada dışlanabilir. */
+export type MuhurtaFlag = 
+/**  Rikta tithi (4, 9, 14; her iki pakshada). */
+"Rikta" | 
+/**  Vishti karana. */
+"Vishti" | 
+/**  Vyatipata nitya yogası. */
+"Vyatipata" | 
+/**  Vaidhriti nitya yogası. */
+"Vaidhriti" | 
+/**  Gündüzün varaya göre Rahu'ya ait sekizde bir dilimi. */
+"RahuSegment" | "Yamaganda" | "Gulika" | 
+/**  Ay sidereal 300°–360° arasında. */
+"Panchaka" | 
+/**  Jüpiter yanık (v1 yanma kuralı). */
+"JupiterCombust" | 
+/**  Venüs yanık. */
+"VenusCombust";
+
+/**
+ *  Sonraki dilimin imleci: ilk çağrıda çözülen aralık ve çekirdeğin imleci. Arayüz olduğu gibi
+ *  geri gönderir; böylece gece yarısını aşan bir arama aralığını değiştirmez.
+ */
+export type MuhurtaPageCursor = {
+	from_jd_ut: number | null,
+	to_jd_ut: number | null,
+	cursor: MuhurtaCursor,
+};
+
+/**  Hesabın yapılacağı yer ve saatlerin gösterileceği dilim. Ad taşımaz. */
+export type MuhurtaPlace = {
+	/**  Kuzey +. */
+	lat: number | null,
+	/**  Doğu +. */
+	lon: number | null,
+	tz: TzChoice,
+};
+
+/**
+ *  Aramanın girdisi. `from_date` ve `to_date` yerin takvim günleridir (`YYYY-MM-DD`, ikisi de
+ *  dahil); `from_date` boşsa bugün, `to_date` boşsa başlangıçtan 30 gün sonrası.
+ */
+export type MuhurtaQuery = {
+	from_date: string | null,
+	to_date: string | null,
+	place: MuhurtaPlace,
+	criteria: MuhurtaCriteria,
+	natal: NatalMoon | null,
+};
+
+export type MuhurtaSearchView = {
+	/**  Bu dilimde kapanan pencereler. */
+	windows: MuhurtaWindowView[],
+	scanned: number,
+	chunks: number,
+	/**  Taranan aralığın tamamı ve uçlarındaki ofset. */
+	from_jd_ut: number | null,
+	to_jd_ut: number | null,
+	from_offset_secs: number,
+	to_offset_secs: number,
+	/**  Sonraki dilimin imleci; arama bittiyse `null`. */
+	next: MuhurtaPageCursor | null,
+	warnings: ChartWarning[],
+	method: string,
+};
+
+export type MuhurtaWindowView = {
+	start_jd_ut: number | null,
+	end_jd_ut: number | null,
+	/**  Başlangıç ve bitiş anlarındaki UTC ofseti (yaz saati pencerenin içinde değişebilir). */
+	start_offset_secs: number,
+	end_offset_secs: number,
+	snapshot: WindowSnapshot,
+};
+
+/**  Nakshatranın doğası (muhurta sınıfı). */
+export type NakshatraNature = 
+/**  Dhruva: sabit. */
+"Fixed" | 
+/**  Chara: yürük. */
+"Movable" | 
+/**  Ugra: sert. */
+"Fierce" | 
+/**  Mishra: karışık. */
+"Mixed" | 
+/**  Kshipra: çevik. */
+"Swift" | 
+/**  Mridu: yumuşak. */
+"Soft" | 
+/**  Tikshna: keskin. */
+"Sharp";
+
+/**  Kişiye bağlı etkenlerin girdisi: doğum haritasının Ay'ı. Yalnızca iki sayı taşır. */
+export type NatalMoon = {
+	/**  Doğum nakshatrası, 1..=27 (sidereal). */
+	nakshatra: number,
+	/**  Doğum Ay burcu (rasi çerçevesinde). */
+	sign: Sign,
+};
+
 export type NewChart = {
 	label: string,
 	kind: ChartKind,
@@ -871,6 +1109,15 @@ export type PanelLayout = {
 	layouts: Layout[],
 };
 
+/**
+ *  Kişiye bağlı etkenler, gün içindeki aralıklarıyla: Ay gün içinde nakshatra ya da burç
+ *  değiştirirse değer de değişir.
+ */
+export type PersonalFactors = {
+	tara: Interval<TaraBala>[],
+	chandra: Interval<ChandraBala>[],
+};
+
 export type Place = {
 	/**  Manuel koordinatta boş olabilir. */
 	name: string,
@@ -930,6 +1177,11 @@ export type ResolvedRecord = {
 	abbrev: string,
 	warnings: MomentWarning[],
 	tzdb_version: string,
+};
+
+export type SavedMuhurtaFilter = {
+	name: string,
+	criteria: MuhurtaCriteria,
 };
 
 export type SearchHit = {
@@ -1029,6 +1281,15 @@ export type TagCount = {
 	charts: number,
 };
 
+/**
+ *  Tara bala: doğum nakshatrasından günün nakshatrasına sayımın dokuzlu döngüdeki yeri
+ *  (1 Janma … 9 Parama Mitra) ve elverişli kümede olup olmadığı.
+ */
+export type TaraBala = {
+	number: number,
+	favourable: boolean,
+};
+
 /**  Zaman gücü kalemleri, virupa. `ayana` Güneş'te iki katıdır. */
 export type TemporalBala = {
 	day_night: number | null,
@@ -1061,6 +1322,19 @@ export type Tithi = {
 	paksha: Paksha,
 	ends_jd_ut: number | null,
 };
+
+/**  Tithi grubu: paksha içi sıranın beşli döngüsü. */
+export type TithiGroup = 
+/**  1, 6, 11. */
+"Nanda" | 
+/**  2, 7, 12. */
+"Bhadra" | 
+/**  3, 8, 13. */
+"Jaya" | 
+/**  4, 9, 14. */
+"Rikta" | 
+/**  5, 10, 15 (Purnima ve Amavasya dahil). */
+"Purna";
 
 /**  Transit anı. `Local`: duvar saati (`YYYY-MM-DD`, `HH:MM`) ve IANA dilimi. */
 export type TransitAt = "Now" | ({ Local: {
@@ -1186,6 +1460,19 @@ export type ViewState = {
 	compat_partner_uuid: string | null,
 	/**  Açık haritanın uyum rolü; eş yokken `OpenIsGroom`. */
 	compat_roles: CompatRoles,
+};
+
+/**  Pencerenin başındaki beş uzuv ve lagna burcu. */
+export type WindowSnapshot = {
+	vara: Vara,
+	tithi: number,
+	paksha: Paksha,
+	nakshatra: number,
+	pada: number,
+	yoga: number,
+	karana: number,
+	karana_name: KaranaName,
+	lagna_sign: Sign,
 };
 
 export type YogaGroup = "Mahapurusha" | "Lunar" | "Solar" | "Raja" | "Dhana" | "Exchange" | "ViparitaRaja" | "NeechaBhanga" | "NabhasaCount" | "NabhasaAshraya" | "Dosha";

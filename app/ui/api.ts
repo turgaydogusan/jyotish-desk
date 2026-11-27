@@ -15,10 +15,15 @@ import {
   type DashaSeed,
   type Gender,
   type Graha,
+  type MuhurtaPageCursor,
+  type MuhurtaPlace,
+  type MuhurtaQuery,
+  type NatalMoon,
   type NewChart,
   type NewClient,
   type BirthData,
   type PanelLayout,
+  type SavedMuhurtaFilter,
   type Sign,
   type TransitAt,
   type ViewState,
@@ -98,6 +103,14 @@ export const api = {
   computeCompat: (groom: ChartInput, bride: ChartInput) => wrap(() => commands.computeCompat(groom, bride)),
   chartInput: (chartUuid: string) => wrap(() => commands.chartInput(chartUuid)),
   chartBrief: (chartUuid: string) => wrap(() => commands.chartBrief(chartUuid)),
+  // Muhurta: gün panchangı transit anını içeren gündür ("şimdi" Rust'ta okunur). Arama dilim
+  // dilim yürür: ilk çağrıda `cursor` boştur, dönen `next` sonraki çağrıya olduğu gibi verilir;
+  // aramayı durdurmak sonraki dilimi istememektir. Yer ve doğum Ay'ı kişisel veridir: loglanmaz.
+  dayPanchang: (at: TransitAt, place: MuhurtaPlace, settings: CalcSettings, natal: NatalMoon | null) => wrap(() => commands.dayPanchang(at, place, settings, natal)),
+  muhurtaSearch: (query: MuhurtaQuery, settings: CalcSettings, cursor: MuhurtaPageCursor | null) => wrap(() => commands.muhurtaSearch(query, settings, cursor)),
+  // Kayıtlı süzgeçler: ad ve koşullar; yer, tarih ve kişi kaydedilmez. Kayıt listenin tamamını yazar.
+  loadMuhurtaFilters: () => wrap(() => commands.loadMuhurtaFilters()),
+  saveMuhurtaFilters: (filters: SavedMuhurtaFilter[]) => wrap(() => commands.saveMuhurtaFilters(filters)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

@@ -1,20 +1,29 @@
 // Gerçek veri fikstürü (app/src-tauri/tests/ui_fixture.rs üretir): Delhi 2000-01-01 17:30
 // için `create_client` dönüşü, ilk 3. seviye dönemin alt dönemleri, "new delhi" atlas araması,
 // an önizlemesi, bir DST boşluğu hatası, aynı sabit saatte transit, bakış tablosu, Jaimini raporu,
-// chara dasha, Shadbala raporu, yoga raporu (kataloğuyla) ve ikinci bir danışanla uyum raporları.
-// Arayüz hesap yapmadığı için testler bunu çizer.
+// chara dasha, Shadbala raporu, yoga raporu (kataloğuyla), ikinci bir danışanla uyum raporları,
+// gün panchangı (iki gün) ve üç dilimlik bir muhurta araması. Arayüz hesap yapmadığı için testler
+// bunu çizer.
 import type {
   CharaDasha,
   ChartBrief,
   ChartInput,
   CommandError,
   DashaPeriod,
+  DayPanchangView,
   DrishtiTable,
   Graha,
+  HomePlace,
   JaiminiReport,
   Kuta,
   KutaReport,
   MomentPreview,
+  MuhurtaFlag,
+  MuhurtaPlace,
+  MuhurtaQuery,
+  MuhurtaSearchView,
+  NakshatraNature,
+  NatalMoon,
   OpenedClient,
   PlaceHit,
   PrefsLoad,
@@ -22,6 +31,7 @@ import type {
   Sign,
   SignDashaPath,
   SignDashaPeriod,
+  TithiGroup,
   TransitView,
   YogaGroup,
   YogaReport,
@@ -76,6 +86,24 @@ export interface UiFixture {
   };
   /** Rust `kuta_class_ids`: her kutanın alabileceği sınıf kimlikleri. */
   kuta_classes: Record<Kuta, string[]>;
+  /**
+   * Muhurta: `place` açık haritanın doğum yeridir (Delhi, Asia/Kolkata), `natal` açık haritanın
+   * Ay'ı, `home_place` aynı yerin `AppPrefs.home_place` biçimi. `day`, fikstürün sabit saatini
+   * ("şimdi") içeren günün `day_panchang` dönüşüdür; `day_polar` kutup gecesinde bir gündür
+   * (Tromsø, 2050-12-21: dilimler hesaplanmaz). `pages`, `query` için `muhurta_search`'ün üç
+   * diliminin dönüşüdür (67 gün; Perşembe gündüzleri, üç işaretli dilim dışlanmış).
+   */
+  muhurta: {
+    natal: NatalMoon;
+    place: MuhurtaPlace;
+    home_place: HomePlace;
+    day: DayPanchangView;
+    day_polar: DayPanchangView;
+    query: MuhurtaQuery;
+    pages: MuhurtaSearchView[];
+  };
+  /** Rust `MuhurtaFlag::ALL`, `TithiGroup::ALL`, `NakshatraNature::ALL` ve `MUHURTA_MAX_MIN_MINUTES`. */
+  muhurta_ids: { flags: MuhurtaFlag[]; tithi_groups: TithiGroup[]; nakshatra_natures: NakshatraNature[]; max_min_minutes: number };
 }
 
 const FIXTURE = JSON.parse(raw) as UiFixture;

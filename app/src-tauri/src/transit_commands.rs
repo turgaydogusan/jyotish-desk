@@ -62,7 +62,11 @@ fn resolve_local(date: &str, time: &str, tz: TzChoice) -> Result<(f64, String), 
     Ok((r.jd_ut, r.utc))
 }
 
-fn transit_moment(at: &TransitAt, now: Timestamp) -> Result<(f64, String), CommandError> {
+/// Transit anının Jülyen günü ve UTC yazımı. Gün panchangı da aynı anı kullanır.
+pub(crate) fn transit_moment(
+    at: &TransitAt,
+    now: Timestamp,
+) -> Result<(f64, String), CommandError> {
     match at {
         TransitAt::Now => {
             // UTC duvar saati, saniye çözünürlüklü; JD dönüşümü atlas'ta.

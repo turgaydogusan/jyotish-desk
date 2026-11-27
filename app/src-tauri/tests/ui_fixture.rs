@@ -11,7 +11,11 @@ use std::sync::Mutex;
 
 use atlas::Timestamp;
 use ephemeris::Engine;
-use jyotish_core::{kuta_class_ids, ChartInput, Kuta, YOGA_CATALOG, YOGA_CONDITIONS};
+use jyotish_core::muhurta::{NakshatraNature, TithiGroup, MUHURTA_MAX_MIN_MINUTES};
+use jyotish_core::{
+    kuta_class_ids, ChartInput, Graha, Kuta, MuhurtaCriteria, MuhurtaFlag, NatalMoon, Vara,
+    YOGA_CATALOG, YOGA_CONDITIONS,
+};
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
 use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
@@ -20,10 +24,14 @@ use jyotish_desk_lib::module_commands::{
     compute_compat_blocking, compute_drishti_blocking, compute_jaimini_blocking,
     compute_shadbala_blocking, compute_yogas_blocking,
 };
+use jyotish_desk_lib::muhurta_commands::{
+    day_panchang_blocking, muhurta_search_blocking, MuhurtaPlace, MuhurtaQuery,
+};
 use jyotish_desk_lib::transit_commands::{transits_at_blocking, TransitAt};
 use serde_json::{json, Value};
 use store::{
-    BirthData, ChartKind, Gender, NewChart, NewClient, Place, Store, TimeCertainty, TzChoice,
+    BirthData, ChartKind, Gender, HomePlace, NewChart, NewClient, Place, Store, TimeCertainty,
+    TzChoice,
 };
 
 const CLIENT_UUID: &str = "00000000-0000-4000-8000-000000000001";
@@ -221,6 +229,84 @@ fn ui_fixture_is_up_to_date() {
         .into_iter()
         .map(|k| (format!("{k:?}"), json!(kuta_class_ids(k))))
         .collect();
+    // Muhurta: açık haritanın doğum yeri için "şimdi"yi içeren gün (doğum Ay'ıyla), kutup
+    // gecesinde bir gün (dilimler hesaplanmaz) ve üç dilimlik bir arama (67 gün; Perşembe
+    // gündüzleri, üç işaretli dilim dışlanmış). İşaret ve sınıf kimlikleri: arayüz testleri her
+    // birinin üç dilde adı olduğunu bu listeden denetler.
+    let fixture_now = Timestamp::from_second(1_795_600_800).expect("timestamp");
+    let moon = &opened.chart.grahas[Graha::Moon as usize];
+    let natal = NatalMoon {
+        nakshatra: moon.nakshatra,
+        sign: moon.sign,
+    };
+    let birth = &opened.chart_record.birth;
+    let muhurta_place = MuhurtaPlace {
+        lat: birth.place.lat,
+        lon: birth.place.lon,
+        tz: birth.tz.clone(),
+    };
+    let muhurta_day = day_panchang_blocking(
+        &engine,
+        TransitAt::Now,
+        fixture_now,
+        muhurta_place.clone(),
+        opened.calc_settings.clone(),
+        Some(natal),
+    )
+    .expect("day panchang");
+    // tests/golden/tromso-2050-12-21.json anı: Güneş doğmaz.
+    let muhurta_day_polar = day_panchang_blocking(
+        &engine,
+        TransitAt::Jd(2_470_162.260_416_666_5),
+        fixture_now,
+        MuhurtaPlace {
+            lat: 69.6492,
+            lon: 18.9553,
+            tz: TzChoice::Iana("Europe/Oslo".into()),
+        },
+        opened.calc_settings.clone(),
+        None,
+    )
+    .expect("day panchang in the polar night");
+    let muhurta_query = MuhurtaQuery {
+        from_date: Some("2026-11-26".into()),
+        to_date: Some("2027-01-31".into()),
+        place: muhurta_place.clone(),
+        criteria: MuhurtaCriteria {
+            weekdays: vec![Vara::Thursday],
+            daytime_only: true,
+            min_minutes: 30,
+            exclude: vec![
+                MuhurtaFlag::RahuSegment,
+                MuhurtaFlag::Yamaganda,
+                MuhurtaFlag::Gulika,
+            ],
+            ..MuhurtaCriteria::default()
+        },
+        natal: Some(natal),
+    };
+    let mut muhurta_pages = Vec::new();
+    let mut cursor = None;
+    loop {
+        let page = muhurta_search_blocking(
+            &engine,
+            muhurta_query.clone(),
+            opened.calc_settings.clone(),
+            cursor,
+            fixture_now,
+        )
+        .expect("muhurta search");
+        cursor = page.next;
+        muhurta_pages.push(page);
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(muhurta_pages.len(), 3, "sixty-seven days are three chunks");
+    let home_place = HomePlace {
+        place: birth.place.clone(),
+        tz: birth.tz.clone(),
+    };
     // Kaydedilen doğum verisi girdinin kanonik biçimidir (Plan 10 kapsam dışı 21).
     assert_eq!(opened.chart_record.birth, delhi());
     let prefs = store
@@ -256,6 +342,21 @@ fn ui_fixture_is_up_to_date() {
             "report_time_unknown": compat_time_unknown,
         },
         "kuta_classes": kuta_classes,
+        "muhurta": {
+            "natal": natal,
+            "place": muhurta_place,
+            "home_place": home_place,
+            "day": muhurta_day,
+            "day_polar": muhurta_day_polar,
+            "query": muhurta_query,
+            "pages": muhurta_pages,
+        },
+        "muhurta_ids": {
+            "flags": MuhurtaFlag::ALL,
+            "tithi_groups": TithiGroup::ALL,
+            "nakshatra_natures": NakshatraNature::ALL,
+            "max_min_minutes": MUHURTA_MAX_MIN_MINUTES,
+        },
     });
     let text = serde_json::to_string(&value)
         .expect("serialize")
