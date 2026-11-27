@@ -504,6 +504,48 @@ mod tests {
     }
 
     #[test]
+    fn mercury_alone_with_a_node_is_malefic_for_kshobhita_and_trushita() {
+        // `nature` düğümleri kötücül sayar: Merkür aynı burçta yalnız Rahu ile ise kötücüldür.
+        // Venüs İkizler'de Güneş ile; İkizler'e yalnız Yay'daki Merkür (Venüs'ün dostu) bakar.
+        // Merkür Rahu ile: kötücül bakış, Kshobhita var. Rahu Başak'a dönünce Merkür yalnız ve
+        // iyicildir: yok.
+        let places = with(
+            BASE,
+            &[
+                (Venus, Gemini, 9.0),
+                (Mercury, Sagittarius, 10.0),
+                (Rahu, Sagittarius, 25.0),
+                (Saturn, Taurus, 12.0),
+                (Jupiter, Taurus, 1.0),
+            ],
+        );
+        let p = chart(None, places);
+        assert_eq!(aspecting_grahas(Venus, &p), [Mercury]);
+        assert_eq!(nature(Mercury, &p), Nature::Malefic);
+        assert_eq!(found(Venus, Kshobhita, &p), Some(vec![Sun, Mercury]));
+        let alone = chart(None, with(places, &[(Rahu, Virgo, 25.0)]));
+        assert_eq!(nature(Mercury, &alone), Nature::Benefic);
+        assert_eq!(found(Venus, Kshobhita, &alone), None);
+        // Güneş Yengeç'te; düşmanı Satürn Boğa'dan 3. bakışla, Merkür Oğlak'tan karşıdan bakar.
+        // Merkür Rahu ile kötücüldür: iyicil bakış yok, Trushita var. Rahu Başak'a dönünce
+        // Merkür iyicildir ve bakışı Trushita'yı bozar.
+        let places = with(
+            BASE,
+            &[
+                (Sun, Cancer, 5.0),
+                (Saturn, Taurus, 12.0),
+                (Mercury, Capricorn, 10.0),
+                (Rahu, Capricorn, 25.0),
+            ],
+        );
+        let p = chart(None, places);
+        assert_eq!(aspecting_grahas(Sun, &p), [Mercury, Saturn]);
+        assert_eq!(found(Sun, Trushita, &p), Some(vec![Saturn]));
+        let alone = chart(None, with(places, &[(Rahu, Virgo, 25.0)]));
+        assert_eq!(found(Sun, Trushita, &alone), None);
+    }
+
+    #[test]
     fn one_graha_can_be_in_five_states_at_once_in_rule_order() {
         // Lagna Akrep: 5. ev Balık. Venüs Balık'ta (yücelme) Güneş ile; Satürn Başak'tan karşıya
         // bakar. Balık'a başka bakan yok.

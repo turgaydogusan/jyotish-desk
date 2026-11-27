@@ -29,9 +29,11 @@ Ortak tanımlar:
 - **Dost** ve **düşman** doğal (naisargika) ilişkidir ve durumu sorulan grahanın gözünden okunur
   (aşağıdaki tablo). Düğümler kimsenin dostu ya da düşmanı değildir. Bir burcun lordu grahanın
   kendisiyse o burç ne dost ne düşman burcudur.
-- **İyicil** ve **kötücül** uygulamanın ortak doğal sınıfıdır: Jüpiter ve Venüs iyicil; Güneş, Mars
-  ve Satürn kötücül; Ay büyürken (uzanım 0°–180°) iyicil, küçülürken kötücül; Merkür aynı burçta
-  kötücül varken iyicil yoksa kötücül, değilse iyicil.
+- **İyicil** ve **kötücül** uygulamanın ortak doğal sınıfıdır: Jüpiter ve Venüs iyicil; Güneş,
+  Mars, Satürn, Rahu ve Ketu kötücül; Ay büyürken (uzanım 0°–180°) iyicil, küçülürken kötücül;
+  Merkür aynı burçta kötücül varken iyicil yoksa kötücül, değilse iyicil. Düğümler bakmadığı için
+  sınıfları bu dizide yalnızca Merkür'ün sınıfına etki eder: Merkür aynı burçta yalnız Rahu ya da
+  Ketu ile ise kötücüldür.
 
 1. **Baladi.** Burç altışar derecelik beş dilime bölünür. Tek burçlarda (Koç, İkizler, Aslan,
    Terazi, Yay, Kova) dilimler sırayla Bala, Kumara, Yuva, Vriddha, Mrita'dır; çift burçlarda sıra
@@ -154,4 +156,4 @@ adını, tarihini ve bulduğu farkları yazar.
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
 | Plan 24'ü yazan oturum (örneklerin yazarı) | 2026-11-27 | Örnekler, motorun kaynağından ayrı yazılmış bir türetmeyle kural metninden üretildi ve motorla karşılaştırıldı: `lajjitadi/` yedi örnek, 49 graha satırı; `shayanadi/` dört hesaplı örnek, 28 graha satırı; fark yok. Sınır: türetmeyi ve motoru aynı yazar yazdı; kuralın okunuşundaki ortak bir yanlış ikisinde de aynıdır. Bu kayıt aritmetiği ve kuralların uygulanışını doğrular, okuma seçimlerini (yukarıdaki onay tablosu) değil. |
-| Plan 24 Task 8 agent (outside the fixture-authoring session) | 2026-11-27 | 13/13 matched: 49 + 28 graha rows and two null fixtures; no diff. Validation used `cargo test -p jyotish-core --test avastha_golden` against each JSON `expected` (motor not used as oracle during fixture authorship). Limitation: this agent wrote the motor too; this record verifies rule application and arithmetic, not reading choices (approval table). |
+| Plan 24'ün son gözden geçirmesi (Claude; örnekleri ve motoru yazan oturumların dışında) | 2026-11-27 | 13/13 uyuştu: 49 + 28 graha satırı ve iki hesapsız örnek, fark yok. Depo dışında yazılan bir python3 betiği kuralları ve tabloları bu dosyadan aldı, her JSON'un `input`'undan başladı ve motoru çalıştırmadı; betik Rust kaynağı okunmadan yazıldı. Aynı betik birim testlerinin beklentilerini de yeniden hesapladı (Baladi sınırları, Jagradadi, altı Lajjitadi kuralı, Shayanadi terimleri ve toplamları: 143 beklenti, fark yok). Bulgu: "Okuma kuralları"ndaki iyicil ve kötücül maddesi düğümleri saymıyordu, motorun ortak sınıfı ise Rahu ve Ketu'yu kötücül sayar; fark yalnızca Merkür'ün sınıfına etki eder, on üç örnekte iki okuma da aynı sonucu verir. Madde motorun sınıfına göre düzeltildi ve durum bir birim testiyle sabitlendi (`lajjitadi.rs › mercury_alone_with_a_node_…`). Sınırlar: betik yazılmadan önce dosya biçimini öğrenmek için dört örneğin `expected` ve `derivation` alanları görüldü; gözden geçiren, planı ve örnekleri yazan oturumla aynı model ailesindendir ve kuralın okunuşundaki ortak bir yanlış burada da aynı olur. Yürüten ajanın bu satıra yazdığı önceki kayıt bağımsız bir türetme değildi (yalnızca `cargo test` koşulmuştu); bu satır onun yerine yazıldı. Bu kayıt kuralların uygulanışını ve aritmetiği doğrular, okuma seçimlerini (onay tablosu) değil. |
