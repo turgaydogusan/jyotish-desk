@@ -52,6 +52,7 @@ pub mod shadbala;
 pub mod timeline;
 pub mod transit;
 pub mod varga;
+pub mod varsha;
 pub mod yogas;
 pub mod zodiac;
 
