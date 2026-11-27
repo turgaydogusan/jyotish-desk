@@ -95,13 +95,13 @@ yazılımla ya da çevrimiçi kaynakla karşılaştırmaz.
 "geçti" sayar. **[insan]** maddeler yalnızca gerçek uygulamaya bakan biri tarafından
 doğrulanabilir ve sahibine devredilir (Y3: sonraki planı engellemez).
 
-- [ ] **[otomatik]** Sripati sandhileri Porphyry ortalarının ikişer ikişer ortasıdır; 1. bhavanın ortası lagnadır. (`tests/bhava.rs`; `table.rs › porphyry_points_…`)
-- [ ] **[otomatik]** Grahanın bhavası graha tablosundaki evdir; tam burçta hiçbir graha yer değiştirmez; Placidus'ta orta yoktur. (`tests/bhava.rs`; `table.rs › whole_sign_table_…`)
-- [ ] **[otomatik]** Doğum saati bilinmiyorsa tablo yoktur, chakra lagna halkası olmadan ve yaklaşık döner; sayı prashnasında evler tam burçtur; geçersiz konum saat bilinmese de bildirilir. (`tests/bhava.rs`; `table.rs › collector_…`; `sudarshana.rs › collector_reads_…`)
-- [ ] **[otomatik]** Bhava tablosu paneli üç ev sistemini, kutup dairesindeki düşmeyi, nokta ayarını, `*` işaretini (sözle de) ve "saat bilinmiyor" durumunu gösterir. (`BhavaTablePanel.test.tsx`, on bir test)
-- [ ] **[otomatik]** Chalit görünümü grahaları haritanın verdiği bhavaya çizer, yeni istek yapmaz, tam burçta kutuyu sunmaz, D1 dışında ve saat bilinmezken nedenini söyler, öteki katmanları çizmez. (`ChartPanel.test.tsx` chalit testleri; `adapter.test.ts`; `ChartSvg.test.tsx`)
-- [ ] **[otomatik]** Sudarshana çizimi 36 hücredir, her graha üç kez yazılır, çizimde sekme durağı yoktur; tablo aynı veriyi taşır ve ortak vurguyu sürer. (`SudarshanaSvg.test.tsx`, `SudarshanaPanel.test.tsx`, `sudarshana.test.ts`; e2e)
-- [ ] **[otomatik]** Görsel temeller: chalit (üç biçim) ve Sudarshana (açık, koyu). (`pnpm --dir app e2e:visual`: 15)
+- [x] **[otomatik]** Sripati sandhileri Porphyry ortalarının ikişer ikişer ortasıdır; 1. bhavanın ortası lagnadır. (`tests/bhava.rs`; `table.rs › porphyry_points_…`)
+- [x] **[otomatik]** Grahanın bhavası graha tablosundaki evdir; tam burçta hiçbir graha yer değiştirmez; Placidus'ta orta yoktur. (`tests/bhava.rs`; `table.rs › whole_sign_table_…`)
+- [x] **[otomatik]** Doğum saati bilinmiyorsa tablo yoktur, chakra lagna halkası olmadan ve yaklaşık döner; sayı prashnasında evler tam burçtur; geçersiz konum saat bilinmese de bildirilir. (`tests/bhava.rs`; `table.rs › collector_…`; `sudarshana.rs › collector_reads_…`)
+- [x] **[otomatik]** Bhava tablosu paneli üç ev sistemini, kutup dairesindeki düşmeyi, nokta ayarını, `*` işaretini (sözle de) ve "saat bilinmiyor" durumunu gösterir. (`BhavaTablePanel.test.tsx`, on bir test)
+- [x] **[otomatik]** Chalit görünümü grahaları haritanın verdiği bhavaya çizer, yeni istek yapmaz, tam burçta kutuyu sunmaz, D1 dışında ve saat bilinmezken nedenini söyler, öteki katmanları çizmez. (`ChartPanel.test.tsx` chalit testleri; `adapter.test.ts`; `ChartSvg.test.tsx`)
+- [x] **[otomatik]** Sudarshana çizimi 36 hücredir, her graha üç kez yazılır, çizimde sekme durağı yoktur; tablo aynı veriyi taşır ve ortak vurguyu sürer. (`SudarshanaSvg.test.tsx`, `SudarshanaPanel.test.tsx`, `sudarshana.test.ts`; e2e)
+- [x] **[otomatik]** Görsel temeller: chalit (üç biçim) ve Sudarshana (açık, koyu). (`pnpm --dir app e2e:visual`: 15)
 - [ ] **[insan]** Sripati ayarlı bir deneme haritasında Bhava tablosunun başlangıç ve orta değerleri, sahibin basılı kaynağındaki bir örnekle (ya da elle Porphyry bölmesiyle) uyuşur; yukarıdaki 1–4. satırlar onaylanır ya da düzeltme istenir.
 - [ ] **[insan]** Chalit görünümü ekranda okunur: iki burca yayılan bhavanın tek hücrede gösterimi, `*` işareti ve açıklama satırı yeterlidir (5. satır); Kuzey, Güney ve daire biçimlerinde yer değiştiren graha aynı bhavadadır.
 - [ ] **[insan]** Sudarshana çizimi açık ve koyu temada, üç dilde okunur; dar panelde tablo çizimin altında kayar; halka sırası ve yön onaylanır (6. ve 7. satırlar); beş grahalık bir yığılmada etiketler okunur.
@@ -117,4 +117,4 @@ değerlerle karşılaştırır ve aşağıya adını, tarihini ve bulduğu farkl
 
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
-| — | — | Bekliyor (Plan 25 Task 8) |
+| Plan 23–25'in son gözden geçirmesi (Claude; motoru ve örnekleri yazan oturumların dışında) | 2026-11-27 | Fark yok. Elle, yalnızca girdilerden ve yukarıdaki okuma kurallarından, motor çalıştırılmadan yeniden hesaplandı: lagna 101°, MC 341° için on iki Porphyry noktası, on iki sandhi ve on iki yay; eşit çeyrek örneği; 81° ve 101° noktalarının burcu, nakshatrası, padası ve iki lordu (tropikal-rasi kipiyle); Sripati tablosunda dokuz grahanın burç evi, bhavası, başlangıçtan ve ortadan uzaklığı ve yer değiştiren altı graha; tam burç örneğinde Güneş; Sudarshana örneğinin üç halkası ve sahte gökyüzünün üç başlangıç burcu (sayı 30 → Yengeç). Sınır: beklenen değerler testte türetmenin yanında yazılıdır, türetme kör değildir; bu kayıt aritmetiği ve kuralların uygulanışını doğrular, okuma seçimlerini (yukarıdaki onay tablosu) değil. |

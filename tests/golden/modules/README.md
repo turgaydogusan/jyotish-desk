@@ -112,4 +112,14 @@ Shayanadi durumunun ve artanın sıfır olduğu durumun örneklerde bulunduğunu
 kuralları, motorun tabloları, sahibin onayını bekleyen varyant noktaları ve gözden geçirme kaydı
 `avastha/REVIEW.md`'dedir.
 
+Doğum anı ekleri (yol haritası §4.1–§4.3, Plan 23) ile bhava tablosu ve Sudarshana chakra
+(§4.5–§4.6, Plan 25) bu dizinde JSON örneği taşımaz: `natal_extras/` ve `bhava/` klasörlerinde
+yalnızca `REVIEW.md` vardır ve hiçbir test bu iki klasörü yüklemez. El örnekleri modüllerin birim
+testleridir (`crates/jyotish-core/src/natal_extras/` ve `crates/jyotish-core/src/bhava/`
+içindeki `mod tests`); her beklenen değerin türetmesi testin yorumunda adım adım yazılıdır.
+Gerçek motorla çapraz denetim `app/src-tauri/tests/natal_extras.rs` ve
+`app/src-tauri/tests/bhava.rs` dosyalarındadır. Okuma kuralları, bellekten yazılan tablolar,
+sahibin onayını bekleyen noktalar, denetim maddeleri ve gözden geçirme kaydı
+`natal_extras/REVIEW.md` ve `bhava/REVIEW.md`'dedir.
+
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.

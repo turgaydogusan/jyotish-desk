@@ -259,5 +259,5 @@ kullanılır.
 
 | Tarih | Gözden geçiren | Kapsam | Sonuç |
 |---|---|---|---|
-| | | El örneklerinin kuraldan yeniden türetilmesi (yogi A–C, navatara tabanı, Vimshopaka'nın iki örneği) | |
+| 2026-11-27 | Plan 23–25'in son gözden geçirmesi (Claude; motoru ve örnekleri yazan oturumların dışında) | El örneklerinin kuraldan yeniden türetilmesi (yogi A–C, navatara tabanı, Vimshopaka'nın iki örneği) | Fark yok. Elle, yalnızca girdilerden ve bu dosyadaki kurallarla tablolardan, motor çalıştırılmadan yeniden hesaplandı: yogi A, B, C (nokta, nakshatra, pada, yogi, burç, eş yogi, avayogi); tropikal-rasi örneği; `collect.rs`'teki sahte gökyüzü (tithi 8, dagdha İkizler ve Başak; dokuz grahanın nakshatrası, tarası ve turu; on gün sonraki Ay ve Güneş); `navatara.rs` tabanı (dokuz grahanın satırı, tarası ve turu) ve dört grahalık geçiş örneği; Vimshopaka'nın iki örneği (on altı varga burcu, on altı basamak, dört küme toplamı: 388, 389, 394, 385 ve 270, 254, 276, 285,5). Sınır: beklenen değerler testte türetmenin yanında yazılıdır, türetme kör değildir; bu kayıt aritmetiği ve kuralların uygulanışını doğrular, okuma seçimlerini ve bellekten yazılan tabloları (1.5, 2.2, 3.4) değil. |
 | | | Sahibinin basılı kaynak onayı (1.5, 2.2, 3.4) | |
