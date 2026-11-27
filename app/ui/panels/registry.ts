@@ -7,6 +7,7 @@ import { NotesPanel } from "../notes/NotesPanel";
 import { ArgalaPanel } from "./ArgalaPanel";
 import { ArudhaPanel } from "./ArudhaPanel";
 import { AshtakavargaPanel } from "./AshtakavargaPanel";
+import { AvasthaPanel } from "./AvasthaPanel";
 import { BhavaBalaPanel } from "./BhavaBalaPanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
@@ -50,6 +51,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   bhava_bala: { titleKey: "panel.bhava_bala", component: BhavaBalaPanel },
   // Yogalar (Plan 18).
   yogas: { titleKey: "panel.yogas", component: YogasPanel },
+  // Avasthalar (Plan 24).
+  avastha: { titleKey: "panel.avastha", component: AvasthaPanel },
   // Uyum (Plan 19).
   compat: { titleKey: "panel.compat", component: CompatPanel },
   // Muhurta (Plan 20).

@@ -1,0 +1,15 @@
+/* Avastha paneli: Lajjitadi hücresindeki durum listesi. Renk token'lardan gelir (C9). */
+.avastha-states {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.avastha-states li {
+  display: inline;
+}
+.avastha-states li + li::before {
+  content: "; ";
+}
+.avastha-by {
+  color: var(--text-2);
+}

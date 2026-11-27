@@ -5,6 +5,8 @@
 // gün panchangı (iki gün), üç dilimlik bir muhurta araması ve iki prashna haritası (olgularıyla).
 // Arayüz hesap yapmadığı için testler bunu çizer.
 import type {
+  AvasthaReport,
+  Baladi,
   CharaDasha,
   ChartBrief,
   ChartInput,
@@ -19,10 +21,12 @@ import type {
   Graha,
   GrahaFlag,
   HomePlace,
+  Jagradadi,
   JaiminiReport,
   KarakaRole,
   Kuta,
   KutaReport,
+  Lajjitadi,
   LordLink,
   MomentPreview,
   MuhurtaFlag,
@@ -38,6 +42,7 @@ import type {
   RisingMode,
   SavedSearch,
   ShadbalaReport,
+  Shayanadi,
   Sign,
   SignDashaPath,
   SignDashaPeriod,
@@ -82,6 +87,12 @@ export interface UiFixture {
   yoga_catalog: { id: string; group: YogaGroup }[];
   /** Rust `YOGA_CONDITIONS`: alt koşul kimlikleri. */
   yoga_conditions: string[];
+  /** `compute_avasthas`, açık haritanın girdisiyle: yedi graha, dört dizi, Shayanadi terimleri. */
+  avasthas: AvasthaReport;
+  /** `compute_avasthas`, `time_known: false` ile: Lajjita değerlendirilmez, Shayanadi yoktur. */
+  avasthas_time_unknown: AvasthaReport;
+  /** Rust `Baladi::ALL`, `Jagradadi::ALL`, `Lajjitadi::ALL` ve `Shayanadi::ALL`. */
+  avastha_ids: { baladi: Baladi[]; jagradadi: Jagradadi[]; lajjitadi: Lajjitadi[]; shayanadi: Shayanadi[] };
   /**
    * Uyum: ikinci danışan ("Eş Danışan", İstanbul 1987-03-17) eş haritadır. `input` ve `brief`
    * store'un `chart_input` ve `chart_brief` dönüşleridir. `report` açık harita damat rolündeyken,

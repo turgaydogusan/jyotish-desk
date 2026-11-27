@@ -11,6 +11,7 @@ use std::sync::Mutex;
 
 use atlas::Timestamp;
 use ephemeris::Engine;
+use jyotish_core::avastha::{Baladi, Jagradadi, Lajjitadi, Shayanadi};
 use jyotish_core::muhurta::{NakshatraNature, TithiGroup, MUHURTA_MAX_MIN_MINUTES};
 use jyotish_core::{
     kuta_class_ids, ChartInput, ChartQuery, Condition, Graha, GrahaFlag, Kuta, LordLink,
@@ -19,6 +20,7 @@ use jyotish_core::{
     MAX_SKY_EVENTS, MAX_YOGA_IDS, PRASHNA_NUMBER_MAX, YOGA_CATALOG, YOGA_CONDITIONS,
 };
 use jyotish_desk_lib::atlas_commands::{preview_moment_body, search_places_blocking, AtlasState};
+use jyotish_desk_lib::avastha_commands::compute_avasthas_blocking;
 use jyotish_desk_lib::client_commands::create_client_blocking;
 use jyotish_desk_lib::commands::dasha_children;
 use jyotish_desk_lib::module_commands::{
@@ -191,6 +193,23 @@ fn ui_fixture_is_up_to_date() {
         },
     )
     .expect("yogas without a birth time");
+    // Avasthalar (Plan 24): aynı girdiyle ve doğum saati bilinmeyen girdiyle (Lajjita
+    // değerlendirilmez, Shayanadi yoktur). Dört dizinin kimlikleri: arayüz testleri her birinin
+    // adını bu listelerden denetler.
+    let avasthas = compute_avasthas_blocking(&engine, module_input.clone()).expect("avasthas");
+    assert!(
+        avasthas.shayanadi_basis.is_some(),
+        "the fixture has a sunrise"
+    );
+    let avasthas_time_unknown = compute_avasthas_blocking(
+        &engine,
+        ChartInput {
+            time_known: false,
+            lagna_number: None,
+            ..module_input.clone()
+        },
+    )
+    .expect("avasthas without a birth time");
     let yoga_catalog: Vec<Value> = YOGA_CATALOG
         .iter()
         .map(|r| json!({ "id": r.id, "group": r.group }))
@@ -485,6 +504,14 @@ fn ui_fixture_is_up_to_date() {
         "yogas_time_unknown": yogas_time_unknown,
         "yoga_catalog": yoga_catalog,
         "yoga_conditions": YOGA_CONDITIONS,
+        "avasthas": avasthas,
+        "avasthas_time_unknown": avasthas_time_unknown,
+        "avastha_ids": {
+            "baladi": Baladi::ALL,
+            "jagradadi": Jagradadi::ALL,
+            "lajjitadi": Lajjitadi::ALL,
+            "shayanadi": Shayanadi::ALL,
+        },
         "compat": {
             "partner_uuid": partner.chart_record.uuid,
             "brief": partner_brief,

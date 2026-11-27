@@ -104,6 +104,9 @@ export const api = {
   // Yogalar: doğum saati bilinmiyorsa rapor yine döner; lagna isteyen kurallar atlanmış,
   // diğer kayıtlar `approximate` işaretlidir.
   computeYogas: (input: ChartInput) => wrap(() => commands.computeYogas(input)),
+  // Avasthalar: doğum saati bilinmiyorsa rapor yine döner; Lajjita değerlendirilmemiş, Shayanadi
+  // hesaplanmamıştır (`time_known: false`). O gün gün doğumu yoksa yalnızca Shayanadi boştur.
+  computeAvasthas: (input: ChartInput) => wrap(() => commands.computeAvasthas(input)),
   // Uyum: `groom` damat rolünün, `bride` gelin rolünün girdisidir. Eş haritanın girdisi ve kısa
   // kimliği store'dan okunur; harita yoksa (silinmiş eş) ikisi de `null` döner. Girdiler doğum
   // verisidir, eş bağı ilişki bilgisidir: loglanmaz.
