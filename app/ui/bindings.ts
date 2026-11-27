@@ -6,7 +6,13 @@ import type { InvokeOptions } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	engineStatus: (options?: InvokeOptions) => typedError<EngineStatus, CommandError>(__TAURI_INVOKE("engine_status", undefined, options)),
-	/**  Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir. */
+	/**
+	 *  Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir.
+	 * 
+	 *  Lagna her zaman anın lagnasıdır: bu komut sayı prashnasının sayısını almaz. Kayıtlı bir
+	 *  haritanın (sayı prashnası dahil) haritası `open_client` ve `save_calc_settings` dönüşüdür
+	 *  (`compute_chart_for_blocking`); arayüz bu komutu kayıtlı harita için çağırmaz.
+	 */
 	computeChart: (jdUt: number | null, lat: number | null, lon: number | null, settings: CalcSettings, options?: InvokeOptions) => typedError<Chart, CommandError>(__TAURI_INVOKE("compute_chart", { jdUt, lat, lon, settings }, options)),
 	/**
 	 *  Transit konumları (UI spec §3.3). `jd_ut` arayüzden gelir (varsayılan "şimdi" ya da

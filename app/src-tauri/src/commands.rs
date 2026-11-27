@@ -132,6 +132,10 @@ pub fn compute_chart_for_blocking(
 }
 
 /// Haritayı hesaplar. `jd_ut` ve konum atlas katmanında çözülmüş olarak gelir.
+///
+/// Lagna her zaman anın lagnasıdır: bu komut sayı prashnasının sayısını almaz. Kayıtlı bir
+/// haritanın (sayı prashnası dahil) haritası `open_client` ve `save_calc_settings` dönüşüdür
+/// (`compute_chart_for_blocking`); arayüz bu komutu kayıtlı harita için çağırmaz.
 #[tauri::command]
 #[specta::specta]
 pub async fn compute_chart(

@@ -165,6 +165,9 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
           const base = structuredClone(request.number === null ? fixture.prashna.opened : fixture.prashna.opened_number);
           base.prashna = { ...base.prashna, number: request.number, question: request.question.trim(), focus_house: request.focus_house };
           if (request.client_id === null) base.client = { ...base.client, id: 9, uuid: "00000000-0000-4000-8000-000000000009", name: "Prashna", last_chart_id: base.chart_record.id };
+          // İstenen danışan: harita onun altına girer; olmayan danışan Rust'taki gibi reddedilir.
+          else if (!opened[request.client_id]) throw { code: "not_found", params: { what: "client", id: String(request.client_id) } };
+          else base.client = structuredClone(opened[request.client_id].client);
           base.chart_record = { ...base.chart_record, client_id: base.client.id };
           opened[base.client.id] = base;
           prashnas[base.chart_record.id] = base;
