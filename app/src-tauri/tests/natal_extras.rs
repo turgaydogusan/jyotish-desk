@@ -325,6 +325,11 @@ fn vimshopaka_checks(engine: &Engine, cases: &[(String, ChartInput)]) {
                 let v = row.vargas.iter().find(|v| v.varga == varga).expect("varga");
                 let sapta = saptavargaja_points(row.graha, varga, &positions);
                 // Moolatrikona (45; yalnızca D1) Vimshopaka'da ayrı basamak değildir: eşlenmez.
+                // Başka hiçbir puan eşlemesiz geçemez (tanınmayan puan testi düşürür).
+                if sapta == 45.0 {
+                    assert_eq!(varga, Varga::D1, "{id} {:?}", row.graha);
+                    continue;
+                }
                 let expected = [
                     (30.0, 20.0),
                     (20.0, 18.0),
@@ -335,7 +340,8 @@ fn vimshopaka_checks(engine: &Engine, cases: &[(String, ChartInput)]) {
                 ]
                 .into_iter()
                 .find(|(points, _)| *points == sapta)
-                .map_or(v.points, |(_, rung)| rung);
+                .map(|(_, rung)| rung)
+                .unwrap_or_else(|| panic!("{id} {:?} {varga:?}: saptavargaja {sapta}", row.graha));
                 assert_eq!(v.points, expected, "{id} {:?} {varga:?}", row.graha);
             }
             let scores = [

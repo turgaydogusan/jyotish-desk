@@ -14,7 +14,6 @@ use ephemeris::Ephemeris;
 use serde::{Deserialize, Serialize};
 
 use crate::chart::{compute_chart_for, finite, rasi_frame, to_sidereal, ChartWarning};
-use crate::dasha::VIMSHOTTARI_ORDER;
 use crate::dignity::sign_lord;
 use crate::graha::Graha;
 use crate::houses::house_from_cusps;
@@ -91,9 +90,8 @@ pub struct BhavaTable {
 }
 
 /// Nakshatranın (1..=27) Vimshottari lordu: Ashwini'den başlayan dokuzlu sıra üç kez yinelenir.
-pub fn nakshatra_lord(nakshatra: u8) -> Graha {
-    VIMSHOTTARI_ORDER[(usize::from(nakshatra) + 8) % 9]
-}
+/// Tek tanım `natal_extras`'tadır (Plan 23); bu modül aynı fonksiyonu kendi yolundan da sunar.
+pub use crate::natal_extras::nakshatra_lord;
 
 /// `from` boylamından `to` boylamına işaretli kısa yay, derece, (−180, 180].
 pub fn signed_arc(from: f64, to: f64) -> f64 {

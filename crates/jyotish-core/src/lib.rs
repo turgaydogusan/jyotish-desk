@@ -12,9 +12,9 @@
 //! Doğum anı ekleri (yol haritası Plan 23): `natal_extras` (panchang ekleri, navatara, Vimshopaka).
 
 // Bhava tablosu ve Sudarshana chakra (yol haritası Plan 25). Ayrı blok: paralel planların
-// alfabetik sıradaki eklemeleriyle aynı satırlara dokunmaz. `bhava::nakshatra_lord` kökten dışa
-// aktarılmaz: Plan 23 aynı adı `natal_extras`'tan köke çıkarır ve iki `pub use` birleşince
-// derlenmez (E0252); modül yolu (`jyotish_core::bhava::nakshatra_lord`) açıktır.
+// alfabetik sıradaki eklemeleriyle aynı satırlara dokunmaz. `nakshatra_lord` köke yalnızca
+// `natal_extras`'tan çıkar (tek tanım oradadır); `bhava::nakshatra_lord` aynı fonksiyonun ikinci
+// yoludur ve kökten yeniden dışa aktarılmaz.
 pub mod bhava;
 pub use bhava::{
     bhava_point, bhava_table, compute_bhava_table, compute_sudarshana, porphyry_points,
