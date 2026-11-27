@@ -14,8 +14,11 @@ hüküm değildir: takvim olguları sayar, "uygun gün" demez.
 ## Okuma kuralları
 
 1. **Hücre takvim günüdür.** Gün, seçilen yerin duvar saatiyle gece yarısından sonraki gece
-   yarısınadır (`[başlangıç, bitiş)`). Yaz saati geçişinde gün 23 ya da 25 saat sürer. Saat
-   diliminin takvimden atladığı gün (örnek: Samoa, 30 Aralık 2011) ızgarada yoktur.
+   yarısınadır (`[başlangıç, bitiş)`). Yaz saati geçişinde gün 23 ya da 25 saat sürer. Gece
+   yarısı yaz saati boşluğuna düşüyorsa (saat 00:00'dan 01:00'e atlar; örnek: São Paulo, 15 Ekim
+   2017) gün boşluğun bitişinde başlar: o gün 23 saattir ve önceki günün son saati önceki günün
+   hücresinde durur. Saat diliminin takvimden atladığı gün (örnek: Samoa, 30 Aralık 2011)
+   ızgarada yoktur.
 2. **Günün olguları gün doğumundadır.** Hücrenin tithisi ve Ay nakshatrası, o takvim gününün
    içindeki gün doğumunda geçerli olan değerdir: o gün başlayan panchang gününün ilk değeri.
    Gün içinde değişen tithi ya da nakshatra hücrede yazılmaz; gün panchangı paneli bütün
@@ -77,7 +80,7 @@ başlar.
 | `events.rs › the_sliced_month_finds_exactly_the_events_of_one_search` (ikinci yazım) | 9, 11 |
 | `events.rs › the_event_limit_cuts_the_list_and_says_so` | 10 |
 | `events.rs › bad_input_is_named_by_field_and_low_precision_is_reported` | 12 |
-| `app/src-tauri/tests/calendar.rs` (gerçek motor: Delhi Kasım 2026 gün panchangı ve olay aramasıyla çapraz denetim; Berlin yaz saati günleri; Tromsø kutup gecesi ve gece yarısı güneşi; Samoa'nın atlanan günü; yıl aralığının uçları) | 1–12, 14 |
+| `app/src-tauri/tests/calendar.rs` (gerçek motor: Delhi Kasım 2026 gün panchangı ve olay aramasıyla çapraz denetim; Berlin yaz saati günleri; São Paulo'nun gece yarısı boşluğu; Tromsø kutup gecesi ve gece yarısı güneşi; Samoa'nın atlanan günü; yıl aralığının uçları) | 1–12, 14 |
 | `app/ui/calendar/model.test.ts`, `CalendarPanel.test.tsx` | 10, 13 |
 
 ## Sahibin kararını bekleyen noktalar
@@ -118,7 +121,7 @@ biri tarafından doğrulanabilir ve sahibine devredilir (Y3: sonraki planı enge
 - [x] **[otomatik]** Gün ayrıntısı günün bütün olaylarını listeler; olayın saati transit tarihini değiştirir; "Gün panchangını aç" paneli ekler. (`CalendarPanel.test.tsx`)
 - [x] **[otomatik]** Süzgeç panelin ayarıdır; hafta İngilizcede Pazar, Türkçe ve Fransızcada Pazartesi başlar; üç dilde ay ve gün adları vardır. (`CalendarPanel.test.tsx`, `model.test.ts`, `i18n.test.ts`)
 - [x] **[otomatik]** Eski isteğin geç gelen yanıtı gösterilmez; yeni ay yüklenirken eski ızgara durur. (`useCalendar.test.tsx`)
-- [ ] **[kontrolör]** Uçtan uca akışlar ve görsel temeller. (`app/e2e/calendar.desk.spec.ts`: üç akış; `app/e2e/calendar.visual.spec.ts`: üç temel)
+- [x] **[kontrolör]** Uçtan uca akışlar ve görsel temeller. (`app/e2e/calendar.desk.spec.ts`: üç akış; `app/e2e/calendar.visual.spec.ts`: üç temel; 2026-11-28'de özel portta koşuldu: e2e 36, görsel 18 geçti)
 - [ ] **[insan]** Gün tanımı (1. ve 2. satırlar): bir ayın hücreleri, sahibin kullandığı basılı bir panchang takvimiyle yan yana konur; gün doğumundaki tithi ve nakshatra uyuşur. Farklı bir gün tanımı isteniyorsa karar tablosuna yazılır.
 - [ ] **[insan]** Varsayılan olay türleri (4. ve 5. satırlar) bir danışan görüşmesinde yeterlidir; hücreler ne boş ne de aşırı doludur.
 - [ ] **[insan]** Izgara ekranda okunur: açık ve koyu temada, üç dilde; dar panelde yatay kayar; bugün ve seçili gün ayırt edilir (renk dışında sözle ve çerçeveyle); üç olaylı hücre taşmaz.
@@ -137,4 +140,4 @@ karşılaştırır ve aşağıya adını, tarihini ve bulduğu farkları yazar.
 
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
-| — | — | Bekliyor: Plan 29 Task 8 Step 4 |
+| Plan 29'un son gözden geçirmesi (Claude; kodu yürüten ajan değil. Sınır: planı ve el örneklerini yazan modelin ayrı bir oturumudur, bağımsız bir insan değil) | 2026-11-28 | **El örnekleri: fark yok.** Yalnızca sahte gökyüzünden ve yukarıdaki okuma kurallarından, motor çalıştırılmadan, depo dışındaki bir python3 betiğiyle (kesirli aritmetik) yeniden hesaplandı: üç günün gün doğumundaki uzanımı (80,9674°, 93,1874°, 105,4074°), tithisi (7, 8, 9) ve nakshatrası (5, 6, 7); Krishna örneği (uzanım 195,9674°, 17. tithi); gün doğumu olmayan günün anı (boylam 30° D: 04:00 UT; 0°: 06:00; −90°: 12:00) ve o andaki olgular (7, 5); yedi olayın günü (3, 7, 8, 13, 14, 23, 28); Ay'ın giriş sayıları (13 ve 31); Güneş'in dönüş günü (14); sınır örneğinin gün başına sayıları (`[2, 1, 1]`, sınır 3'te `[2, 0, 0]` ve "kesildi") ve dilimler. **Ek denetim (gerçek motorun çıktısı, kurallardan yeniden türetilen beklentiyle):** 23 yer ve ay (673 gün, 1314 olay) için gün sınırları saat dilimi verisinden (python `zoneinfo`, tzdata 2026f) "o tarihin ilk anı" olarak, gün doğumu ve olgular bu dosyadaki kurallarla ve betikte yazılmış Meeus dizileriyle (Güneş, Ay, Lahiri) hesaplandı. Uyuşanlar: 673 günün tithisi, nakshatrası, hafta günü ve ofseti; 594 gün doğumu (en büyük fark 21 sn); gün doğumu olmayan 79 günün okuma anı; "bugün"; Berlin, Sydney, New York, Lord Howe (23,5 saat), Kahire ve Santiago'nun 25 saatlik günleri; Samoa'nın ve Kiritimati'nin atlanan günü. **Bulunan fark (düzeltildi):** gece yarısı yaz saati boşluğuna düşen günde (Kahire, Beyrut, Havana, Santiago, São Paulo) gün bir saat erken, önceki günün 23:00'ünde başlıyordu; önceki gün 23, o gün 24 saat sürüyordu. Kural 1'e cümlesi eklendi, `calendar_commands.rs` günün ilk anını buluyor ve `tests/calendar.rs` São Paulo örneğiyle sınıyor; düzeltmeden sonra bu beş yerin bütün günleri uyuşur. **Bilinen sınır (düzeltilmedi):** 1900'den önceki yerel ortalama saat dönemlerinde saat dilimi verisinin tarih çizgisi değişimleri (Alaska, Ekim 1867; Manila, Aralık 1844) bu uygulamada yerin boylamından okunan tek bir ofsetle değiştirilir: Juneau'nun günleri saat dilimi verisinden bir gün kayar ve Manila'nın Aralık 1844 ayı `range` hatası verir. Ayrıca gün doğumu, günün başından 0,05 saniye öncesine düşerse o gün "gün doğumu yok" sayılabilir. Bu kayıt aritmetiği ve kuralların uygulanışını doğrular; gün tanımını ve varsayılan seçimleri (karar tablosu) değil. |

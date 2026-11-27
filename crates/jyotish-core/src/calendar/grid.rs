@@ -243,7 +243,7 @@ mod tests {
                 want
             );
         }
-        // İki doğuşlu günde ilksi alınır.
+        // İki doğuşlu günde ilki alınır.
         let mut eph = FakeEph {
             sunrises: Some(vec![span.start_jd_ut + 0.01, span.start_jd_ut + 0.99]),
             ..FakeEph::default()
