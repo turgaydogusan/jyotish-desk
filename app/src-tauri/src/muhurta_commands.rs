@@ -199,6 +199,47 @@ pub(crate) fn day_start_jd(
         .map_err(|_| invalid(field))
 }
 
+/// Yerin takvim gününün ilk anı (UT JD); gün yerin takviminde hiç yoksa (saat dilimi günü
+/// atlamışsa) `None`. Gece yarısı var olan bir duvar saatiyse odur; iki kez yaşanıyorsa (saat
+/// geri alınırsa) önceki an. Gece yarısı yaz saati boşluğuna düşüyorsa (saat 00:00'dan 01:00'e
+/// atlar: Kahire, Beyrut, Havana, Santiago, São Paulo) `day_start_jd` öğleden 12 saat öncesini
+/// verir; o an önceki günün duvar saatindedir (23:00). Günün ilk anı boşluğun bitişidir ve
+/// duvar tarihinin değiştiği saniye ikiye bölmeyle bulunur. Efemeris tablosu ve geçiş takvimi
+/// gün sınırını buradan okur. Yer önceden denetlenmiş olmalıdır: çözülemeyen gün "yok" sayılır.
+pub(crate) fn civil_day_start(
+    date: atlas::Date,
+    place: &MuhurtaPlace,
+) -> Result<Option<f64>, CommandError> {
+    const SECS: f64 = 86_400.0;
+    let Ok(start) = day_start_jd(&date.to_string(), place, "date") else {
+        return Ok(None);
+    };
+    // Duvar saatiyle gün sayısı: tam sayı gece yarısıdır.
+    let wall = |jd_ut: f64| -> Result<f64, CommandError> {
+        Ok(jd_ut + 0.5 + f64::from(offset_at(place, jd_ut)?) / SECS)
+    };
+    // Yarım saniyelik pay: kayan nokta hatası ve yerel ortalama saatin tam saniyeye yuvarlanan
+    // ofseti gece yarısını bir sonraki güne itmesin.
+    let slack = 0.5 / SECS;
+    let midnight = (wall(start)? - slack).ceil();
+    let reached =
+        |jd_ut: f64| -> Result<bool, CommandError> { Ok(wall(jd_ut)? >= midnight - slack) };
+    if reached(start)? {
+        return Ok(Some(start));
+    }
+    // `start` önceki gündedir; 12 saat sonrası (öğle) bu gündedir.
+    let (mut lo, mut hi) = (0_u32, 43_200_u32);
+    while hi - lo > 1 {
+        let mid = lo + (hi - lo) / 2;
+        if reached(start + f64::from(mid) / SECS)? {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    Ok(Some(start + f64::from(hi) / SECS))
+}
+
 /// Yerin bugünkü takvim günü (`YYYY-MM-DD`).
 pub(crate) fn today(place: &MuhurtaPlace, now: Timestamp) -> Result<String, CommandError> {
     let offset =
@@ -426,5 +467,43 @@ mod tests {
             offset_at(&place(TzChoice::Lmt), NOV_27_ISTANBUL).unwrap(),
             6_948
         );
+    }
+
+    /// RFC 3339 UTC yazımından Jülyen günü.
+    fn jd(utc: &str) -> f64 {
+        let t: Timestamp = utc.parse().unwrap();
+        UNIX_EPOCH_JD + t.as_second() as f64 / 86_400.0
+    }
+
+    /// Beklenen anlar dilimlerin kurallarından elle türetildi; pay bir milisaniyedir.
+    #[test]
+    fn a_civil_day_starts_at_its_first_valid_instant() {
+        let start = |date: &str, zone: &str| {
+            civil_day_start(date.parse().unwrap(), &place(TzChoice::Iana(zone.into()))).unwrap()
+        };
+        let near = |got: Option<f64>, utc: &str| {
+            let got = got.expect("the day exists");
+            assert!((got - jd(utc)).abs() < 0.001 / 86_400.0, "{utc}: {got}");
+        };
+        // Sıradan gün: 00:00 +03:00.
+        near(
+            start("2026-11-27", "Europe/Istanbul"),
+            "2026-11-26T21:00:00Z",
+        );
+        // Yaz saati gece yarısında başlar (00:00 → 01:00, −03 → −02): gün 01:00'de başlar.
+        near(
+            start("2017-10-15", "America/Sao_Paulo"),
+            "2017-10-15T03:00:00Z",
+        );
+        // Aynı kalıp, +02 → +03.
+        near(start("2023-04-28", "Africa/Cairo"), "2023-04-27T22:00:00Z");
+        // Saat 01:00'den 00:00'a geri alınır (−04 → −05): 00:00 iki kez yaşanır, önceki alınır.
+        near(
+            start("2023-11-05", "America/Havana"),
+            "2023-11-05T04:00:00Z",
+        );
+        // Dilim günü atlamıştır (29 Aralık'tan 31 Aralık'a): gün yoktur; ertesi gün +14'tedir.
+        assert_eq!(start("2011-12-30", "Pacific/Apia"), None);
+        near(start("2011-12-31", "Pacific/Apia"), "2011-12-30T10:00:00Z");
     }
 }

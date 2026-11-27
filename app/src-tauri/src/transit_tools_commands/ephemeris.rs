@@ -9,13 +9,12 @@ use ephemeris::{Engine, SwissEph};
 use jyotish_core::{CalcSettings, ChartWarning, EphemerisRow};
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use store::{BirthData, FoldChoice, Place, TimeCertainty};
 use tauri::State;
 
 use super::{invalid, TOOLS_YEAR_RANGE};
 use crate::client_commands::blocking;
 use crate::commands::CommandError;
-use crate::muhurta_commands::{offset_at, today, MuhurtaPlace, J2000_JD};
+use crate::muhurta_commands::{civil_day_start, offset_at, today, MuhurtaPlace, J2000_JD};
 
 /// Saniye yuvarlamasına karşı ileri alma payı (gün): 1e-6 gün = 0,0864 s.
 const OFFSET_NUDGE_DAYS: f64 = 1e-6;
@@ -99,41 +98,16 @@ pub struct EphemerisMonthView {
     pub method: String,
 }
 
-/// Yerin takvim gününün ilk geçerli anı (UT JD): 00:00 varsa o; yaz saati gece yarısında
-/// başlıyorsa (00:00 yoksa) günün başladığı an, yani geçiş anı; gün yerde hiç yoksa `None`.
-/// 00:00 iki kez yaşanıyorsa (saat geri alınırsa) önceki an. `muhurta_commands::day_start_jd`
-/// öğle − 0,5 gün yedeğini kullanır ve boşlukta bir saat erken kalır; burada kullanılmaz.
+/// Yerin takvim gününün ilk geçerli anı (UT JD); gün yerde hiç yoksa `None`. Kural geçiş
+/// takvimiyle ortaktır (`muhurta_commands::civil_day_start`): 00:00 varsa o, yaz saati gece
+/// yarısında başlıyorsa günün başladığı an, 00:00 iki kez yaşanıyorsa önceki an.
 fn first_instant_of(date: atlas::Date, place: &MuhurtaPlace) -> Result<Option<f64>, CommandError> {
-    let resolve = |time: &str| {
-        store::resolve_birth(&BirthData {
-            date: date.to_string(),
-            time: Some(time.to_owned()),
-            time_certainty: TimeCertainty::Exact,
-            place: Place {
-                name: String::new(),
-                country: String::new(),
-                admin1: String::new(),
-                lat: place.lat,
-                lon: place.lon,
-                geoname_id: None,
-            },
-            tz: place.tz.clone(),
-            fold: Some(FoldChoice::Earlier),
-            notes: String::new(),
+    civil_day_start(date, place).map_err(|e| {
+        invalid(match e.params.get("field").map(String::as_str) {
+            Some("place") => "place",
+            _ => "month",
         })
-        .map(|(_, r)| r.jd_ut)
-    };
-    if let Ok(midnight) = resolve("00:00") {
-        return Ok(Some(midnight));
-    }
-    // 00:00 yok: öğle varsa gün geçiş anında başlar, yoksa gün hiç yaşanmamıştır.
-    let Ok(noon) = resolve("12:00") else {
-        return Ok(None);
-    };
-    // Duvar saati öğle = UT öğle + ofset; geçiş anı, geçişten önceki ofsetle okunan duvar 00:00.
-    let after = f64::from(offset_at(place, noon).map_err(|_| invalid("place"))?);
-    let before = f64::from(offset_at(place, noon - 1.0).map_err(|_| invalid("place"))?);
-    Ok(Some(noon + (after - before) / 86_400.0 - 0.5))
+    })
 }
 
 /// `ephemeris_month` gövdesi; `now` testte sabitlenir. Bloklar.
