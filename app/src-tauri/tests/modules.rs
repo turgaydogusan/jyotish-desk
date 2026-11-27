@@ -3054,6 +3054,13 @@ fn search_checks(engine: &Engine, inputs: &[(String, ChartInput)]) {
             assert_eq!(page(20, Some(next)).unwrap_err().code, "search_stale");
         }
     }
+    // Durdurma aramanın ilk isteğinden önce gelirse arama hiç başlamaz; sonraki arama çalışır.
+    registry.cancel_chart_search(21);
+    assert_eq!(
+        search_error(page(21, None).unwrap_err()),
+        ("search_stale".to_owned(), Vec::new())
+    );
+    page(22, None).expect("the next search starts");
 
     // Girdi hataları yalnızca alan adı taşır ve veritabanına dokunmadan döner.
     let empty = search_query(Vec::new(), every_chart());
@@ -3405,6 +3412,29 @@ fn event_checks(engine: &Engine, inputs: &[(String, ChartInput)], now: Timestamp
     assert_eq!(default_range.from_offset_secs, 10_800);
     assert!((12..=13).contains(&default_range.events.len()));
     assert!(default_range.events.iter().all(|e| e.offset_secs == 10_800));
+
+    // Bitiş günü dahildir ve yaz saati biterken 25 saat sürer: aralık sonraki günün başında
+    // biter (2025-11-02, New York: 00:00 −04:00 … ertesi gün 00:00 −05:00).
+    let new_york = MuhurtaPlace {
+        lat: 40.7,
+        lon: -74.0,
+        tz: TzChoice::Iana("America/New_York".into()),
+    };
+    let long_day = run(
+        event_spec(
+            &new_york,
+            "2025-11-02",
+            "2025-11-02",
+            &[SkyEventKind::FullMoon],
+            &[],
+        ),
+        8,
+    );
+    assert!((long_day.to_jd_ut - long_day.from_jd_ut - 25.0 / 24.0).abs() < 1e-9);
+    assert_eq!(
+        (long_day.from_offset_secs, long_day.to_offset_secs),
+        (-14_400, -18_000)
+    );
 
     // Hatalar yalnızca alan adı taşır; yer tarihlerden önce denetlenir.
     let field = |spec: EventSearchSpec| -> String {

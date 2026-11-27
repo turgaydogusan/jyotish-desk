@@ -36,43 +36,68 @@ pub const SEARCH_SLICE_CHARTS: usize = 100;
 pub const DEFAULT_EVENT_DAYS: f64 = 366.0;
 const UNIX_EPOCH_JD: f64 = 2_440_587.5;
 
+/// Bir arama türünün durumu: süren aramanın kimliği ve en son durdurulan kimlik.
+#[derive(Debug, Default)]
+struct Slot {
+    live: Option<u32>,
+    /// Durdurma, aramanın ilk isteği kaydolmadan önce gelebilir (istek store kilidini beklerken
+    /// arayüz yeni bir arama başlatır): durdurulan kimlik sonradan başlayamaz. Aksi halde geç
+    /// kaydolan eski arama yenisinin yerine geçerdi.
+    cancelled: Option<u32>,
+}
+
 /// Süren aramaların kimlikleri. Bir türde aynı anda tek arama sürer: yenisi başlayınca ya da
 /// arama durdurulunca eskisinin kimliği geçersiz olur.
 #[derive(Debug, Default)]
 pub struct SearchRegistry {
-    chart: Mutex<Option<u32>>,
-    event: Mutex<Option<u32>>,
+    chart: Mutex<Slot>,
+    event: Mutex<Slot>,
 }
 
-fn slot(m: &Mutex<Option<u32>>) -> std::sync::MutexGuard<'_, Option<u32>> {
-    // Kilit yalnızca bir sayı tutar; zehirlenmiş kilidin değeri de geçerlidir.
+fn slot(m: &Mutex<Slot>) -> std::sync::MutexGuard<'_, Slot> {
+    // Kilit yalnızca iki sayı tutar; zehirlenmiş kilidin değeri de geçerlidir.
     m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-fn begin(m: &Mutex<Option<u32>>, id: u32) {
-    *slot(m) = Some(id);
-}
-
-fn is_live(m: &Mutex<Option<u32>>, id: u32) -> bool {
-    *slot(m) == Some(id)
-}
-
-fn end(m: &Mutex<Option<u32>>, id: u32) {
+/// Aramayı kaydeder; kimlik daha önce durdurulduysa arama başlamaz (`search_stale`).
+fn begin(m: &Mutex<Slot>, id: u32) -> Result<(), CommandError> {
     let mut s = slot(m);
-    if *s == Some(id) {
-        *s = None;
+    if s.cancelled == Some(id) {
+        return Err(stale());
     }
+    s.live = Some(id);
+    Ok(())
+}
+
+fn is_live(m: &Mutex<Slot>, id: u32) -> bool {
+    slot(m).live == Some(id)
+}
+
+/// Biten ya da hatayla sonlanan aramanın kaydını siler; başka bir arama sürüyorsa dokunmaz.
+fn end(m: &Mutex<Slot>, id: u32) {
+    let mut s = slot(m);
+    if s.live == Some(id) {
+        s.live = None;
+    }
+}
+
+fn cancel(m: &Mutex<Slot>, id: u32) {
+    let mut s = slot(m);
+    if s.live == Some(id) {
+        s.live = None;
+    }
+    s.cancelled = Some(id);
 }
 
 impl SearchRegistry {
     /// Harita aramasını durdurur: kimlik geçersiz olur. Başka bir arama sürüyorsa dokunulmaz.
     pub fn cancel_chart_search(&self, search_id: u32) {
-        end(&self.chart, search_id);
+        cancel(&self.chart, search_id);
     }
 
     /// Olay aramasını durdurur.
     pub fn cancel_event_search(&self, search_id: u32) {
-        end(&self.event, search_id);
+        cancel(&self.event, search_id);
     }
 }
 
@@ -162,8 +187,25 @@ pub fn evaluate_rows(
     (hits, unknown, failed)
 }
 
-/// `chart_search` gövdesi; `now` testte sabitlenir. Bloklar ve tek bir sayfa hesaplar.
+/// `chart_search` gövdesi; `now` testte sabitlenir. Bloklar ve tek bir sayfa hesaplar. Hatayla
+/// biten aramanın kaydı silinir (yerine başlamış başka bir aramaya dokunulmaz).
 pub fn chart_search_blocking(
+    engine: &Engine,
+    store: &Mutex<Store>,
+    registry: &SearchRegistry,
+    query: ChartQuery,
+    search_id: u32,
+    cursor: Option<ChartSearchCursor>,
+    now: Timestamp,
+) -> Result<ChartSearchPage, CommandError> {
+    let page = chart_search_page(engine, store, registry, query, search_id, cursor, now);
+    if page.is_err() {
+        end(&registry.chart, search_id);
+    }
+    page
+}
+
+fn chart_search_page(
     engine: &Engine,
     store: &Mutex<Store>,
     registry: &SearchRegistry,
@@ -183,7 +225,7 @@ pub fn chart_search_blocking(
         }
         None => {
             let total = lock(store)?.search_scope_count(&query.scope)?;
-            begin(&registry.chart, search_id);
+            begin(&registry.chart, search_id)?;
             ChartSearchCursor {
                 after_chart_id: 0,
                 scanned: 0,
@@ -198,7 +240,8 @@ pub fn chart_search_blocking(
     let rows = lock(store)?.search_rows(&query.scope, state.after_chart_id, SEARCH_PAGE_CHARTS)?;
     let done = rows.len() < SEARCH_PAGE_CHARTS as usize;
     let after_chart_id = rows.last().map_or(state.after_chart_id, |r| r.chart_id);
-    let scanned = state.scanned + rows.len() as u32;
+    // İmleç arayüzden geri gelir: sayaçlar taşmaz.
+    let scanned = state.scanned.saturating_add(rows.len() as u32);
 
     let query = Arc::new(query);
     let (mut hits, mut unknown, mut failed) = (Vec::new(), 0, 0);
@@ -219,8 +262,8 @@ pub fn chart_search_blocking(
         unknown += u;
         failed += f;
     }
-    let skipped_time_unknown = state.skipped_time_unknown + unknown;
-    let failed = state.failed + failed;
+    let skipped_time_unknown = state.skipped_time_unknown.saturating_add(unknown);
+    let failed = state.failed.saturating_add(failed);
     if done {
         end(&registry.chart, search_id);
     }
@@ -399,8 +442,30 @@ fn field_error(e: CommandError) -> CommandError {
 }
 
 /// `event_search` gövdesi; `now` testte sabitlenir. Bloklar; dilimleri sırayla yürütür ve her
-/// dilimden sonra motor iş parçacığını bırakır.
+/// dilimden sonra motor iş parçacığını bırakır. Hatayla biten aramanın kaydı silinir.
 pub fn event_search_blocking(
+    engine: &Engine,
+    registry: &SearchRegistry,
+    spec: EventSearchSpec,
+    search_id: u32,
+    now: Timestamp,
+) -> Result<EventSearchView, CommandError> {
+    let view = event_search_run(engine, registry, spec, search_id, now);
+    if view.is_err() {
+        end(&registry.event, search_id);
+    }
+    view
+}
+
+/// Bitiş günü dahildir: aralık, sonraki takvim gününün başında biter. Gün 23 ya da 25 saat
+/// sürebilir (yaz saati geçişi); bu yüzden günün başına 24 saat eklenmez.
+fn day_end_jd(date: &str, place: &MuhurtaPlace) -> Result<f64, CommandError> {
+    let day: atlas::Date = date.trim().parse().map_err(|_| invalid("to_date"))?;
+    let next = day.tomorrow().map_err(|_| invalid("to_date"))?;
+    day_start_jd(&next.to_string(), place, "to_date").map_err(field_error)
+}
+
+fn event_search_run(
     engine: &Engine,
     registry: &SearchRegistry,
     spec: EventSearchSpec,
@@ -416,7 +481,7 @@ pub fn event_search_blocking(
     };
     let from_jd_ut = day_start_jd(&from_date, &spec.place, "from_date").map_err(field_error)?;
     let to_jd_ut = match &spec.to_date {
-        Some(d) => day_start_jd(d, &spec.place, "to_date").map_err(field_error)? + 1.0,
+        Some(d) => day_end_jd(d, &spec.place)?,
         None => from_jd_ut + DEFAULT_EVENT_DAYS,
     };
     let core = EventSpec {
@@ -430,7 +495,7 @@ pub fn event_search_blocking(
     let from_offset_secs = offset_at(&spec.place, from_jd_ut).map_err(field_error)?;
     let to_offset_secs = offset_at(&spec.place, to_jd_ut).map_err(field_error)?;
 
-    begin(&registry.event, search_id);
+    begin(&registry.event, search_id)?;
     let natal: Option<Arc<Positions>> = match spec.natal.clone() {
         Some(input) => Some(Arc::new(engine.call(move |se: &mut SwissEph| {
             jyotish_core::compute_positions(se, &input)
@@ -455,7 +520,8 @@ pub fn event_search_blocking(
         if events.len() > MAX_SKY_EVENTS {
             events.truncate(MAX_SKY_EVENTS);
             truncated = true;
-            // Kesilen listenin son olayına dek her olay bulunmuştur.
+            // Kesilen listenin son olayından sonrası listede yoktur (tam o ana düşen bir başka
+            // olay da kesilmiş olabilir).
             scanned_to_jd_ut = events.last().map_or(chunk.1, |e| e.jd_ut);
             break;
         }
@@ -520,23 +586,41 @@ mod tests {
     fn a_search_id_is_live_until_it_is_cancelled_replaced_or_finished() {
         let r = SearchRegistry::default();
         assert!(!is_live(&r.chart, 1));
-        begin(&r.chart, 1);
+        begin(&r.chart, 1).unwrap();
         assert!(is_live(&r.chart, 1));
         // Başka bir kimliğin durdurulması süren aramaya dokunmaz.
-        r.cancel_chart_search(2);
+        r.cancel_chart_search(9);
         assert!(is_live(&r.chart, 1));
         // Yeni arama eskisini geçersiz kılar.
-        begin(&r.chart, 2);
+        begin(&r.chart, 2).unwrap();
         assert!(!is_live(&r.chart, 1) && is_live(&r.chart, 2));
         r.cancel_chart_search(2);
         assert!(!is_live(&r.chart, 2));
         // İki tür birbirinden bağımsızdır.
-        begin(&r.chart, 7);
-        begin(&r.event, 7);
+        begin(&r.chart, 7).unwrap();
+        begin(&r.event, 7).unwrap();
         r.cancel_event_search(7);
         assert!(is_live(&r.chart, 7) && !is_live(&r.event, 7));
         end(&r.chart, 7);
         assert!(!is_live(&r.chart, 7));
+    }
+
+    #[test]
+    fn a_search_cancelled_before_it_registers_never_starts() {
+        // Arama 3'ün ilk isteği store kilidini beklerken arayüz onu durdurur ve arama 4'ü
+        // başlatır; 4 önce kaydolur. Geç kaydolmak isteyen 3 başlayamaz ve 4 sürer.
+        let r = SearchRegistry::default();
+        r.cancel_chart_search(3);
+        begin(&r.chart, 4).unwrap();
+        assert_eq!(begin(&r.chart, 3).unwrap_err().code, "search_stale");
+        assert!(is_live(&r.chart, 4));
+        // Hatayla biten eski aramanın temizliği yenisine dokunmaz.
+        end(&r.chart, 3);
+        assert!(is_live(&r.chart, 4));
+        // Olay aramasında da aynıdır.
+        r.cancel_event_search(5);
+        assert_eq!(begin(&r.event, 5).unwrap_err().code, "search_stale");
+        assert!(begin(&r.event, 6).is_ok());
     }
 
     #[test]
