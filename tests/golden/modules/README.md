@@ -144,4 +144,11 @@ dosyalarındadır; bu iki test arayüz fikstürlerini de üretir
 (`app/ui/test/fixtures/sankranti.json`, `ephemeris.json`). Okuma kuralları, sahibin onayını
 bekleyen seçimler ve denetim maddeleri `transit_tools/REVIEW.md`'dedir.
 
+Transit takvimi (yol haritası §4.11, Plan 29) de bu dizinde JSON örneği taşımaz: `calendar/`
+klasöründe yalnızca `REVIEW.md` vardır ve hiçbir test bu klasörü yüklemez. El örnekleri modülün
+birim testleridir (`crates/jyotish-core/src/calendar/` içindeki `mod tests`, sahte gökyüzüyle);
+gerçek motorla çapraz denetim (gün panchangı ve olay aramasıyla) `app/src-tauri/tests/calendar.rs`
+dosyasındadır. Okuma kuralları (gün tanımı, gün doğumu olmayan gün, olayın günü), sahibin kararını
+bekleyen noktalar, denetim maddeleri ve gözden geçirme kaydı `calendar/REVIEW.md`'dedir.
+
 Sonraki alt projeler kendi klasörünü ve `expected` yapısını ekler.

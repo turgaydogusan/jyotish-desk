@@ -200,6 +200,16 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
           const cursor = args.cursor as { cursor: { chunk: number } } | null;
           return fixture.muhurta.pages[cursor === null ? 0 : cursor.cursor.chunk];
         },
+        // Transit takvimi (Plan 29): ay yeniden hesaplanmaz, fikstürün ayları döner. Ay verilmemişse
+        // ya da Kasım 2026 ise bugünün ayı (süzgeç Ay'ı ya da doğum boylamına gelişleri içeriyorsa
+        // bütün olaylarıyla), Aralık 2026 ise sonraki ay; başka bir ay Rust'taki gibi alan adlı hatadır.
+        month_calendar: (args) => {
+          const request = args.request as { month: { year: number; month: number } | null; filter: { kinds: string[]; moon: boolean } };
+          const asked = request.month;
+          if (asked !== null && asked.year === 2026 && asked.month === 12) return fixture.calendar.month_next;
+          if (asked !== null && !(asked.year === 2026 && asked.month === 11)) throw { code: "invalid_calendar_input", params: { field: "month" } };
+          return request.filter.moon || request.filter.kinds.includes("TransitToNatal") ? fixture.calendar.month_full : fixture.calendar.month;
+        },
         load_muhurta_filters: () => muhurtaFilters,
         save_muhurta_filters: (args) => {
           muhurtaFilters = args.filters as unknown[];

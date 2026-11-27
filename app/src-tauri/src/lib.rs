@@ -1,6 +1,7 @@
 pub mod atlas_commands;
 pub mod avastha_commands;
 pub mod bhava_commands;
+pub mod calendar_commands;
 pub mod client_commands;
 pub mod commands;
 pub mod data_dir;
@@ -60,6 +61,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             natal_extras_commands::compute_vimshopaka,
             muhurta_commands::day_panchang,
             muhurta_commands::muhurta_search,
+            calendar_commands::month_calendar,
             prashna_commands::create_prashna,
             prashna_commands::update_prashna,
             prashna_commands::compute_prashna_facts,

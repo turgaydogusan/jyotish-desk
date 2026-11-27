@@ -539,6 +539,78 @@ fn ui_fixture_is_up_to_date() {
             "the fixture range has a {kind:?}"
         );
     }
+    // Geçiş takvimi (Plan 29). Fikstürün sabit saatinde (2026-11-25, Delhi) dört ay: bulunulan
+    // yerin bugünkü ayı varsayılan süzgeçle; aynı ay bütün türler, Ay ve açık haritayla; sonraki
+    // ay; kutup dairesinde Güneş'in ay içinde geri döndüğü ay (Tromsø, Ocak 2027).
+    let calendar = {
+        use jyotish_core::calendar::{
+            CalendarFilter, CALENDAR_DEFAULT_KINDS, CALENDAR_KINDS, CALENDAR_MAX_EVENTS,
+        };
+        use jyotish_desk_lib::calendar_commands::{
+            month_calendar_blocking, CalendarRequest, YearMonth, CALENDAR_YEARS,
+        };
+        let request = CalendarRequest {
+            month: None,
+            place: muhurta_place.clone(),
+            filter: CalendarFilter {
+                kinds: CALENDAR_DEFAULT_KINDS.to_vec(),
+                moon: false,
+            },
+            settings: opened.calc_settings.clone(),
+            natal: None,
+        };
+        let month_of = |request: CalendarRequest| {
+            month_calendar_blocking(&engine, request, fixture_now).expect("month calendar")
+        };
+        let month = month_of(request.clone());
+        assert_eq!((month.days.len(), month.today), (30, Some(25)));
+        let request_full = CalendarRequest {
+            filter: CalendarFilter {
+                kinds: CALENDAR_KINDS.to_vec(),
+                moon: true,
+            },
+            natal: Some(module_input.clone()),
+            ..request.clone()
+        };
+        let month_full = month_of(request_full.clone());
+        assert!(month_full.natal && !month_full.truncated);
+        let month_next = month_of(CalendarRequest {
+            month: month.next,
+            ..request.clone()
+        });
+        assert_eq!(month_next.today, None);
+        let month_polar = month_of(CalendarRequest {
+            month: Some(YearMonth {
+                year: 2027,
+                month: 1,
+            }),
+            place: MuhurtaPlace {
+                lat: 69.6492,
+                lon: 18.9553,
+                tz: TzChoice::Iana("Europe/Oslo".into()),
+            },
+            ..request.clone()
+        });
+        assert!(month_polar
+            .days
+            .iter()
+            .any(|d| d.facts.sunrise_jd_ut.is_none()));
+        json!({
+            "request": request,
+            "request_full": request_full,
+            "month": month,
+            "month_full": month_full,
+            "month_next": month_next,
+            "month_polar": month_polar,
+            "ids": {
+                "kinds": CALENDAR_KINDS,
+                "default_kinds": CALENDAR_DEFAULT_KINDS,
+                "max_events": CALENDAR_MAX_EVENTS,
+                "min_year": CALENDAR_YEARS.start(),
+                "max_year": CALENDAR_YEARS.end(),
+            },
+        })
+    };
     // Bhava tablosu ve Sudarshana chakra (Plan 25). Açık haritanın girdisiyle (tam burç) tablo ve
     // chakra; aynı an ve yer için Sripati tablosu (bhava ortalarıyla) ile Placidus haritası ve
     // tablosu (chalit görünümünün verisi: üç graha burç evinden başka bir bhavadadır); kutup
@@ -667,6 +739,7 @@ fn ui_fixture_is_up_to_date() {
             "max_number": PRASHNA_NUMBER_MAX,
             "max_question_chars": MAX_QUESTION_CHARS,
         },
+        "calendar": calendar,
         "search": {
             "query": search_query,
             "page": search_page,

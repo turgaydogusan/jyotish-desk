@@ -11,6 +11,7 @@ import { AvasthaPanel } from "./AvasthaPanel";
 import { BhavaBalaPanel } from "./BhavaBalaPanel";
 import { BhavaTablePanel } from "./BhavaTablePanel";
 import { BirthInfoPanel } from "./BirthInfoPanel";
+import { CalendarPanel } from "../calendar/CalendarPanel";
 import { ChartPanel, chartVarga } from "./ChartPanel";
 import { CompatPanel } from "./CompatPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
@@ -71,6 +72,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   // Muhurta (Plan 20).
   muhurta_day: { titleKey: "panel.muhurta_day", component: MuhurtaDayPanel },
   muhurta_search: { titleKey: "panel.muhurta_search", component: MuhurtaSearchPanel },
+  // Transit takvimi (yol haritası Plan 29).
+  calendar: { titleKey: "panel.calendar", component: CalendarPanel },
   // Prashna (Plan 21).
   prashna_facts: { titleKey: "panel.prashna_facts", component: PrashnaFactsPanel },
   // Olay araması (Plan 22).

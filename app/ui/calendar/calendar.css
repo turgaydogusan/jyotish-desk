@@ -1,0 +1,99 @@
+/* Transit takvimi paneli: ay ızgarası. Renk token'lardan gelir (C9). */
+.calendar-nav button[aria-disabled="true"] {
+  color: var(--text-2);
+}
+.calendar-year {
+  display: inline-flex;
+}
+.calendar-year input[aria-invalid="true"] {
+  outline: 2px solid var(--danger);
+  outline-offset: -1px;
+}
+.calendar-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--text-2);
+}
+.calendar-grid {
+  width: 100%;
+  min-width: 560px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--fs-table);
+}
+.calendar-grid th {
+  padding: 2px 4px;
+  text-align: left;
+  color: var(--text-2);
+  font-weight: var(--fw-medium);
+  border-bottom: 1px solid var(--line);
+}
+.calendar-grid td {
+  height: 84px;
+  padding: 2px 4px;
+  vertical-align: top;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.calendar-grid td.calendar-empty {
+  border-color: transparent;
+  border-bottom-color: var(--line);
+}
+.calendar-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.calendar-day-number {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+.calendar-day.is-today {
+  border: 2px solid var(--ink);
+}
+.calendar-today {
+  color: var(--ink-strong);
+}
+.calendar-day.is-selected {
+  background: var(--select);
+}
+.calendar-day:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.calendar-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.calendar-detail-title {
+  margin: 0;
+  font-weight: var(--fw-medium);
+}
+.calendar-tithi,
+.calendar-nakshatra,
+.calendar-events li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calendar-nakshatra {
+  color: var(--text-2);
+}
+.calendar-events {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+}
+.calendar-event-time {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.calendar-more {
+  color: var(--text-2);
+}

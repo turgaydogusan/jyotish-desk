@@ -25,6 +25,7 @@ pub use bhava::{
 
 pub mod ashtakavarga;
 pub mod avastha;
+pub mod calendar;
 mod chart;
 mod combustion;
 pub mod dasha;
