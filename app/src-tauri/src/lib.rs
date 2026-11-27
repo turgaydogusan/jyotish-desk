@@ -13,6 +13,7 @@ pub mod store_commands;
 pub mod transit_commands;
 pub mod transit_tools_commands;
 pub mod update_commands;
+pub mod varsha_commands;
 
 use std::sync::{Arc, Mutex};
 
@@ -42,6 +43,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             bhava_commands::compute_bhava_table,
             bhava_commands::compute_sudarshana,
             commands::dasha_children,
+            varsha_commands::compute_varsha,
+            varsha_commands::save_varsha_chart,
             commands::print_window,
             avastha_commands::compute_avasthas,
             module_commands::compute_drishti,

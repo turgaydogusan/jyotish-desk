@@ -1,0 +1,38 @@
+{
+  "id": "swati-age-26-mars-first",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "360 günlük yıl: bitişler tam gündür.",
+    "Doğum nakshatrası: Ay 199,47° ÷ 13°20′ → 15. nakshatra (Swati).",
+    "İlk lord: 15 + 26 − 2 = 39 = 4 × 9 + 3: artan 3 → 3. lord Mars.",
+    "Yıl 360 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Mars: 21 gün; birikimli 21/360 → bitiş 21. gün.",
+    "Rahu: 54 gün; birikimli 75/360 → bitiş 75. gün.",
+    "Jüpiter: 48 gün; birikimli 123/360 → bitiş 123. gün.",
+    "Satürn: 57 gün; birikimli 180/360 → bitiş 180. gün.",
+    "Merkür: 51 gün; birikimli 231/360 → bitiş 231. gün.",
+    "Ketu: 21 gün; birikimli 252/360 → bitiş 252. gün.",
+    "Venüs: 60 gün; birikimli 312/360 → bitiş 312. gün.",
+    "Güneş: 18 gün; birikimli 330/360 → bitiş 330. gün.",
+    "Ay: 30 gün; birikimli 360/360 → bitiş 360. gün.",
+    "İlk dönemin (Mars, 0 → 21) alt dönemleri Mars ile başlar ve dönemi aynı paylarla böler:",
+    "Mars–Mars: birikimli 21/360 × 21 → bitiş 1,225. gün.",
+    "Mars–Rahu: birikimli 75/360 × 21 → bitiş 4,375. gün.",
+    "Mars–Jüpiter: birikimli 123/360 × 21 → bitiş 7,175. gün.",
+    "Mars–Satürn: birikimli 180/360 × 21 → bitiş 10,5. gün.",
+    "Mars–Merkür: birikimli 231/360 × 21 → bitiş 13,475. gün.",
+    "Mars–Ketu: birikimli 252/360 × 21 → bitiş 14,7. gün.",
+    "Mars–Venüs: birikimli 312/360 × 21 → bitiş 18,2. gün.",
+    "Mars–Güneş: birikimli 330/360 × 21 → bitiş 19,25. gün.",
+    "Mars–Ay: birikimli 360/360 × 21 → bitiş 21. gün."
+  ],
+  "input": {"moon_lon": 199.47, "age": 26, "year_days": 360.0},
+  "expected": {
+    "birth_nakshatra": 15,
+    "remainder": 3,
+    "first_lord": "Mars",
+    "periods": [["Mars", 21.0], ["Rahu", 75.0], ["Jupiter", 123.0], ["Saturn", 180.0], ["Mercury", 231.0], ["Ketu", 252.0], ["Venus", 312.0], ["Sun", 330.0], ["Moon", 360.0]],
+    "first_sub_periods": [["Mars", 1.225], ["Rahu", 4.375], ["Jupiter", 7.175], ["Saturn", 10.5], ["Mercury", 13.475], ["Ketu", 14.7], ["Venus", 18.2], ["Sun", 19.25], ["Moon", 21.0]]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "ardra-age-9-rahu-first",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Dokuz yılda sıra başa döner: ilk lord doğum yılındakiyle aynıdır (Ardra: Rahu).",
+    "Doğum nakshatrası: Ay 71° ÷ 13°20′ → 6. nakshatra (Ardra).",
+    "İlk lord: 6 + 9 − 2 = 13 = 1 × 9 + 4: artan 4 → 4. lord Rahu.",
+    "Yıl 365,256363 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Rahu: 54 gün; birikimli 54/360 → bitiş 54,788454. gün.",
+    "Jüpiter: 48 gün; birikimli 102/360 → bitiş 103,489303. gün.",
+    "Satürn: 57 gün; birikimli 159/360 → bitiş 161,32156. gün.",
+    "Merkür: 51 gün; birikimli 210/360 → bitiş 213,066212. gün.",
+    "Ketu: 21 gün; birikimli 231/360 → bitiş 234,372833. gün.",
+    "Venüs: 60 gün; birikimli 291/360 → bitiş 295,248893. gün.",
+    "Güneş: 18 gün; birikimli 309/360 → bitiş 313,511712. gün.",
+    "Ay: 30 gün; birikimli 339/360 → bitiş 343,949742. gün.",
+    "Mars: 21 gün; birikimli 360/360 → bitiş 365,256363. gün."
+  ],
+  "input": {"moon_lon": 71.0, "age": 9, "year_days": 365.256363},
+  "expected": {
+    "birth_nakshatra": 6,
+    "remainder": 4,
+    "first_lord": "Rahu",
+    "periods": [["Rahu", 54.788454], ["Jupiter", 103.489303], ["Saturn", 161.32156], ["Mercury", 213.066212], ["Ketu", 234.372833], ["Venus", 295.248893], ["Sun", 313.511712], ["Moon", 343.949742], ["Mars", 365.256363]],
+    "first_sub_periods": null
+  }
+}

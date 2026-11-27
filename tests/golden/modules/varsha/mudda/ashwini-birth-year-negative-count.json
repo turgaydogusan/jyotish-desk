@@ -1,0 +1,28 @@
+{
+  "id": "ashwini-birth-year-negative-count",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Toplam eksiye düşer (1 + 0 − 2 = −1): bölmede −1 = −1 × 9 + 8, artan 8.",
+    "Doğum nakshatrası: Ay 5° ÷ 13°20′ → 1. nakshatra (Ashwini).",
+    "İlk lord: 1 + 0 − 2 = -1 = -1 × 9 + 8: artan 8 → 8. lord Ketu.",
+    "Yıl 365,256363 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Ketu: 21 gün; birikimli 21/360 → bitiş 21,306621. gün.",
+    "Venüs: 60 gün; birikimli 81/360 → bitiş 82,182682. gün.",
+    "Güneş: 18 gün; birikimli 99/360 → bitiş 100,4455. gün.",
+    "Ay: 30 gün; birikimli 129/360 → bitiş 130,88353. gün.",
+    "Mars: 21 gün; birikimli 150/360 → bitiş 152,190151. gün.",
+    "Rahu: 54 gün; birikimli 204/360 → bitiş 206,978606. gün.",
+    "Jüpiter: 48 gün; birikimli 252/360 → bitiş 255,679454. gün.",
+    "Satürn: 57 gün; birikimli 309/360 → bitiş 313,511712. gün.",
+    "Merkür: 51 gün; birikimli 360/360 → bitiş 365,256363. gün."
+  ],
+  "input": {"moon_lon": 5.0, "age": 0, "year_days": 365.256363},
+  "expected": {
+    "birth_nakshatra": 1,
+    "remainder": 8,
+    "first_lord": "Ketu",
+    "periods": [["Ketu", 21.306621], ["Venus", 82.182682], ["Sun", 100.4455], ["Moon", 130.88353], ["Mars", 152.190151], ["Rahu", 206.978606], ["Jupiter", 255.679454], ["Saturn", 313.511712], ["Mercury", 365.256363]],
+    "first_sub_periods": null
+  }
+}

@@ -168,6 +168,14 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         compute_yogas: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.yogas : fixture.yogas_time_unknown),
         // Avasthalar: fikstürdeki iki gerçek sonuç (doğum saati bilinen ve bilinmeyen girdi).
         compute_avasthas: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.avasthas : fixture.avasthas_time_unknown),
+        // Varshaphala (Plan 27): fikstürdeki gerçek sonuçlar. Doğum saati bilinmiyorsa Rust yıllık
+        // haritayı ve munthayı boş döner; 27 yaşı sonraki yıldır, öteki her istek (yaşsız istek
+        // dahil) süren yıldır. Kayıt, açık haritanın kaydından türetilmiş bir olay haritası döner.
+        compute_varsha: (args) => {
+          if (!(args.input as { time_known: boolean }).time_known) return fixture.varsha.time_unknown;
+          return args.age === 27 ? fixture.varsha.next : fixture.varsha.current;
+        },
+        save_varsha_chart: (args) => ({ ...fixture.opened.chart_record, id: 900 + (args.age as number), uuid: "00000000-0000-4000-8000-000000000031", kind: "Event", label: `Varshaphala ${args.age === 27 ? 2027 : 2026}-01-01` }),
         // Uyum: eş haritanın girdisi ve kısa kimliği; başka kimlik `null` döner (harita yok).
         // Rapor yeniden hesaplanmaz, rollerden seçilir: açık harita damat rolündeyse `report`,
         // gelin rolündeyse `report_swapped`; gelin rolündeki eşin doğum saati bilinmiyorsa

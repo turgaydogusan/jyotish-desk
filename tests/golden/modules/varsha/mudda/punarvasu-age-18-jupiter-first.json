@@ -1,0 +1,28 @@
+{
+  "id": "punarvasu-age-18-jupiter-first",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Punarvasu (7), tamamlanan yıl 18.",
+    "Doğum nakshatrası: Ay 85° ÷ 13°20′ → 7. nakshatra (Punarvasu).",
+    "İlk lord: 7 + 18 − 2 = 23 = 2 × 9 + 5: artan 5 → 5. lord Jüpiter.",
+    "Yıl 360 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Jüpiter: 48 gün; birikimli 48/360 → bitiş 48. gün.",
+    "Satürn: 57 gün; birikimli 105/360 → bitiş 105. gün.",
+    "Merkür: 51 gün; birikimli 156/360 → bitiş 156. gün.",
+    "Ketu: 21 gün; birikimli 177/360 → bitiş 177. gün.",
+    "Venüs: 60 gün; birikimli 237/360 → bitiş 237. gün.",
+    "Güneş: 18 gün; birikimli 255/360 → bitiş 255. gün.",
+    "Ay: 30 gün; birikimli 285/360 → bitiş 285. gün.",
+    "Mars: 21 gün; birikimli 306/360 → bitiş 306. gün.",
+    "Rahu: 54 gün; birikimli 360/360 → bitiş 360. gün."
+  ],
+  "input": {"moon_lon": 85.0, "age": 18, "year_days": 360.0},
+  "expected": {
+    "birth_nakshatra": 7,
+    "remainder": 5,
+    "first_lord": "Jupiter",
+    "periods": [["Jupiter", 48.0], ["Saturn", 105.0], ["Mercury", 156.0], ["Ketu", 177.0], ["Venus", 237.0], ["Sun", 255.0], ["Moon", 285.0], ["Mars", 306.0], ["Rahu", 360.0]],
+    "first_sub_periods": null
+  }
+}

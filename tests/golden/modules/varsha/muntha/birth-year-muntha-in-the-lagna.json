@@ -1,0 +1,24 @@
+{
+  "id": "birth-year-muntha-in-the-lagna",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: muntha (alıntı yapılmaz); okuma kuralları varsha/REVIEW.md",
+  "derivation": [
+    "Doğum yılı (tamamlanan yıl 0): yıllık harita doğum haritasıdır ve muntha lagnadadır.",
+    "Doğum lagnası 215,25° ÷ 30° → 8. burç (Akrep). Yıllık lagna 215,25° ÷ 30° → 8. burç (Akrep).",
+    "Tamamlanan yıl 0 = 0 × 12 + 0: muntha Akrep burcundan 0 burç ötededir → Akrep.",
+    "Muntha lordu: Akrep burcunun lordu Mars.",
+    "Evler: Akrep, Akrep burcundan sayınca 1. ev; Akrep burcundan sayınca 1. ev.",
+    "Lagna lordları: yıllık lagna Akrep → Mars; doğum lagnası Akrep → Mars."
+  ],
+  "input": {"natal_lagna_lon": 215.25, "annual_lagna_lon": 215.25, "age": 0},
+  "expected": {
+    "sign": "Scorpio",
+    "lord": "Mars",
+    "natal_house": 1,
+    "annual_house": 1,
+    "lagna_sign": "Scorpio",
+    "lagna_lord": "Mars",
+    "natal_lagna_sign": "Scorpio",
+    "natal_lagna_lord": "Mars"
+  }
+}

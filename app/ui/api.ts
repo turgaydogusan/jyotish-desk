@@ -126,6 +126,11 @@ export const api = {
   // Avasthalar: doğum saati bilinmiyorsa rapor yine döner; Lajjita değerlendirilmemiş, Shayanadi
   // hesaplanmamıştır (`time_known: false`). O gün gün doğumu yoksa yalnızca Shayanadi boştur.
   computeAvasthas: (input: ChartInput) => wrap(() => commands.computeAvasthas(input)),
+  // Varshaphala (Plan 27): `age` tamamlanan yıldır, `null` ise süren yılı Rust bulur; `place`
+  // yıllık haritanın yeridir. Kayıt komutu yeri ve anı veritabanından okur: yalnızca kaynak
+  // haritanın kimliği, yaş ve "bulunulan yer" seçimi gider. Girdi ve yer loglanmaz.
+  computeVarsha: (input: ChartInput, age: number | null, place: MuhurtaPlace) => wrap(() => commands.computeVarsha(input, age, place)),
+  saveVarshaChart: (chartId: number, age: number, home: boolean) => wrap(() => commands.saveVarshaChart(chartId, age, home)),
   // Uyum: `groom` damat rolünün, `bride` gelin rolünün girdisidir. Eş haritanın girdisi ve kısa
   // kimliği store'dan okunur; harita yoksa (silinmiş eş) ikisi de `null` döner. Girdiler doğum
   // verisidir, eş bağı ilişki bilgisidir: loglanmaz.

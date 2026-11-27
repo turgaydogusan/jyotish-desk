@@ -1,7 +1,7 @@
 // Panel türü → bileşen (spec §3.3). Yeni panel türü yalnızca buraya eklenir.
 import { DashaStripPanel } from "../dasha/DashaStripPanel";
 import { DashaTreePanel } from "../dasha/DashaTreePanel";
-import { dashaSystem } from "../dasha/system";
+import { treeSystem, treeSystemName } from "../dasha/muddaSystem";
 import { isKnownPanelKind, type KnownPanelKind } from "../layout/model";
 import { NotesPanel } from "../notes/NotesPanel";
 import { ArgalaPanel } from "./ArgalaPanel";
@@ -29,6 +29,7 @@ import { ShadbalaPanel } from "./ShadbalaPanel";
 import { SudarshanaPanel } from "./SudarshanaPanel";
 import type { PanelDefinition } from "./types";
 import { UnavailablePanel } from "./UnavailablePanel";
+import { VarshaPanel } from "./VarshaPanel";
 import { VimshopakaPanel } from "./VimshopakaPanel";
 import { YogasPanel } from "./YogasPanel";
 
@@ -37,7 +38,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   graha_table: { titleKey: "panel.graha_table", component: GrahaTablePanel },
   dasha_tree: {
     titleKey: "panel.dasha_tree",
-    nameDetail: (p, t) => t(`dasha.systems.${dashaSystem(p.settings)}`),
+    nameDetail: (p, t) => treeSystemName(treeSystem(p.settings), t),
     component: DashaTreePanel,
   },
   dasha_strip: { titleKey: "panel.dasha_strip", component: DashaStripPanel },
@@ -63,6 +64,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   yogas: { titleKey: "panel.yogas", component: YogasPanel },
   // Avasthalar (Plan 24).
   avastha: { titleKey: "panel.avastha", component: AvasthaPanel },
+  // Varshaphala (yol haritası Plan 27).
+  varsha: { titleKey: "panel.varsha", component: VarshaPanel },
   // Uyum (Plan 19).
   compat: { titleKey: "panel.compat", component: CompatPanel },
   // Muhurta (Plan 20).

@@ -7,8 +7,9 @@ import { useSession } from "../session/store";
 import { useLayoutStore, useViewStore } from "../view/store";
 import { CharaDashaTree } from "./CharaDashaTree";
 import "./dasha.css";
+import { MuddaDashaTree } from "./MuddaDashaTree";
+import { treeSystem, TreeSystemSelect } from "./muddaSystem";
 import { PeriodTree, type PeriodLevel } from "./PeriodTree";
-import { dashaSystem, SystemSelect } from "./system";
 import { childrenOf, formatJdDate, isOpen, MAX_DASHA_LEVEL, PRELOADED_LEVEL } from "./tree";
 import { pathKey, useLazyDasha, type LazyEntry } from "./useLazyDasha";
 
@@ -23,13 +24,14 @@ export function DashaTreePanel({ panel }: PanelProps) {
   const { opened } = useSession();
   const { setPanelSettings } = useLayoutStore();
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
-  const system = dashaSystem(panel.settings);
+  // Üçüncü sistem mudda dasadır (yol haritası §4.14): yalnızca ağaçta, `muddaSystem.tsx`.
+  const system = treeSystem(panel.settings);
   return (
     <div className="dasha-panel">
       <div className="module-toolbar">
-        <SystemSelect value={system} onChange={(next) => setPanelSettings(panel.id, { system: next })} />
+        <TreeSystemSelect value={system} onChange={(next) => setPanelSettings(panel.id, { system: next })} />
       </div>
-      {system === "chara" ? <CharaDashaTree opened={opened} /> : <VimshottariTree opened={opened} />}
+      {system === "mudda" ? <MuddaDashaTree opened={opened} /> : system === "chara" ? <CharaDashaTree opened={opened} /> : <VimshottariTree opened={opened} />}
     </div>
   );
 }

@@ -1,0 +1,38 @@
+{
+  "id": "krittika-birth-year-sun-first",
+  "source": "hand",
+  "rule_ref": "Tajika yıllık harita: mudda dasa (alıntı yapılmaz); okuma kuralları ve tablolar varsha/REVIEW.md",
+  "derivation": [
+    "Dönüşten dönüşe yıl (365,256363 gün): dönemler aynı oranda uzar.",
+    "Doğum nakshatrası: Ay 30° ÷ 13°20′ → 3. nakshatra (Krittika).",
+    "İlk lord: 3 + 0 − 2 = 1 = 0 × 9 + 1: artan 1 → 1. lord Güneş.",
+    "Yıl 365,256363 gün; her dönem yılın gün(lord)/360 kadarıdır, bitişler birikimli günden.",
+    "Güneş: 18 gün; birikimli 18/360 → bitiş 18,262818. gün.",
+    "Ay: 30 gün; birikimli 48/360 → bitiş 48,700848. gün.",
+    "Mars: 21 gün; birikimli 69/360 → bitiş 70,00747. gün.",
+    "Rahu: 54 gün; birikimli 123/360 → bitiş 124,795924. gün.",
+    "Jüpiter: 48 gün; birikimli 171/360 → bitiş 173,496772. gün.",
+    "Satürn: 57 gün; birikimli 228/360 → bitiş 231,32903. gün.",
+    "Merkür: 51 gün; birikimli 279/360 → bitiş 283,073681. gün.",
+    "Ketu: 21 gün; birikimli 300/360 → bitiş 304,380303. gün.",
+    "Venüs: 60 gün; birikimli 360/360 → bitiş 365,256363. gün.",
+    "İlk dönemin (Güneş, 0 → 18,262818) alt dönemleri Güneş ile başlar ve dönemi aynı paylarla böler:",
+    "Güneş–Güneş: birikimli 18/360 × 18,262818 → bitiş 0,913141. gün.",
+    "Güneş–Ay: birikimli 48/360 × 18,262818 → bitiş 2,435042. gün.",
+    "Güneş–Mars: birikimli 69/360 × 18,262818 → bitiş 3,500373. gün.",
+    "Güneş–Rahu: birikimli 123/360 × 18,262818 → bitiş 6,239796. gün.",
+    "Güneş–Jüpiter: birikimli 171/360 × 18,262818 → bitiş 8,674839. gün.",
+    "Güneş–Satürn: birikimli 228/360 × 18,262818 → bitiş 11,566451. gün.",
+    "Güneş–Merkür: birikimli 279/360 × 18,262818 → bitiş 14,153684. gün.",
+    "Güneş–Ketu: birikimli 300/360 × 18,262818 → bitiş 15,219015. gün.",
+    "Güneş–Venüs: birikimli 360/360 × 18,262818 → bitiş 18,262818. gün."
+  ],
+  "input": {"moon_lon": 30.0, "age": 0, "year_days": 365.256363},
+  "expected": {
+    "birth_nakshatra": 3,
+    "remainder": 1,
+    "first_lord": "Sun",
+    "periods": [["Sun", 18.262818], ["Moon", 48.700848], ["Mars", 70.00747], ["Rahu", 124.795924], ["Jupiter", 173.496772], ["Saturn", 231.32903], ["Mercury", 283.073681], ["Ketu", 304.380303], ["Venus", 365.256363]],
+    "first_sub_periods": [["Sun", 0.913141], ["Moon", 2.435042], ["Mars", 3.500373], ["Rahu", 6.239796], ["Jupiter", 8.674839], ["Saturn", 11.566451], ["Mercury", 14.153684], ["Ketu", 15.219015], ["Venus", 18.262818]]
+  }
+}
