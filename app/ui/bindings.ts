@@ -134,6 +134,12 @@ export const commands = {
 	 */
 	muhurtaSearch: (query: MuhurtaQuery, settings: CalcSettings, cursor: MuhurtaPageCursor | null, options?: InvokeOptions) => typedError<MuhurtaSearchView, CommandError>(__TAURI_INVOKE("muhurta_search", { query, settings, cursor }, options)),
 	/**
+	 *  Geçiş takvimi: bir ayın takvim günleri (yerin duvar saatiyle gece yarısından gece yarısına),
+	 *  her günün gün doğumundaki tithisi ve Ay nakshatrası ile o güne düşen gök olayları. `month`
+	 *  boşsa yerin bugünkü ayı döner ("bugün" Rust'ta okunur). Yer ve girdi loglanmaz.
+	 */
+	monthCalendar: (request: CalendarRequest, options?: InvokeOptions) => typedError<CalendarView, CommandError>(__TAURI_INVOKE("month_calendar", { request }, options)),
+	/**
 	 *  Soru anının haritasını kurar ve açar. An "şimdi" ya da sorunun yerinin duvar saatidir; yer
 	 *  haritanın yeri olarak saklanır. Harita `Event` türündedir ve genel varsayılan ayarların
 	 *  kopyasını alır. Soru metni, yer ve an loglanmaz; hatalar yalnızca alan adı taşır.
@@ -449,6 +455,70 @@ export type CalcSettings = {
 	combustion_orbs: CombustionOrbs,
 	sunrise_def: SunriseDef,
 	advanced: AdvancedSettings,
+};
+
+/**
+ *  Bir takvim günü. Saatler `offset_secs` ile gösterilir; olaylar kendi ofsetlerini taşır (yaz
+ *  saati gün içinde değişebilir).
+ */
+export type CalendarDayView = {
+	/**  `YYYY-MM-DD`. */
+	date: string,
+	/**  Ayın günü, 1..=31. */
+	day: number,
+	/**  Takvim gününün hafta günü. */
+	weekday: Vara,
+	span: DaySpan,
+	/**  Gün doğumundaki tithi ve Ay nakshatrası (gün doğumu yoksa 06:00 yerel ortalama saat). */
+	facts: DayFacts,
+	/**  `facts.jd_ut` anındaki UTC ofseti. */
+	offset_secs: number,
+	/**  Gün panchangı paneline verilecek an: o gün doğumuyla başlayan günün içindedir. */
+	panchang_jd_ut: number | null,
+	/**  Zaman sırasıyla. */
+	events: SkyEventView[],
+};
+
+/**  Takvimin olay süzgeci. */
+export type CalendarFilter = {
+	/**  `CALENDAR_KINDS`'in bir alt kümesi; boş olabilir (yalnızca gün doğumu olguları). */
+	kinds: SkyEventKind[],
+	/**
+	 *  Ay'ın girişleri ve doğum boylamlarına gelişleri de aranır. Kapalıyken graha seçimi Ay
+	 *  dışındaki sekiz grahadır; yeni ay ve dolunay bu seçime bağlı değildir.
+	 */
+	moon: boolean,
+};
+
+/**
+ *  Takvimin girdisi. `month` boşsa yerin bugünkü ayıdır. `place` günlerin sınırını (yerel gece
+ *  yarısı), gün doğumunu ve saatlerin gösterileceği dilimi belirler. `natal` açık haritanın
+ *  modül girdisidir (doğum boylamına gelişler için; o tür seçili değilse gönderilmez);
+ *  `settings` açık haritanın hesap ayarıdır.
+ */
+export type CalendarRequest = {
+	month: YearMonth | null,
+	place: MuhurtaPlace,
+	filter: CalendarFilter,
+	settings: CalcSettings,
+	natal: ChartInput | null,
+};
+
+export type CalendarView = {
+	month: YearMonth,
+	/**  Önceki ve sonraki ay; yıl aralığının ucunda `None`. */
+	prev: YearMonth | null,
+	next: YearMonth | null,
+	/**  Yerin bugünkü günü bu aydaysa ayın günü. */
+	today: number | null,
+	days: CalendarDayView[],
+	/**  Olay sayısı ayın sınırını (`CALENDAR_MAX_EVENTS`) aştı: sonraki olaylar listede yoktur. */
+	truncated: boolean,
+	/**  Doğum boylamına gelişler arandı (tür seçili ve açık haritanın girdisi verildi). */
+	natal: boolean,
+	/**  `LowPrecision` ya da boş. */
+	warnings: ChartWarning[],
+	method: string,
 };
 
 /**
@@ -778,6 +848,19 @@ export type DashaSeed = {
 	year_days: number | null,
 };
 
+/**  Bir takvim gününün gün doğumu olguları. */
+export type DayFacts = {
+	/**  Olguların okunduğu an: günün içindeki gün doğumu; yoksa 06:00 yerel ortalama saat. */
+	jd_ut: number | null,
+	/**  Günün içindeki (ilk) gün doğumu; o takvim gününde Güneş doğmuyorsa `None`. */
+	sunrise_jd_ut: number | null,
+	/**  1..=30. */
+	tithi: number,
+	paksha: Paksha,
+	/**  Ay'ın nakshatrası, 1..=27 (sidereal boylamdan, her zodyak kipinde). */
+	nakshatra: number,
+};
+
 export type DayKarana = {
 	/**  1..=60. */
 	no: number,
@@ -842,6 +925,12 @@ export type DaySegments = {
 	abhijit_weekday_exception: boolean,
 	/**  24 saat dilimi ve lordları: gün doğumundan sonraki gün doğumuna. */
 	horas: Interval<Graha>[],
+};
+
+/**  Bir takvim günü: `[start_jd_ut, end_jd_ut)`. Uçlar yerin duvar saatiyle gece yarılarıdır. */
+export type DaySpan = {
+	start_jd_ut: number | null,
+	end_jd_ut: number | null,
 };
 
 export type DayTithi = {
@@ -2247,6 +2336,13 @@ export type WindowSnapshot = {
 	karana: number,
 	karana_name: KaranaName,
 	lagna_sign: Sign,
+};
+
+/**  Bir takvim ayı. */
+export type YearMonth = {
+	year: number,
+	/**  1..=12. */
+	month: number,
 };
 
 export type YogaGroup = "Mahapurusha" | "Lunar" | "Solar" | "Raja" | "Dhana" | "Exchange" | "ViparitaRaja" | "NeechaBhanga" | "NabhasaCount" | "NabhasaAshraya" | "Dosha";

@@ -128,6 +128,10 @@ export const api = {
   // aramayı durdurmak sonraki dilimi istememektir. Yer ve doğum Ay'ı kişisel veridir: loglanmaz.
   dayPanchang: (at: TransitAt, place: MuhurtaPlace, settings: CalcSettings, natal: NatalMoon | null) => wrap(() => commands.dayPanchang(at, place, settings, natal)),
   muhurtaSearch: (query: MuhurtaQuery, settings: CalcSettings, cursor: MuhurtaPageCursor | null) => wrap(() => commands.muhurtaSearch(query, settings, cursor)),
+  // Geçiş takvimi (Plan 29): bir ayın takvim günleri, gün doğumu olguları ve olayları. `month`
+  // boşsa yerin bugünkü ayıdır ("bugün" Rust'ta okunur); önceki ve sonraki ay yanıtta döner.
+  // İstek yer ve (doğum türü seçiliyse) açık haritanın doğum verisini taşır: loglanmaz.
+  monthCalendar: (request: Parameters<typeof commands.monthCalendar>[0]) => wrap(() => commands.monthCalendar(request)),
   // Kayıtlı süzgeçler: ad ve koşullar; yer, tarih ve kişi kaydedilmez. Kayıt listenin tamamını yazar.
   loadMuhurtaFilters: () => wrap(() => commands.loadMuhurtaFilters()),
   saveMuhurtaFilters: (filters: SavedMuhurtaFilter[]) => wrap(() => commands.saveMuhurtaFilters(filters)),
