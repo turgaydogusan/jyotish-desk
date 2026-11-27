@@ -55,12 +55,16 @@ export function useModule<T>(key: string | null, fetch: () => Promise<Result<T>>
 /**
  * Yeniden okuma sürerken gösterilecek veri: `state.data` yoksa ve istek sürüyorsa aynı `scope`
  * için son okunan veri. Böylece içerik (liste, tablo, odaktaki denetim) yeni yanıt gelene dek
- * yerinde durur; hata ya da başka bir `scope` eski veriyi göstermez. `scope === null` unutur.
+ * yerinde durur. Hata ya da başka bir `scope` eski veriyi unutturur: hatadan sonraki okuma
+ * (yeniden deneme dahil) boş başlar. `scope === null` unutur.
  */
 export function useLastData<T>(state: ModuleState<T>, scope: string | null): T | null {
-  const last = useRef<{ scope: string; data: T } | null>(null);
-  if (scope === null || (last.current !== null && last.current.scope !== scope)) last.current = null;
-  if (scope !== null && state.data !== null) last.current = { scope, data: state.data };
+  // Çizim sırasında ayarlanan durum (ref değil): atılan bir çizim yanlış değer bırakamaz.
+  const [last, setLast] = useState<{ scope: string; data: T } | null>(null);
+  let next = last;
+  if (scope === null || state.error !== null || (next !== null && next.scope !== scope)) next = null;
+  if (scope !== null && state.data !== null) next = { scope, data: state.data };
+  if (next?.scope !== last?.scope || next?.data !== last?.data) setLast(next);
   if (state.data !== null) return state.data;
-  return state.loading ? (last.current?.data ?? null) : null;
+  return state.loading ? (next?.data ?? null) : null;
 }

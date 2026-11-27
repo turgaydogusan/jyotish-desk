@@ -151,3 +151,28 @@ test("the last data stays on screen while a new key loads, but not across scopes
   rerender(<KeptProbe k={null} scope={null} fetch={fetch} />);
   expect(kept()).toBe("none");
 });
+
+test("after an error, reading again in the same scope shows nothing from before the error", async () => {
+  const kept = () => screen.getByTestId("kept").textContent;
+  const [a, b, c, d] = [deferred<string>(), deferred<string>(), deferred<string>(), deferred<string>()];
+  const fetch = vi
+    .fn<() => Promise<Result<string>>>()
+    .mockReturnValueOnce(a.promise)
+    .mockReturnValueOnce(b.promise)
+    .mockReturnValueOnce(c.promise)
+    .mockReturnValueOnce(d.promise);
+  const { rerender } = render(<KeptProbe k="a" scope="panel" fetch={fetch} />);
+  await act(async () => a.resolve({ status: "ok", data: "A" }));
+  rerender(<KeptProbe k="b" scope="panel" fetch={fetch} />);
+  await act(async () => b.resolve({ status: "error", error: failure }));
+  expect(kept()).toBe("none (error)");
+  // The next read (a retry or another input) starts empty: "A" belongs to an input the user
+  // has left, and the error came after it.
+  rerender(<KeptProbe k="c" scope="panel" fetch={fetch} />);
+  expect(kept()).toBe("none (loading)");
+  await act(async () => c.resolve({ status: "ok", data: "C" }));
+  expect(kept()).toBe("C");
+  // From then on the last data is kept again.
+  rerender(<KeptProbe k="d" scope="panel" fetch={fetch} />);
+  expect(kept()).toBe("C (loading)");
+});
