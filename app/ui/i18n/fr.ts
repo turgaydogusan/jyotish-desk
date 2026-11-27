@@ -1505,7 +1505,7 @@ export const fr: Messages = {
     nakshatra: "Nakshatra",
     caption: "signe et degré des neuf grahas au début de chaque jour (00:00, heure du lieu choisi)",
     day: "Jour",
-    goTo: "{{date}} : placer la date de transit au début de ce jour",
+    goTo: "{{day}} ({{date}}) : placer la date de transit au début de ce jour",
     ingress: "entre en {{sign}} ce jour-là",
     station: { Retrograde: "devient rétrograde ce jour-là", Direct: "redevient direct ce jour-là" },
     legend: "{{ingress}} signe : le graha entre dans ce signe au cours de la journée. {{station}}R : devient rétrograde ce jour-là ; {{station}}D : redevient direct ce jour-là. Les moments exacts sont dans la recherche d’événements.",

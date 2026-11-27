@@ -186,7 +186,9 @@ test("the table stays while another month is read; a day moves the transit date"
   await act(async () => resolve(ok({ ...ephemerisFixture().month, month: { year: 2026, month: 12 } })));
   expect(screen.getByRole("table", { name: /^Aralık 2026:/ })).toBeInTheDocument();
   const day = within(rows()[5]).getByRole("button");
-  expect(day).toHaveAccessibleName("2026-11-06: transit tarihini bu günün başına götür");
+  // Erişilebilir ad görünen yazıyla başlar (WCAG 2.5.3).
+  expect(day).toHaveTextContent("06 Cum");
+  expect(day).toHaveAccessibleName("06 Cum (2026-11-06): transit tarihini bu günün başına götür");
   fireEvent.click(day);
   expect(transit.at).toEqual({ Jd: EX.month.days[5].row.jd_ut });
 });

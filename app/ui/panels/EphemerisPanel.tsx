@@ -251,7 +251,7 @@ function Table({ view, nakshatra }: { view: EphemerisMonthView; nakshatra: boole
                     {jd === null ? (
                       label
                     ) : (
-                      <button type="button" className="link-button" aria-label={t("ephemeris.goTo", { date: day.date })} onClick={() => transit.setAt({ Jd: jd })}>
+                      <button type="button" className="link-button" aria-label={t("ephemeris.goTo", { day: label, date: day.date })} onClick={() => transit.setAt({ Jd: jd })}>
                         {label}
                       </button>
                     )}

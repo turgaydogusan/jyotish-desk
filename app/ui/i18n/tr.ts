@@ -1504,7 +1504,7 @@ export const tr = {
     nakshatra: "Nakshatra",
     caption: "her günün başında (00:00, seçilen yerin saati) dokuz grahanın burcu ve derecesi",
     day: "Gün",
-    goTo: "{{date}}: transit tarihini bu günün başına götür",
+    goTo: "{{day}} ({{date}}): transit tarihini bu günün başına götür",
     ingress: "o gün {{sign}} burcuna girer",
     station: { Retrograde: "o gün retroya döner", Direct: "o gün düze döner" },
     legend: "{{ingress}} burç: graha o gün içinde bu burca girer. {{station}}R: o gün retroya döner; {{station}}D: o gün düze döner. Kesin anlar olay aramasındadır.",
