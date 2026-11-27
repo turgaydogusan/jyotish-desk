@@ -660,6 +660,7 @@ export const tr = {
     invalid_transit_input: "Transit isteği geçersiz: {{field}}.",
     invalid_muhurta_input: "Muhurta isteği geçersiz: {{field}}.",
     invalid_prashna_input: "Prashna isteği geçersiz: {{field}}.",
+    invalid_search_input: "Arama isteği geçersiz: {{field}}.",
     atlas_unavailable: "Yer araması kullanılamıyor ({{reason}}). Enlem, boylam ve saat dilimini elle girebilirsiniz.",
     atlas_sqlite: "Yer atlası okunamadı ({{detail}}).",
     atlas_io: "Yer atlası dosyası okunamadı ({{detail}}).",

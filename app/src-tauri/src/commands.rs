@@ -92,6 +92,9 @@ impl From<CoreError> for CommandError {
             CoreError::InvalidPrashnaInput(field) => {
                 Self::new("invalid_prashna_input", &[("field", field.to_owned())])
             }
+            CoreError::InvalidSearchInput(field) => {
+                Self::new("invalid_search_input", &[("field", field.to_owned())])
+            }
         }
     }
 }
@@ -273,6 +276,11 @@ mod tests {
         // Yalnızca alan adı: sayı, soru, yer ve an hata parametresine girmez.
         assert_eq!(e.params.len(), 1);
         assert_eq!(e.params["field"], "number");
+        let e = CommandError::from(CoreError::InvalidSearchInput("signs"));
+        assert_eq!(e.code, "invalid_search_input");
+        // Yalnızca alan adı: sorgunun değerleri hata parametresine girmez.
+        assert_eq!(e.params.len(), 1);
+        assert_eq!(e.params["field"], "signs");
     }
 
     #[test]

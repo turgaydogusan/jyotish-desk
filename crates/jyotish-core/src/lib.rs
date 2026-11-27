@@ -8,6 +8,7 @@
 //! (Alt proje 3.4): `shadbala`. Yogalar (Alt proje 3.5): `yogas`. Uyum (Alt proje 3.6): `kuta`.
 //! Muhurta (Alt proje 3.7): `timeline` (aralık dizileri) ve `muhurta` (gün panchangı, arama).
 //! Prashna (Alt proje 3.8): `prashna` (sayı prashnasının lagnası, soru haritasının olguları).
+//! Arama (Alt proje 3.9): `search` (harita araması sorgusu ve hafif yol).
 
 pub mod ashtakavarga;
 mod chart;
@@ -30,6 +31,7 @@ pub mod positions;
 pub mod prashna;
 #[cfg(test)]
 mod proptests;
+pub mod search;
 pub mod settings;
 pub mod shadbala;
 pub mod timeline;
@@ -96,6 +98,11 @@ pub use prashna::{
     compute_prashna_facts, lord_relation, moon_facts, number_lagna_lon, prashna_facts, rising_mode,
     FocusFacts, HouseOccupants, LagnaFacts, LordFacts, LordLink, LordRelation, MoonFacts, Occupant,
     PrashnaFacts, RisingMode, PRASHNA_METHOD, PRASHNA_NUMBER_MAX,
+};
+pub use search::{
+    date_noon_jd, evaluate, search_facts, ChartQuery, Condition, GrahaFlag, MatchFact, Outcome,
+    QueryCondition, QueryScope, ScopeKind, SearchFacts, MAX_CONDITIONS, MAX_SCOPE_TAGS,
+    MAX_SCOPE_TAG_CHARS, MAX_SEARCH_DASHA_LEVEL, MAX_YOGA_IDS, SEARCH_METHOD,
 };
 pub use settings::{
     AdvancedSettings, AyanamsaSystem, CalcSettings, CombustionOrbs, HouseSystem, KarakaScheme,

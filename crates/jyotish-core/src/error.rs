@@ -30,4 +30,7 @@ pub enum CoreError {
     /// Prashna girdisi geçersiz (sayı, odak evi, lagna); alan adını taşır (değer taşımaz).
     #[error("invalid prashna input: {0}")]
     InvalidPrashnaInput(&'static str),
+    /// Harita ya da olay araması girdisi geçersiz; alan adını taşır (değer taşımaz).
+    #[error("invalid search input: {0}")]
+    InvalidSearchInput(&'static str),
 }

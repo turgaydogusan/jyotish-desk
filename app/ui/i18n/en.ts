@@ -661,6 +661,7 @@ export const en: Messages = {
     invalid_transit_input: "Invalid transit request: {{field}}.",
     invalid_muhurta_input: "Invalid muhurta request: {{field}}.",
     invalid_prashna_input: "Invalid prashna request: {{field}}.",
+    invalid_search_input: "Invalid search request: {{field}}.",
     atlas_unavailable: "Place search is unavailable ({{reason}}). You can enter latitude, longitude and time zone by hand.",
     atlas_sqlite: "The place atlas could not be read ({{detail}}).",
     atlas_io: "The place atlas file could not be read ({{detail}}).",
