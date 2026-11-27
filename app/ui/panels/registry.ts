@@ -15,6 +15,7 @@ import { ChartPanel, chartVarga } from "./ChartPanel";
 import { CompatPanel } from "./CompatPanel";
 import { TransitTablePanel } from "../transit/TransitTablePanel";
 import { DrishtiPanel } from "./DrishtiPanel";
+import { EphemerisPanel } from "./EphemerisPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { MuhurtaDayPanel } from "./MuhurtaDayPanel";
@@ -73,6 +74,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   event_search: { titleKey: "panel.event_search", component: EventSearchPanel },
   // Geçiş araçları (yol haritası Plan 26).
   sankranti: { titleKey: "panel.sankranti", component: SankrantiPanel },
+  ephemeris: { titleKey: "panel.ephemeris", component: EphemerisPanel },
   // Doğum anı ekleri (Plan 23).
   navatara: { titleKey: "panel.navatara", component: NavataraPanel },
   vimshopaka: { titleKey: "panel.vimshopaka", component: VimshopakaPanel },

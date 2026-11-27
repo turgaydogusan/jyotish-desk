@@ -28,6 +28,7 @@ export const PANEL_KINDS = [
   "prashna_facts",
   "event_search",
   "sankranti",
+  "ephemeris",
   "navatara",
   "vimshopaka",
 ] as const;
@@ -67,6 +68,7 @@ export const MODULE_PANELS = [
   { kind: "event_search", w: 7, h: 18 },
   // Geçiş araçları (yol haritası Plan 26).
   { kind: "sankranti", w: 7, h: 16 },
+  { kind: "ephemeris", w: 12, h: 22 },
   // Doğum anı ekleri (Plan 23).
   { kind: "navatara", w: 7, h: 16 },
   { kind: "vimshopaka", w: 7, h: 12 },

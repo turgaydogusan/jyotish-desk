@@ -1,0 +1,18 @@
+/* Efemeris paneli: dar hücreler ve hücre içi ikinci satır. Renk token'lardan gelir (C9). */
+.ephemeris-table th,
+.ephemeris-table td {
+  white-space: nowrap;
+}
+.ephemeris-table td {
+  font-variant-numeric: tabular-nums;
+}
+.ephemeris-mark {
+  color: var(--text-2);
+}
+.ephemeris-nakshatra {
+  display: block;
+  color: var(--text-2);
+}
+.ephemeris-month {
+  font-weight: var(--fw-medium);
+}

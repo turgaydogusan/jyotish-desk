@@ -17,6 +17,7 @@ import { BirthInfoPanel } from "./BirthInfoPanel";
 import { ChartPanel } from "./ChartPanel";
 import { CompatPanel } from "./CompatPanel";
 import { DrishtiPanel } from "./DrishtiPanel";
+import { EphemerisPanel } from "./EphemerisPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { MuhurtaDayPanel } from "./MuhurtaDayPanel";
@@ -68,6 +69,7 @@ test("registry covers every catalog kind", () => {
   expect(PANEL_REGISTRY.muhurta_search.component).toBe(MuhurtaSearchPanel);
   expect(PANEL_REGISTRY.event_search.component).toBe(EventSearchPanel);
   expect(PANEL_REGISTRY.sankranti.component).toBe(SankrantiPanel);
+  expect(PANEL_REGISTRY.ephemeris.component).toBe(EphemerisPanel);
   expect(PANEL_REGISTRY.navatara.component).toBe(NavataraPanel);
   expect(PANEL_REGISTRY.vimshopaka.component).toBe(VimshopakaPanel);
   // Kataloğun her türü uygulanmıştır: yer tutucu yoktur.
