@@ -1,11 +1,12 @@
-//! Geçiş araçlarının komutları (yol haritası Plan 26): Sankranti listesi. Kalıp muhurta
-//! komutlarıyla aynıdır: hesap motor iş parçacığında, komut gövdesi `blocking` havuzunda, hata
-//! `CommandError`; sonuç saklanmaz (K1). "Bu yıl" Rust'ta okunur; arayüz tarih hesabı yapmaz
-//! (C4).
+//! Geçiş araçlarının komutları (yol haritası Plan 26): Sankranti listesi ve efemeris tablosu.
+//! Kalıp muhurta komutlarıyla aynıdır: hesap motor iş parçacığında, komut gövdesi `blocking`
+//! havuzunda, hata `CommandError`; sonuç saklanmaz (K1). "Bu yıl", "bu ay", önceki ve sonraki
+//! ay Rust'ta okunur; arayüz tarih hesabı yapmaz (C4).
 //!
 //! Yer kişisel veridir: loglanmaz ve hata parametresine girmez. Bu modülün ürettiği hatalar
 //! var olan `invalid_transit_input` kodunu ve yalnızca alan adını taşır.
 
+pub mod ephemeris;
 pub mod sankranti;
 
 use crate::commands::CommandError;

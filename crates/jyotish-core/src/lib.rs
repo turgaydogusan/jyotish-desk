@@ -168,6 +168,7 @@ pub use zodiac::{angular_distance, deg_in_sign, nakshatra_pada, normalize, Sign}
 // alfabetik gruplardaki ve dosya başındaki ekleriyle aynı satırlara dokunmaz.
 pub mod transit_tools;
 pub use transit_tools::{
-    sankranti_list, sankranti_moments, Sankranti, SankrantiList, NAKSHATRA_LORDS,
-    SANKRANTI_MAX_RANGE_DAYS, SANKRANTI_METHOD,
+    ephemeris_table, sankranti_list, sankranti_moments, EphemerisCell, EphemerisRow,
+    EphemerisTable, Sankranti, SankrantiList, EPHEMERIS_MAX_ROWS, EPHEMERIS_MAX_STEP_DAYS,
+    EPHEMERIS_METHOD, NAKSHATRA_LORDS, SANKRANTI_MAX_RANGE_DAYS, SANKRANTI_METHOD,
 };

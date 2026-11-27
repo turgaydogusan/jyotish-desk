@@ -29,6 +29,13 @@ export const commands = {
 	 */
 	sankrantiList: (year: number | null, place: MuhurtaPlace, settings: CalcSettings, options?: InvokeOptions) => typedError<SankrantiListView, CommandError>(__TAURI_INVOKE("sankranti_list", { year, place, settings }, options)),
 	/**
+	 *  Efemeris tablosu: yerin `month` takvim ayında her günün başındaki (00:00 duvar saati) dokuz
+	 *  graha: burç, derece, retro, nakshatra ve pada; o gün içindeki burç girişi ve yön dönüşü
+	 *  işaretli. `month` boşsa yerin bugünkü ayı ("bugün" Rust'ta okunur). `settings` açık haritanın
+	 *  hesap ayarıdır (ayanamsa, düğüm türü, zodyak kipi). Yer loglanmaz.
+	 */
+	ephemerisMonth: (month: MonthId | null, place: MuhurtaPlace, settings: CalcSettings, options?: InvokeOptions) => typedError<EphemerisMonthView, CommandError>(__TAURI_INVOKE("ephemeris_month", { month, place, settings }, options)),
+	/**
 	 *  Bhava tablosu: haritanın ev sisteminde on iki bhavanın başlangıcı, ortası ve bitişi (burç,
 	 *  derece, nakshatra, pada, burç lordu, nakshatra lordu) ve dokuz grahanın bhavası ile bhava
 	 *  başlangıcına ve ortasına uzaklığı. Doğum saati bilinmiyorsa (`time_known == false`) `null`
@@ -881,6 +888,50 @@ export type EngineStatus = {
 	seVersion: string,
 };
 
+/**  Bir grahanın bir satırdaki konumu. */
+export type EphemerisCell = {
+	graha: Graha,
+	/**  Rasi çerçevesinde boylam, [0, 360). */
+	lon: number | null,
+	sign: Sign,
+	deg_in_sign: number | null,
+	/**  Boylam hızı < 0 (v1'in retro tanımı). */
+	retrograde: boolean,
+	/**  Sidereal boylamdan. */
+	nakshatra: number,
+	pada: number,
+	/**  Sonraki ana dek girilen burç; burç değişmiyorsa `None`. */
+	ingress: Sign | null,
+	/**  Sonraki ana dek dönülen yön; yalnızca `STATION_GRAHAS` için, yön değişmiyorsa `None`. */
+	station: Motion | null,
+};
+
+/**  Bir günün satırı: yerin takvim günü (`YYYY-MM-DD`), o günün başındaki UTC ofseti ve konumlar. */
+export type EphemerisDayView = {
+	date: string,
+	offset_secs: number,
+	row: EphemerisRow,
+};
+
+export type EphemerisMonthView = {
+	/**  Tablonun ayı (ay verilmediyse yerin bugünkü ayı). */
+	month: MonthId,
+	prev: MonthId | null,
+	next: MonthId | null,
+	/**  Ayın günleri, sırayla (28–31 satır). */
+	days: EphemerisDayView[],
+	/**  Yalnızca `LowPrecision` olabilir. */
+	warnings: ChartWarning[],
+	method: string,
+};
+
+/**  Bir anın dokuz grahası. */
+export type EphemerisRow = {
+	jd_ut: number | null,
+	/**  Her zaman 9 eleman, `Graha::ALL` sırasında. */
+	cells: EphemerisCell[],
+};
+
 /**
  *  Olay aramasının girdisi. `from_date` ve `to_date` yerin takvim günleridir (`YYYY-MM-DD`, ikisi
  *  de dahil); `from_date` boşsa bugün, `to_date` boşsa başlangıçtan bir yıl sonrası. `place`
@@ -1338,6 +1389,12 @@ export type MomentPreview = {
 /**  Çözüm uyarıları (atlas `MomentWarning`'in IPC karşılığı; UI spec §5 rozetleri). */
 export type MomentWarning = "TimeUnknownNoon" | "LmtFromLongitude" | "PreTzdbReliability";
 
+/**  Bir takvim ayı (yerin takvimi): `month` 1..=12. */
+export type MonthId = {
+	year: number,
+	month: number,
+};
+
 /**
  *  Doğum saati bilinmeyen haritada Ay'ın o yerel gün içinde (öğle ± 12 saat) nakshatra ya da
  *  burç değiştirip değiştirmediği. Doğum saati bilinen haritada ikisi de `false`'tur.
@@ -1362,6 +1419,9 @@ export type MoonFacts = {
 	 */
 	aspected_by: Graha[],
 };
+
+/**  Grahanın boylamca hareket yönü. */
+export type Motion = "Direct" | "Retrograde";
 
 /**
  *  Süzgecin saklanabilen kısmı: koşullar. Boş küme "kısıt yok" demektir. Tarih aralığı, yer ve

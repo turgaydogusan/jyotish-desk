@@ -62,3 +62,33 @@ Vimshottari sırasının üç kez yazılmış biçimidir ve testte o sırayla ka
 - [ ] Listenin tropikal-rasi kipinde de sidereal verilmesi (K5'ten bilinçli ayrılma).
 - [ ] Varanın gün doğumuna göre okunması (öteki okuma: yerin takvim günü, gece yarısından).
 - [ ] Yılın, seçilen yerin takvim yılı olması (öteki okuma: Mesha girişinden Mesha girişine).
+
+## 3. Efemeris tablosu (yöntem `ephemeris_table.v1`)
+
+### 3.1 Okuma kuralları
+
+1. **Satır.** Seçilen yerin takvim ayının her günü için bir satır; satırın anı o günün başıdır:
+   yerin duvar saatiyle 00:00. Yaz saati gece yarısında başlıyorsa (00:00 yoksa) satır günün
+   başladığı andadır; o gün önceki satırdan 23 saat sonradır.
+2. **Konum.** Dokuz grahanın boylamı transit hesabıyla aynıdır: burç ve burç içi derece rasi
+   çerçevesindedir (haritanın zodyak kipini izler, K5); nakshatra ve pada sidereal boylamdandır.
+   Ayanamsa ve düğüm türü açık haritanın ayarıdır. Retro, boylam hızının eksi olmasıdır; Rahu ve
+   Ketu'da retro işareti yazılmaz.
+3. **Giriş işareti.** Graha, satırın anı ile bir sonraki satırın anı arasında başka bir burca
+   giriyorsa satır girilen burcu taşır. Ayın son gününün işareti, sonraki ayın ilk gününün
+   başındaki konumdan okunur.
+4. **Dönüş işareti.** Mars, Merkür, Jüpiter, Venüs ve Satürn için: graha aynı süre içinde retroya
+   ya da düze dönüyorsa satır dönülen yönü taşır. Düğümlerin yönü işaretlenmez.
+5. **İşaretlerin sınırı.** İşaret, ardışık iki satırın karşılaştırmasıdır: kesin an olay
+   aramasındadır. Bir gün içinde burç sınırını geçip geri dönen durağan bir graha işaret almaz.
+6. **Aralık.** Bir ay (28–31 satır); yıl 1–2999. Ay verilmezse yerin bugünkü ayıdır. Ephemeris
+   dosyalarının dışındaki yıllarda (1800 öncesi, 2400 ve sonrası) tablo `LowPrecision` uyarısını
+   taşır.
+7. **Kapsam dışı.** CSV ve baskı (K10); enlem, hız ve deklinasyon sütunları; yıl görünümü;
+   00:00 UT satırı.
+
+### 3.2 Onay bekleyen noktalar (sahibi)
+
+- [ ] Satır saatinin seçilen yerin yerel gece yarısı olması (öteki okuma: 00:00 UT).
+- [ ] Varsayılan yerin bulunulan yer olması (öteki okuma: haritanın doğum yeri).
+- [ ] Burç ve derecenin haritanın zodyak kipini izlemesi (tropikal-rasi kipinde tropikal).

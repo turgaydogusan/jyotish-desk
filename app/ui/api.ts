@@ -18,6 +18,7 @@ import {
   type EventSearchSpec,
   type Gender,
   type Graha,
+  type MonthId,
   type MuhurtaPageCursor,
   type MuhurtaPlace,
   type MuhurtaQuery,
@@ -73,6 +74,8 @@ export const api = {
   // Geçiş araçları (yol haritası Plan 26). `year` boşsa yerin bugünkü yılıdır ("bugün" Rust'ta
   // okunur). Yer kişisel veridir: loglanmaz.
   sankrantiList: (year: number | null, place: MuhurtaPlace, settings: CalcSettings) => wrap(() => commands.sankrantiList(year, place, settings)),
+  // `month` boşsa yerin bugünkü ayıdır; önceki ve sonraki ay yanıtla gelir (arayüz tarih hesabı yapmaz).
+  ephemerisMonth: (month: MonthId | null, place: MuhurtaPlace, settings: CalcSettings) => wrap(() => commands.ephemerisMonth(month, place, settings)),
   deleteClient: (clientId: number) => wrap(() => commands.deleteClient(clientId)),
   deleteChart: (chartId: number) => wrap(() => commands.deleteChart(chartId)),
   listClients: (limit: number) => wrap(() => commands.listClients(limit)),
