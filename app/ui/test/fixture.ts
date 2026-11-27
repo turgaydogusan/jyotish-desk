@@ -8,13 +8,19 @@ import type {
   CharaDasha,
   ChartBrief,
   ChartInput,
+  ChartQuery,
+  ChartSearchPage,
   CommandError,
   DashaPeriod,
   DayPanchangView,
   DrishtiTable,
+  EventSearchSpec,
+  EventSearchView,
   Graha,
+  GrahaFlag,
   HomePlace,
   JaiminiReport,
+  KarakaRole,
   Kuta,
   KutaReport,
   LordLink,
@@ -30,12 +36,15 @@ import type {
   PrashnaFacts,
   PrefsLoad,
   RisingMode,
+  SavedSearch,
   ShadbalaReport,
   Sign,
   SignDashaPath,
   SignDashaPeriod,
+  SkyEventKind,
   TithiGroup,
   TransitView,
+  Varga,
   YogaGroup,
   YogaReport,
 } from "../bindings";
@@ -121,6 +130,34 @@ export interface UiFixture {
   };
   /** Rust `RisingMode::ALL`, `LordLink::ALL`, `PRASHNA_NUMBER_MAX` ve `MAX_QUESTION_CHARS`. */
   prashna_ids: { rising: RisingMode[]; links: LordLink[]; max_number: number; max_question_chars: number };
+  /**
+   * Arama (Plan 22): fikstür veritabanında (iki danışan, iki doğum haritası, iki prashna) bir
+   * harita araması. `query`: Ay açık haritanın Ay burcunda ve Güneş 1. ya da 10. evde değil.
+   * `page` varsayılan kapsamla (prashna haritaları dışarıda: 2 harita, 1 eşleşme),
+   * `page_all_charts` prashna haritalarıyla (4 harita) `chart_search` dönüşüdür; `saved` aynı
+   * sorgunun `save_search` dönüşüdür. `events`, `event_spec` ile (açık haritayla, 2026-11-26 …
+   * 2027-03-31) `event_search` dönüşüdür.
+   */
+  search: {
+    query: ChartQuery;
+    page: ChartSearchPage;
+    page_all_charts: ChartSearchPage;
+    saved: SavedSearch;
+    event_spec: EventSearchSpec;
+    events: EventSearchView;
+  };
+  /** Rust `SkyEventKind::ALL`, `GrahaFlag::ALL`, `Varga::ALL`, `EIGHT_KARAKA_ROLES` ve aramanın sınırları. */
+  search_ids: {
+    event_kinds: SkyEventKind[];
+    flags: GrahaFlag[];
+    vargas: Varga[];
+    karaka_roles: KarakaRole[];
+    max_conditions: number;
+    max_scope_tags: number;
+    max_yoga_ids: number;
+    max_dasha_level: number;
+    max_events: number;
+  };
   /** Rust `MuhurtaFlag::ALL`, `TithiGroup::ALL`, `NakshatraNature::ALL` ve `MUHURTA_MAX_MIN_MINUTES`. */
   muhurta_ids: { flags: MuhurtaFlag[]; tithi_groups: TithiGroup[]; nakshatra_natures: NakshatraNature[]; max_min_minutes: number };
 }

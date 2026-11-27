@@ -26,6 +26,9 @@ vi.mock("./api", () => ({
     appInfo: vi.fn(async () => ({ status: "ok", data: { version: "0.9.0", updaterConfigured: true } })),
     checkForUpdate: vi.fn(async () => ({ status: "ok", data: { version: "0.9.1", notes: null, published: null } })),
     installUpdate: vi.fn(),
+    listSavedSearches: vi.fn(async () => ({ status: "ok", data: [] })),
+    chartSearch: vi.fn(async () => ({ status: "ok", data: (await import("./test/fixture")).fixture().search.page_all_charts })),
+    chartSearchCancel: vi.fn(async () => ({ status: "ok", data: null })),
   },
 }));
 
@@ -610,4 +613,50 @@ test("casting a prashna opens it on the Prashna layout: D1, facts, panchang and 
   expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Görüşme");
   fireEvent.keyDown(window, { key: "4", code: "Digit4", metaKey: true });
   expect(screen.getByRole("combobox", { name: "Düzen" })).toHaveDisplayValue("Prashna");
+});
+
+test("Cmd+Shift+F and the palette open the chart search; Esc closes it, the conditions stay and a result opens its chart", async () => {
+  const { unmount } = renderApp({ opened: null });
+  // Açık harita gerekmez: arama danışan veritabanına aittir.
+  fireEvent.keyDown(window, { key: "F", metaKey: true, shiftKey: true });
+  let sheet = screen.getByRole("dialog", { name: "Haritalarda ara" });
+  fireEvent.click(within(sheet).getByRole("button", { name: "Örnek koşul ekle" }));
+  expect(within(sheet).getByRole("group", { name: "Koşul 1" })).toBeInTheDocument();
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  // Paletten açılınca koşullar yerindedir (sonuçlar saklanmaz).
+  fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const palette = screen.getByRole("dialog", { name: "Komut paleti" });
+  fireEvent.change(within(palette).getByRole("combobox"), { target: { value: "haritalarda" } });
+  fireEvent.click(await within(palette).findByRole("option", { name: /Haritalarda ara/ }));
+  sheet = screen.getByRole("dialog", { name: "Haritalarda ara" });
+  expect(within(sheet).getByRole("group", { name: "Koşul 1" })).toBeInTheDocument();
+  expect(within(sheet).getByText(/Koşulları kurup/)).toBeInTheDocument();
+  unmount();
+
+  const opened = fixture().opened;
+  vi.mocked(api.openClient).mockResolvedValueOnce({ status: "ok", data: opened });
+  renderApp();
+  const title = screen.getByRole("button", { name: "Baskı önizleme" });
+  title.focus();
+  fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
+  sheet = screen.getByRole("dialog", { name: "Haritalarda ara" });
+  // Pencere açıkken ikinci basış yok sayılır (modal).
+  fireEvent.keyDown(window, { key: "F", metaKey: true, shiftKey: true });
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  fireEvent.click(within(sheet).getByRole("button", { name: "Örnek koşul ekle" }));
+  fireEvent.click(within(sheet).getByRole("button", { name: "Ara" }));
+  const hit = await within(sheet).findByRole("button", { name: /Örnek Danışan, etiketsiz harita: haritayı aç/ });
+  fireEvent.click(hit);
+  // Sonuç haritayı açar ve yüzeyi kapatır; odak açan öğeye döner.
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(api.openClient).toHaveBeenCalledWith(opened.client.id, opened.chart_record.id);
+  expect(title).toHaveFocus();
+  // Baskı önizlemesinde tuş tüketilir ama yüzey açılmaz.
+  fireEvent.keyDown(window, { key: "p", metaKey: true });
+  expect(printToolbar()).toBeInTheDocument();
+  const ev = new KeyboardEvent("keydown", { key: "F", metaKey: true, shiftKey: true, cancelable: true });
+  window.dispatchEvent(ev);
+  expect(ev.defaultPrevented).toBe(true);
+  expect(screen.queryByRole("dialog", { name: "Haritalarda ara" })).toBeNull();
 });

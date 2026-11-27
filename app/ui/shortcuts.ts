@@ -8,6 +8,7 @@ export type Command =
   | { id: "toggleNotes" }
   | { id: "newChart" }
   | { id: "newPrashna" }
+  | { id: "chartSearch" }
   | { id: "editChart" }
   | { id: "settings" }
   | { id: "print" }
@@ -17,7 +18,7 @@ export type Command =
 
 export interface ShortcutInfo {
   /** i18n anahtarı: `shortcuts.<id>`. */
-  id: "palette" | "sidebar" | "selectLayout" | "toggleNotes" | "newChart" | "newPrashna" | "editChart" | "settings" | "print" | "help" | "escape" | "movePanel" | "resizePanel" | "tree";
+  id: "palette" | "sidebar" | "selectLayout" | "toggleNotes" | "newChart" | "newPrashna" | "chartSearch" | "editChart" | "settings" | "print" | "help" | "escape" | "movePanel" | "resizePanel" | "tree";
   keys: string;
 }
 
@@ -31,6 +32,7 @@ export const SHORTCUT_LIST: readonly ShortcutInfo[] = [
   { id: "selectLayout", keys: "⌘1 … ⌘9" },
   { id: "toggleNotes", keys: "⌘⇧N" },
   { id: "newPrashna", keys: "⌘⇧P" },
+  { id: "chartSearch", keys: "⌘⇧F" },
   { id: "help", keys: "?" },
   { id: "escape", keys: "Esc" },
   { id: "movePanel", keys: "⌥ ←↑→↓" },
@@ -59,7 +61,9 @@ export function matchShortcut(e: KeyboardEvent): Command | null {
   if (e.metaKey) {
     if (e.shiftKey) {
       const shifted = e.key.toLowerCase();
-      // ⌘⇧P "Yeni prashna"dır (ileri modüller spec'i §11); ⌘P baskıdır.
+      // ⌘⇧P "Yeni prashna"dır (ileri modüller spec'i §11); ⌘P baskıdır. ⌘⇧F "Haritalarda ara"dır
+      // (§12).
+      if (shifted === "f") return { id: "chartSearch" };
       return shifted === "n" ? { id: "toggleNotes" } : shifted === "p" ? { id: "newPrashna" } : null;
     }
     // Önizlemenin ardındaki düzen görünmeden değişmesin (Plan 04 incelemesi M4).

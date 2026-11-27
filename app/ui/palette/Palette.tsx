@@ -92,6 +92,8 @@ export function Palette({ onClose, onRun }: PaletteProps) {
       { command: "newChart", label: t("palette.command.newChart") },
       // Açık harita gerekmez: danışan seçili değilse prashna yerleşik danışana eklenir.
       { command: "newPrashna", label: t("palette.command.newPrashna") },
+      // Açık harita gerekmez: arama danışan veritabanına aittir.
+      { command: "chartSearch", label: t("palette.command.chartSearch") },
       ...(opened
         ? [
             { command: "addChart" as const, label: t("palette.command.addChart") },

@@ -11,8 +11,11 @@ import {
   type Bhavas,
   type CalcSettings,
   type ChartInput,
+  type ChartQuery,
+  type ChartSearchCursor,
   type CommandError,
   type DashaSeed,
+  type EventSearchSpec,
   type Gender,
   type Graha,
   type MuhurtaPageCursor,
@@ -26,7 +29,9 @@ import {
   type PrashnaEdit,
   type PrashnaRequest,
   type SavedMuhurtaFilter,
+  type SaveSearchRequest,
   type Sign,
+  type TagChartsRequest,
   type TransitAt,
   type ViewState,
 } from "./bindings";
@@ -119,6 +124,19 @@ export const api = {
   createPrashna: (request: PrashnaRequest) => wrap(() => commands.createPrashna(request)),
   updatePrashna: (chartId: number, edit: PrashnaEdit) => wrap(() => commands.updatePrashna(chartId, edit)),
   computePrashnaFacts: (input: ChartInput, focusHouse: number | null) => wrap(() => commands.computePrashnaFacts(input, focusHouse)),
+  // Arama (ileri modüller spec'i §12). Harita araması sayfa sayfa yürür: ilk çağrıda `cursor`
+  // boştur ve `searchId` yeni bir aramayı başlatır; dönen `next` sonraki çağrıya olduğu gibi
+  // verilir. Durdurulan ya da yerine yenisi başlatılan aramanın isteği `search_stale` döner.
+  // Olay araması tek çağrıdır ve `eventSearchCancel` ile durdurulur. Sorgu, sonuçlar (adlar,
+  // sayılar, kimlikler) ve yer loglanmaz.
+  chartSearch: (query: ChartQuery, searchId: number, cursor: ChartSearchCursor | null) => wrap(() => commands.chartSearch(query, searchId, cursor)),
+  chartSearchCancel: (searchId: number) => wrap(() => commands.chartSearchCancel(searchId)),
+  tagCharts: (request: TagChartsRequest) => wrap(() => commands.tagCharts(request)),
+  listSavedSearches: () => wrap(() => commands.listSavedSearches()),
+  saveSearch: (request: SaveSearchRequest) => wrap(() => commands.saveSearch(request)),
+  deleteSavedSearch: (searchId: number) => wrap(() => commands.deleteSavedSearch(searchId)),
+  eventSearch: (spec: EventSearchSpec, searchId: number) => wrap(() => commands.eventSearch(spec, searchId)),
+  eventSearchCancel: (searchId: number) => wrap(() => commands.eventSearchCancel(searchId)),
   searchPlaces: (query: string, limit: number) => wrap(() => commands.searchPlaces(query, limit)),
   previewMoment: (birth: BirthData) => wrap(() => commands.previewMoment(birth)),
   appInfo: () => wrap(() => commands.appInfo()),

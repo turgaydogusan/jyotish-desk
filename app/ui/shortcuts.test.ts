@@ -17,6 +17,10 @@ test("global commands", () => {
   expect(key({ key: "p", metaKey: true })).toEqual({ id: "print" });
   expect(key({ key: "P", metaKey: true, shiftKey: true })).toEqual({ id: "newPrashna" });
   expect(key({ key: "p", metaKey: true, shiftKey: true })).toEqual({ id: "newPrashna" });
+  expect(key({ key: "F", metaKey: true, shiftKey: true })).toEqual({ id: "chartSearch" });
+  expect(key({ key: "f", metaKey: true, shiftKey: true })).toEqual({ id: "chartSearch" });
+  // ⌘F atanmamıştır: web görünümünün kendi araması yoktur ve komut sayılmaz.
+  expect(key({ key: "f", metaKey: true })).toBeNull();
   expect(key({ key: "K", metaKey: true, shiftKey: true })).toBeNull();
   expect(key({ key: "\\", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });
   expect(key({ key: ",", code: "Backslash", metaKey: true })).toEqual({ id: "sidebar" });

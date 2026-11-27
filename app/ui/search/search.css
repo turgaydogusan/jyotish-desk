@@ -1,0 +1,87 @@
+/* Harita araması yüzeyi (ileri modüller spec'i §12). Renkler yalnızca token'lardan gelir (C9). */
+.search-form,
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.search-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  color: var(--text-2);
+}
+.search-field,
+.search-form label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.search-condition,
+.search-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+}
+.search-condition-head,
+.search-condition-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 12px;
+}
+.search-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+}
+.search-fold {
+  flex: 1 1 100%;
+}
+.search-fold summary {
+  cursor: default;
+  color: var(--text-2);
+}
+.search-form button[aria-disabled="true"],
+.search-tag button[aria-disabled="true"] {
+  color: var(--text-2);
+}
+.search-progress {
+  width: 100%;
+}
+.search-hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.search-hit {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(6rem, 1fr) 2fr;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+.search-hit:hover,
+.search-hit:focus-visible {
+  background: var(--select);
+}
+.search-hit-name {
+  font-weight: var(--fw-medium);
+}
+.search-hit-facts {
+  font-variant-numeric: tabular-nums;
+}

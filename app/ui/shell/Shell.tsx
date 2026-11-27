@@ -20,6 +20,9 @@ import { HelpDialog } from "./HelpDialog";
 import { NoticeBar, useNotices } from "./notices";
 import { loadSidebarOpen, saveSidebarOpen } from "./sidebarPref";
 import { PrashnaForm } from "../prashna/PrashnaForm";
+import type { ChartQuery } from "../bindings";
+import { ChartSearch } from "../search/ChartSearch";
+import { EMPTY_QUERY } from "../search/model";
 import { PrintView } from "../print/PrintView";
 import "./shell.css";
 import { TopBar } from "./TopBar";
@@ -36,6 +39,10 @@ export function Shell() {
   const [about, setAbout] = useState(false);
   const [form, setForm] = useState<"new" | "add" | "edit" | null>(null);
   const [prashna, setPrashna] = useState(false);
+  // Harita araması: koşullar burada durur, yüzey kapanıp açılınca form yerindedir. Sonuçlar
+  // yüzeyle birlikte gider (saklanmaz).
+  const [search, setSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<ChartQuery>(EMPTY_QUERY);
   const [sidebar, setSidebar] = useState(() => loadSidebarOpen());
   // Açık/kapalı durumu bir sonraki açılışta da geçerlidir (Plan 12 D11).
   useEffect(() => saveSidebarOpen(sidebar), [sidebar]);
@@ -126,6 +133,10 @@ export function Shell() {
         // ⌘⇧P her zaman tüketilir; baskı önizlemesinde (pano yokken) pencere açılmaz.
         e.preventDefault();
         if (!now.printView) setPrashna(true);
+      } else if (command?.id === "chartSearch") {
+        // ⌘⇧F her zaman tüketilir; baskı önizlemesinde yüzey açılmaz.
+        e.preventDefault();
+        if (!now.printView) setSearch(true);
       } else if (command?.id === "editChart" && now.opened) {
         e.preventDefault();
         setForm("edit");
@@ -174,6 +185,7 @@ export function Shell() {
         }
         // Kısayollarındaki gibi: baskı görünümünde (pano ve kenar çubuğu yokken) yok sayılır.
         if (item.command === "newPrashna") return printView ? undefined : setPrashna(true);
+        if (item.command === "chartSearch") return printView ? undefined : setSearch(true);
         if (item.command === "settings") return setSettings(true);
         if (item.command === "print") return printView ? undefined : togglePrint();
         if (item.command === "toggleNotes") {
@@ -215,6 +227,18 @@ export function Shell() {
       {settings && <SettingsDialog onClose={() => setSettings(false)} />}
       {about && <AboutDialog onClose={() => setAbout(false)} />}
       {form && <BirthForm mode={form} onClose={() => setForm(null)} />}
+      {search && (
+        <ChartSearch
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          onClose={() => setSearch(false)}
+          onOpenChart={(clientId, chartId) => {
+            setSearch(false);
+            openClient(clientId, chartId);
+          }}
+          onTagged={session.touch}
+        />
+      )}
       {prashna && <PrashnaForm onClose={() => setPrashna(false)} onCreated={() => layout.select(BUILTIN_LAYOUT_IDS.prashna)} />}
     </div>
   );
