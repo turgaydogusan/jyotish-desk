@@ -1415,6 +1415,11 @@ export const en: Messages = {
     units: { Hour: "Hour", Day: "Day", Week: "Week", Month: "Month", Year: "Year" },
     back: "One step back",
     forward: "One step forward",
+    play: "Play",
+    pause: "Pause",
+    speed: "Speed",
+    speeds: { slow: "Slow", normal: "Medium", fast: "Fast" },
+    reducedMotion: "“Reduce motion” is on in the system: playback is not offered. The step buttons work.",
     field: { jd_ut: "moment", count: "step count", tz: "time zone", range: "date range (years 1–2999)" },
   },
   transit: {

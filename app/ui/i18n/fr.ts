@@ -1415,6 +1415,11 @@ export const fr: Messages = {
     units: { Hour: "Heure", Day: "Jour", Week: "Semaine", Month: "Mois", Year: "Année" },
     back: "Un pas en arrière",
     forward: "Un pas en avant",
+    play: "Lire",
+    pause: "Mettre en pause",
+    speed: "Vitesse",
+    speeds: { slow: "Lente", normal: "Moyenne", fast: "Rapide" },
+    reducedMotion: "« Réduire les animations » est activé dans le système : la lecture n’est pas proposée. Les boutons de pas fonctionnent.",
     field: { jd_ut: "moment", count: "nombre de pas", tz: "fuseau horaire", range: "plage de dates (années 1–2999)" },
   },
   transit: {

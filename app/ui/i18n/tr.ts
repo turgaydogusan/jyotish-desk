@@ -1414,6 +1414,11 @@ export const tr = {
     units: { Hour: "Saat", Day: "Gün", Week: "Hafta", Month: "Ay", Year: "Yıl" },
     back: "Bir adım geri",
     forward: "Bir adım ileri",
+    play: "Oynat",
+    pause: "Duraklat",
+    speed: "Hız",
+    speeds: { slow: "Yavaş", normal: "Orta", fast: "Hızlı" },
+    reducedMotion: "Sistemde “hareketi azalt” açık: oynatma sunulmuyor. Adım düğmeleri çalışır.",
     field: { jd_ut: "an", count: "adım sayısı", tz: "saat dilimi", range: "tarih aralığı (1–2999 yılları)" },
   },
   transit: {

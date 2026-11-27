@@ -126,3 +126,26 @@ Vimshottari sırasının üç kez yazılmış biçimidir ve testte o sırayla ka
 - [ ] Duvar saatinin tarayıcının diliminde okunması (öteki okuma: haritanın ya da bulunulan
       yerin dilimi).
 - [ ] Ay sonunda ayın son gününe düşme ve boşlukta ileri alma.
+
+### 4.3 Oynatma
+
+1. **Oynat** seçili birimle ileri adım atar; **Duraklat** durdurur. Geri oynatma yoktur.
+2. **Hız** iki adım arasındaki bekleme süresidir: Yavaş 2 sn, Orta 1 sn (varsayılan), Hızlı 0,4 sn.
+3. **Sıra.** Sonraki adım, önceki an yerleşince planlanır: adım isteği bitmiş ve o anın
+   transitleri gelmiş olmalıdır. Motor meşgulse oynatma bekler; iş birikmez ve oynatma sürerken
+   harita açmak beklemez.
+4. **Durma.** Duraklat düğmesi; panelin kapanması; başka bir haritanın açılması; adım ya da
+   transit hatası (aralığın sonu dahil); sistemin "hareketi azalt" ayarının açılması.
+5. **Elle seçilen an** (tarih kutuları, Şimdi, başka bir panelin satırı, adım düğmeleri) oynatmayı
+   durdurmaz: oynatma o andan sürer.
+6. **Hareketi azalt.** Sistem ayarı açıkken oynatma düğmesi ve hız seçici çizilmez; yerinde
+   nedeni yazan bir satır durur. Adım düğmeleri çalışır.
+7. Birim, hız ve oynatma durumu oturumluktur: düzenle birlikte saklanmaz (transit anı da
+   saklanmaz).
+
+### 4.4 Onay bekleyen noktalar (sahibi)
+
+- [ ] Üç hız ve süreleri (2 sn, 1 sn, 0,4 sn); varsayılan hız.
+- [ ] Geri oynatmanın olmaması.
+- [ ] Elle seçilen anın oynatmayı durdurmaması.
+- [ ] Denetimlerin yalnızca Transit tablosu panelinde durması (harita panelinde ayrı düğme yok).
