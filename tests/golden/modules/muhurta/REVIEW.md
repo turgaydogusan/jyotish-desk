@@ -101,4 +101,4 @@ tasarım belgesinden, yukarıdaki okuma kurallarından ve tablolardan yeniden he
 
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
-| — | — | Bekliyor (Plan 20 Task 9 Step 5) |
+| Plan 20 Task 2'nin gözden geçiren ajanı (motoru ve örnekleri yazan dışında); son incelemede yeniden koşuldu | 2026-11-27 | 7/7 uyuştu: yedi örnekte 140 denetim, fark yok. Hesap yalnızca `input`'tan başlar, motoru çalıştırmaz ve kendi yazdığı listeleri kullanır (varaya göre üç dilim sırası, gün lordları ve hora döngüsü, tithi grupları, yedi doğa listesi, iki elverişli küme, sayım başlangıcını sayan tara ve burç sayımı); bu listeler son incelemede yukarıdaki tablolar ve okuma kurallarıyla satır satır karşılaştırıldı. Sınır: gözden geçiren aynı görevde motorun kaynağını da okudu ve tablolar iki hesapta da aynı aktarımdan gelir; bu kayıt kuralların uygulanışını ve aritmetiği doğrular, tabloların kendisini (yukarıdaki onay tablosu) ve okuma seçimlerini değil. |
