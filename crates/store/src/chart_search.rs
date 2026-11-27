@@ -2,7 +2,7 @@
 //! girdileri (dilim dilim), toplu etiketleme ve kayıtlı aramalar.
 //!
 //! Tarama harita kimliği sırasıyla yürür (`id > imleç`): her harita tam bir kez okunur; arama
-//! sürerken silinen harita atlanır, eklenen harita (daha büyük kimlikle) sırası gelince okunur.
+//! sürerken silinen harita atlanır; eklenen harita, kimliği imleçten büyükse sırası gelince okunur.
 //! Hesaplanmış olgu saklanmaz; kayıtlı arama yalnızca koşulları taşır ve dışa aktarılmaz.
 //! Danışan adları, harita kimlikleri ve sorgular loglanmaz.
 
@@ -78,6 +78,13 @@ const SCOPE_WHERE: &str = "(?1 IS NULL OR ch.kind = ?1)
 
 fn name_key(name: &str) -> String {
     name.to_lowercase()
+}
+
+/// Kayıtlı sorgunun listelenen hali: okunamayan ya da artık geçerli olmayan sorgu `None`.
+fn listable(raw: &str) -> Option<ChartQuery> {
+    serde_json::from_str::<ChartQuery>(raw)
+        .ok()
+        .filter(|q| q.validate().is_ok())
 }
 
 impl Store {
@@ -197,10 +204,7 @@ impl Store {
         let mut out = Vec::new();
         for row in rows {
             let (id, name, raw, updated_at) = row?;
-            let Ok(query) = serde_json::from_str::<ChartQuery>(&raw) else {
-                continue;
-            };
-            if query.validate().is_ok() {
+            if let Some(query) = listable(&raw) {
                 out.push(SavedSearch {
                     id,
                     name,
@@ -253,8 +257,19 @@ impl Store {
                 id
             }
             None => {
-                let count: u32 =
-                    tx.query_row("SELECT count(*) FROM saved_searches", [], |r| r.get(0))?;
+                // Sınır listelenen kayıtları sayar: okunamayan satır listede görünmez ve
+                // silinemez, yer de tutmaz.
+                let count = {
+                    let mut stmt = tx.prepare_cached("SELECT query_json FROM saved_searches")?;
+                    let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
+                    let mut count = 0u32;
+                    for raw in rows {
+                        if listable(&raw?).is_some() {
+                            count += 1;
+                        }
+                    }
+                    count
+                };
                 if count >= MAX_SAVED_SEARCHES {
                     return Err(StoreError::InvalidInput("search.count"));
                 }
@@ -532,7 +547,7 @@ mod tests {
         let b = s.add_chart(c.id, &event("Evlilik", "2016-06-01")).unwrap();
         let untouched = s.add_chart(c.id, &event("Taşınma", "2018-06-01")).unwrap();
         s.set_chart_tags(a.id, &["Kariyer".into()]).unwrap();
-        // Var olmayan kimlik atlanır; yinelenen kimlik bir kez sayılmaz ama zarar vermez.
+        // Var olmayan kimlik atlanır.
         let tagged = s.tag_charts(&[a.id, b.id, 9_999], " Mars Koç ").unwrap();
         assert_eq!(tagged, 2);
         assert_eq!(s.chart(a.id).unwrap().tags, ["Kariyer", "Mars Koç"]);
@@ -649,6 +664,11 @@ mod tests {
         assert!(list
             .iter()
             .all(|x| x.name != "Arama 1" && x.name != "Arama 2"));
+        // Listelenmeyen satır yer tutmaz: sınır görünen kayıtları sayar.
+        s.save_search("Yeni 1", &query()).unwrap();
+        s.save_search("Yeni 2", &query()).unwrap();
+        assert_eq!(field(s.save_search("Fazla", &query())), "search.count");
+        assert_eq!(s.saved_searches().unwrap().len() as u32, MAX_SAVED_SEARCHES);
     }
 
     #[test]
@@ -664,5 +684,7 @@ mod tests {
             .unwrap();
         assert!(!json.contains("Gizli arama adı"));
         assert!(!json.contains("saved_search") && !json.contains("all_of"));
+        let csv = s.export_csv().unwrap();
+        assert!(!csv.contains("Gizli arama adı") && !csv.contains("all_of"));
     }
 }
