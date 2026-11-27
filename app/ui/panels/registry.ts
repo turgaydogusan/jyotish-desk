@@ -17,6 +17,7 @@ import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { MuhurtaDayPanel } from "./MuhurtaDayPanel";
 import { MuhurtaSearchPanel } from "./MuhurtaSearchPanel";
 import { PanchangPanel } from "./PanchangPanel";
+import { EventSearchPanel } from "./EventSearchPanel";
 import { PrashnaFactsPanel } from "./PrashnaFactsPanel";
 import { ShadbalaPanel } from "./ShadbalaPanel";
 import type { PanelDefinition } from "./types";
@@ -51,6 +52,8 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   muhurta_search: { titleKey: "panel.muhurta_search", component: MuhurtaSearchPanel },
   // Prashna (Plan 21).
   prashna_facts: { titleKey: "panel.prashna_facts", component: PrashnaFactsPanel },
+  // Olay araması (Plan 22).
+  event_search: { titleKey: "panel.event_search", component: EventSearchPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };
