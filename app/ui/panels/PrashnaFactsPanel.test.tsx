@@ -257,6 +257,74 @@ test("a pending question is sent when the panel goes away; a failed save is show
   }
 });
 
+test("a focus house chosen while a question save is still due is not undone by that save", async () => {
+  vi.useFakeTimers();
+  try {
+    const chartId = fixture().prashna.opened.chart_record.id;
+    // İlk kayıt yanıtı bekletilir: zamanlayıcı ateşlediğinde oturumdaki odak evi hâlâ eskidir.
+    let release: () => void = () => {};
+    vi.mocked(api.updatePrashna).mockImplementationOnce(
+      (_chartId, edit) =>
+        new Promise((resolve) => {
+          release = () => resolve(ok<PrashnaMeta>({ ...fixture().prashna.opened.prashna!, question: edit.question.trim(), focus_house: edit.focus_house }));
+        }),
+    );
+    renderPanel();
+    await act(async () => vi.advanceTimersByTime(0));
+    fireEvent.change(question(), { target: { value: "Taslak" } });
+    await act(async () => vi.advanceTimersByTime(QUESTION_SAVE_MS / 2));
+    fireEvent.change(focusSelect(), { target: { value: "10" } });
+    expect(focusSelect()).toHaveDisplayValue("10. ev");
+    await act(async () => vi.advanceTimersByTime(QUESTION_SAVE_MS));
+    await act(async () => release());
+    await act(async () => vi.advanceTimersByTime(QUESTION_SAVE_MS));
+    // Her kayıt seçilen evi taşır; sıradaki son kayıt eski evi geri yazmaz.
+    for (const call of vi.mocked(api.updatePrashna).mock.calls) expect(call).toEqual([chartId, { question: "Taslak", focus_house: 10 }]);
+    expect(screen.getByRole("status", { name: "kayıt" })).toHaveTextContent("10|Taslak");
+    expect(focusSelect()).toHaveDisplayValue("10. ev");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("a focus house change with a draft that is too long saves the house with the stored question", async () => {
+  renderPanel();
+  await screen.findByRole("region", { name: "Lordlar" });
+  const long = "ş".repeat(MAX_QUESTION_CHARS + 1);
+  fireEvent.change(question(), { target: { value: long } });
+  fireEvent.change(focusSelect(), { target: { value: "10" } });
+  await waitFor(() => expect(screen.getByRole("status", { name: "kayıt" })).toHaveTextContent(`10|${QUESTION}`));
+  expect(api.updatePrashna).toHaveBeenCalledTimes(1);
+  expect(api.updatePrashna).toHaveBeenCalledWith(fixture().prashna.opened.chart_record.id, { question: QUESTION, focus_house: 10 });
+  // Taslak ve uyarısı yerinde durur.
+  expect(question()).toHaveValue(long);
+  expect(question()).toHaveAccessibleDescription("2001 / 2000 karakter: soru çok uzun, kaydedilmedi.");
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("a failed focus house save keeps the chosen house and retry sends it again", async () => {
+  renderPanel();
+  await screen.findByRole("region", { name: "Lordlar" });
+  vi.mocked(api.updatePrashna).mockResolvedValueOnce({ status: "error", error: { code: "store_unavailable", params: {} } });
+  fireEvent.change(focusSelect(), { target: { value: "10" } });
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Kaydedilemedi: Danışan veritabanı kullanılamıyor.");
+  // Seçim geri atlamaz; kayıt eski evdedir ve satır bunu söyler.
+  expect(focusSelect()).toHaveDisplayValue("10. ev");
+  expect(screen.getByRole("status", { name: "kayıt" })).toHaveTextContent(`7|${QUESTION}`);
+  fireEvent.click(within(alert).getByRole("button", { name: "Yeniden dene" }));
+  await waitFor(() => expect(screen.getByRole("status", { name: "kayıt" })).toHaveTextContent(`10|${QUESTION}`));
+  expect(api.updatePrashna).toHaveBeenLastCalledWith(fixture().prashna.opened.chart_record.id, { question: QUESTION, focus_house: 10 });
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("the occupants cell is named by its own content: the graha buttons stay reachable by name", async () => {
+  renderPanel();
+  const table = within(await screen.findByRole("region", { name: "Kendralar ve odak evi" })).getByRole("table");
+  expect(table.querySelector("td[aria-label]")).toBeNull();
+  expect(within(table).getAllByRole("button").length).toBeGreaterThan(4);
+});
+
 test("an error keeps the question and the focus house; retry reads again and shows nothing from before the error", async () => {
   renderPanel();
   await screen.findByRole("region", { name: "Lordlar" });

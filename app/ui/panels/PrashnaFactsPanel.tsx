@@ -54,12 +54,15 @@ function Prashna({ opened, meta }: { opened: OpenedClient; meta: PrashnaMeta }) 
   const id = useId();
   const chartId = opened.chart_record.id;
   const [question, setQuestion] = useState(meta.question);
+  // Seçilen odak evi: kayıt sürerken ve kayıt düşse de seçim budur. Her kayıt bunu taşır;
+  // böylece sırada bekleyen bir soru kaydı yeni seçilen evi eskisiyle ezmez.
+  const [focus, setFocus] = useState(meta.focus_house);
   const [saveError, setSaveError] = useState<CommandError | null>(null);
   const [saved, setSaved] = useState(false);
   // Kayıtlar sırayla gider: eski metin yenisinin üstüne yazılmaz.
   const chain = useRef<Promise<unknown>>(Promise.resolve());
-  const latest = useRef({ question, focus: meta.focus_house, stored: meta.question });
-  latest.current = { question, focus: meta.focus_house, stored: meta.question };
+  const latest = useRef({ question, focus, stored: meta.question });
+  latest.current = { question, focus, stored: meta.question };
   const { setPrashna } = session;
 
   const save = (text: string, focus: number | null) => {
@@ -95,7 +98,9 @@ function Prashna({ opened, meta }: { opened: OpenedClient; meta: PrashnaMeta }) 
     [],
   );
 
-  const module = usePrashnaFacts(opened, meta.focus_house);
+  // Çok uzun taslak gönderilmez: odak evi kaydı ve yeniden deneme o sırada kayıtlı soruyla gider.
+  const sendable = tooLong ? meta.question : question;
+  const module = usePrashnaFacts(opened, focus);
   const facts = useLastData(module, String(chartId));
   const phase = usePanelLoadPhase(module.loading);
   const length = [...question.trim()].length;
@@ -125,7 +130,7 @@ function Prashna({ opened, meta }: { opened: OpenedClient; meta: PrashnaMeta }) 
         {saveError && (
           <p className="panel-error" role="alert">
             {t("prashna.saveFailed", { message: errorMessage(t, i18n, saveError) })}{" "}
-            <button type="button" onClick={() => void save(question, meta.focus_house)}>
+            <button type="button" onClick={() => void save(sendable, focus)}>
               {t("panel.retry")}
             </button>
           </p>
@@ -133,7 +138,15 @@ function Prashna({ opened, meta }: { opened: OpenedClient; meta: PrashnaMeta }) 
       </div>
       <div className="module-toolbar">
         <label htmlFor={`${id}-focus`}>{t("prashna.focus")}</label>
-        <select id={`${id}-focus`} value={meta.focus_house ?? ""} onChange={(e) => void save(question, e.target.value === "" ? null : Number(e.target.value))}>
+        <select
+          id={`${id}-focus`}
+          value={focus ?? ""}
+          onChange={(e) => {
+            const chosen = e.target.value === "" ? null : Number(e.target.value);
+            setFocus(chosen);
+            void save(sendable, chosen);
+          }}
+        >
           <option value="">{t("prashna.focusNone")}</option>
           {HOUSES.map((h) => (
             <option key={h} value={h}>
@@ -154,10 +167,6 @@ function Prashna({ opened, meta }: { opened: OpenedClient; meta: PrashnaMeta }) 
       )}
     </div>
   );
-}
-
-function natureLabel(t: (k: string) => string, o: Occupant): string {
-  return `${t(`grahaName.${o.graha}`)} (${t(`prashna.nature.${o.nature}`)})`;
 }
 
 function Occupants({ list }: { list: Occupant[] }) {
@@ -384,7 +393,7 @@ function LagnaSection({
                     <td>
                       <PinButton target={{ type: "sign", sign: s }}>{t(`sign.${s}`)}</PinButton>
                     </td>
-                    <td aria-label={h.grahas.length === 0 ? undefined : h.grahas.map((o) => natureLabel(t, o)).join(", ")}>
+                    <td>
                       <Occupants list={h.grahas} />
                     </td>
                   </tr>
