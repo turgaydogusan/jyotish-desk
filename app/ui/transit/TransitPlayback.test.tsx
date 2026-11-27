@@ -13,6 +13,7 @@ import { renderWithStores } from "../test/render";
 import { useSession, type Session } from "../session/store";
 import { useTransitControl, type Transit } from "./store";
 import { TransitStepper } from "./TransitStepper";
+import { TransitTablePanel } from "./TransitTablePanel";
 import { DEFAULT_PLAY_SPEED, PLAY_INTERVAL_MS, PLAY_SPEEDS } from "./useTransitPlayback";
 
 const J0 = fixture().transit.snapshot.jd_ut!;
@@ -145,6 +146,62 @@ test("a step error stops playback and is shown", async () => {
   expect(play()).toBeInTheDocument();
   await advance(10 * NORMAL);
   expect(steps()).toBe(2);
+});
+
+test("play after a step error retries the step, then plays on", async () => {
+  await renderReady();
+  fireEvent.click(play());
+  await advance(NORMAL);
+  vi.mocked(api.transitStep).mockResolvedValueOnce({ status: "error", error: { code: "invalid_transit_input", params: { field: "range" } } });
+  await advance(NORMAL);
+  expect(steps()).toBe(2);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+  fireEvent.click(play());
+  await advance(0);
+  expect(steps()).toBe(3);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(pause()).toBeInTheDocument();
+  await advance(NORMAL);
+  expect(steps()).toBe(4);
+});
+
+test("play after a step error that keeps failing stays stopped, never showing a dead pause", async () => {
+  await renderReady();
+  fireEvent.click(play());
+  await advance(NORMAL);
+  vi.mocked(api.transitStep).mockResolvedValue({ status: "error", error: { code: "invalid_transit_input", params: { field: "range" } } });
+  await advance(NORMAL);
+  fireEvent.click(play());
+  await advance(0);
+  expect(steps()).toBe(3);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+  expect(play()).toBeInTheDocument();
+  await advance(10 * NORMAL);
+  expect(steps()).toBe(3);
+});
+
+test("play after a transit error retries the read, then plays on", async () => {
+  await renderReady();
+  fireEvent.click(play());
+  vi.mocked(api.transitsAt).mockResolvedValueOnce({ status: "error", error: { code: "calc", params: { detail: "x" } } });
+  await advance(NORMAL);
+  expect(steps()).toBe(1);
+  fireEvent.click(play());
+  await advance(0);
+  expect(pause()).toBeInTheDocument();
+  await advance(NORMAL);
+  expect(steps()).toBe(2);
+});
+
+test("the shown moment is silent while playing and announces again when paused", async () => {
+  renderWithStores(<TransitTablePanel panel={{ id: "tt", kind: "transit_table", x: 0, y: 0, w: 6, h: 8, settings: {} }} />);
+  await advance(0);
+  const shown = () => document.querySelector(".transit-shown");
+  expect(shown()).not.toHaveAttribute("aria-live", "off");
+  fireEvent.click(play());
+  expect(shown()).toHaveAttribute("aria-live", "off");
+  fireEvent.click(pause());
+  expect(shown()).not.toHaveAttribute("aria-live", "off");
 });
 
 test("a transit error stops playback", async () => {

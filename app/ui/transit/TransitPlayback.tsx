@@ -1,15 +1,20 @@
 // Transit oynatma denetimleri (yol haritası Plan 26, §4.10): oynat ya da duraklat ve hız seçici.
 // Düğmenin adı durumu söyler ("Oynat" ya da "Duraklat"). Sistem "hareketi azalt" istiyorsa
 // denetimler yerine nedeni yazan bir satır çizilir; adım düğmeleri çalışmayı sürdürür.
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { PLAY_SPEEDS, useTransitPlayback, type PlaySpeed } from "./useTransitPlayback";
 import type { TransitStepper } from "./useTransitStepper";
 
-export function TransitPlayback({ stepper }: { stepper: TransitStepper }) {
+export function TransitPlayback({ stepper, onPlayingChange }: { stepper: TransitStepper; onPlayingChange?: (playing: boolean) => void }) {
   const { t } = useTranslation();
   const playback = useTransitPlayback(stepper);
   const id = useId();
+  const { playing } = playback;
+  useEffect(() => {
+    onPlayingChange?.(playing);
+    return () => onPlayingChange?.(false);
+  }, [playing, onPlayingChange]);
   if (!playback.available) {
     return (
       <p className="transit-stepper-note" role="note">

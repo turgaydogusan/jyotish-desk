@@ -17,7 +17,8 @@ function fieldError(error: CommandError, name: (field: string) => string): Comma
   return { ...error, params: { ...error.params, field: name(field) } };
 }
 
-export function TransitStepper() {
+/** `onPlayingChange`: oynatma başlayıp bitince bildirir (tarih seçici sürerken duyurmaz). */
+export function TransitStepper({ onPlayingChange }: { onPlayingChange?: (playing: boolean) => void } = {}) {
   const { t, i18n } = useTranslation();
   const stepper = useTransitStepper();
   const id = useId();
@@ -40,7 +41,7 @@ export function TransitStepper() {
         <button type="button" aria-disabled={blocked ? true : undefined} onClick={() => void stepper.step(1)}>
           {t("transitStep.forward")}
         </button>
-        <TransitPlayback stepper={stepper} />
+        <TransitPlayback stepper={stepper} onPlayingChange={onPlayingChange} />
       </div>
       {shownError && <PanelError error={shownError} onRetry={stepper.retry} />}
     </>

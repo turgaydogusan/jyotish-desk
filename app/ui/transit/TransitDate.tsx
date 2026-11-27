@@ -4,7 +4,8 @@ import { useId, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { browserTimeZone, formatMoment, localParts, useTransitControl } from "./store";
 
-export function TransitDate() {
+/** `quiet`: an sık değişirken (oynatma) gösterilen an ekran okuyucuya duyurulmaz. */
+export function TransitDate({ quiet = false }: { quiet?: boolean } = {}) {
   const { t, i18n } = useTranslation();
   const { at, view, setAt } = useTransitControl();
   const id = useId();
@@ -69,7 +70,7 @@ export function TransitDate() {
       >
         {t("transit.now")}
       </button>
-      <span className="transit-shown" role="status">
+      <span className="transit-shown" role="status" aria-live={quiet ? "off" : undefined}>
         {view ? t(isNow ? "transit.shownNow" : "transit.shown", { when: formatMoment(view.utc, i18n.language, zone) }) : ""}
       </span>
     </form>

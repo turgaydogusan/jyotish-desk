@@ -2,6 +2,7 @@
 // bilinmiyorsa natal ev gösterilmez (spec §7). Retro düz "R", düğümlerde yok (spec §2.3).
 // Nakshatra lordu Rust'ın tablosundan okunur (`nakshatraLord`; Plan 26). Tarih kutularının
 // altındaki adım denetimleri anı birim birim yürütür (`TransitStepper`).
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { signIndex } from "../chart/adapter";
 import { RETRO_MARK, showsRetro, type GrahaId } from "../chart/types";
@@ -21,6 +22,7 @@ export function TransitTablePanel(_: PanelProps) {
   const { t, i18n } = useTranslation();
   const { opened } = useSession();
   const transit = useTransit();
+  const [playing, setPlaying] = useState(false);
   usePanelLoadPhase(opened !== null && transit.loading);
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
   const unknown = timeUnknown(opened);
@@ -31,8 +33,8 @@ export function TransitTablePanel(_: PanelProps) {
   };
   return (
     <div className="transit-panel">
-      <TransitDate />
-      <TransitStepper />
+      <TransitDate quiet={playing} />
+      <TransitStepper onPlayingChange={setPlaying} />
       {transit.error ? (
         <PanelError error={transit.error} onRetry={transit.retry} />
       ) : (

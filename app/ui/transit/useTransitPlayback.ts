@@ -67,6 +67,18 @@ export function useTransitPlayback(stepper: TransitStepper): TransitPlayback {
     return () => clearTimeout(timer);
   }, [playing, settled, failed, reduced, frame, speed, step]);
 
-  const toggle = useCallback(() => setPlaying((on) => !on), []);
-  return { available: !reduced, playing: playing && !reduced, speed, setSpeed, toggle };
+  // Hata varken oynat: önce hata yeniden denenir (adım hatası adımı, transit hatası okumayı),
+  // sonra oynatma sürer. Yeniden deneme yine hata verirse oynatma kendiliğinden durur.
+  const { retry: retryStep, error: stepError } = stepper;
+  const { retry: retryTransit, error: transitError } = transit;
+  // Hata ya da "hareketi azalt" varken oynatma hiçbir zaman "sürüyor" görünmez.
+  const running = playing && !failed && !reduced;
+  const toggle = useCallback(() => {
+    if (!running) {
+      if (stepError !== null) retryStep();
+      if (transitError !== null) retryTransit();
+    }
+    setPlaying(!running);
+  }, [running, stepError, transitError, retryStep, retryTransit]);
+  return { available: !reduced, playing: running, speed, setSpeed, toggle };
 }
