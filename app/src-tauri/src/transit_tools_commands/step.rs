@@ -159,7 +159,15 @@ pub fn transit_step_body(request: &TransitStepRequest) -> Result<TransitStepView
         }
         resolve(&date.to_string(), &time, tz)?
     };
-    if !JD_UT_RANGE.contains(&jd_ut) {
+    // Her birimin sonucu aynı yıl aralığındadır (D23); aralık dışına çıkan adım hata verir.
+    let year: i32 = utc
+        .parse::<Timestamp>()
+        .map_err(|_| invalid("range"))?
+        .strftime("%Y")
+        .to_string()
+        .parse()
+        .map_err(|_| invalid("range"))?;
+    if !TOOLS_YEAR_RANGE.contains(&year) || !JD_UT_RANGE.contains(&jd_ut) {
         return Err(invalid("range"));
     }
     Ok(TransitStepView { jd_ut, utc })
@@ -391,6 +399,23 @@ mod tests {
         assert_eq!(
             field("0001-01-01T12:00:00Z", StepUnit::Week, -1, "UTC"),
             "range"
+        );
+        // Saat adımı da aynı yıl aralığındadır; son ve ilk saatin kendisi geçerlidir.
+        assert_eq!(
+            field("2999-12-31T23:30:00Z", StepUnit::Hour, 1, "UTC"),
+            "range"
+        );
+        assert_eq!(
+            field("0001-01-01T00:30:00Z", StepUnit::Hour, -1, "UTC"),
+            "range"
+        );
+        assert_eq!(
+            ok("2999-12-31T22:30:00Z", StepUnit::Hour, 1, "UTC"),
+            "2999-12-31T23:30:00Z"
+        );
+        assert_eq!(
+            ok("0001-01-01T01:30:00Z", StepUnit::Hour, -1, "UTC"),
+            "0001-01-01T00:30:00Z"
         );
         assert_eq!(
             ok("2998-06-15T12:00:00Z", StepUnit::Year, 1, "UTC"),
