@@ -78,8 +78,14 @@ pub struct ExportChart {
 /// gibi hassastır: yalnızca "notları dahil et" işaretliyse yazılır, değilse `null`'dır.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExportPrashna {
-    pub number: Option<u8>,
-    pub focus_house: Option<u8>,
+    /// 1..=108 ya da `null`. Okurken ham JSON değeridir: aralık dışı ya da sayı olmayan değer
+    /// dosya biçimi hatası değil kayıt hatasıdır (kaydın UUID'si ve `prashna` alanı) ve
+    /// değerin kendisi hata iletisine girmez.
+    #[serde(default)]
+    pub number: Value,
+    /// 1..=12 ya da `null`; `number` gibi okunur.
+    #[serde(default)]
+    pub focus_house: Value,
     pub question: Option<String>,
     pub created_at: String,
 }
@@ -213,6 +219,15 @@ const MAX_IMPORT_LABEL_CHARS: usize = 32;
 const MAX_OFFSET_SECS: u32 = 18 * 3600;
 
 /// Geçerli bir `format_ts` zaman damgası değilse `now`.
+/// Dosyadaki isteğe bağlı küçük sayı (prashna sayısı, odak evi): `null` ya da `u8`'e sığan
+/// negatif olmayan tamsayı. Başka her JSON değeri (kesirli sayı, dizgi, taşan sayı) `None`'dır.
+fn small_number(value: &Value) -> Option<Option<u8>> {
+    match value {
+        Value::Null => Some(None),
+        other => other.as_u64().and_then(|n| u8::try_from(n).ok()).map(Some),
+    }
+}
+
 fn ts_or(ts: &str, now: &str) -> String {
     match ts.parse::<atlas::Timestamp>() {
         Ok(t) => format_ts(t),
@@ -261,8 +276,8 @@ impl Store {
                     created_at: ch.created_at.clone(),
                     updated_at: ch.updated_at.clone(),
                     prashna: load_prashna(&self.conn, ch.id)?.map(|p| ExportPrashna {
-                        number: p.number,
-                        focus_house: p.focus_house,
+                        number: Value::from(p.number),
+                        focus_house: Value::from(p.focus_house),
                         question: opts.include_notes.then_some(p.question),
                         created_at: p.created_at,
                     }),
@@ -440,8 +455,11 @@ impl Store {
                 }
                 if let Some(p) = &ch.prashna {
                     // Geçersiz sayı, odak evi ya da soru kaydın UUID'siyle reddedilir.
-                    check_number(p.number).map_err(|_| record("prashna"))?;
-                    check_focus_house(p.focus_house).map_err(|_| record("prashna"))?;
+                    let number = small_number(&p.number).ok_or_else(|| record("prashna"))?;
+                    let focus_house =
+                        small_number(&p.focus_house).ok_or_else(|| record("prashna"))?;
+                    check_number(number).map_err(|_| record("prashna"))?;
+                    check_focus_house(focus_house).map_err(|_| record("prashna"))?;
                     let question = clean_question(p.question.as_deref().unwrap_or(""))
                         .map_err(|_| record("prashna"))?;
                     insert_prashna(
@@ -449,8 +467,8 @@ impl Store {
                         chart_id,
                         &PrashnaMeta {
                             question,
-                            number: p.number,
-                            focus_house: p.focus_house,
+                            number,
+                            focus_house,
                             created_at: ts_or(&p.created_at, &now),
                         },
                     )?;

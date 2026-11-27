@@ -560,19 +560,107 @@ mod tests {
         assert_eq!((meta.question.as_str(), meta.number), ("", Some(10)));
 
         // Geçersiz değerler kaydın UUID'siyle ve alan adıyla reddedilir; hiçbir şey yazılmaz.
+        // `u8`'e sığmayan, negatif, kesirli ya da sayı olmayan değer de dosya biçimi hatası
+        // değil kayıt hatasıdır: ileti değeri yinelemez.
         for (from, to) in [
             ("\"number\": 10", "\"number\": 109"),
+            ("\"number\": 10", "\"number\": 0"),
+            ("\"number\": 10", "\"number\": 300"),
+            ("\"number\": 10", "\"number\": -1"),
+            ("\"number\": 10", "\"number\": 10.5"),
+            ("\"number\": 10", "\"number\": \"gizli metin\""),
             ("\"focus_house\": 4", "\"focus_house\": 13"),
+            ("\"focus_house\": 4", "\"focus_house\": 70000"),
+            ("\"focus_house\": 4", "\"focus_house\": [4]"),
         ] {
             assert!(plain.contains(from), "{from}");
             let mut v = store();
             match v.import_json(&plain.replace(from, to)) {
-                Err(StoreError::ImportRecord { item, field }) => {
+                Err(e @ StoreError::ImportRecord { .. }) => {
+                    assert!(!e.to_string().contains("gizli"), "{to}");
+                    let StoreError::ImportRecord { item, field } = e else {
+                        unreachable!()
+                    };
                     assert_eq!((item.as_str(), field), (chart.uuid.as_str(), "prashna"));
                 }
                 other => panic!("{to}: {other:?}"),
             }
             assert!(v.list_clients(10).unwrap().is_empty());
         }
+        // Sayısı ve odak evi hiç yazılmamış kayıt geçerlidir (zaman prashnası, ev seçilmemiş).
+        let bare = plain
+            .replace("\"number\": 10,", "")
+            .replace("\"focus_house\": 4,", "");
+        assert!(!bare.contains("\"number\"") && !bare.contains("\"focus_house\""));
+        let mut w = store();
+        w.import_json(&bare).unwrap();
+        let id: u32 = w
+            .conn
+            .query_row(
+                "SELECT id FROM charts WHERE uuid = ?1",
+                params![chart.uuid],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let meta = w.prashna_meta(id).unwrap().unwrap();
+        assert_eq!((meta.number, meta.focus_house), (None, None));
+    }
+
+    /// Projenin ilk şema göçü: sürüm 1 dosyası `Store::open` ile sürüm 2'ye çıkar ve içindeki
+    /// danışan, harita, not ve arama dizini olduğu gibi durur.
+    #[test]
+    fn a_version_one_file_is_upgraded_in_place_and_keeps_its_records() {
+        let dir = std::env::temp_dir().join(format!("jd-store-upgrade-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("db.sqlite");
+        let (client, chart, note) = {
+            let mut s = Store::open(&path).unwrap();
+            let (client, chart) = s.create_client(&new_client("Deneme Kaydı")).unwrap();
+            let note = s
+                .add_note(client.id, Some(chart.id), "göçten önceki not")
+                .unwrap();
+            (client, chart, note)
+        };
+        // Sürüm 2 yalnızca `prashna` tablosunu ekler: tabloyu atıp sürümü 1'e çekmek dosyayı
+        // sürüm 1'in bıraktığı duruma getirir.
+        {
+            let c = Connection::open(&path).unwrap();
+            c.execute_batch("DROP TABLE prashna; PRAGMA user_version = 1;")
+                .unwrap();
+            let tables: u32 = c
+                .query_row(
+                    "SELECT count(*) FROM sqlite_master WHERE name = 'prashna'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(tables, 0);
+        }
+        let mut s = Store::open(&path).unwrap();
+        assert_eq!(s.schema_version().unwrap(), 2);
+        assert_eq!(s.client(client.id).unwrap(), client);
+        let kept = s.chart(chart.id).unwrap();
+        assert_eq!(kept, chart);
+        assert_eq!(kept.resolved.jd_ut, chart.resolved.jd_ut);
+        assert_eq!(s.notes(client.id, 10).unwrap(), vec![note]);
+        assert_eq!(s.search_clients("Deneme", 10).unwrap().len(), 1);
+        assert_eq!(s.search_clients("göçten", 10).unwrap().len(), 1);
+        // Eski haritalar prashna değildir; yeni tablo çalışır.
+        assert_eq!(s.prashna_meta(chart.id).unwrap(), None);
+        assert_eq!(s.open_client(client.id, None).unwrap().prashna, None);
+        let (_, asked) = s
+            .create_prashna(&new_prashna(Some(client.id)), "Prashna")
+            .unwrap();
+        assert_eq!(
+            s.prashna_meta(asked.id).unwrap().unwrap().question,
+            QUESTION
+        );
+        // Yeniden açılış bir şey değiştirmez.
+        drop(s);
+        let s = Store::open(&path).unwrap();
+        assert_eq!(s.schema_version().unwrap(), 2);
+        assert_eq!(s.charts_of(client.id).unwrap().len(), 2);
+        drop(s);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
