@@ -265,8 +265,9 @@ mod tests {
         // Harita genel varsayılan ayarların kopyasını alır ve danışanın haritaları arasındadır.
         assert_eq!(s.charts_of(client.id).unwrap().len(), 2);
         assert!(s.client(client.id).unwrap().updated_at >= chart.created_at);
-        // Şema sürümü 2'dir ve `kind` değişmemiştir.
-        assert_eq!((s.schema_version().unwrap(), SCHEMA_VERSION), (2, 2));
+        // Veritabanı güncel şema sürümündedir (prashna tablosu sürüm 2 ile geldi) ve `kind`
+        // değişmemiştir.
+        assert_eq!(s.schema_version().unwrap(), SCHEMA_VERSION);
     }
 
     #[test]
@@ -621,12 +622,14 @@ mod tests {
                 .unwrap();
             (client, chart, note)
         };
-        // Sürüm 2 yalnızca `prashna` tablosunu ekler: tabloyu atıp sürümü 1'e çekmek dosyayı
-        // sürüm 1'in bıraktığı duruma getirir.
+        // Sürüm 2 yalnızca `prashna`, sürüm 3 yalnızca `saved_searches` tablosunu ekler:
+        // tabloları atıp sürümü 1'e çekmek dosyayı sürüm 1'in bıraktığı duruma getirir.
         {
             let c = Connection::open(&path).unwrap();
-            c.execute_batch("DROP TABLE prashna; PRAGMA user_version = 1;")
-                .unwrap();
+            c.execute_batch(
+                "DROP TABLE prashna; DROP TABLE saved_searches; PRAGMA user_version = 1;",
+            )
+            .unwrap();
             let tables: u32 = c
                 .query_row(
                     "SELECT count(*) FROM sqlite_master WHERE name = 'prashna'",
@@ -637,7 +640,7 @@ mod tests {
             assert_eq!(tables, 0);
         }
         let mut s = Store::open(&path).unwrap();
-        assert_eq!(s.schema_version().unwrap(), 2);
+        assert_eq!(s.schema_version().unwrap(), SCHEMA_VERSION);
         assert_eq!(s.client(client.id).unwrap(), client);
         let kept = s.chart(chart.id).unwrap();
         assert_eq!(kept, chart);
@@ -658,7 +661,7 @@ mod tests {
         // Yeniden açılış bir şey değiştirmez.
         drop(s);
         let s = Store::open(&path).unwrap();
-        assert_eq!(s.schema_version().unwrap(), 2);
+        assert_eq!(s.schema_version().unwrap(), SCHEMA_VERSION);
         assert_eq!(s.charts_of(client.id).unwrap().len(), 2);
         drop(s);
         std::fs::remove_dir_all(&dir).unwrap();

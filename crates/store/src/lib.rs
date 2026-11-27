@@ -3,6 +3,7 @@
 //! saklanır. Hesap yapmaz: `jyotish-core`'dan yalnızca tipleri kullanır.
 
 pub mod birth;
+mod chart_search;
 mod charts;
 mod compat;
 mod csv;
@@ -22,6 +23,9 @@ pub mod settings;
 pub mod view_state;
 
 pub use birth::{parse_birth, resolve_birth, resolve_parsed, ParsedBirth};
+pub use chart_search::{
+    SavedSearch, SearchRow, MAX_SAVED_SEARCHES, MAX_TAG_CHARTS, SEARCH_PAGE_CHARTS,
+};
 pub use charts::{MAX_LIST, MAX_NAME_CHARS};
 pub use compat::ChartBrief;
 pub use csv::CSV_COLUMNS;

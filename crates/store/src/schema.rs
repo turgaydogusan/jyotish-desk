@@ -1,6 +1,6 @@
 //! SQLite şeması ve göçler (spec §5). Sürüm `PRAGMA user_version`'da tutulur
 //! (`rusqlite_migration`). Göçler yalnızca eklenir; yayımlanmış bir göç değiştirilmez.
-//! Sürüm 2 (Plan 21) `prashna` yan tablosunu ekler.
+//! Sürüm 2 (Plan 21) `prashna` yan tablosunu, sürüm 3 (Plan 22) `saved_searches` tablosunu ekler.
 
 use rusqlite_migration::{Migrations, M};
 
@@ -121,10 +121,24 @@ CREATE TABLE prashna (
 );
 ";
 
-const MIGRATION_LIST: &[M<'static>] = &[M::up(V1), M::up(V2)];
+/// Göç 3: kayıtlı aramalar (ileri modüller spec'i §12.1). Bir kayıt yalnızca bir ad ve sorgunun
+/// JSON'udur; sonuç listesi ve sayısı saklanmaz. Adın tekliği (büyük/küçük harf ayırmadan)
+/// Rust'ta sağlanır (SQLite `NOCASE` yalnızca ASCII katlar).
+const V3: &str = "
+CREATE TABLE saved_searches (
+    id         INTEGER PRIMARY KEY,
+    uuid       TEXT NOT NULL UNIQUE,
+    name       TEXT NOT NULL,
+    query_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+";
+
+const MIGRATION_LIST: &[M<'static>] = &[M::up(V1), M::up(V2), M::up(V3)];
 
 /// Bu sürümün şema sürümü (`MIGRATION_LIST.len()`).
-pub const SCHEMA_VERSION: usize = 2;
+pub const SCHEMA_VERSION: usize = 3;
 
 pub(crate) const MIGRATIONS: Migrations<'static> = Migrations::from_slice(MIGRATION_LIST);
 
@@ -163,7 +177,9 @@ mod tests {
                 'u', 2451545.0, 0, '', '[]', 'v', '{}', '{}', 't', 't');",
         )
         .unwrap();
-        MIGRATIONS.to_latest(&mut conn).unwrap();
+        Migrations::from_slice(&MIGRATION_LIST[..2])
+            .to_latest(&mut conn)
+            .unwrap();
         assert_eq!(version(&conn), 2);
         let count = |c: &rusqlite::Connection, sql: &str| -> i64 {
             c.query_row(sql, [], |r| r.get(0)).unwrap()
@@ -193,5 +209,48 @@ mod tests {
         // Harita silinince satır da silinir.
         conn.execute("DELETE FROM charts WHERE id = 7", []).unwrap();
         assert_eq!(count(&conn, "SELECT count(*) FROM prashna"), 0);
+    }
+
+    /// Sürüm 2 veritabanı açılışta sürüm 3'e çıkar: haritalar ve prashna satırları durur,
+    /// `saved_searches` boş gelir.
+    #[test]
+    fn a_version_two_database_gains_the_saved_searches_table() {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", true).unwrap();
+        Migrations::from_slice(&MIGRATION_LIST[..2])
+            .to_latest(&mut conn)
+            .unwrap();
+        conn.execute_batch(
+            "INSERT INTO clients (id, uuid, name, created_at, updated_at)
+             VALUES (1, 'c', 'Deneme', 't', 't');
+             INSERT INTO charts (id, uuid, client_id, label, kind, date, time_certainty,
+                place_name, country, admin1, lat, lon, tz_kind, birth_notes, resolved_utc,
+                resolved_jd_ut, resolved_offset_secs, resolved_abbrev, resolved_warnings_json,
+                tzdb_version, calc_settings_json, view_state_json, created_at, updated_at)
+             VALUES (7, 'h', 1, '', 'Event', '2000-01-01', 'Exact', '', '', '', 0, 0, 'Lmt', '',
+                'u', 2451545.0, 0, '', '[]', 'v', '{}', '{}', 't', 't');
+             INSERT INTO prashna (chart_id, number, created_at) VALUES (7, 54, 't');",
+        )
+        .unwrap();
+        MIGRATIONS.to_latest(&mut conn).unwrap();
+        let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+        assert_eq!(count("PRAGMA user_version"), 3);
+        assert_eq!(count("SELECT count(*) FROM charts"), 1);
+        assert_eq!(count("SELECT count(*) FROM prashna"), 1);
+        assert_eq!(count("SELECT count(*) FROM saved_searches"), 0);
+        // UUID tektir; ad, sorgu ve damgalar zorunludur.
+        let insert = |values: &str| {
+            conn.execute(
+                &format!(
+                    "INSERT INTO saved_searches (uuid, name, query_json, created_at, updated_at)
+                     VALUES {values}"
+                ),
+                [],
+            )
+        };
+        assert_eq!(insert("('u1', 'Ad', '{}', 't', 't')"), Ok(1));
+        assert!(insert("('u1', 'Başka', '{}', 't', 't')").is_err());
+        assert!(insert("('u2', NULL, '{}', 't', 't')").is_err());
+        assert!(insert("('u3', 'Ad', NULL, 't', 't')").is_err());
     }
 }
