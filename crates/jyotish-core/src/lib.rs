@@ -11,6 +11,7 @@
 //! Arama (Alt proje 3.9): `search` (harita araması sorgusu ve hafif yol, olay araması).
 
 pub mod ashtakavarga;
+pub mod avastha;
 mod chart;
 mod combustion;
 pub mod dasha;
