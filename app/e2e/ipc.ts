@@ -44,6 +44,8 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
       // kaydı gerçek bir gidiş dönüş görür.
       let prefs = fixture.prefs.prefs;
       let muhurtaFilters: unknown[] = [];
+      // Kayıtlı aramalar bellek içi: yalnızca ad ve sorgu.
+      let savedSearches: { id: number; name: string; query: unknown; updated_at: string }[] = [];
       // Bu oturumda kurulan prashna haritaları: harita kimliği → açılan kayıt.
       const prashnas: Record<number, typeof ayse> = {};
       const chartOf = (clientId: number) => opened[clientId].chart_record.id;
@@ -191,6 +193,39 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
           facts.focus.house = focus;
           return facts;
         },
+        // Arama (Plan 22): sonuçlar fikstürden. Harita araması kapsamın prashna seçimine göre
+        // fikstürün iki sayfasından birini döner (arayüz hesap yapmaz); etiketleme ve kayıtlı
+        // aramalar bellek içidir.
+        chart_search: (args) => {
+          const query = args.query as { scope: { exclude_prashna: boolean } };
+          const page = structuredClone(query.scope.exclude_prashna ? fixture.search.page : fixture.search.page_all_charts);
+          page.search_id = args.searchId as number;
+          return page;
+        },
+        chart_search_cancel: () => null,
+        tag_charts: (args) => {
+          const request = args.request as { chart_ids: number[]; tag: string };
+          for (const id of request.chart_ids) tags[id] = [...new Set([...(tags[id] ?? []), request.tag.trim()])];
+          return request.chart_ids.length;
+        },
+        list_saved_searches: () => savedSearches,
+        save_search: (args) => {
+          const request = args.request as { name: string; query: unknown };
+          const existing = savedSearches.find((x) => x.name.toLowerCase() === request.name.toLowerCase());
+          if (existing) {
+            existing.query = request.query;
+            return existing;
+          }
+          const saved = { id: savedSearches.length + 1, name: request.name, query: request.query, updated_at: stamp() };
+          savedSearches.push(saved);
+          return saved;
+        },
+        delete_saved_search: (args) => {
+          savedSearches = savedSearches.filter((x) => x.id !== args.searchId);
+          return null;
+        },
+        event_search: () => fixture.search.events,
+        event_search_cancel: () => null,
         print_window: () => null,
         // Güncelleme: sahte yayın; ağ yoktur. Kurulum yalnızca denetimin bildirdiği sürümü kabul eder.
         app_info: () => ({ version: "0.9.0", updaterConfigured: true }),

@@ -1061,3 +1061,146 @@ test("prashna without an open client: the palette command, a searched place, a t
   await expect(page.getByRole("region", { name: "Prashna olguları" })).toHaveCount(0);
   await expect(page.locator("body")).not.toBeFocused();
 });
+
+test("chart search: Cmd+Shift+F, an example condition, the result list, a saved search, tagging the results and opening a chart", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  type SearchCall = { query: { all_of: { cond: Record<string, unknown>; negate: boolean }[]; scope: { tags: string[]; kind: string | null; exclude_prashna: boolean } }; searchId: number; cursor: unknown };
+  const searchCalls = async () => (await ipcCalls(page, "chart_search")) as SearchCall[];
+
+  await page.keyboard.press("Meta+Shift+f");
+  const sheet = page.getByRole("dialog", { name: "Haritalarda ara" });
+  // Koşul yokken tek eylem örnek koşuldur ve arama nedenini söyleyerek kullanılamaz.
+  await expect(sheet.getByRole("button", { name: "Örnek koşul ekle" })).toBeFocused();
+  await expect(sheet.getByRole("button", { name: "Ara", exact: true })).toHaveAttribute("aria-disabled", "true");
+  expect(await ipcCalls(page, "list_saved_searches")).toHaveLength(1);
+  await page.keyboard.press("Enter");
+  const row = sheet.getByRole("group", { name: "Koşul 1" });
+  await expect(row.getByLabel("Tür")).toHaveValue("GrahaInSign");
+  // Koşul klavyeyle kurulur: Ay Terazi'de; ikinci koşul "değil" ile.
+  await row.getByText("Burçlar · 1 seçili").click();
+  await row.getByRole("checkbox", { name: "Yen" }).uncheck();
+  await row.getByRole("checkbox", { name: "Ter" }).check();
+  await sheet.getByRole("button", { name: "Koşul ekle" }).click();
+  const second = sheet.getByRole("group", { name: "Koşul 2" });
+  await second.getByLabel("Tür").selectOption("GrahaInHouse");
+  await expect(sheet.getByRole("button", { name: "Ara", exact: true })).toHaveAttribute("aria-disabled", "true");
+  await second.getByText("Evler · seçilmedi").click();
+  await second.getByRole("checkbox", { name: "1", exact: true }).check();
+  await second.getByRole("checkbox", { name: "10", exact: true }).check();
+  await second.getByRole("checkbox", { name: "değil" }).check();
+  expect(await searchCalls()).toHaveLength(0);
+
+  await sheet.getByRole("button", { name: "Ara", exact: true }).click();
+  await expect(sheet.locator("[data-summary]")).toHaveText("1 eşleşme / 2 harita tarandı");
+  const hit = sheet.getByRole("button", { name: "Örnek Danışan, etiketsiz harita: haritayı aç" });
+  await expect(hit).toContainText("Ay Ter 5. ev; değil: Gü 1/10. ev");
+  const calls = await searchCalls();
+  expect(calls).toHaveLength(1);
+  expect(calls[0].cursor).toBeNull();
+  expect(calls[0].query).toEqual(FIXTURE.search.query);
+
+  // Arama saklanır: kayıt yalnızca ad ve sorgu taşır.
+  await sheet.getByRole("textbox", { name: "Arama adı" }).fill("Ay Terazi");
+  await sheet.getByRole("button", { name: "Aramayı sakla" }).click();
+  await expect(sheet.getByRole("combobox", { name: "Kayıtlı arama" }).locator("option:checked")).toHaveText("Ay Terazi");
+  const saved = (await ipcCalls(page, "save_search")).at(-1) as { request: Record<string, unknown> };
+  expect(Object.keys(saved.request).sort()).toEqual(["name", "query"]);
+
+  // Sonuçları etiketle: onay etiketi ve harita sayısını söyler; odak "Vazgeç"te başlar.
+  await sheet.getByRole("textbox", { name: "Sonuçları etiketle" }).fill("Ay Terazi");
+  await sheet.getByRole("button", { name: "Etiketle", exact: true }).click();
+  const confirm = page.getByRole("dialog", { name: "Sonuçları etiketle" });
+  await expect(confirm).toContainText("“Ay Terazi” etiketi 1 haritaya eklenecek.");
+  await expect(confirm.getByRole("button", { name: "Vazgeç" })).toBeFocused();
+  expect(await ipcCalls(page, "tag_charts")).toHaveLength(0);
+  await confirm.getByRole("button", { name: "1 haritayı etiketle" }).click();
+  await expect(sheet.getByText("“Ay Terazi” etiketi 1 haritaya eklendi.")).toBeVisible();
+  expect(await ipcCalls(page, "tag_charts")).toEqual([{ request: { chart_ids: [FIXTURE.search.page.hits[0].chart_id], tag: "Ay Terazi" } }]);
+
+  // Kapsam değişince liste önceki aramaya aittir; yeni arama prashna haritalarını da tarar.
+  await sheet.getByRole("checkbox", { name: "Prashna haritalarını dışla" }).uncheck();
+  await expect(sheet.getByRole("note")).toContainText("Koşullar değişti; liste önceki aramaya ait.");
+  await sheet.getByRole("button", { name: "Ara", exact: true }).click();
+  await expect(sheet.locator("[data-summary]")).toHaveText(`${FIXTURE.search.page_all_charts.hits.length} eşleşme / 4 harita tarandı`);
+  await expect(sheet.getByRole("note")).toHaveCount(0);
+
+  // Enter sonucu açar: yüzey kapanır, harita açılır.
+  await sheet.getByRole("button", { name: "Örnek Danışan, etiketsiz harita: haritayı aç" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await ipcCalls(page, "open_client")).toEqual([{ clientId: 1, chartId: FIXTURE.search.page.hits[0].chart_id }]);
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+
+  // Paletten yeniden açılınca koşullar yerindedir, sonuçlar değil; Esc kapatır ve odak gövdeye düşmez.
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Komut paleti" });
+  await palette.getByRole("combobox").fill("haritalarda");
+  await palette.getByRole("option", { name: /Haritalarda ara/ }).click();
+  await expect(sheet.getByRole("group", { name: /^Koşul \d$/ })).toHaveCount(2);
+  await expect(sheet.getByText(/^Koşulları kurup “Ara”ya basın\./)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+});
+
+test("event search: the panel from the palette, the event list in the chart's time zone, and a row that moves the transit date", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  const toggle = async () => {
+    await page.keyboard.press("Meta+k");
+    const palette = page.getByRole("dialog", { name: "Komut paleti" });
+    await palette.getByRole("combobox").fill("olay ara");
+    await palette.getByRole("option", { name: /Olay araması panelini aç\/kapat/ }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  };
+  type EventCall = { spec: { from_date: string | null; to_date: string | null; place: unknown; kinds: string[]; grahas: string[]; natal: unknown }; searchId: number };
+  const eventCalls = async () => (await ipcCalls(page, "event_search")) as EventCall[];
+
+  await toggle();
+  const panel = page.getByRole("region", { name: "Olay araması" });
+  await expect(panel).toBeFocused();
+  // Panel açılınca arama yapılmaz; yer açık haritanın yeridir.
+  expect(await eventCalls()).toHaveLength(0);
+  await expect(panel.getByRole("combobox", { name: "Yer" })).toHaveValue("chart");
+  await expect(panel.getByText(/^Türleri, grahaları ve aralığı seçip/)).toBeVisible();
+  await panel.getByRole("checkbox", { name: "Yeni ay" }).check();
+  await panel.getByRole("checkbox", { name: "Doğum boylamına geliş" }).check();
+  await panel.getByLabel("Başlangıç tarihi").fill("2026-11-26");
+  await panel.getByLabel("Bitiş tarihi").fill("2027-03-31");
+  await panel.getByRole("button", { name: "Ara", exact: true }).click();
+  const total = FIXTURE.search.events.events.length;
+  await expect(panel.locator("[data-summary]")).toHaveText(`${total} olay · 2026-11-26 – 2027-03-31`);
+  const table = panel.getByRole("table", { name: "Olaylar" });
+  await expect(table.locator("tbody tr")).toHaveCount(total);
+  await expect(table.locator("tbody tr").first().locator("td")).toHaveText(["Yeni ay", "Akr · Jyeshtha"]);
+  const calls = await eventCalls();
+  expect(calls).toHaveLength(1);
+  expect(calls[0].spec).toMatchObject({
+    from_date: "2026-11-26",
+    to_date: "2027-03-31",
+    place: FIXTURE.muhurta.place,
+    kinds: ["SignIngress", "StationRetrograde", "StationDirect", "NewMoon", "TransitToNatal"],
+    grahas: ["Jupiter", "Saturn", "Rahu"],
+  });
+  // Doğum verisi yalnızca açık harita isteyen tür seçiliyken gider.
+  expect(calls[0].spec.natal).toMatchObject({ jd_ut: FIXTURE.opened.chart.jd_ut, time_known: true });
+
+  // Satırdaki an transit tarihini o ana götürür; liste ve odak yerinde durur.
+  const before = (await ipcCalls(page, "transits_at")).length;
+  const first = table.locator("tbody tr").first().getByRole("button");
+  await first.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(async () => (await ipcCalls(page, "transits_at")).length).toBe(before + 1);
+  const moved = (await ipcCalls(page, "transits_at")).at(-1) as { at: { Jd: number } };
+  expect(moved.at).toEqual({ Jd: FIXTURE.search.events.events[0].event.jd_ut });
+  await expect(table.locator("tbody tr")).toHaveCount(total);
+  await expect(first).toBeFocused();
+
+  // Panel aynı komutla kalkar; odak gövdeye düşmez.
+  await toggle();
+  await expect(panel).toHaveCount(0);
+  expect(await page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body)).toBe(true);
+});
