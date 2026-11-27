@@ -3,7 +3,7 @@
 // metni yoktur. Koşullar panelin ayarıdır (düzenle birlikte saklanır) ve adlandırılıp
 // kaydedilebilir; kayıt yer, tarih ve kişi taşımaz. Pencereler `muhurta_search`'ten gelir;
 // burada hesap yoktur (C4). Satırdaki başlangıç, transit tarihini o ana götürür.
-import { useId, useLayoutEffect, useRef, useState, type FormEvent, type RefObject } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import type { CommandError, MuhurtaCriteria, MuhurtaWindowView, OpenedClient, SavedMuhurtaFilter } from "../bindings";
@@ -27,6 +27,8 @@ import type { PanelProps } from "./types";
 
 /** Listede çizilen en çok pencere; fazlası sayılır ve süzgecin daraltılması önerilir. */
 export const MAX_SHOWN_WINDOWS = 500;
+/** Rust `store::MAX_MUHURTA_FILTERS`: saklanan süzgeç sayısının üst sınırı (kayıt Rust'ta da denetlenir). */
+export const MAX_SAVED_FILTERS = 32;
 const TITHIS = Array.from({ length: 30 }, (_, i) => i + 1);
 const NAKSHATRAS = Array.from({ length: 27 }, (_, i) => i + 1);
 
@@ -87,10 +89,20 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
   const setCriteria = (patch: Partial<MuhurtaCriteria>) => setPanelSettings(panel.id, { criteria: { ...criteria, ...patch } });
   const unknown = timeUnknown(opened);
   const ready = place.place !== null;
+  // Aramanın girdisi: liste, başlatıldığı girdiye aittir. Girdi arama sürerken değişirse arama
+  // durdurulur (yeni sayfalar artık görünen forma uymaz); değişmiş form bir satırla söylenir.
+  const queryKey = JSON.stringify([place.place === null ? null : muhurtaPlace(place.place), from, to, criteria]);
+  const [searchedKey, setSearchedKey] = useState<string | null>(null);
+  const stale = search.status !== "idle" && searchedKey !== null && searchedKey !== queryKey;
+  const { stop } = search;
+  useEffect(() => {
+    if (running && stale) stop();
+  }, [running, stale, stop]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (place.place === null || running) return;
+    setSearchedKey(queryKey);
     search.start(
       { from_date: from === "" ? null : from, to_date: to === "" ? null : to, place: muhurtaPlace(place.place), criteria, natal: natalMoon(opened) },
       opened.chart.meta.settings,
@@ -196,7 +208,7 @@ function Search({ panel, opened }: { panel: Panel; opened: OpenedClient }) {
         )}
       </form>
       {search.error && <PanelError error={search.error} onRetry={() => searchButton.current?.click()} />}
-      <Results search={search} />
+      <Results search={search} stale={stale} />
     </div>
   );
 }
@@ -229,7 +241,11 @@ function SavedFilters({ criteria, onLoad }: { criteria: MuhurtaCriteria; onLoad(
   // istemez); kayıttan sonra Rust'ın döndürdüğü kanonik liste gösterilir.
   const loaded = useModule("muhurta-filters", () => api.loadMuhurtaFilters());
   const [written, setWritten] = useState<SavedMuhurtaFilter[] | null>(null);
-  const filters = written ?? loaded.data ?? [];
+  // Kayıt listenin tamamını yazar: saklanan liste okunmadan (okunurken ya da okunamadıysa)
+  // kaydetmek ve silmek kullanılamaz; yoksa görülmemiş liste tek öğeyle ezilirdi.
+  const stored = written ?? loaded.data;
+  const known = stored !== null;
+  const filters = stored ?? [];
   const [selected, setSelected] = useState("");
   const [name, setName] = useState("");
   const [failed, setFailed] = useState<CommandError | null>(null);
@@ -237,7 +253,13 @@ function SavedFilters({ criteria, onLoad }: { criteria: MuhurtaCriteria; onLoad(
   const [busy, setBusy] = useState(false);
   const select = useRef<HTMLSelectElement>(null);
 
-  const same = (a: string, b: string) => a.trim().toLocaleLowerCase(i18n.language) === b.trim().toLocaleLowerCase(i18n.language);
+  // Store'un karşılaştırmasıyla aynı (`name.trim().to_lowercase()`): arayüz dilinden bağımsız.
+  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const trimmed = name.trim();
+  const existing = filters.findIndex((f) => same(f.name, trimmed));
+  const unread = known ? null : loaded.error ? "filtersUnread" : "filtersLoading";
+  const saveWhy = unread ?? (trimmed === "" ? "nameNeeded" : existing < 0 && filters.length >= MAX_SAVED_FILTERS ? "capReached" : null);
+  const removeWhy = unread ?? (selected === "" ? "selectToRemove" : null);
   const write = async (next: SavedMuhurtaFilter[], select_: string) => {
     setBusy(true);
     const r = await api.saveMuhurtaFilters(next);
@@ -252,14 +274,12 @@ function SavedFilters({ criteria, onLoad }: { criteria: MuhurtaCriteria; onLoad(
     return true;
   };
   const save = () => {
-    const trimmed = name.trim();
-    if (trimmed === "" || busy) return;
+    if (saveWhy !== null || busy) return;
     const entry = { name: trimmed, criteria };
-    const at = filters.findIndex((f) => same(f.name, trimmed));
-    void write(at < 0 ? [...filters, entry] : filters.map((f, i) => (i === at ? entry : f)), trimmed);
+    void write(existing < 0 ? [...filters, entry] : filters.map((f, i) => (i === existing ? entry : f)), trimmed);
   };
   const remove = async () => {
-    if (selected === "" || busy) return;
+    if (removeWhy !== null || busy) return;
     const done = await write(
       filters.filter((f) => f.name !== selected),
       "",
@@ -293,11 +313,24 @@ function SavedFilters({ criteria, onLoad }: { criteria: MuhurtaCriteria; onLoad(
         ))}
       </select>
       <label htmlFor={`${id}-name`}>{t("muhurtaSearch.name")}</label>
-      <input id={`${id}-name`} type="text" value={name} maxLength={200} onChange={(e) => setName(e.target.value)} />
-      <button type="button" aria-disabled={name.trim() === "" || busy ? true : undefined} onClick={save}>
+      <input
+        id={`${id}-name`}
+        type="text"
+        value={name}
+        maxLength={200}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          // Enter bu alanda süzgeci kaydeder; çevredeki arama formunu göndermez.
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          save();
+        }}
+      />
+      {/* Kullanılamazken yerel `disabled` değildir: odaklanır ve nedeni görünür bir satırdır. */}
+      <button type="button" aria-disabled={saveWhy !== null || busy ? true : undefined} aria-describedby={saveWhy !== null ? `${id}-save-why` : undefined} onClick={save}>
         {t("muhurtaSearch.save")}
       </button>
-      <button type="button" aria-disabled={selected === "" || busy ? true : undefined} onClick={() => void remove()}>
+      <button type="button" aria-disabled={removeWhy !== null || busy ? true : undefined} aria-describedby={removeWhy === null ? undefined : removeWhy === saveWhy ? `${id}-save-why` : `${id}-remove-why`} onClick={() => void remove()}>
         {t("muhurtaSearch.remove")}
       </button>
       {error && (
@@ -305,11 +338,33 @@ function SavedFilters({ criteria, onLoad }: { criteria: MuhurtaCriteria; onLoad(
           {errorMessage(t, i18n, error)}
         </span>
       )}
+      {!known && loaded.error && (
+        <button
+          type="button"
+          onClick={() => {
+            // Düğme yeniden okuma başlayınca kalkar: odak seçiciye taşınır.
+            select.current?.focus();
+            loaded.retry();
+          }}
+        >
+          {t("muhurtaSearch.reload")}
+        </button>
+      )}
+      {saveWhy !== null && (
+        <span id={`${id}-save-why`} className="chart-toolbar-hint">
+          {t(`muhurtaSearch.${saveWhy}`, { max: MAX_SAVED_FILTERS })}
+        </span>
+      )}
+      {removeWhy !== null && removeWhy !== saveWhy && (
+        <span id={`${id}-remove-why`} className="chart-toolbar-hint">
+          {t(`muhurtaSearch.${removeWhy}`)}
+        </span>
+      )}
     </div>
   );
 }
 
-function Results({ search }: { search: MuhurtaSearch }) {
+function Results({ search, stale }: { search: MuhurtaSearch; stale: boolean }) {
   const { t } = useTranslation();
   const transit = useTransitControl();
   const captionId = useId();
@@ -320,20 +375,18 @@ function Results({ search }: { search: MuhurtaSearch }) {
   const moment = (jd: number | null, offset: number) => `${formatJdDate(jd, offset)} ${formatJdClock(jd, offset, jd)}`;
   const row = (w: MuhurtaWindowView, n: number) => {
     const s = w.snapshot;
-    const start = moment(w.start_jd_ut, w.start_offset_secs);
+    const jd = w.start_jd_ut;
+    const start = moment(jd, w.start_offset_secs);
     return (
       <tr key={`${n}:${w.start_jd_ut}`} data-window={n}>
         <th scope="row">
-          <button
-            type="button"
-            className="link-button"
-            aria-label={t("muhurtaSearch.goTo", { when: start })}
-            onClick={() => {
-              if (w.start_jd_ut !== null) transit.setAt({ Jd: w.start_jd_ut });
-            }}
-          >
-            {start}
-          </button>
+          {jd === null ? (
+            start
+          ) : (
+            <button type="button" className="link-button" aria-label={t("muhurtaSearch.goTo", { when: start })} onClick={() => transit.setAt({ Jd: jd })}>
+              {start}
+            </button>
+          )}
         </th>
         <td>{moment(w.end_jd_ut, w.end_offset_secs)}</td>
         <td className="num">{formatJdSpan(w.start_jd_ut, w.end_jd_ut, units)}</td>
@@ -346,18 +399,32 @@ function Results({ search }: { search: MuhurtaSearch }) {
       </tr>
     );
   };
+  // İlk sayfadan önce: süren arama "Aranıyor…", durdurulan arama bunu söyler; hata kendi
+  // satırında yazılıdır ve yanına bir özet konmaz.
+  const summary = range
+    ? t(`muhurtaSearch.summary.${search.status}`, {
+        n: windows.length,
+        from: formatJdDate(range.from_jd_ut, range.from_offset_secs),
+        // Aralığın sonu son günün bitişidir: bir saniye öncesi o günün tarihini verir.
+        to: formatJdDate(range.to_jd_ut === null ? null : range.to_jd_ut - 1 / 86_400, range.to_offset_secs),
+      })
+    : search.status === "running"
+      ? t("muhurtaSearch.searching")
+      : search.status === "stopped"
+        ? t("muhurtaSearch.stoppedEarly")
+        : null;
   return (
     <>
-      <p className="panel-message" data-summary>
-        {range
-          ? t(`muhurtaSearch.summary.${search.status}`, {
-              n: windows.length,
-              from: formatJdDate(range.from_jd_ut, range.from_offset_secs),
-              // Aralığın sonu son günün bitişidir: bir saniye öncesi o günün tarihini verir.
-              to: formatJdDate(range.to_jd_ut === null ? null : range.to_jd_ut - 1 / 86_400, range.to_offset_secs),
-            })
-          : t("muhurtaSearch.searching")}
-      </p>
+      {summary !== null && (
+        <p className="panel-message" data-summary>
+          {summary}
+        </p>
+      )}
+      {stale && (
+        <p className="panel-notice" role="note">
+          {t("muhurtaSearch.stale")}
+        </p>
+      )}
       {search.warnings.includes("SunriseUnavailable") && (
         <p className="panel-notice muhurta-warning" role="note">
           {t("muhurtaSearch.noSunrise")}

@@ -283,8 +283,10 @@ test("an invalid range is reported by the field Rust names", async () => {
   renderPanel();
   fireEvent.click(run());
   expect(await screen.findByRole("alert")).toHaveTextContent("Muhurta isteği geçersiz: range.");
-  // Hiç yanıt gelmedi: özet yerine arama satırı durur, tablo yoktur.
+  // Hiç yanıt gelmedi: tablo yoktur ve hatanın yanında "Aranıyor…" durmaz.
   expect(screen.queryByRole("table")).toBeNull();
+  expect(summary()).toBeUndefined();
+  expect(screen.queryByText("Aranıyor…")).toBeNull();
 });
 
 test("without a place the search button stays focusable, says why and does nothing", async () => {
@@ -444,5 +446,192 @@ test("the search texts exist in three languages and carry no verdict words", () 
   const words = /uğur|iyi gün|kötü gün|auspicious|inauspicious|good day|bad day|faste|néfaste/i;
   for (const lang of [tr, en, fr]) {
     for (const group of [lang.muhurtaSearch, lang.muhurtaDay, lang.muhurta]) expect(JSON.stringify(group)).not.toMatch(words);
+  }
+});
+
+const why = (button: HTMLElement) => document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent;
+const saveButton = () => screen.getByRole("button", { name: "Süzgeci kaydet" });
+const removeButton = () => screen.getByRole("button", { name: "Süzgeci sil" });
+const nameBox = () => screen.getByRole("textbox", { name: "Süzgeç adı" });
+
+test("nothing is saved until the stored filters are read: a save cannot replace a list it has not seen", async () => {
+  let resolve!: (r: Result<SavedMuhurtaFilter[]>) => void;
+  vi.mocked(api.loadMuhurtaFilters).mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  renderPanel();
+  fireEvent.change(nameBox(), { target: { value: "Hasat" } });
+  expect(saveButton()).toHaveAttribute("aria-disabled", "true");
+  expect(why(saveButton())).toBe("Kayıtlı süzgeçler okunuyor.");
+  expect(why(removeButton())).toBe("Kayıtlı süzgeçler okunuyor.");
+  fireEvent.click(saveButton());
+  fireEvent.keyDown(nameBox(), { key: "Enter" });
+  await act(() => Promise.resolve());
+  expect(api.saveMuhurtaFilters).not.toHaveBeenCalled();
+  await act(async () => resolve(ok([saved("Yolculuk")])));
+  expect(saveButton()).not.toHaveAttribute("aria-disabled");
+  expect(saveButton()).not.toHaveAttribute("aria-describedby");
+  fireEvent.click(saveButton());
+  await waitFor(() => expect(api.saveMuhurtaFilters).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.saveMuhurtaFilters).mock.calls[0][0].map((f) => f.name)).toEqual(["Yolculuk", "Hasat"]);
+});
+
+test("when the stored filters cannot be read, saving stays unavailable and says why; reading again restores it", async () => {
+  vi.mocked(api.loadMuhurtaFilters)
+    .mockResolvedValueOnce({ status: "error", error: { code: "ipc", params: { detail: "x" } } })
+    .mockResolvedValueOnce(ok([saved("Yolculuk")]));
+  renderPanel();
+  const again = await screen.findByRole("button", { name: "Süzgeçleri yeniden oku" });
+  expect(screen.getByRole("alert")).toHaveTextContent("Uygulama çekirdeğine ulaşılamadı.");
+  fireEvent.change(nameBox(), { target: { value: "Hasat" } });
+  expect(saveButton()).toHaveAttribute("aria-disabled", "true");
+  expect(why(saveButton())).toBe("Kayıtlı süzgeçler okunamadı; okunmadan kaydedilemez ve silinemez.");
+  fireEvent.click(saveButton());
+  await act(() => Promise.resolve());
+  expect(api.saveMuhurtaFilters).not.toHaveBeenCalled();
+  again.focus();
+  fireEvent.click(again);
+  const select = screen.getByRole("combobox", { name: "Kayıtlı süzgeç" });
+  await waitFor(() => expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["—", "Yolculuk"]));
+  // The button is gone; the focus went to the picker, not to the body.
+  expect(again).not.toBeInTheDocument();
+  expect(select).toHaveFocus();
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.click(saveButton());
+  await waitFor(() => expect(api.saveMuhurtaFilters).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.saveMuhurtaFilters).mock.calls[0][0].map((f) => f.name)).toEqual(["Yolculuk", "Hasat"]);
+});
+
+test("names are compared the way the store compares them, whatever the interface language", async () => {
+  // Turkish lower-casing would turn "ISIK" into a word with dotless letters and miss "isik".
+  vi.mocked(api.loadMuhurtaFilters).mockResolvedValue(ok([saved("ISIK"), saved("Açılış")]));
+  renderPanel();
+  const select = screen.getByRole("combobox", { name: "Kayıtlı süzgeç" });
+  await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(3));
+  fireEvent.click(box("Cuma"));
+  fireEvent.change(nameBox(), { target: { value: "isik" } });
+  fireEvent.click(saveButton());
+  await waitFor(() => expect(api.saveMuhurtaFilters).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.saveMuhurtaFilters).mock.calls[0][0]).toEqual([saved("isik", { weekdays: ["Friday"] }), saved("Açılış")]);
+});
+
+test("the save and delete buttons say why they are unavailable; the list holds at most 32 filters", async () => {
+  const full = Array.from({ length: 32 }, (_, i) => saved(`F${i + 1}`));
+  vi.mocked(api.loadMuhurtaFilters).mockResolvedValue(ok(full));
+  renderPanel();
+  const select = screen.getByRole("combobox", { name: "Kayıtlı süzgeç" });
+  await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(33));
+  expect(why(saveButton())).toBe("Kaydetmek için süzgece bir ad yazın.");
+  expect(why(removeButton())).toBe("Silmek için kayıtlı bir süzgeç seçin.");
+  fireEvent.change(nameBox(), { target: { value: "   " } });
+  expect(saveButton()).toHaveAttribute("aria-disabled", "true");
+  expect(why(saveButton())).toBe("Kaydetmek için süzgece bir ad yazın.");
+  // A new name does not fit; an existing name still overwrites.
+  fireEvent.change(nameBox(), { target: { value: "Yeni" } });
+  expect(saveButton()).toHaveAttribute("aria-disabled", "true");
+  expect(why(saveButton())).toBe("En çok 32 süzgeç saklanır. Birini silin ya da var olan bir adla üzerine yazın.");
+  fireEvent.click(saveButton());
+  await act(() => Promise.resolve());
+  expect(api.saveMuhurtaFilters).not.toHaveBeenCalled();
+  fireEvent.change(nameBox(), { target: { value: "f7" } });
+  expect(saveButton()).not.toHaveAttribute("aria-disabled");
+  expect(saveButton()).not.toHaveAttribute("aria-describedby");
+  fireEvent.change(select, { target: { value: "F3" } });
+  expect(removeButton()).not.toHaveAttribute("aria-disabled");
+  expect(removeButton()).not.toHaveAttribute("aria-describedby");
+});
+
+test("Enter in the name field saves the filter and does not start a search", async () => {
+  renderPanel();
+  await waitFor(() => expect(api.loadMuhurtaFilters).toHaveBeenCalledTimes(1));
+  await act(() => Promise.resolve());
+  fireEvent.change(nameBox(), { target: { value: "Hasat" } });
+  // An unhandled Enter in a text field submits the form it sits in.
+  if (fireEvent.keyDown(nameBox(), { key: "Enter" })) fireEvent.submit(screen.getByRole("form", { name: "Muhurta süzgeci" }));
+  await waitFor(() => expect(api.saveMuhurtaFilters).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.saveMuhurtaFilters).mock.calls[0][0]).toEqual([saved("Hasat")]);
+  expect(api.muhurtaSearch).not.toHaveBeenCalled();
+});
+
+test("a search stopped before its first page says so instead of searching forever", async () => {
+  vi.useFakeTimers();
+  try {
+    const reply = deferred();
+    vi.mocked(api.muhurtaSearch).mockReturnValueOnce(reply.promise);
+    renderPanel();
+    fireEvent.click(run());
+    await act(async () => vi.advanceTimersByTime(1000));
+    expect(summary()).toBe("Aranıyor…");
+    fireEvent.click(screen.getByRole("button", { name: "Durdur" }));
+    expect(summary()).toBe("Arama durduruldu.");
+    expect(screen.queryByText("Aranıyor…")).toBeNull();
+    await act(async () => reply.resolve(ok(fixture().muhurta.pages[0])));
+    expect(summary()).toBe("Arama durduruldu.");
+    expect(screen.queryByRole("table")).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("changing the filter, the dates or the place while searching stops the search; the list says it is from the earlier filter", async () => {
+  for (const change of [
+    () => fireEvent.click(box("Cuma")),
+    () => fireEvent.change(screen.getByLabelText("Bitiş tarihi"), { target: { value: "2027-01-31" } }),
+    () => fireEvent.change(screen.getByRole("combobox", { name: "Yer" }), { target: { value: "home" } }),
+  ]) {
+    vi.mocked(api.muhurtaSearch).mockReset();
+    const replies = [deferred(), deferred()];
+    replies.forEach((r) => vi.mocked(api.muhurtaSearch).mockReturnValueOnce(r.promise));
+    const { unmount } = renderPanel();
+    fireEvent.click(run());
+    await act(async () => replies[0].resolve(ok(fixture().muhurta.pages[0])));
+    expect(resultRows()).toHaveLength(15);
+    expect(screen.queryByText(/^Süzgeç, tarihler ya da yer bu aramadan sonra değişti/)).toBeNull();
+    await act(async () => void change());
+    expect(summary()).toBe("Arama durduruldu: 15 pencere · 2026-11-26 – 2027-01-31");
+    expect(screen.getByText("Süzgeç, tarihler ya da yer bu aramadan sonra değişti: liste önceki aramanın sonucudur.")).toBeInTheDocument();
+    // The page on its way is dropped and no further page is asked for.
+    await act(async () => replies[1].resolve(ok(fixture().muhurta.pages[1])));
+    expect(resultRows()).toHaveLength(15);
+    expect(api.muhurtaSearch).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("button", { name: "Durdur" })).toBeNull();
+    unmount();
+  }
+});
+
+test("a finished list is marked once the form no longer matches it, and a new search clears the mark", async () => {
+  threePages();
+  renderPanel();
+  fireEvent.click(run());
+  await waitFor(() => expect(resultRows()).toHaveLength(30));
+  const note = () => screen.queryByText(/^Süzgeç, tarihler ya da yer bu aramadan sonra değişti/);
+  expect(note()).toBeNull();
+  fireEvent.click(box("Cuma"));
+  await waitFor(() => expect(note()).toBeInTheDocument());
+  expect(summary()).toBe("30 pencere · 2026-11-26 – 2027-01-31");
+  // Undoing the change makes the form match again.
+  fireEvent.click(box("Cuma"));
+  await waitFor(() => expect(note()).toBeNull());
+  fireEvent.click(box("Cuma"));
+  await waitFor(() => expect(note()).toBeInTheDocument());
+  threePages();
+  fireEvent.click(run());
+  await waitFor(() => expect(api.muhurtaSearch).toHaveBeenCalledTimes(6));
+  expect(note()).toBeNull();
+});
+
+test("a window without a start is written without a button", async () => {
+  const first = PAGES[0].windows[0];
+  vi.mocked(api.muhurtaSearch).mockResolvedValueOnce(ok({ ...PAGES[2], windows: [{ ...first, start_jd_ut: null }, first], scanned: 1, chunks: 1 }));
+  renderPanel();
+  fireEvent.click(run());
+  await waitFor(() => expect(resultRows()).toHaveLength(2));
+  expect(within(resultRows()[0]).queryByRole("button")).toBeNull();
+  expect(within(resultRows()[1]).getByRole("button")).toBeInTheDocument();
+});
+
+test("counts are written so that one and many read correctly in English and French", () => {
+  for (const lang of [en, fr]) {
+    for (const text of [...Object.values(lang.muhurtaSearch.summary), lang.muhurtaSearch.capped, lang.muhurtaSearch.selected]) {
+      expect(text).not.toMatch(/\{\{n\}\} (windows|fenêtres|choisis)/);
+    }
   }
 });

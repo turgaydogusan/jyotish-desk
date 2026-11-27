@@ -36,15 +36,16 @@ export function useMuhurtaSearch(scope: string): MuhurtaSearch {
   // Her arama bir numara alır; eski aramanın geç gelen yanıtı ve sonraki isteği düşer.
   const run = useRef(0);
 
+  // Başka harita ya da panelin kapanması: süren aramanın numarası geçersiz olur (effect
+  // temizliğinde; çizim sırasında ref yazılmaz).
   useEffect(() => {
     return () => {
       run.current += 1;
     };
-  }, []);
+  }, [scope]);
   const [shownScope, setShownScope] = useState(scope);
   if (shownScope !== scope) {
     setShownScope(scope);
-    run.current += 1;
     setState(IDLE);
   }
 
