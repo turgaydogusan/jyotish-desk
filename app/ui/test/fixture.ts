@@ -5,7 +5,9 @@
 // gün panchangı (iki gün), üç dilimlik bir muhurta araması ve iki prashna haritası (olgularıyla).
 // Arayüz hesap yapmadığı için testler bunu çizer.
 import type {
+  BhavaTable,
   CharaDasha,
+  Chart,
   ChartBrief,
   ChartInput,
   ChartQuery,
@@ -42,6 +44,8 @@ import type {
   SignDashaPath,
   SignDashaPeriod,
   SkyEventKind,
+  SudarshanaChakra,
+  SudarshanaRef,
   TithiGroup,
   TransitView,
   Varga,
@@ -52,6 +56,27 @@ import raw from "./fixtures/delhi.json?raw";
 
 export interface UiFixture {
   opened: OpenedClient;
+  /**
+   * Bhava tablosu ve Sudarshana chakra (Plan 25), açık haritanın anı ve yeri için. `table` açık
+   * haritanın girdisiyle (tam burç), `table_sripati` Sripati ayarıyla (bhava ortalarıyla; hiçbir
+   * graha yer değiştirmez), `table_placidus` Placidus ayarıyla (orta yok; Merkür, Jüpiter ve
+   * Venüs burç evinden bir önceki bhavadadır) `compute_bhava_table` dönüşüdür;
+   * `chart_placidus` aynı Placidus ayarının haritasıdır (chalit görünümünün verisi).
+   * `table_placidus_polar` kutup dairesinde (Tromsø, 2050-12-21) Placidus'un Porphyry'ye düştüğü
+   * tablodur. `sudarshana` açık haritanın girdisiyle, `sudarshana_time_unknown`
+   * `time_known: false` ile `compute_sudarshana` dönüşüdür; `sudarshana_refs` Rust
+   * `SudarshanaRef::ALL` (içten dışa halka sırası).
+   */
+  bhava: {
+    chart_placidus: Chart;
+    table: BhavaTable;
+    table_sripati: BhavaTable;
+    table_placidus: BhavaTable;
+    table_placidus_polar: BhavaTable;
+    sudarshana: SudarshanaChakra;
+    sudarshana_time_unknown: SudarshanaChakra;
+    sudarshana_refs: SudarshanaRef[];
+  };
   dasha_children: { path: Graha[]; periods: DashaPeriod[] };
   places: PlaceHit[];
   preview: MomentPreview;
@@ -167,6 +192,17 @@ const FIXTURE = JSON.parse(raw) as UiFixture;
 /** Her çağrıda derin kopya: testler sonucu değiştirebilir. */
 export function fixture(): UiFixture {
   return structuredClone(FIXTURE);
+}
+
+/**
+ * Placidus ayarlı açık harita: aynı danışan ve doğum, harita `bhava.chart_placidus` (üç graha burç
+ * evinden başka bir bhavada). `save_calc_settings` dönüşünün arayüzdeki karşılığıdır.
+ */
+export function placidusOpened(): OpenedClient {
+  const f = fixture();
+  f.opened.chart = f.bhava.chart_placidus;
+  f.opened.calc_settings = f.bhava.chart_placidus.meta.settings;
+  return f.opened;
 }
 
 /** Saati bilinmeyen doğum: aynı harita, `time_certainty: "Unknown"` ve öğle uyarısı. */

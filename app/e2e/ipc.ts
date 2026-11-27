@@ -13,11 +13,17 @@ export interface IpcOptions {
   unknownTime?: boolean;
   /** Uyum: eş haritanın (Ayşe) doğum saati bilinmiyor; `chart_input` `time_known: false` döner. */
   partnerUnknownTime?: boolean;
+  /** Açık harita Placidus ayarlıdır (`bhava.chart_placidus`): chalit görünümünde üç graha yer değiştirir. */
+  placidus?: boolean;
 }
 
-export async function mockIpc(page: Page, { session, unknownTime = false, partnerUnknownTime = false }: IpcOptions) {
+export async function mockIpc(page: Page, { session, unknownTime = false, partnerUnknownTime = false, placidus = false }: IpcOptions) {
   await page.addInitScript(
-    ({ fixture, session, unknownTime, partnerUnknownTime }) => {
+    ({ fixture, session, unknownTime, partnerUnknownTime, placidus }) => {
+      if (placidus) {
+        fixture.opened.chart = fixture.bhava.chart_placidus;
+        fixture.opened.calc_settings = fixture.bhava.chart_placidus.meta.settings;
+      }
       if (unknownTime) {
         fixture.opened.chart_record.birth.time = null;
         fixture.opened.chart_record.birth.time_certainty = "Unknown";
@@ -111,6 +117,16 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         transits_at: () => fixture.transit,
         // Bakış tablosu yeniden hesaplanmaz: fikstürdeki gerçek sonuç döner.
         compute_drishti: () => fixture.drishti,
+        // Bhava tablosu ve Sudarshana chakra (Plan 25): fikstürdeki gerçek sonuçlar. Tablo
+        // girdinin ev sistemine göre seçilir; saat bilinmiyorsa Rust tabloyu `null`, chakrayı
+        // lagna halkası olmadan döner.
+        compute_bhava_table: (args) => {
+          const input = args.input as { time_known: boolean; settings: { house_system: string } };
+          if (!input.time_known) return null;
+          if (input.settings.house_system === "Sripati") return fixture.bhava.table_sripati;
+          return input.settings.house_system === "Placidus" ? fixture.bhava.table_placidus : fixture.bhava.table;
+        },
+        compute_sudarshana: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.bhava.sudarshana : fixture.bhava.sudarshana_time_unknown),
         // Jaimini raporu: fikstürdeki gerçek sonuç; saat bilinmiyorsa Rust padaları boş döner.
         compute_jaimini: (args) =>
           (args.input as { time_known: boolean }).time_known ? fixture.jaimini : { ...fixture.jaimini, arudhas: null },
@@ -249,7 +265,7 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         },
       });
     },
-    { fixture: FIXTURE, session, unknownTime, partnerUnknownTime },
+    { fixture: FIXTURE, session, unknownTime, partnerUnknownTime, placidus },
   );
 }
 

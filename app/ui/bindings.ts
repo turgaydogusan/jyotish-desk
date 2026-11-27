@@ -23,6 +23,19 @@ export const commands = {
 	/**  Açık haritanın transitleri. `settings`, `natal_bhavas` ve `seed` açık haritadan gelir. */
 	transitsAt: (at: TransitAt, settings: CalcSettings, natalBhavas: Bhavas, seed: DashaSeed, options?: InvokeOptions) => typedError<TransitView, CommandError>(__TAURI_INVOKE("transits_at", { at, settings, natalBhavas, seed }, options)),
 	/**
+	 *  Bhava tablosu: haritanın ev sisteminde on iki bhavanın başlangıcı, ortası ve bitişi (burç,
+	 *  derece, nakshatra, pada, burç lordu, nakshatra lordu) ve dokuz grahanın bhavası ile bhava
+	 *  başlangıcına ve ortasına uzaklığı. Doğum saati bilinmiyorsa (`time_known == false`) `null`
+	 *  döner. Placidus'ta bhava ortası yoktur; sayı prashnasında evler tam burçtur.
+	 */
+	computeBhavaTable: (input: ChartInput, options?: InvokeOptions) => typedError<BhavaTable | null, CommandError>(__TAURI_INVOKE("compute_bhava_table", { input }, options)),
+	/**
+	 *  Sudarshana chakra: lagna, Ay ve Güneş'i birinci ev sayan üç halka (içten dışa), her halkada
+	 *  on iki ev ve içindeki grahalar. Doğum saati bilinmiyorsa lagna halkasının evleri `null` döner
+	 *  ve sonuç `approximate` işaretlidir.
+	 */
+	computeSudarshana: (input: ChartInput, options?: InvokeOptions) => typedError<SudarshanaChakra, CommandError>(__TAURI_INVOKE("compute_sudarshana", { input }, options)),
+	/**
 	 *  Bir dasha döneminin alt dönemleri (spec §4 `dasha_children(path)`). `seed`
 	 *  `chart.dasha.seed`'den, `path` dönemin `lords`'undan gelir. Saf hesaptır, motora gitmez.
 	 */
@@ -314,6 +327,48 @@ export type BhavaBala = {
 	total: number | null,
 	/**  On iki bhava arasında toplamın sırası: 1 en güçlü. */
 	rank: number,
+};
+
+/**  Bir bhava noktası (başlangıç, orta ya da bitiş). */
+export type BhavaPoint = {
+	/**  Rasi çerçevesinde boylam, [0, 360). */
+	lon: number | null,
+	sign: Sign,
+	/**  Burç içi derece, [0, 30). */
+	deg_in_sign: number | null,
+	/**  1..=27; sidereal boylamdan. */
+	nakshatra: number,
+	/**  1..=4. */
+	pada: number,
+	sign_lord: Graha,
+	nakshatra_lord: Graha,
+};
+
+/**  Bir bhava: başlangıç, orta ve bitiş. Bitiş, sonraki bhavanın başlangıcıdır. */
+export type BhavaRow = {
+	/**  1..=12. */
+	house: number,
+	start: BhavaPoint,
+	/**  Placidus'ta `None`. */
+	mid: BhavaPoint | null,
+	end: BhavaPoint,
+	/**  Başlangıçtan bitişe yay, derece, (0, 360). */
+	span_deg: number | null,
+};
+
+export type BhavaTable = {
+	method: string,
+	/**
+	 *  Tablonun ev sistemi (`Chart.bhavas.system`): sayı prashnasında ayar ne olursa olsun
+	 *  `WholeSign`.
+	 */
+	system: HouseSystem,
+	/**  Placidus bu enlemde hesaplanamadı; başlangıç noktaları Porphyry'dir. */
+	porphyry_fallback: boolean,
+	/**  On iki bhava, 1. bhavadan başlayarak. */
+	rows: BhavaRow[],
+	/**  Dokuz graha, `Graha::ALL` sırasında. */
+	grahas: GrahaBhava[],
 };
 
 export type Bhavas = {
@@ -832,6 +887,24 @@ export type FoldChoice = "Earlier" | "Later";
 export type Gender = "Male" | "Female" | "Other";
 
 export type Graha = "Sun" | "Moon" | "Mars" | "Mercury" | "Jupiter" | "Venus" | "Saturn" | "Rahu" | "Ketu";
+
+/**  Bir grahanın bhavası. */
+export type GrahaBhava = {
+	graha: Graha,
+	/**  Lagna burcundan sayılan burç evi (K4), 1..=12. */
+	sign_house: number,
+	/**  Seçili ev sistemindeki bhava, 1..=12. */
+	bhava: number,
+	/**  Bhava başlangıcından grahaya yay, derece, [0, bhavanın yayı). */
+	from_start_deg: number | null,
+	/**
+	 *  Bhava ortasından grahaya işaretli yay, derece, (−180, 180]: eksi, graha ortadan öncedir.
+	 *  Placidus'ta `None`.
+	 */
+	from_mid_deg: number | null,
+	/**  Bhava, burç evinden farklı. */
+	shifted: boolean,
+};
 
 /**  Grahanın aranabilen ikili durumları. Retro, Rahu ve Ketu için sunulmaz. */
 export type GrahaFlag = "Retrograde" | "Combust" | "Vargottama";
@@ -1750,6 +1823,32 @@ export type StoreWarning =
 	current_version: string,
 	current_utc: string | null,
 } }) & { CalcSettingsReset?: never };
+
+export type SudarshanaChakra = {
+	method: string,
+	/**  Üç halka, `SudarshanaRef::ALL` sırasında (içten dışa). */
+	rings: SudarshanaRing[],
+	/**  Doğum saati bilinmiyor: Ay'ın burcu o gün değişmiş olabilir. */
+	approximate: boolean,
+};
+
+/**  Bir halkanın bir evi. */
+export type SudarshanaHouse = {
+	/**  1..=12. */
+	house: number,
+	sign: Sign,
+	/**  Bu burçtaki grahalar, `Graha::ALL` sırasında. */
+	grahas: Graha[],
+};
+
+/**  Halkanın birinci evini veren nokta. */
+export type SudarshanaRef = "Lagna" | "Moon" | "Sun";
+
+export type SudarshanaRing = {
+	reference: SudarshanaRef,
+	/**  On iki ev, 1. evden başlayarak. Lagna halkasında doğum saati bilinmiyorsa `None` (K2). */
+	houses: SudarshanaHouse[] | null,
+};
 
 /**
  *  Gün doğumu tanımı. Panchang'ın vara ve gün doğumu/batımı hesabı bunu kullanır
