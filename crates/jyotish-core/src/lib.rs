@@ -9,6 +9,7 @@
 //! Muhurta (Alt proje 3.7): `timeline` (aralık dizileri) ve `muhurta` (gün panchangı, arama).
 //! Prashna (Alt proje 3.8): `prashna` (sayı prashnasının lagnası, soru haritasının olguları).
 //! Arama (Alt proje 3.9): `search` (harita araması sorgusu ve hafif yol, olay araması).
+//! Doğum anı ekleri (yol haritası Plan 23): `natal_extras` (panchang ekleri, navatara, Vimshopaka).
 
 pub mod ashtakavarga;
 mod chart;
@@ -25,6 +26,7 @@ pub mod jaimini;
 pub mod kuta;
 pub mod lordship;
 pub mod muhurta;
+pub mod natal_extras;
 pub mod nature;
 pub mod panchang;
 pub mod positions;
@@ -86,6 +88,10 @@ pub use muhurta::{
     MuhurtaFilter, MuhurtaFlag, MuhurtaSearchPage, MuhurtaWindow, NakshatraNature, NatalMoon,
     PersonalFactors, TaraBala, TithiGroup, WindowSnapshot, MUHURTA_CHUNK_DAYS,
     MUHURTA_MAX_RANGE_DAYS, MUHURTA_METHOD,
+};
+pub use natal_extras::{
+    avayogi_nakshatra, nakshatra_lord, rasi_frame_offset, yogi_facts, yogi_point, YogiFacts,
+    AVAYOGI_COUNT, YOGI_ARC_DEG,
 };
 pub use nature::{kuja_dosha, moon_is_waxing, nature, KujaDosha, Nature, KUJA_DOSHA_HOUSES};
 pub use panchang::{
