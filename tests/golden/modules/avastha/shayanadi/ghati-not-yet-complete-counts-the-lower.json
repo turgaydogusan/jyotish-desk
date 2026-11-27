@@ -1,0 +1,35 @@
+{
+  "id": "ghati-not-yet-complete-counts-the-lower",
+  "source": "hand",
+  "rule_ref": "BPHS, avasthalar bölümü: Shayanadi (alıntı yapılmaz); okuma kuralları avastha/REVIEW.md",
+  "derivation": [
+    "Gün doğumundan 47,9 dakika sonra doğum: ikinci ghati bitmemiştir (48 dakika), tamamlanan ghati 1'dir.",
+    "Ghati: 47.9 dk ÷ 24 dk = 1.9958; tamamlanan 1.",
+    "Doğum nakshatrası: Ay 115.0° ÷ 13°20′ → 9. nakshatra (Ashlesha). Lagna 122.0° Aslan: 5.",
+    "Ortak toplanan: J + Gh + L = 9 + 1 + 5 = 15.",
+    "Güneş: 33.0° = Boğa 3°00′; nakshatra 3 (Krittika), navamsa dilimi 1, sayı 1. 3 × 1 × 1 = 3; + 15 = 18 = 1 × 12 + 6: artan 6 → Agamana.",
+    "Ay: 115.0° = Yengeç 25°00′; nakshatra 9 (Ashlesha), navamsa dilimi 8, sayı 2. 9 × 2 × 8 = 144; + 15 = 159 = 13 × 12 + 3: artan 3 → Netrapani.",
+    "Mars: 134.0° = Aslan 14°00′; nakshatra 11 (Purva Phalguni), navamsa dilimi 5, sayı 3. 11 × 3 × 5 = 165; + 15 = 180 = 15 × 12 + 0: artan 0 → on ikinci durum Nidra.",
+    "Merkür: 51.0° = Boğa 21°00′; nakshatra 4 (Rohini), navamsa dilimi 7, sayı 4. 4 × 4 × 7 = 112; + 15 = 127 = 10 × 12 + 7: artan 7 → Sabha.",
+    "Jüpiter: 159.0° = Başak 9°00′; nakshatra 12 (Uttara Phalguni), navamsa dilimi 3, sayı 5. 12 × 5 × 3 = 180; + 15 = 195 = 16 × 12 + 3: artan 3 → Netrapani.",
+    "Venüs: 88.0° = İkizler 28°00′; nakshatra 7 (Punarvasu), navamsa dilimi 9, sayı 6. 7 × 6 × 9 = 378; + 15 = 393 = 32 × 12 + 9: artan 9 → Bhojana.",
+    "Satürn: 347.0° = Balık 17°00′; nakshatra 27 (Revati), navamsa dilimi 6, sayı 7. 27 × 7 × 6 = 1134; + 15 = 1149 = 95 × 12 + 9: artan 9 → Bhojana."
+  ],
+  "input": {
+    "lagna_lon": 122.0,
+    "minutes_since_sunrise": 47.9,
+    "grahas": {"Sun": 33.0, "Moon": 115.0, "Mars": 134.0, "Mercury": 51.0, "Jupiter": 159.0, "Venus": 88.0, "Saturn": 347.0, "Rahu": 215.0, "Ketu": 35.0}
+  },
+  "expected": {
+    "basis": {"birth_nakshatra": 9, "ghatis": 1, "lagna_sign_number": 5},
+    "grahas": {
+      "Sun": {"state": "Agamana", "nakshatra": 3, "navamsa": 1, "total": 18},
+      "Moon": {"state": "Netrapani", "nakshatra": 9, "navamsa": 8, "total": 159},
+      "Mars": {"state": "Nidra", "nakshatra": 11, "navamsa": 5, "total": 180},
+      "Mercury": {"state": "Sabha", "nakshatra": 4, "navamsa": 7, "total": 127},
+      "Jupiter": {"state": "Netrapani", "nakshatra": 12, "navamsa": 3, "total": 195},
+      "Venus": {"state": "Bhojana", "nakshatra": 7, "navamsa": 9, "total": 393},
+      "Saturn": {"state": "Bhojana", "nakshatra": 27, "navamsa": 6, "total": 1149}
+    }
+  }
+}

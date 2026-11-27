@@ -1,13 +1,15 @@
 //! Avastha el örnekleri (yol haritası §4.4; ileri modüller spec'i §13): beklenen değerler
 //! kuraldan elle türetilir (`derivation`), başka yazılımın çıktısı olamaz (K9). Her alt klasör
-//! bir dizidir: `tests/golden/modules/avastha/lajjitadi/` (Baladi, Jagradadi ve Lajjitadi).
+//! bir dizidir: `tests/golden/modules/avastha/lajjitadi/` (Baladi, Jagradadi ve Lajjitadi) ve
+//! `tests/golden/modules/avastha/shayanadi/` (Shayanadi; girdide gün doğumundan geçen dakika).
 //! Okuma kuralları ve onay bekleyen varyant noktaları `avastha/REVIEW.md`'dedir.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use jyotish_core::avastha::{
-    baladi, jagradadi, lajjitadi, Baladi, Jagradadi, Lajjitadi, LajjitadiHit, AVASTHA_GRAHAS,
+    avasthas, baladi, elapsed_ghatis, graha_number, jagradadi, lajjitadi, Baladi, Jagradadi,
+    Lajjitadi, LajjitadiHit, Shayanadi, ShayanadiBasis, AVASTHA_GRAHAS,
 };
 use jyotish_core::{Graha, Positions};
 use serde::de::DeserializeOwned;
@@ -15,6 +17,9 @@ use serde::Deserialize;
 
 /// Örnek silmek testi düşürür.
 const MIN_LAJJITADI: usize = 7;
+const MIN_SHAYANADI: usize = 6;
+/// Bir gün, dakika.
+const MINUTES_PER_DAY: f64 = 1440.0;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -250,10 +255,185 @@ fn lajjitadi_fixtures_cover_the_required_cases() {
     }
 }
 
+/// Shayanadi örneğinin girdisi: konumlar ve gün doğumundan doğuma geçen dakika. `null` dakika
+/// o gün gün doğumu olmayan yerdir.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ShayanadiInput {
+    lagna_lon: Option<f64>,
+    minutes_since_sunrise: Option<f64>,
+    grahas: BTreeMap<Graha, f64>,
+}
+
+impl ShayanadiInput {
+    fn positions(&self, id: &str) -> Positions {
+        assert_eq!(self.grahas.len(), 9, "{id}: all nine grahas are required");
+        Positions::synthetic(
+            self.lagna_lon,
+            std::array::from_fn(|i| self.grahas[&Graha::ALL[i]]),
+        )
+    }
+
+    /// Tamamlanmış ghati: gün doğumu 0 anı sayılır.
+    fn ghatis(&self) -> Option<u32> {
+        self.minutes_since_sunrise
+            .and_then(|m| elapsed_ghatis(m / MINUTES_PER_DAY, 0.0))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ShayanadiRow {
+    state: Shayanadi,
+    nakshatra: u8,
+    navamsa: u8,
+    total: u32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ShayanadiExpected {
+    basis: ShayanadiBasis,
+    grahas: BTreeMap<Graha, ShayanadiRow>,
+}
+
+type ShayanadiFixture = Fixture<Option<ShayanadiExpected>, ShayanadiInput>;
+
+fn shayanadi_fixtures() -> Vec<(ShayanadiFixture, Positions)> {
+    load::<Option<ShayanadiExpected>, ShayanadiInput>("shayanadi", MIN_SHAYANADI)
+        .into_iter()
+        .map(|f| {
+            let positions = f.input.positions(&f.id);
+            (f, positions)
+        })
+        .collect()
+}
+
+/// İkinci yazım: bölme yok; durum çemberinde `total` adım yürünür (ilk adım ilk duruma varır).
+fn walked_state(total: u32) -> Shayanadi {
+    let mut at = Shayanadi::ALL.len() - 1;
+    for _ in 0..total {
+        at = if at + 1 == Shayanadi::ALL.len() {
+            0
+        } else {
+            at + 1
+        };
+    }
+    Shayanadi::ALL[at]
+}
+
+#[test]
+fn shayanadi_hand_fixtures() {
+    for (f, p) in shayanadi_fixtures() {
+        let report = avasthas(&p, f.input.ghatis());
+        assert_eq!(report.grahas.len(), 7, "{}", f.id);
+        let Some(x) = &f.expected else {
+            // Lagna ya da gün doğumu yok: Shayanadi hesaplanmaz.
+            assert!(
+                f.input.lagna_lon.is_none() || f.input.minutes_since_sunrise.is_none(),
+                "{}: a null expectation needs a missing lagna or sunrise",
+                f.id
+            );
+            assert_eq!(report.shayanadi_basis, None, "{}", f.id);
+            assert!(
+                report.grahas.iter().all(|g| g.shayanadi.is_none()),
+                "{}",
+                f.id
+            );
+            continue;
+        };
+        assert_eq!(report.shayanadi_basis, Some(x.basis), "{}: basis", f.id);
+        assert_eq!(
+            x.grahas.keys().copied().collect::<Vec<_>>(),
+            AVASTHA_GRAHAS,
+            "{}: the seven grahas",
+            f.id
+        );
+        let addend = u32::from(x.basis.birth_nakshatra)
+            + x.basis.ghatis
+            + u32::from(x.basis.lagna_sign_number);
+        for row in &report.grahas {
+            let want = &x.grahas[&row.graha];
+            let got = row.shayanadi.expect("a state for each of the seven grahas");
+            assert_eq!(
+                (got.state, got.nakshatra, got.navamsa, got.total),
+                (want.state, want.nakshatra, want.navamsa, want.total),
+                "{}: {:?}",
+                f.id,
+                row.graha
+            );
+            // Örneğin kendi aritmetiği tutarlıdır (motordan bağımsız): toplam ve durum.
+            let number = u32::from(graha_number(row.graha).expect("seven grahas"));
+            assert_eq!(
+                u32::from(want.nakshatra) * number * u32::from(want.navamsa) + addend,
+                want.total,
+                "{}: {:?} total",
+                f.id,
+                row.graha
+            );
+            assert_eq!(
+                walked_state(want.total),
+                want.state,
+                "{}: {:?} state",
+                f.id,
+                row.graha
+            );
+            assert_eq!(
+                u32::from(got.remainder),
+                want.total % 12,
+                "{}: {:?} remainder",
+                f.id,
+                row.graha
+            );
+        }
+    }
+}
+
+#[test]
+fn shayanadi_fixtures_cover_the_required_cases() {
+    let fixtures = shayanadi_fixtures();
+    let rows = || {
+        fixtures
+            .iter()
+            .filter_map(|(f, _)| f.expected.as_ref())
+            .flat_map(|x| x.grahas.values())
+    };
+    // On iki durumun her biri en az bir örnekte.
+    for state in Shayanadi::ALL {
+        assert!(rows().any(|r| r.state == state), "{state:?} in no fixture");
+    }
+    // Artanın sıfır olduğu durum: on ikinci durum.
+    assert!(rows().any(|r| r.total.is_multiple_of(12) && r.state == Shayanadi::Nidra));
+    // Ghati sayımı: tam doğuşta 0, yarım ghati aşağı yuvarlanır, sonraki doğuştan önce 59.
+    let ghatis: Vec<u32> = fixtures
+        .iter()
+        .filter_map(|(f, _)| f.expected.as_ref().map(|x| x.basis.ghatis))
+        .collect();
+    for wanted in [0, 1, 28, 59] {
+        assert!(ghatis.contains(&wanted), "{wanted} ghatis in no fixture");
+    }
+    assert!(
+        fixtures.iter().any(|(f, _)| f
+            .input
+            .minutes_since_sunrise
+            .is_some_and(|m| (m / 24.0).fract() > 0.9)),
+        "a birth late in a ghati"
+    );
+    // Hesaplanmayan iki durum: lagna yok; gün doğumu yok.
+    assert!(fixtures
+        .iter()
+        .any(|(f, _)| f.expected.is_none() && f.input.lagna_lon.is_none()));
+    assert!(fixtures.iter().any(|(f, _)| f.expected.is_none()
+        && f.input.lagna_lon.is_some()
+        && f.input.minutes_since_sunrise.is_none()));
+}
+
 #[test]
 fn unknown_fields_are_rejected() {
     let text = r#"{"lagna_lon": null, "grahas": {}, "extra": 1}"#;
     assert!(serde_json::from_str::<Input>(text).is_err());
     let text = r#"{"graha": "Sun", "state": "Lajjita", "why": "x"}"#;
     assert!(serde_json::from_str::<Absent>(text).is_err());
+    let text = r#"{"state": "Nidra", "nakshatra": 1, "navamsa": 1, "total": 12, "note": "x"}"#;
+    assert!(serde_json::from_str::<ShayanadiRow>(text).is_err());
 }

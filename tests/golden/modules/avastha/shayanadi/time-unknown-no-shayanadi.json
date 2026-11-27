@@ -1,0 +1,15 @@
+{
+  "id": "time-unknown-no-shayanadi",
+  "source": "hand",
+  "rule_ref": "BPHS, avasthalar bölümü: Shayanadi (alıntı yapılmaz); okuma kuralları avastha/REVIEW.md",
+  "derivation": [
+    "Doğum saati bilinmiyor: lagna yok; formülün lagna ve ghati terimleri tanımsızdır, Shayanadi hesaplanmaz.",
+    "Beklenen: rapor Shayanadi taşımaz (her graha için boş); Baladi, Jagradadi ve Lajjitadi bundan etkilenmez."
+  ],
+  "input": {
+    "lagna_lon": null,
+    "minutes_since_sunrise": 690.0,
+    "grahas": {"Sun": 256.5, "Moon": 199.5, "Mars": 304.0, "Mercury": 248.0, "Jupiter": 1.5, "Venus": 217.75, "Saturn": 16.5, "Rahu": 101.0, "Ketu": 281.0}
+  },
+  "expected": null
+}

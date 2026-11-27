@@ -1,0 +1,35 @@
+{
+  "id": "birth-just-before-the-next-sunrise",
+  "source": "hand",
+  "rule_ref": "BPHS, avasthalar bölümü: Shayanadi (alıntı yapılmaz); okuma kuralları avastha/REVIEW.md",
+  "derivation": [
+    "Gün doğumundan 1439 dakika sonra doğum (sonraki doğuştan bir dakika önce): gün hâlâ önceki doğuştan sayılır.",
+    "Ghati: 1439.0 dk ÷ 24 dk = 59.9583; tamamlanan 59.",
+    "Doğum nakshatrası: Ay 331.0° ÷ 13°20′ → 25. nakshatra (Purva Bhadrapada). Lagna 359.0° Balık: 12.",
+    "Ortak toplanan: J + Gh + L = 25 + 59 + 12 = 96.",
+    "Güneş: 282.0° = Oğlak 12°00′; nakshatra 22 (Shravana), navamsa dilimi 4, sayı 1. 22 × 1 × 4 = 88; + 96 = 184 = 15 × 12 + 4: artan 4 → Prakashana.",
+    "Ay: 331.0° = Balık 1°00′; nakshatra 25 (Purva Bhadrapada), navamsa dilimi 1, sayı 2. 25 × 2 × 1 = 50; + 96 = 146 = 12 × 12 + 2: artan 2 → Upaveshana.",
+    "Mars: 94.0° = Yengeç 4°00′; nakshatra 8 (Pushya), navamsa dilimi 2, sayı 3. 8 × 3 × 2 = 48; + 96 = 144 = 12 × 12 + 0: artan 0 → on ikinci durum Nidra.",
+    "Merkür: 297.0° = Oğlak 27°00′; nakshatra 23 (Dhanishta), navamsa dilimi 9, sayı 4. 23 × 4 × 9 = 828; + 96 = 924 = 77 × 12 + 0: artan 0 → on ikinci durum Nidra.",
+    "Jüpiter: 262.0° = Yay 22°00′; nakshatra 20 (Purva Ashadha), navamsa dilimi 7, sayı 5. 20 × 5 × 7 = 700; + 96 = 796 = 66 × 12 + 4: artan 4 → Prakashana.",
+    "Venüs: 313.0° = Kova 13°00′; nakshatra 24 (Shatabhisha), navamsa dilimi 4, sayı 6. 24 × 6 × 4 = 576; + 96 = 672 = 56 × 12 + 0: artan 0 → on ikinci durum Nidra.",
+    "Satürn: 301.0° = Kova 1°00′; nakshatra 23 (Dhanishta), navamsa dilimi 1, sayı 7. 23 × 7 × 1 = 161; + 96 = 257 = 21 × 12 + 5: artan 5 → Gamana."
+  ],
+  "input": {
+    "lagna_lon": 359.0,
+    "minutes_since_sunrise": 1439.0,
+    "grahas": {"Sun": 282.0, "Moon": 331.0, "Mars": 94.0, "Mercury": 297.0, "Jupiter": 262.0, "Venus": 313.0, "Saturn": 301.0, "Rahu": 20.0, "Ketu": 200.0}
+  },
+  "expected": {
+    "basis": {"birth_nakshatra": 25, "ghatis": 59, "lagna_sign_number": 12},
+    "grahas": {
+      "Sun": {"state": "Prakashana", "nakshatra": 22, "navamsa": 4, "total": 184},
+      "Moon": {"state": "Upaveshana", "nakshatra": 25, "navamsa": 1, "total": 146},
+      "Mars": {"state": "Nidra", "nakshatra": 8, "navamsa": 2, "total": 144},
+      "Mercury": {"state": "Nidra", "nakshatra": 23, "navamsa": 9, "total": 924},
+      "Jupiter": {"state": "Prakashana", "nakshatra": 20, "navamsa": 7, "total": 796},
+      "Venus": {"state": "Nidra", "nakshatra": 24, "navamsa": 4, "total": 672},
+      "Saturn": {"state": "Gamana", "nakshatra": 23, "navamsa": 1, "total": 257}
+    }
+  }
+}
