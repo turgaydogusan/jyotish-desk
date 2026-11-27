@@ -19,6 +19,7 @@ export const PANEL_KINDS = [
   "shadbala",
   "bhava_bala",
   "yogas",
+  "avastha",
   "compat",
   "muhurta_day",
   "muhurta_search",
@@ -46,6 +47,8 @@ export const MODULE_PANELS = [
   { kind: "bhava_bala", w: 6, h: 14 },
   // Yogalar (Plan 18).
   { kind: "yogas", w: 7, h: 14 },
+  // Avasthalar (Plan 24).
+  { kind: "avastha", w: 7, h: 16 },
   // Uyum (Plan 19).
   { kind: "compat", w: 7, h: 16 },
   // Muhurta (Plan 20).

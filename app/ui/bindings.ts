@@ -33,6 +33,13 @@ export const commands = {
 	 */
 	printWindow: (options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("print_window", undefined, options)),
 	/**
+	 *  Avasthalar: yedi grahanın Baladi, Jagradadi, Lajjitadi (küme) ve Shayanadi durumu. Doğum
+	 *  saati bilinmiyorsa (`time_known == false`) Lajjita değerlendirilmez, Shayanadi `null` döner
+	 *  ve rapor `time_known: false` taşır; doğum yerinde o gün gün doğumu yoksa yalnızca Shayanadi
+	 *  `null`'dır. Girdi doğum verisidir: loglanmaz.
+	 */
+	computeAvasthas: (input: ChartInput, options?: InvokeOptions) => typedError<AvasthaReport, CommandError>(__TAURI_INVOKE("compute_avasthas", { input }, options)),
+	/**
 	 *  Graha bakışları: on üç tam bakış ve 7 × 9 sphuta drishti matrisi. `input`, açık haritanın
 	 *  `jd_ut`, konum ve ayarlarıdır; `time_known` doğum saatinin bilinip bilinmediğidir.
 	 */
@@ -309,6 +316,22 @@ export type Ashtakavarga = {
 	sav: [number, number, number, number, number, number, number, number, number, number, number, number],
 };
 
+/**  `compute_avasthas` sonucu. */
+export type AvasthaReport = {
+	/**  Yedi graha, `AVASTHA_GRAHAS` sırasında. */
+	grahas: GrahaAvastha[],
+	/**  Shayanadi formülünün haritaya ait terimleri; Shayanadi hesaplanmadıysa `None`. */
+	shayanadi_basis: ShayanadiBasis | null,
+	/**
+	 *  Yanlışsa lagna yoktur: Lajjita değerlendirilmemiş, Shayanadi hesaplanmamıştır ve Ay'a
+	 *  bağlı değerler yaklaşıktır (Ay'ın derecesi gün içinde değişir).
+	 */
+	time_known: boolean,
+	/**  Temel haritanın konum duyarlılığı uyarısı (`LowPrecision`). */
+	warnings: ChartWarning[],
+	method: string,
+};
+
 export type AyanamsaSystem = "Lahiri" | "Raman" | 
 /**  Krishnamurti (KP). */
 "Kp" | 
@@ -319,6 +342,9 @@ export type AyanamsaSystem = "Lahiri" | "Raman" |
 	t0_jd: number | null,
 	deg: number | null,
 } };
+
+/**  Yaş basamağı. */
+export type Baladi = "Bala" | "Kumara" | "Yuva" | "Vriddha" | "Mrita";
 
 /**  Bir bhavanın gücü, virupa. */
 export type BhavaBala = {
@@ -852,6 +878,17 @@ export type Gender = "Male" | "Female" | "Other";
 
 export type Graha = "Sun" | "Moon" | "Mars" | "Mercury" | "Jupiter" | "Venus" | "Saturn" | "Rahu" | "Ketu";
 
+/**  Bir grahanın dört dizideki durumu. */
+export type GrahaAvastha = {
+	graha: Graha,
+	baladi: Baladi,
+	jagradadi: Jagradadi,
+	/**  Kural sırasında; boş olabilir. Lagna yoksa Lajjita değerlendirilmemiştir. */
+	lajjitadi: LajjitadiHit[],
+	/**  Lagna ya da gün doğumu yoksa `None`. */
+	shayanadi: ShayanadiHit | null,
+};
+
 /**  Grahanın aranabilen ikili durumları. Retro, Rahu ve Ketu için sunulmaz. */
 export type GrahaFlag = "Retrograde" | "Combust" | "Vargottama";
 
@@ -983,6 +1020,9 @@ export type Interval<T> = {
 	start_jd_ut: number | null,
 	end_jd_ut: number | null,
 };
+
+/**  Uyanıklık durumu. */
+export type Jagradadi = "Jagrat" | "Swapna" | "Sushupti";
 
 /**
  *  `compute_jaimini` sonucu. AI yorum paneli için sözleşmedir: alan adları değişirse AI
@@ -1118,6 +1158,18 @@ export type LagnaFacts = {
 	lord: LordFacts,
 	/**  Dört kendra (1, 4, 7, 10), ev sırasıyla; boş evler de listededir. */
 	kendras: HouseOccupants[],
+};
+
+export type Lajjitadi = "Lajjita" | "Garvita" | "Kshudhita" | "Trushita" | "Mudita" | "Kshobhita";
+
+/**  Grahanın içinde bulunduğu bir Lajjitadi durumu. */
+export type LajjitadiHit = {
+	state: Lajjitadi,
+	/**
+	 *  Kuralı sağlayan öteki grahalar (birlikte olan ya da bakan), `Graha::ALL` sırasında.
+	 *  Kural yalnızca burçtan sağlanıyorsa boştur.
+	 */
+	grahas: Graha[],
 };
 
 export type Layout = {
@@ -1714,6 +1766,33 @@ export type ShadbalaReport = {
 	bhavas: [BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala, BhavaBala],
 	method: string,
 	warnings: ChartWarning[],
+};
+
+export type Shayanadi = "Shayana" | "Upaveshana" | "Netrapani" | "Prakashana" | "Gamana" | "Agamana" | "Sabha" | "Agama" | "Bhojana" | "NrityaLipsa" | "Kautuka" | "Nidra";
+
+/**  Formülün haritaya ait üç terimi: her graha için aynıdır. */
+export type ShayanadiBasis = {
+	/**  Doğum nakshatrası (Ay), 1..=27. */
+	birth_nakshatra: number,
+	/**  Gün doğumundan doğuma tamamlanmış ghati. */
+	ghatis: number,
+	/**  Lagnanın rasi burcunun sırası, 1..=12. */
+	lagna_sign_number: number,
+};
+
+/**  Bir grahanın Shayanadi durumu ve formülün o grahaya ait terimleri. */
+export type ShayanadiHit = {
+	state: Shayanadi,
+	/**  Grahanın nakshatrası, 1..=27. */
+	nakshatra: number,
+	/**  Grahanın sayısı, 1..=7. */
+	graha_number: number,
+	/**  Navamsa diliminin burç içindeki sırası, 1..=9. */
+	navamsa: number,
+	/**  `N × G × A + J + Gh + L`. */
+	total: number,
+	/**  Toplamın 12'ye bölümünden artan, 0..=11; 0 on ikinci durumdur. */
+	remainder: number,
 };
 
 export type Sign = "Aries" | "Taurus" | "Gemini" | "Cancer" | "Leo" | "Virgo" | "Libra" | "Scorpio" | "Sagittarius" | "Capricorn" | "Aquarius" | "Pisces";

@@ -12,6 +12,7 @@
 //! Doğum anı ekleri (yol haritası Plan 23): `natal_extras` (panchang ekleri, navatara, Vimshopaka).
 
 pub mod ashtakavarga;
+pub mod avastha;
 mod chart;
 mod combustion;
 pub mod dasha;

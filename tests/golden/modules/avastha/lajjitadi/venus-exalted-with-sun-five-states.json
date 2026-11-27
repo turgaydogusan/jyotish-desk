@@ -1,0 +1,44 @@
+{
+  "id": "venus-exalted-with-sun-five-states",
+  "source": "hand",
+  "rule_ref": "BPHS, avasthalar bölümü: Baladi, Jagradadi ve Lajjitadi (alıntı yapılmaz); okuma kuralları avastha/REVIEW.md",
+  "derivation": [
+    "Lagna Akrep: 5. ev Balık. Venüs Balık'ta (yücelme) Güneş ile; Satürn Başak'tan karşıya bakar: Venüs beş durumdadır.",
+    "Ay'ın sınıfı: uzanım = Ay − Güneş = 10.0 − 335.0 ≡ 35.0°; 180°'den küçük: büyüyor, iyicil.",
+    "Güneş: Balık 5°00′ (çift burç, 1. dilim → Mrita); lord Jüpiter dost → Swapna; 5. ev; birlikte: Venüs; bakan: Satürn; burç lordu Jüpiter (dost).",
+    "Güneş durumları: Kshudhita (Venüs, Satürn); Trushita (Satürn); Mudita.",
+    "Ay: Koç 10°00′ (tek burç, 2. dilim → Kumara); lord Mars nötr → Swapna; 6. ev; birlikte: Mars; bakan: yok; burç lordu Mars (nötr).",
+    "Ay durumları: hiçbiri.",
+    "Mars: Koç 3°00′ (tek burç, 1. dilim → Bala); kendi burcu → Jagrat; 6. ev; birlikte: Ay; bakan: yok; burç lordu Mars (kendisi).",
+    "Mars durumları: Garvita; Mudita (Ay).",
+    "Merkür: Kova 20°00′ (tek burç, 4. dilim → Vriddha); lord Satürn nötr → Swapna; 4. ev; birlikte: yok; bakan: yok; burç lordu Satürn (nötr).",
+    "Merkür durumları: hiçbiri.",
+    "Jüpiter: Boğa 10°00′ (çift burç, 2. dilim → Vriddha); lord Venüs düşman → Sushupti; 7. ev; birlikte: yok; bakan: yok; burç lordu Venüs (düşman).",
+    "Jüpiter durumları: Kshudhita.",
+    "Venüs: Balık 15°00′ (çift burç, 3. dilim → Yuva); yücelme burcu → Jagrat; 5. ev; birlikte: Güneş; bakan: Satürn; burç lordu Jüpiter (nötr).",
+    "Venüs durumları: Lajjita (Güneş); Garvita; Kshudhita (Güneş); Mudita (Satürn); Kshobhita (Güneş, Satürn).",
+    "Satürn: Başak 12°00′ (çift burç, 3. dilim → Yuva); lord Merkür dost → Swapna; 11. ev; birlikte: yok; bakan: Güneş, Jüpiter, Venüs; burç lordu Merkür (dost).",
+    "Satürn durumları: Kshudhita (Güneş); Mudita (Venüs).",
+    "Oluşmayan: Venüs Trushita değil (Venüs su burcunda, bakan Satürn düşman değil).",
+    "Oluşmayan: Ay Kshudhita değil (Ay'ın doğal düşmanı yok).",
+    "Oluşmayan: Merkür Mudita değil (Kova'nın lordu Satürn Merkür'e nötr; yalnız ve bakışsız)."
+  ],
+  "input": {
+    "lagna_lon": 225.0,
+    "grahas": {"Sun": 335.0, "Moon": 10.0, "Mars": 3.0, "Mercury": 320.0, "Jupiter": 40.0, "Venus": 345.0, "Saturn": 162.0, "Rahu": 85.0, "Ketu": 265.0}
+  },
+  "expected": {
+    "baladi": {"Sun": "Mrita", "Moon": "Kumara", "Mars": "Bala", "Mercury": "Vriddha", "Jupiter": "Vriddha", "Venus": "Yuva", "Saturn": "Yuva"},
+    "jagradadi": {"Sun": "Swapna", "Moon": "Swapna", "Mars": "Jagrat", "Mercury": "Swapna", "Jupiter": "Sushupti", "Venus": "Jagrat", "Saturn": "Swapna"},
+    "lajjitadi": {
+      "Sun": [{"state": "Kshudhita", "grahas": ["Venus", "Saturn"]}, {"state": "Trushita", "grahas": ["Saturn"]}, {"state": "Mudita", "grahas": []}],
+      "Moon": [],
+      "Mars": [{"state": "Garvita", "grahas": []}, {"state": "Mudita", "grahas": ["Moon"]}],
+      "Mercury": [],
+      "Jupiter": [{"state": "Kshudhita", "grahas": []}],
+      "Venus": [{"state": "Lajjita", "grahas": ["Sun"]}, {"state": "Garvita", "grahas": []}, {"state": "Kshudhita", "grahas": ["Sun"]}, {"state": "Mudita", "grahas": ["Saturn"]}, {"state": "Kshobhita", "grahas": ["Sun", "Saturn"]}],
+      "Saturn": [{"state": "Kshudhita", "grahas": ["Sun"]}, {"state": "Mudita", "grahas": ["Venus"]}]
+    },
+    "absent": [{"graha": "Venus", "state": "Trushita"}, {"graha": "Moon", "state": "Kshudhita"}, {"graha": "Mercury", "state": "Mudita"}]
+  }
+}
