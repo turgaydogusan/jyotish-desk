@@ -649,85 +649,120 @@ Komutlar:
 
 ### Kapsam ve yöntem
 
-**Zaman çizelgesi çekirdeği** (`timeline`): bir tarih aralığı ve yer için aralık dizileri üretir. Her dizi boşluksuz ardışık `[start_jd, end_jd)` aralıklarıdır; sınırlar v1'deki panchang bitiş aramasıyla aynı yöntemle (ikiye bölme) bulunur.
+**Zaman çizelgesi çekirdeği** (`timeline`): bir zaman aralığı ve yer için aralık dizileri üretir. Her dizi boşluksuz ardışık `[start_jd, end_jd)` aralıklarıdır ve verilen aralığa kırpılır (ilk aralık aralığın başında başlar, sonuncusu sonunda biter). `muhurta` modülü bunun üstünde durur; 3.9'un olay araması yalnızca `timeline`'ı kullanır.
 
-- Tithi, nakshatra (pada ile), nitya yoga, karana, vara (gün doğumu → gün doğumu), Ay burcu, Güneş burcu.
+- **Yöntem.** Bütün diziler tek bir yürüyücüden gelir: ayrık değer sabit adımlarla örneklenir; iki örnek arasında değer değişmişse değişim anı ikiye bölmeyle bulunur (çözünürlük 0,05 sn); bir adımın içindeki birden çok değişim sırayla bulunur. Sınır, yeni değerin geçerli olduğu ilk andır. Değer v1 panchangının fonksiyonlarıyla aynı sorgulardan hesaplanır; böylece aralığın içinde `compute_panchang` ile aynı değer yapıdan gelir. v1'in bitiş araması tekdüze artan açı ister ve retro girişlerde ve lagnada kullanılamaz; ayrık değerin yürüyüşü tekdüzelik istemez. Adımlar: Ay'a bağlı diziler 0,5 gün, graha dizileri 1 gün, lagna 30 dakika, gün doğumu olmayan yerde vara 6 saat. **Sınır:** bir adımın içinde değişip aynı değere dönen kısa gidiş (dönüş anının tam burç sınırına düşmesi; kutup dairesinin içinde lagnanın anlık sıçraması) görülmez.
+- Tithi, karana, nakshatra (pada ile), nitya yoga, vara, Ay burcu, Güneş burcu. Tithi dizisi karana dizisinden türetilir (ardışık iki karana bir tithidir): iki dizi aynı sınır anlarını paylaşır.
+- Vara `compute_panchang`'ın kuralıdır: gün doğumunda değişir; gün doğumu yoksa gün 06:00 yerel ortalama saatte başlar. Olağan enlemde dizi doğuş anlarından kurulur; doğuşlar aralığı örtmüyorsa v1'in fonksiyonu yürünür. İki yol her anda aynı değeri verir.
 - Lagna burcu (yükselen burcun değiştiği anlar).
-- Graha burç girişleri, nakshatra girişleri, retro ve düz dönüş anları (hızın sıfır geçişi) — 3.9'un olay araması da bunları kullanır.
+- Graha dizileri (olay ayrı bir tip değildir: bir giriş ya da dönüş, iki aralığın sınırıdır): rasi çerçevesinde burç ve sidereal nakshatra dokuz graha için; hareket yönü (`Motion { Direct, Retrograde }`) yalnızca Mars, Merkür, Jüpiter, Venüs ve Satürn için (Güneş ve Ay geri gitmez; düğümlerin yön değişimi olay sayılmaz); yanma (v1 kuralı, haritanın orbları).
+- Çerçeveler (K5): burçlar ve chandra bala rasi çerçevesindedir; tithi, karana, nakshatra, pada, nitya yoga, panchaka ve tara bala her kipte sidereal boylamdandır.
 
-**Gün panchangı.** Seçilen tarih ve yer için gün doğumundan sonraki gün doğumuna:
+**Gün panchangı.** Gün, verilen anı içeren gündür (gün doğumundan sonraki gün doğumuna); gün doğumundan önceki an bir önceki güne aittir (vara ile aynı kural). Bir takvim günü ve saat dilimi hangi gün doğumunun kastedildiğini tek başına söylemez; girdi bu yüzden bir andır.
 
-- Beş uzvun o gün içindeki tüm değerleri ve değişim saatleri.
-- Gündüzün sekizde bir dilimleri: gün doğumu → batımı sekiz eşit parça. Varaya göre dilim sırası (Pazar…Cumartesi): Rahu dilimi 8, 2, 7, 5, 6, 4, 3; Yamaganda 5, 4, 3, 2, 1, 7, 6; Gulika 7, 6, 5, 4, 3, 2, 1.
-- Abhijit: gündüzün on beş eşit muhurtasının sekizincisi. Çarşamba günü `abhijit_weekday_exception: true`.
-- Hora tablosu: 24 saat lordu (3.4'teki kural).
+- Beş uzvun o gün içindeki tüm değerleri ve değişim saatleri, sınıflarıyla. Günün dışına taşan uç günün başı ya da sonudur; arayüz bunu işaretler ("günün başından önce başlar", "günün sonundan sonra sürer").
+- Gündüzün sekizde bir dilimleri: gerçek gün doğumu → batımı sekiz eşit parça. Varaya göre dilim sırası (Pazar…Cumartesi): Rahu dilimi 8, 2, 7, 5, 6, 4, 3; Yamaganda 5, 4, 3, 2, 1, 7, 6; Gulika 7, 6, 5, 4, 3, 2, 1.
+- Abhijit: gündüzün on beş eşit muhurtasının sekizincisi. Çarşamba günü `abhijit_weekday_exception: true`'dur; dilim yine verilir.
+- Hora tablosu: gün doğumundan sonraki gün doğumuna 24 eşit dilim; ilk lord vara lordudur, sonrakiler 3.4'teki kuralla.
+- **Gün doğumu olmayan gün** (kutup gecesi ya da gündüzü): gün 06:00 yerel ortalama saatte başlar ve 24 saat sürer; gün doğumu alanları ve dilimler boştur, `warnings` `SunriseUnavailable` taşır; uzuvlar, işaretler ve kişiye bağlı etkenler yine verilir.
 
 **Sınıflar ve işaretler** (olgu olarak; uygun/uygunsuz hükmü süzgeci kuran astrologundur):
 
-- Tithi grubu: Nanda (1, 6, 11), Bhadra (2, 7, 12), Jaya (3, 8, 13), Rikta (4, 9, 14), Purna (5, 10, 15); her iki pakshada.
+- Tithi grubu: Nanda (1, 6, 11), Bhadra (2, 7, 12), Jaya (3, 8, 13), Rikta (4, 9, 14), Purna (5, 10, 15); her iki pakshada (Purnima ve Amavasya Purna'dır).
 - Nakshatra doğası: sabit (Rohini, üç Uttara), yürük (Punarvasu, Swati, Shravana, Dhanishta, Shatabhisha), sert (Bharani, Magha, üç Purva), karışık (Krittika, Vishakha), çevik (Ashwini, Pushya, Hasta), yumuşak (Mrigashira, Chitra, Anuradha, Revati), keskin (Ardra, Ashlesha, Jyeshtha, Mula).
-- İşaretler: Vishti karana; Vyatipata ve Vaidhriti nitya yogaları; panchaka (Ay sidereal 300°–360°); Jüpiter ya da Venüs yanık (v1 yanma kuralı).
+- İşaretler tek bir enum'dur ve ikili kalemler ayrı değerlerdir (süzgeç birini dışlayıp diğerini bırakabilir): `MuhurtaFlag { Rikta, Vishti, Vyatipata, Vaidhriti, RahuSegment, Yamaganda, Gulika, Panchaka, JupiterCombust, VenusCombust }`. Rikta tithi grubundan, Vishti karananın adından, panchaka Ay'ın sidereal 300°–360° aralığından, yanma v1 kuralından okunur. Gün panchangının `flags` listesi yedisini aralık olarak verir (üç gündüz dilimi `segments` içindedir); aramanın `exclude` listesi onunu da alır.
+- Bu tablolar ve kümeler muhurta derlemelerinin yaygın biçimidir ve bellekten aktarılmıştır; basılı kaynakla karşılaştırma sahibin işidir (§17; `tests/golden/modules/muhurta/REVIEW.md`).
 
-**Kişiye bağlı etkenler** (bir harita seçiliyse):
+**Kişiye bağlı etkenler** (açık haritanın Ay'ına göre; gün içinde değişebildikleri için aralık dizisidir):
 
-- Tara bala: doğum nakshatrasından günün nakshatrasına sayım mod 9 → Janma, Sampat, Vipat, Kshema, Pratyak, Sadhana, Naidhana, Mitra, Parama Mitra; "elverişli" kümesi {2, 4, 6, 8, 9}.
-- Chandra bala: geçiş Ay'ının doğum Ay burcundan ev sayısı; "elverişli" kümesi {1, 3, 6, 7, 10, 11}.
+- Tara bala: doğum nakshatrasından günün nakshatrasına sayım (başlangıç da sayılır) mod 9 → Janma, Sampat, Vipat, Kshema, Pratyak, Sadhana, Naidhana, Mitra, Parama Mitra; "elverişli" kümesi {2, 4, 6, 8, 9}. Janma bu kümede değildir.
+- Chandra bala: geçiş Ay'ının rasi burcunun doğum Ay burcundan sayısı; "elverişli" kümesi {1, 3, 6, 7, 10, 11}.
+- "Elverişli" bu iki kümenin adıdır, hüküm değildir.
+- **Doğum saati bilinmiyorsa** (K2): muhurta doğum lagnasını kullanmaz ve `None` dönen alan yoktur. Doğum Ay'ı öğle konumundadır; arayüz kişiye bağlı tabloyu ve iki kişi koşulunu "≈" ve açıklamasıyla işaretler.
 
 **Pencere araması.** Kullanıcının kurduğu süzgece uyan zaman pencerelerini bulur.
 
-- Süzgeç alanları: tarih aralığı (en çok 366 gün), yer, izinli varalar, izinli tithiler, izinli nakshatralar, izinli lagna burçları, "yalnızca gündüz", en kısa süre (dakika), dışlanan işaretler (Rikta, Vishti, Vyatipata/Vaidhriti, Rahu dilimi, Yamaganda, Gulika, panchaka, yanık Jüpiter/Venüs), kişi için "tara bala elverişli" ve "chandra bala elverişli".
-- Sonuç: aralık kesişimlerinden çıkan pencereler, her biri o andaki beş uzuv ve lagna burcuyla.
+- Koşullar (`MuhurtaCriteria`, saklanabilir; yer, tarih ve kişi taşımaz): izinli varalar, izinli tithiler (1..=30, paksha ayrımıyla), izinli nakshatralar, izinli lagna burçları, "yalnızca gündüz", en kısa süre (dakika), dışlanan işaretler, "tara bala elverişli" ve "chandra bala elverişli". Boş küme kısıt değildir. Arama girdisi (`MuhurtaFilter`) koşullara aralığı (en çok 366 gün), enlem ve boylamı ve doğum Ay'ını ekler.
+- Sonuç: aralık kesişimlerinden çıkan pencereler; her birinin özeti (`WindowSnapshot`: beş uzuv ve lagna burcu) pencerenin başlangıç anının noktasal hesabıdır.
+- **Durumsuz, imleçli sayfalama.** Bir çağrı 31 günlük tek bir dilimi hesaplar ve sonraki dilimin imlecini döner; aynı süzgeç ve imleç her zaman aynı sayfayı verir. Rust'ta arama durumu, `search_id` ve iptal komutu yoktur: durdurmak, sonraki dilimi istememektir; eski aramanın geç gelen sayfasını arayüz düşürür. Dilimler takvim ayı değil 31 gündür.
+- Dilim sınırını aşan pencere bölünmez: başı imleçte taşınır ve pencere kapandığı dilimde tam uzunluğuyla verilir; "en kısa süre" birleşmiş pencereye uygulanır. 1 saniyeden kısa pencere hiç verilmez (aynı ana düşen iki ayrı dizinin sınırları çözünürlük kadar ayrışır ve kıymık pencere üretirdi). Dilim uzunluğu sonucu değiştirmez; bu, sınırlarda 1 saniye içinde geçerlidir.
+- **Gün doğumu ya da batımı olmayan günlerde:** "yalnızca gündüz" o günlerde pencere vermez; üç gündüz dilimi dışlaması uygulanmaz; iki durumda da sayfa `SunriseUnavailable` uyarısı taşır. Vara koşulu yukarıdaki kuralla çalışır.
 - Karar: hazır etkinlik şablonu (evlilik, yolculuk, eve giriş…) yoktur. Şablonlar klasik muhurta derlemelerinin kural kümeleridir, hüküm içerir ve ayrı bir derleme işidir; v1'de astrolog kendi süzgecini kurar ve adlandırıp saklar.
 
-**Bulunulan yer.** `AppPrefs.home_place: Option<Place>` eklenir (atlas'tan seçilir ya da elle girilir). Gün panchangı ve Prashna bunu varsayılan yer olarak kullanır; boşsa açık haritanın doğum yeri önerilir ve seçim istenir. Konum servisi kullanılmaz.
+**Bulunulan yer.** `AppPrefs.home_place: Option<HomePlace>` eklenir; `HomePlace { place: Place, tz: TzChoice }` (o yerin saatleri gösterileceği için saat dilimi de saklanır). `APP_PREFS_SCHEMA_VERSION` değişmez: alanı taşımayan eski kayıt yersiz okunur. Okuma toleranslıdır (geçersiz yer "seçilmemiş"tir); yazım koordinat aralığını, ad uzunluğunu ve saat dilimini denetler ve `invalid_input` alan `home_place` döner. Tercih kaydı bütün kaydı değiştirir: arayüz her yazımda okuduğu kaydı değiştirip yazar. Gün panchangı, muhurta araması ve Prashna bunu varsayılan yer olarak kullanır. Seçilmemişse panel yer ister ve hiçbir komut çağırmaz; açık haritanın doğum yeri önerilir ama sessizce kullanılmaz. Yer atlastan aranır ya da açık haritanın doğum yerinden alınır; ayrı bir elle koordinat formu yoktur (elle girilmiş koordinat, o koordinatla kurulmuş bir haritanın doğum yeri olarak alınır). Konum servisi kullanılmaz.
 
 ### Veri modeli ve IPC
 
 ```rust
 pub struct Interval<T> { pub value: T, pub start_jd_ut: f64, pub end_jd_ut: f64 }
-pub struct DaySegments { pub rahu: Interval<()>, pub yamaganda: Interval<()>,
-                         pub gulika: Interval<()>, pub abhijit: Interval<()>,
+pub struct DaySegments { pub eighths: Vec<Interval<u8>>,                   // sekiz dilim, değer 1..=8
+                         pub rahu: Interval<u8>, pub yamaganda: Interval<u8>, pub gulika: Interval<u8>,
+                         pub abhijit: Interval<u8>,                        // değer 8: muhurtanın sırası
                          pub abhijit_weekday_exception: bool, pub horas: Vec<Interval<Graha>> }
-pub struct DayPanchang { pub sunrise_jd_ut: f64, pub sunset_jd_ut: f64, pub next_sunrise_jd_ut: f64,
-                         pub vara: Vara, pub tithis: Vec<Interval<u8>>,
-                         pub nakshatras: Vec<Interval<(u8, u8)>>,          // (nakshatra, pada)
-                         pub yogas: Vec<Interval<u8>>, pub karanas: Vec<Interval<u8>>,
-                         pub segments: DaySegments, pub flags: Vec<Interval<MuhurtaFlag>>,
-                         pub personal: Option<PersonalFactors>, pub warnings: Vec<ChartWarning> }
-pub struct MuhurtaFilter { pub from_jd_ut: f64, pub to_jd_ut: f64, pub place: Place,
-                           pub weekdays: Vec<Vara>, pub tithis: Vec<u8>, pub nakshatras: Vec<u8>,
-                           pub lagna_signs: Vec<Sign>, pub daytime_only: bool,
-                           pub min_minutes: u32, pub exclude: Vec<MuhurtaFlag>,
-                           pub natal: Option<NatalMoon>, pub require_tara: bool,
-                           pub require_chandra: bool }   // boş küme = kısıt yok
+pub struct DayTithi { pub no: u8, pub paksha: Paksha, pub group: TithiGroup }
+pub struct DayNakshatra { pub no: u8, pub pada: u8, pub nature: NakshatraNature }
+pub struct DayKarana { pub no: u8, pub name: KaranaName }
+pub struct TaraBala { pub number: u8, pub favourable: bool }
+pub struct ChandraBala { pub house: u8, pub favourable: bool }
+pub struct PersonalFactors { pub tara: Vec<Interval<TaraBala>>, pub chandra: Vec<Interval<ChandraBala>> }
+pub struct DayPanchang { pub day_start_jd_ut: f64, pub day_end_jd_ut: f64,
+                         pub sunrise_jd_ut: Option<f64>, pub sunset_jd_ut: Option<f64>,
+                         pub next_sunrise_jd_ut: Option<f64>,              // gün doğumu yoksa üçü de None
+                         pub vara: Vara, pub tithis: Vec<Interval<DayTithi>>,
+                         pub nakshatras: Vec<Interval<DayNakshatra>>,
+                         pub yogas: Vec<Interval<u8>>, pub karanas: Vec<Interval<DayKarana>>,
+                         pub segments: Option<DaySegments>, pub flags: Vec<Interval<MuhurtaFlag>>,
+                         pub personal: Option<PersonalFactors>, pub warnings: Vec<ChartWarning>,
+                         pub method: String }                              // "muhurta.v1" (K7)
+pub struct MuhurtaCriteria { pub weekdays: Vec<Vara>, pub tithis: Vec<u8>, pub nakshatras: Vec<u8>,
+                             pub lagna_signs: Vec<Sign>, pub daytime_only: bool, pub min_minutes: u32,
+                             pub exclude: Vec<MuhurtaFlag>, pub require_tara: bool,
+                             pub require_chandra: bool }                   // boş küme = kısıt yok
+pub struct MuhurtaFilter { pub from_jd_ut: f64, pub to_jd_ut: f64, pub lat: f64, pub lon: f64,
+                           pub criteria: MuhurtaCriteria, pub natal: Option<NatalMoon> }
+pub struct MuhurtaCursor { pub chunk: u32, pub open_start_jd_ut: Option<f64> }
 pub struct MuhurtaWindow { pub start_jd_ut: f64, pub end_jd_ut: f64, pub snapshot: WindowSnapshot }
+pub struct MuhurtaSearchPage { pub windows: Vec<MuhurtaWindow>, pub scanned: u32, pub chunks: u32,
+                               pub next: Option<MuhurtaCursor>, pub warnings: Vec<ChartWarning>,
+                               pub method: String }
 ```
 
-Komutlar: `day_panchang(date, place, tz, settings, natal: Option<NatalMoon>) -> DayPanchang`; `muhurta_search(filter, search_id) -> MuhurtaSearchPage` (ay ay sayfalanır; `search_id` yeni aramada değişir, eski arama sayfaları atılır); `muhurta_cancel(search_id)`. `NatalMoon { nakshatra, sign }` yalnızca iki sayı taşır. Kayıtlı süzgeçler `app_state` altında `muhurta_filters` anahtarında JSON olarak durur (kişi verisi içermez; kişi seçimi kaydedilmez).
+Komutlar:
+
+- `day_panchang(at: TransitAt, place: MuhurtaPlace, settings, natal: Option<NatalMoon>) -> DayPanchangView { day, offset_secs }`. `at` transit anıdır ("şimdi" Rust'ta okunur). `MuhurtaPlace { lat, lon, tz }` ad taşımaz.
+- `muhurta_search(query: MuhurtaQuery, settings, cursor: Option<MuhurtaPageCursor>) -> MuhurtaSearchView`. `MuhurtaQuery { from_date, to_date, place, criteria, natal }`: tarihler yerin takvim günleridir (`YYYY-MM-DD`, ikisi de dahil); boş başlangıç bugün, boş bitiş başlangıçtan 30 gün sonrasıdır. Günün başı yerin 00:00'ıdır (yaz saati boşluğuna düşerse öğleden 12 saat öncesi). Aralık ilk çağrıda çözülür ve imleçte taşınır: gece yarısını aşan bir arama aralığını değiştirmez.
+- `load_muhurta_filters()`, `save_muhurta_filters(filters)`: kayıtlı süzgeçler `app_state`'in `muhurta_filters` anahtarında `{"schema_version": 1, "filters": [{"name", "criteria"}]}` olarak durur. Okuma toleranslıdır; kayıt listenin tamamını yazar ve kanonik listeyi döner. En çok 32 süzgeç; ad kırpılır, boş olamaz, 200 karakteri aşamaz ve büyük/küçük harf ayırmadan tektir (karşılaştırma dilden bağımsızdır; arayüz aynı karşılaştırmayı kullanır). Kişi, yer ve tarih içermez.
+- **Saatler seçilen yerin saatiyle gösterilir.** Ofset Rust'ta çözülür (`atlas::offset_at`) ve sonuçla gelir: gün panchangında günün başındaki ofset, aramada pencerenin iki ucundaki ofset. Gün içinde yaz saati değişirse gün panchangının saatleri o gün bir saat kayık gösterilir (yılda iki gün).
+- **Hatalar yalnızca alan adı taşır:** `invalid_muhurta_input { field }`; alanlar `range`, `place`, `natal`, `graha`, `tithis`, `nakshatras`, `min_minutes`, `cursor` (çekirdek) ve `at`, `from_date`, `to_date` (komut). Muhurta yolları konumu, saat dilimini ve anı kendileri denetler: v1'in `invalid_location { lat, lon }`, `invalid_julian_day { jd }`, `unknown_time_zone { tz }` ve `nonexistent_local_time { local, suggestion }` hataları bu yollarda üretilmez. Yer her şeyden önce denetlenir: geçersiz bir yer, tarihler ve an ne olursa olsun `place` alanıyla döner. Motorun kendi `calc { detail }` hatası v1'deki gibi geçer (ayrıntı Swiss Ephemeris'in iletisidir; yer ve kişi taşımaz).
 
 ### Arayüz
 
 | Panel | `kind` | Ayarlar | İçerik |
 |---|---|---|---|
-| Gün panchangı | `muhurta_day` | yer (bulunulan yer / harita yeri / özel), tarih bağı (transit tarihi / bugün) | Yatay gün şeridi: gün doğumu–batımı, sekiz dilim ve işaretli üçü, Abhijit; altında beş uzvun değişim saatli listesi, işaretler, hora tablosu; harita açıksa tara ve chandra bala. |
-| Muhurta araması | `muhurta_search` | etkin süzgeç | Süzgeç formu (görünür etiketli alanlar), "Ara" düğmesi, sonuç listesi: başlangıç, bitiş, süre, uzuvlar. Satıra tıklamak transit tarihini o ana götürür. |
+| Gün panchangı | `muhurta_day` | `place` (bulunulan yer / harita yeri / özel), `custom` (özel yer), `link` (transit tarihi / bugün) | Başlık (tarih, vara); gün doğumu, batımı ve sonraki gün doğumu; gün şeridi (sekiz dilimli sıralı liste, işaretli üçü ve altında Abhijit); beş uzvun tablosu (değer ve sınıf, başlangıç, bitiş); işaretler; tara ve chandra bala tablosu; hora tablosu; yöntem kimliği. |
+| Muhurta araması | `muhurta_search` | `place`, `custom`, `criteria` (etkin süzgeç) | Kayıtlı süzgeç satırı; yer; başlangıç ve bitiş tarihi (oturumluk); onay kutusu kümeleri; "Ara"; sonuç tablosu: başlangıç, bitiş, süre, uzuvlar ve lagna. Satırın başlangıcı transit tarihini o ana götürür. |
 
-- Gün şeridinde dilimler desen ve yazıyla ayrılır ("Rahu", "Yama", "Guli", "Abhi"); renk tek başına anlam taşımaz.
-- Arama 100 ms'yi aşarsa satır içi gösterge, 1 s'yi aşarsa ilerleme (taranan ay / toplam) ve "Durdur".
-- Kutup günü ya da gecesinde gündüz dilimleri hesaplanmaz; panel uyarı rozetiyle yalnızca uzuvları gösterir.
+- İki panel de modül panelidir (K12): yalnızca harita açıkken sunulur ve doğum Ay'ı her zaman açık haritanınkidir; haritasız gün panchangı yoktur.
+- Gün şeridinde dilimler desen ve yazıyla ayrılır ("Rahu", "Yama", "Guli", "Abhi"); renk tek başına anlam taşımaz. Abhijit çubuğu yalnızca çizimdir; saatleri metin olarak da yazılıdır. Saat "SS:DD"dir; günün başladığı takvim gününden sonraki saat "(+1)" taşır.
+- Gün yeniden okunurken son okunan gün ve odak yerinde durur (`aria-busy`); hatadan sonraki okuma boş başlar (hatadan önceki gün gösterilmez).
+- Arama 100 ms'yi aşarsa satır içi gösterge, 1 s'yi aşarsa ilerleme (taranan bölüm / toplam) ve "Durdur". Sonuç tablosu arama boyunca DOM'da durur. İlk sayfadan önce durdurulan arama bunu söyler; hata kendi satırındadır. En çok 500 satır çizilir; fazlası sayılır.
+- **Liste, başlatıldığı forma aittir:** koşullar, tarihler ya da yer arama sürerken değişirse arama durdurulur; değişmiş formun altındaki liste "önceki aramanın sonucu" diye işaretlenir.
+- **Kayıtlı süzgeçler:** kayıt listenin tamamını yazdığı için saklanan liste okunmadan (okunurken ya da okunamadıysa) kaydetmek ve silmek kullanılamaz; okunamayan liste yeniden okunabilir. Ad alanında Enter süzgeci kaydeder, aramayı başlatmaz.
+- Kullanılamayan düğme yerel `disabled` değildir: odaklanır ve nedeni görünür bir satırdır (yer seçilmedi; ad yok; 32 süzgeç sınırı; seçili süzgeç yok; liste okunmadı). Odaktaki denetimi kaldıran her eylem odağı bilerek taşır ("Durdur" → "Ara"; "Süzgeci sil" ve "Süzgeçleri yeniden oku" → seçici; "Yeri kaldır" → "doğum yerini kullan").
+- Kutup günü ya da gecesinde gündüz dilimleri ve hora tablosu çizilmez; panel uyarı rozetiyle uzuvları, işaretleri ve kişiye bağlı etkenleri gösterir.
 
 ### Test
 
-- **Çapraz denetim (asıl güvence):** `timeline` aralıklarının içinden örneklenen anlarda `compute_panchang` aynı tithi, nakshatra, yoga, karana ve varayı verir; aralık sınırı, `compute_panchang`'ın bitiş zamanıyla ≤ 1 sn içinde örtüşür. v1 panchangı golden fixture'larla zaten doğrulanmıştır.
-- **El örnekleri:** yedi vara için dilim sıraları; gün doğumu 06:00 ve batımı 18:00 olan sentetik günde dilim saatleri (Pazartesi Rahu dilimi 07:30–09:00 gibi) ve Abhijit 11:36–12:24; tara ve chandra bala için 27 × 27 ve 12 × 12 tabloların ikinci bağımsız yazımı.
-- **Property:** aralıklar boşluksuz ve örtüşmesiz; sekiz dilim gündüzü tam böler; Rahu, Yamaganda ve Gulika her varada üç farklı dilimdir; 24 hora günü tam böler ve ilk hora lordu vara lordudur; arama sonucu her pencerenin her anında süzgeci sağlar (pencere içinden rastgele örneklemeyle) ve pencereler en kısa süreden kısa değildir.
+- **Çapraz denetim (asıl güvence):** `timeline` aralıklarının içinden örneklenen anlarda `compute_panchang` aynı tithi, nakshatra, yoga, karana ve varayı verir; aralık sınırı, `compute_panchang`'ın bitiş zamanıyla ≤ 1 sn içinde örtüşür (sahte ve gerçek ephemeris'le). v1 panchangı golden fixture'larla zaten doğrulanmıştır.
+- **El örnekleri:** yedi vara için birer sentetik gün (`tests/golden/modules/muhurta/`, kaynak `hand`): dilim saatleri, Abhijit, hora düzeni, tithi grubu, nakshatra doğası, tara ve chandra bala. Dilim sıraları formül ve elle yazılmış tablo olarak iki ayrı yazımdır. Örnekler motoru yazan dışında biri tarafından kuraldan yeniden türetilir (kayıt `REVIEW.md`'de).
+- **Property:** aralıklar boşluksuz ve örtüşmesiz; sekiz dilim gündüzü tam böler; Rahu, Yamaganda ve Gulika her varada üç farklı dilimdir; 24 hora günü tam böler ve ilk hora lordu vara lordudur; arama sonucu her pencerenin her anında süzgeci sağlar, pencere araları ve son pencereden sonrası sağlamaz (kısa dilimlerle yürünen aramada da), pencereler en kısa süreden kısa değildir ve dilim uzunluğu sonucu değiştirmez.
 - **Astronomik:** bulunan burç girişi anında boylam sınırın ± 1″ içindedir; dönüş anında hız işaret değiştirir.
 
 ### Gizlilik, performans, kapsam dışı
 
-- Gizlilik: §14. `home_place` kişisel veridir: loglanmaz, hata parametresine girmez, dışa aktarıma yazılmaz. Ağ isteği yok.
-- Performans: `day_panchang` ≤ 50 ms. Arama: lagna süzgeci olmadan 366 gün ≤ 2 s, lagna süzgeciyle ≤ 5 s; ilk sayfa ≤ 500 ms. Arama motor iş parçacığını ay sınırlarında bırakır; araya giren harita hesabı en çok 300 ms bekler.
-- Kapsam dışı: etkinlik şablonları, vara–nakshatra birleşim yogaları, otuz muhurtanın adları, choghadiya ve benzeri bölgesel gün bölümlemeleri, tithi–vara–nakshatra dosha tablolarının tamamı, tutulmalar, takvim görünümünde aylık panchang, bildirim/hatırlatma.
+- Gizlilik: §14. `home_place` kişisel veridir: loglanmaz, hata parametresine girmez, dışa aktarıma yazılmaz. Yer, sorgu, doğum Ay'ı ve kayıtlı süzgeç adları loglanmaz; komutlara yerin adı gönderilmez; kayıtlı süzgeçler de dışa aktarılmaz ve içe aktarma tercihlere dokunmaz. Sonuçlar saklanmaz. Ağ isteği yok.
+- Performans: `day_panchang` ≤ 50 ms. Arama: lagna süzgeci olmadan 366 gün ≤ 2 s, lagna süzgeciyle ≤ 5 s; ilk sayfa ≤ 500 ms; her sayfa ≤ 300 ms. Arama motor iş parçacığını dilim aralarında bırakır; araya giren harita hesabı en çok bir dilim bekler. Ölçüm (hata ayıklama derlemesi): gün ~0,6 ms; 366 gün ~0,2 sn, lagna koşuluyla ~0,4 sn; en yavaş dilim ~40 ms.
+- Kapsam dışı: etkinlik şablonları, vara–nakshatra birleşim yogaları, otuz muhurtanın adları, choghadiya ve benzeri bölgesel gün bölümlemeleri, tithi–vara–nakshatra dosha tablolarının tamamı, tutulmalar, takvim görünümünde aylık panchang, bildirim/hatırlatma; haritasız gün panchangı; elle koordinat formu; günün dışına taşan uzuvların gerçek uçları; 500'den fazla pencerenin listelenmesi; sonuçların ve kayıtlı süzgeçlerin dışa aktarılması; ikinci okumalar (gündüz ve gece ayrı bölünen horalar, sabit 06:00–18:00 günü, öğlenin iki yanında sabit Abhijit, Janma tarasının elverişli sayılması, shukla pakshada genişleyen chandra bala kümesi, 293°20′'de başlayan panchaka): K7'ye göre ancak ikinci seçenek uygulanınca ayar olur.
 
 ---
 
@@ -945,12 +980,14 @@ Ek kurallar:
 
 - **Varyant seçimleri tartışılabilir.** Shadbala'da yıl/ay lordunun güneş girişinden bulunması (giriş sidereal çerçevede, varası doğum yerinde ölçülür), saptavargaja değerleri, drik balada Merkür ve Jüpiter'in bakışının çeyreğin *üstüne* tam eklenmesi (1,25 kat; öteki okuma 1,00 kat — §7 madde 6; çalışma kâğıdı ile motor aynı okumayı paylaşır, yani kâğıt aritmetiği doğrular, bu seçimi değil), cheshtanın ortalama öğelerle hesabı, sıranın toplama göre verilmesi, özel bakışların ekleme-ve-kesme biçimi; chara dashada padakrama düzeni ve alt dönem sırası; chara karakada varsayılan sekizli şema; yogalarda mahapurushanın yalnızca lagnadan sayılması, Kemadruma'nın iptalleri, Neecha bhanga'nın üç koşulu ve Ay'ın kendisinden sayılmaması, değişim sınıfının değişen evlerle belirlenmesi, Dharma-Karmadhipati'nin ek kayıt olması (ikinci bir okuma gelirse katalog sürümü artar). Hepsi `method` kimliğiyle görünürdür ve tek fonksiyonda toplanmıştır; beta astrologlarından gelen geri bildirimle ikinci bir yöntem eklenebilir (o zaman K7'ye göre ayar olur).
 - **Kuta puan tabloları basılı kaynaklarla karşılaştırılmadı.** Üç tablo §9'da hücre hücre yazılıdır ve yaygın basılı biçimden aktarılmıştır; değişmezleri ve ikinci yazımları testtedir, el örnekleri bağımsız olarak yeniden türetilmiştir. Bu, aritmetiği ve okumayı doğrular, hücreleri değil: iki bağımsız basılı klasik kaynakla hücre hücre karşılaştırma sahibin işidir (`tests/golden/modules/kuta/REVIEW.md`'deki kayıt). Bakılacak ayrışma noktaları: vashya'da insan–böcek hücreleri ve yabanıl sınıfın insan, böcek ve suyla hücreleri (bakışımlı varyant); gana'da Deva/Manushya 6 ve 5'in yeri ile damat Rakshasa – gelin Deva (1 ya da 0) ve tersi; yoni'de 1, 2, 3 değerli tek tük hücreler. Karşılaştırma yapılana dek puanlar "doğrulanmamış tablo" notuyla sunulur. Öteki okuma seçimleri (taranın iki yönlü sayımı, vashya yarılarının 15° sınırı, istisnaların puanı değiştirmemesi, her haritanın kendi ayarıyla hesaplanması) §9'da yazılıdır ve ikinci bir okuma uygulanana dek ayar değildir (K7).
+- **Muhurta tabloları basılı kaynaklarla karşılaştırılmadı.** Üç işaretli dilimin vara sıraları, tithi grupları, nakshatra doğaları ve iki elverişli küme §10'da yazılıdır ve muhurta derlemelerinin yaygın biçiminden bellekten aktarılmıştır; ikinci yazımları ve değişmezleri testtedir, yedi el örneği bağımsız olarak yeniden türetilmiştir. Bu, kuralların uygulanışını ve aritmetiği doğrular, tabloları ve okuma seçimlerini değil: basılı bir panchang ya da muhurta derlemesiyle karşılaştırma sahibin işidir (`tests/golden/modules/muhurta/REVIEW.md`'deki sekiz satır ve kayıt tablosu). Bakılacak ayrışma noktaları, önem sırasıyla: **horaların uzunluğu** (burada gün doğumundan sonraki gün doğumuna 24 eşit dilim; yaygın öteki okuma gündüzün ve gecenin ayrı ayrı on ikiye bölünmesidir ve gündüz ile gece eşit değilken her horanın saatini değiştirir); dilimlerin gerçek gün doğumu ve batımına göre orantılı olması (öteki okuma sabit 06:00–18:00 günü ve 90 dakikalık dilimler); Gulika'nın dilimin tamamı olması (başını, ortasını ya da sonunu alan ve gece Gulika'sını da veren gelenekler); Abhijit'in gündüzün on beşte biri olması (öğlenin iki yanında sabit 24'er dakika; Çarşamba günü hiç verilmemesi); Janma tarasının elverişli sayılmaması; shukla pakshada genişleyen chandra bala kümesi; panchakanın 300°'de başlaması (öteki okuma 293°20′); Vishti'nin yalnızca karanadan okunması. Karşılaştırma yapılana dek gün dilimleri ve sınıflar "doğrulanmamış tablo" notuyla sunulur. İkinci bir okuma uygulanana dek hiçbiri ayar değildir (K7); yöntem kimliği `muhurta.v1`'dir.
+- **Zaman çizelgesinin göremediği kısa gidişler.** Bir örnekleme adımının içinde değişip aynı değere dönen değer (dönüş anının tam burç sınırına düşmesi; kutup dairesinin içinde lagnanın anlık sıçraması) dizide görünmez (§10 "Yöntem"). 3.9'un olay araması aynı çekirdeği kullanacağı için bu sınır orada da geçerlidir.
 - **Ortalama boylam katsayıları** yayımlanmış tablodan alındı ve ephemeris ile gezegen başına sınırlarla doğrulandı (§7). Jüpiter ve Satürn'de tek bir ±0,05° sınırı tutmaz; iç gezegenlerin güneş merkezli ortalama boylamı yalnızca alt kavuşumlarda dolaylı ölçülür.
 - **`Positions` lagnanın rasi çerçevesindeki derecesini taşımaz.** Shadbala onu Güneş'in iki çerçevedeki farkından türetir (§7 "Çerçeveler"). Başka bir modül de gerek duyarsa §4'e `lagna_deg_in_sign` eklenmesi değerlendirilir.
 - **Tek ephemeris iş parçacığı.** Uzun aramalar harita açmayı bekletebilir; dilimleme ve 300 ms sınırı bunu karşılar. Yetmezse ikinci bir `SwissEph` örneği ayrı bir işin konusudur (SE global durumu nedeniyle süreç içinde güvenli değildir; ayrı süreç gerekir).
 - **Harita araması büyük veritabanında yavaşlayabilir.** Ölçüm ilk görevdir; oturumluk önbellek yedeği tanımlıdır (§12).
 - **El örneği yazanın kuralı yanlış anlaması** motoru da yanlış doğrular. Karşılığı: ayrı gözden geçirmede yeniden türetme (§13) ve değişmezler.
-- **Sahibin kararına bırakılanlar** (engelleyici değil; varsayılanlarla ilerlenir): Shadbala yıl/ay lordu yöntemi, drik balanın okunuşu (1,25 kat) ve chara karaka varsayılanı beta öncesinde bir astrologla teyit edilmeli; üç kuta puan tablosu iki basılı kaynakla karşılaştırılmalı (§9); Muhurta etkinlik şablonlarının (§10) sonraki bir sürüme alınıp alınmayacağı.
+- **Sahibin kararına bırakılanlar** (engelleyici değil; varsayılanlarla ilerlenir): Shadbala yıl/ay lordu yöntemi, drik balanın okunuşu (1,25 kat) ve chara karaka varsayılanı beta öncesinde bir astrologla teyit edilmeli; üç kuta puan tablosu iki basılı kaynakla karşılaştırılmalı (§9); muhurta tabloları ve özellikle hora uzunluğunun okunuşu basılı bir panchangla karşılaştırılmalı (§10); Muhurta etkinlik şablonlarının (§10) sonraki bir sürüme alınıp alınmayacağı.
 
 ## Ek A — Adlandırma eşlemeleri
 
