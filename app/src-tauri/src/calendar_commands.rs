@@ -140,6 +140,40 @@ impl YearMonth {
     }
 }
 
+/// Takvim gününün ilk anı. Gece yarısı var olan bir duvar saatiyse odur. Gece yarısı yaz saati
+/// boşluğuna düşüyorsa (saat 00:00'dan 01:00'e atlar: Kahire, Beyrut, Havana, Santiago)
+/// `day_start_jd` öğleden 12 saat öncesini verir; o an önceki günün duvar saatindedir (23:00).
+/// Günün ilk anı boşluğun bitişidir ve duvar tarihinin değiştiği saniye ikiye bölmeyle bulunur:
+/// önceki günün son saati o günün hücresinde durur.
+fn civil_day_start(date: atlas::Date, place: &MuhurtaPlace) -> Result<f64, CommandError> {
+    const SECS: f64 = 86_400.0;
+    let start = day_start_jd(&date.to_string(), place, "month")?;
+    // Duvar saatiyle gün sayısı: tam sayı gece yarısıdır.
+    let wall = |jd_ut: f64| -> Result<f64, CommandError> {
+        Ok(jd_ut + 0.5 + f64::from(offset_at(place, jd_ut)?) / SECS)
+    };
+    // Yarım saniyelik pay: kayan nokta hatası ve yerel ortalama saatin tam saniyeye yuvarlanan
+    // ofseti gece yarısını bir sonraki güne itmesin.
+    let slack = 0.5 / SECS;
+    let midnight = (wall(start)? - slack).ceil();
+    let reached =
+        |jd_ut: f64| -> Result<bool, CommandError> { Ok(wall(jd_ut)? >= midnight - slack) };
+    if reached(start)? {
+        return Ok(start);
+    }
+    // `start` önceki gündedir; 12 saat sonrası (öğle) bu gündedir.
+    let (mut lo, mut hi) = (0_u32, 43_200_u32);
+    while hi - lo > 1 {
+        let mid = lo + (hi - lo) / 2;
+        if reached(start + f64::from(mid) / SECS)? {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    Ok(start + f64::from(hi) / SECS)
+}
+
 /// Bir ayın takvim günleri: (tarih, günün başı). Yerin saat diliminde var olmayan gün (takvimden
 /// atlanan gün) listede yer almaz. Son öğe sonraki ayın ilk günüdür (son günün bitişi).
 fn month_days(
@@ -151,7 +185,7 @@ fn month_days(
     let mut date = first;
     for _ in 0..first.days_in_month() {
         // Çözülemeyen gün başı: o gün yerin takviminde yoktur (saat dilimi bir günü atlamıştır).
-        if let Ok(start) = day_start_jd(&date.to_string(), place, "month") {
+        if let Ok(start) = civil_day_start(date, place) {
             out.push((date, start));
         }
         date = date.tomorrow().map_err(|_| invalid("month"))?;
@@ -159,7 +193,7 @@ fn month_days(
     if out.is_empty() {
         return Err(invalid("month"));
     }
-    let end = day_start_jd(&date.to_string(), place, "month").map_err(calendar_error)?;
+    let end = civil_day_start(date, place).map_err(calendar_error)?;
     out.push((date, end));
     Ok(out)
 }

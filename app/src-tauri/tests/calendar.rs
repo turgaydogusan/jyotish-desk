@@ -284,6 +284,31 @@ fn the_month_calendar_agrees_with_the_day_panchang_and_the_event_search() {
         .windows(2)
         .all(|w| w[0].span.end_jd_ut == w[1].span.start_jd_ut));
 
+    // Gece yarısı yaz saati boşluğuna düşen gün: São Paulo'da 15 Ekim 2017'de saat 00:00'dan
+    // 01:00'e atladı. O günün ilk anı 01:00'dir (03:00 UT; JD 2458041,625: 1 Ocak 2017 00:00 UT
+    // JD 2457754,5'tir, 15 Ekim yılın 288. günüdür) ve gün 23 saattir. Önceki gün tam 24
+    // saattir: son saati sonraki günün hücresine geçmez.
+    let sao_paulo = run(request(
+        ym(2017, 10),
+        place(-23.5505, -46.6333, "America/Sao_Paulo"),
+    ))
+    .expect("the month with a midnight gap");
+    assert!((sao_paulo.days[14].span.start_jd_ut - 2_458_041.625).abs() < SECOND);
+    assert!((hours(&sao_paulo, 14) - 24.0).abs() < 1e-6);
+    assert!((hours(&sao_paulo, 15) - 23.0).abs() < 1e-6);
+    assert!((hours(&sao_paulo, 16) - 24.0).abs() < 1e-6);
+    assert_eq!(
+        (
+            sao_paulo.days[13].offset_secs,
+            sao_paulo.days[14].offset_secs
+        ),
+        (-10_800, -7200)
+    );
+    assert!(sao_paulo
+        .days
+        .windows(2)
+        .all(|w| w[0].span.end_jd_ut == w[1].span.start_jd_ut));
+
     // 5. Kutup dairesi: Tromsø'da Aralık'ta Güneş doğmaz; olgular 06:00 yerel ortalama saatte
     // okunur ve gün panchangıyla aynı günü gösterir. Ocak'ta Güneş ay içinde geri döner.
     let polar = run(request(ym(2026, 12), tromso())).expect("polar night");
