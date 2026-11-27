@@ -98,6 +98,7 @@ export const BUILTIN_LAYOUT_IDS = {
   research: "builtin:research",
   transit: "builtin:transit",
   prashna: "builtin:prashna",
+  classic: "builtin:classic",
 } as const;
 export type BuiltinLayoutId = (typeof BUILTIN_LAYOUT_IDS)[keyof typeof BUILTIN_LAYOUT_IDS];
 
@@ -106,6 +107,7 @@ const BUILTIN_ORDER: readonly BuiltinLayoutId[] = [
   BUILTIN_LAYOUT_IDS.research,
   BUILTIN_LAYOUT_IDS.transit,
   BUILTIN_LAYOUT_IDS.prashna,
+  BUILTIN_LAYOUT_IDS.classic,
 ];
 
 export function isKnownPanelKind(kind: string): kind is KnownPanelKind {
@@ -161,7 +163,7 @@ const BUILTIN_FACTORIES: Record<BuiltinLayoutId, () => Layout> = {
     ],
   }),
   // Prashna (ileri modüller spec'i §11): D1, olgular, anın panchangı ve notlar. Modül paneli
-  // taşıyan tek hazır düzendir.
+  // taşıyan iki hazır düzenden biridir (öteki Klasik).
   [BUILTIN_LAYOUT_IDS.prashna]: () => ({
     id: BUILTIN_LAYOUT_IDS.prashna,
     name: "Prashna",
@@ -171,6 +173,21 @@ const BUILTIN_FACTORIES: Record<BuiltinLayoutId, () => Layout> = {
       panel("facts", "prashna_facts", 5, 0, 7, 21),
       panel("panchang", "panchang", 0, 12, 5, 9),
       panel("notes", "notes", 0, 21, 12, 5),
+    ],
+  }),
+  // Klasik masaüstü dizilimi: solda büyük D1, sağda günün panchangı ve D9; altta Vimshottari,
+  // chara dasha ve Jaimini karaka tablosu yan yana.
+  [BUILTIN_LAYOUT_IDS.classic]: () => ({
+    id: BUILTIN_LAYOUT_IDS.classic,
+    name: "Klasik",
+    builtin: true,
+    panels: [
+      chart("d1", "D1", 0, 0, 7, 18),
+      panel("panchang", "panchang", 7, 0, 5, 8),
+      chart("d9", "D9", 7, 8, 5, 10),
+      panel("vimshottari", "dasha_tree", 0, 18, 4, 12, { system: "vimshottari", open: [] }),
+      panel("chara", "dasha_tree", 4, 18, 4, 12, { system: "chara", open: [] }),
+      panel("karakas", "jaimini_karakas", 8, 18, 4, 12),
     ],
   }),
 };

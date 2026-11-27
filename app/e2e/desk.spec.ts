@@ -24,6 +24,37 @@ test("birth entry: empty state, atlas place by keyboard, preview, save opens the
   expect(created[0].input.chart.birth.tz).toEqual({ Iana: "Asia/Kolkata" });
 });
 
+test("classic layout with Cmd+5: D1, panchang and D9 above; Vimshottari, chara dasha and karakas below", async ({ page }) => {
+  await mockIpc(page, { session: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Örnek Danışan" })).toBeVisible();
+  await page.keyboard.press("Meta+Digit5");
+  await expect(page.getByRole("combobox", { name: "Düzen" })).toHaveValue("builtin:classic");
+  await expect(page.getByRole("combobox", { name: "Düzen" }).locator("option:checked")).toHaveText("Klasik");
+  await expect(page.getByRole("region", { name: "Harita D1", exact: true }).getByRole("group", { name: "D1 haritası" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Panchang", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Harita D9", exact: true }).getByRole("group", { name: "D9 haritası" })).toBeVisible();
+  // İki dasa ağacı bölgesi sistemin adıyla ayrışır: aynı adı taşıyan iki bölge yoktur.
+  await expect(page.getByRole("region", { name: "Dasa ağacı" })).toHaveCount(2);
+  const vimshottari = page.getByRole("region", { name: "Dasa ağacı Vimshottari", exact: true });
+  const chara = page.getByRole("region", { name: "Dasa ağacı Chara dasha", exact: true });
+  await expect(vimshottari.getByRole("combobox", { name: "Sistem" }).locator("option:checked")).toHaveText("Vimshottari");
+  await expect(chara.getByRole("combobox", { name: "Sistem" }).locator("option:checked")).toHaveText("Chara dasha");
+  await expect(chara.getByText("Yön: geri")).toBeVisible();
+  // Yerleşim: D1 solda 7 × 18; alt sıra üç eşit sütun.
+  const box = (name: string) =>
+    page.getByRole("region", { name, exact: true }).evaluate((el) => ["x", "y", "w", "h"].map((k) => Number((el as HTMLElement).dataset[k])));
+  expect(await box("Harita D1")).toEqual([0, 0, 7, 18]);
+  expect(await box("Panchang")).toEqual([7, 0, 5, 8]);
+  expect(await box("Harita D9")).toEqual([7, 8, 5, 10]);
+  expect(await box("Dasa ağacı Vimshottari")).toEqual([0, 18, 4, 12]);
+  expect(await box("Dasa ağacı Chara dasha")).toEqual([4, 18, 4, 12]);
+  expect(await box("Chara karaka")).toEqual([8, 18, 4, 12]);
+  await expect(page.getByRole("region", { name: "Chara karaka" })).toBeVisible();
+  // Klasik düzende chara dasha açıktır: tek bir hesap istenir.
+  await expect.poll(async () => (await ipcCalls(page, "compute_chara_dasha")).length).toBe(1);
+});
+
 test("layout switch with Cmd+2 and a keyboard panel move that is saved with the chart", async ({ page }) => {
   await mockIpc(page, { session: true });
   await page.goto("/");

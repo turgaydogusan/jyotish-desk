@@ -12,6 +12,8 @@ import { fixture } from "../test/fixture";
 
 import { hasOverlap } from "../layout/grid";
 import type { LayoutState, Panel } from "../layout/model";
+import { i18n } from "../i18n";
+import { PANEL_REGISTRY } from "../panels/registry";
 import { renderWithStores } from "../test/render";
 import { Dashboard } from "./Dashboard";
 import { GRID_GAP_PX } from "./metrics";
@@ -56,6 +58,16 @@ function setup(width = WIDTH, panels = PANELS, initial: LayoutState = state(pane
     }));
   return { ...utils, frame, box, all };
 }
+
+test("two dasha trees in one layout are regions with different names: the system is part of the name", () => {
+  const tree = (id: string, x: number): Panel => ({ id, kind: "dasha_tree", x, y: 0, w: 4, h: 8, settings: { system: "vimshottari" } });
+  const { frame } = setup(WIDTH, [tree("a", 0), { ...tree("b", 4), settings: {} }, { id: "c", kind: "chart", x: 8, y: 0, w: 4, h: 8, settings: { varga: "D9" } }]);
+  expect(screen.getAllByRole("region", { name: "Dasa ağacı Vimshottari" })).toHaveLength(2);
+  expect(frame("c")).toHaveAccessibleName("Harita D9");
+  // Görünen başlık değişmez; ek yalnızca erişilebilir addadır.
+  expect(within(frame("a")).getByText("Dasa ağacı")).toBeInTheDocument();
+  expect(PANEL_REGISTRY.dasha_tree.nameDetail!({ ...tree("x", 0), settings: { system: "chara" } }, i18n.t)).toBe("Chara dasha");
+});
 
 test("renders every panel of the active layout on a 12-column grid", async () => {
   const { container, frame } = setup();

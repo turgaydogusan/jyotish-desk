@@ -18,7 +18,13 @@ import {
 import parityRaw from "./fixtures/layout-parity.json?raw";
 
 const ids = (layouts: Layout[]) => layouts.map((l) => l.id);
-const BUILTINS = [BUILTIN_LAYOUT_IDS.interview, BUILTIN_LAYOUT_IDS.research, BUILTIN_LAYOUT_IDS.transit, BUILTIN_LAYOUT_IDS.prashna];
+const BUILTINS = [
+  BUILTIN_LAYOUT_IDS.interview,
+  BUILTIN_LAYOUT_IDS.research,
+  BUILTIN_LAYOUT_IDS.transit,
+  BUILTIN_LAYOUT_IDS.prashna,
+  BUILTIN_LAYOUT_IDS.classic,
+];
 
 function overlaps(a: Panel, b: Panel) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -61,19 +67,20 @@ test("module panels are known kinds, listed once, with a size the grid accepts",
     expect(m.h).toBeGreaterThanOrEqual(minSize(m.kind).h);
     expect(m.w).toBeLessThanOrEqual(GRID_COLUMNS);
   }
-  // v1'in üç hazır düzeni değişmedi: modül panelleri paletten eklenir. Modül paneli taşıyan tek
-  // hazır düzen Prashna'dır (ileri modüller spec'i §11).
+  // v1'in üç hazır düzeni değişmedi: modül panelleri paletten eklenir. Modül paneli taşıyan
+  // hazır düzenler Prashna (ileri modüller spec'i §11) ve Klasik'tir.
+  const withModules: string[] = [BUILTIN_LAYOUT_IDS.prashna, BUILTIN_LAYOUT_IDS.classic];
   for (const l of builtinLayouts()) {
-    expect(l.panels.some((p) => MODULE_PANELS.some((m) => m.kind === p.kind))).toBe(l.id === BUILTIN_LAYOUT_IDS.prashna);
+    expect(l.panels.some((p) => MODULE_PANELS.some((m) => m.kind === p.kind))).toBe(withModules.includes(l.id));
   }
 });
 
-test("default state has the four builtin layouts with interview active", () => {
+test("default state has the five builtin layouts with interview active", () => {
   const s = defaultLayoutState();
   expect(s.schema_version).toBe(LAYOUT_SCHEMA_VERSION);
   expect(s.active_layout_id).toBe(BUILTIN_LAYOUT_IDS.interview);
   expect(ids(s.layouts)).toEqual(BUILTINS);
-  expect(s.layouts.map((l) => l.name)).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna"]);
+  expect(s.layouts.map((l) => l.name)).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "Klasik"]);
   expect(s.layouts.every((l) => l.builtin)).toBe(true);
 });
 
@@ -91,6 +98,28 @@ test("builtin presets follow the spec text and fit the 12-column grid without ov
   expect(builtinLayout(BUILTIN_LAYOUT_IDS.transit)!.panels[0].settings.transit_ring).toBe(true);
   // Prashna düzeni (ileri modüller spec'i §11): D1, olgular, anın panchangı ve notlar.
   expect(kinds(BUILTIN_LAYOUT_IDS.prashna)).toEqual(["chart:D1", "prashna_facts:", "panchang:", "notes:"]);
+  // Klasik düzen: büyük D1, sağda panchang ve D9, altta Vimshottari, chara dasha ve karaka tablosu.
+  const classic = builtinLayout(BUILTIN_LAYOUT_IDS.classic)!.panels;
+  expect(kinds(BUILTIN_LAYOUT_IDS.classic)).toEqual([
+    "chart:D1",
+    "panchang:",
+    "chart:D9",
+    "dasha_tree:",
+    "dasha_tree:",
+    "jaimini_karakas:",
+  ]);
+  expect(classic.filter((p) => p.kind === "dasha_tree").map((p) => p.settings.system)).toEqual(["vimshottari", "chara"]);
+  expect(classic.map((p) => p.settings.style ?? null)).toEqual(["north", null, "north", null, null, null]);
+  expect(classic.map((p) => [p.x, p.y, p.w, p.h])).toEqual([
+    [0, 0, 7, 18],
+    [7, 0, 5, 8],
+    [7, 8, 5, 10],
+    [0, 18, 4, 12],
+    [4, 18, 4, 12],
+    [8, 18, 4, 12],
+  ]);
+  // Aynı türden iki panel ayrı kimlik taşır.
+  expect(new Set(classic.map((p) => p.id)).size).toBe(classic.length);
 
   for (const id of BUILTINS) {
     const panels = builtinLayout(id)!.panels;
@@ -163,6 +192,25 @@ test("unknown fields are ignored, invalid panels dropped, unknown kinds kept", (
     { id: "future", kind: "yoga_list", x: 4, y: 0, w: 3, h: 4, settings: {} },
   ]);
   expect(s.active_layout_id).toBe("user:a");
+});
+
+test("a state saved before the classic layout existed gains it after prashna; saved panels, user layouts and the active layout stay", () => {
+  const saved = (id: string, name: string, builtin: boolean) => ({ id, name, builtin, panels: [{ id: "p", kind: "notes", x: 0, y: 0, w: 4, h: 6, settings: {} }] });
+  const s = parseLayoutState({
+    schema_version: 1,
+    active_layout_id: "user:mine",
+    layouts: [
+      saved("builtin:interview", "Görüşme", true),
+      saved("builtin:research", "Araştırma", true),
+      saved("builtin:transit", "Transit", true),
+      saved("builtin:prashna", "Prashna", true),
+      saved("user:mine", "Benim", false),
+    ],
+  });
+  expect(ids(s.layouts)).toEqual([...BUILTINS, "user:mine"]);
+  expect(s.active_layout_id).toBe("user:mine");
+  expect(s.layouts[4]).toEqual(builtinLayout(BUILTIN_LAYOUT_IDS.classic));
+  for (const i of [0, 1, 2, 3, 5]) expect(s.layouts[i].panels.map((p) => p.id)).toEqual(["p"]);
 });
 
 test("missing builtins are re-added in canonical order before user layouts", () => {

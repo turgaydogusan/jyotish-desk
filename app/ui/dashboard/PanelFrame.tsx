@@ -27,6 +27,7 @@ export function PanelFrame({ panel, editable, onDragStart, onKeyboardEdit }: Pan
   const Body = def.component;
   const title = t(def.titleKey);
   const subtitle = def.subtitle?.(panel) ?? null;
+  const detail = subtitle ?? def.nameDetail?.(panel, t) ?? null;
 
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     // Yalnızca panelin kendisi odaktayken; panel içindeki düğme ve alanlar etkilenmez.
@@ -48,7 +49,7 @@ export function PanelFrame({ panel, editable, onDragStart, onKeyboardEdit }: Pan
       data-h={panel.h}
       data-editable={editable}
       tabIndex={0}
-      aria-label={subtitle ? `${title} ${subtitle}` : title}
+      aria-label={detail ? `${title} ${detail}` : title}
       aria-keyshortcuts={editable ? KEY_SHORTCUTS : undefined}
       aria-describedby={editable ? hintId : undefined}
       style={{ gridColumn: `${panel.x + 1} / span ${panel.w}`, gridRow: `${panel.y + 1} / span ${panel.h}` }}

@@ -878,6 +878,7 @@ export const en: Messages = {
     research: "Research",
     transit: "Transit",
     prashna: "Prashna",
+    classic: "Classic",
     actions: "Layout actions",
     saveAs: "Save as…",
     rename: "Rename…",

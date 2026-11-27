@@ -57,7 +57,7 @@ afterEach(() => vi.useRealTimers());
 test("loads the stored layout through the tolerant parser", () => {
   setup(memoryPersistence(), { active_layout_id: BUILTIN_LAYOUT_IDS.transit, layouts: [] });
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
-  expect(screen.getByTestId("count")).toHaveTextContent("4");
+  expect(screen.getByTestId("count")).toHaveTextContent("5");
   expect(screen.getByTestId("chart")).toHaveTextContent("null");
 });
 
@@ -76,7 +76,7 @@ test("does not save on mount; saves the whole ViewState once 500 ms after the la
   const [s] = p.saved;
   expect(s.chartId).toBeNull();
   expect(s.viewState.schema_version).toBe(1);
-  expect(s.viewState.panel_layout!.layouts).toHaveLength(5);
+  expect(s.viewState.panel_layout!.layouts).toHaveLength(6);
   expect(s.viewState.panel_layout!.active_layout_id).toMatch(/^user:/);
   expect(s.viewState.dasha_expanded_path).toEqual([]);
 });

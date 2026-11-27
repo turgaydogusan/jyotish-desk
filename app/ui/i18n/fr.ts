@@ -878,6 +878,7 @@ export const fr: Messages = {
     research: "Recherche",
     transit: "Transits",
     prashna: "Prashna",
+    classic: "Classique",
     actions: "Actions sur la disposition",
     saveAs: "Enregistrer sous…",
     rename: "Renommer…",

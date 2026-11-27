@@ -877,6 +877,7 @@ export const tr = {
     research: "Araştırma",
     transit: "Transit",
     prashna: "Prashna",
+    classic: "Klasik",
     actions: "Düzen işlemleri",
     saveAs: "Farklı kaydet…",
     rename: "Yeniden adlandır…",

@@ -50,7 +50,7 @@ const saveAsNamed = (value: string) => {
 
 test("lists builtin layouts by translated name and selects on change", () => {
   setup();
-  expect([...picker().querySelectorAll("option")].map((o) => o.textContent)).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna"]);
+  expect([...picker().querySelectorAll("option")].map((o) => o.textContent)).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "Klasik"]);
   fireEvent.change(picker(), { target: { value: BUILTIN_LAYOUT_IDS.transit } });
   expect(screen.getByTestId("active")).toHaveTextContent(BUILTIN_LAYOUT_IDS.transit);
 });
@@ -106,7 +106,7 @@ test("user layouts can be renamed and deleted after a named confirmation", () =>
   fireEvent.click(item("Sil…"));
   fireEvent.click(screen.getByRole("button", { name: "“Akşam” düzenini sil" }));
   expect(picker()).toHaveDisplayValue("Görüşme");
-  expect([...picker().querySelectorAll("option")]).toHaveLength(4);
+  expect([...picker().querySelectorAll("option")]).toHaveLength(5);
 });
 
 test("duplicate adds a copy after the source without switching", () => {
@@ -119,13 +119,14 @@ test("duplicate adds a copy after the source without switching", () => {
     "Araştırma",
     "Transit",
     "Prashna",
+    "Klasik",
   ]);
   expect(picker()).toHaveDisplayValue("Görüşme");
 });
 
 test("save as and duplicate are disabled at the layout limit", () => {
   setup();
-  for (let i = 4; i < MAX_LAYOUTS; i++) {
+  for (let i = 5; i < MAX_LAYOUTS; i++) {
     menu();
     fireEvent.click(item("Kopyala"));
   }
@@ -237,7 +238,7 @@ describe("focus return to the trigger", () => {
     expect(screen.queryByRole("textbox", { name: "Düzen adı" })).toBeNull();
     expect(trigger()).toHaveFocus();
     expect(screen.getByTestId("pinned")).toHaveTextContent("pinned");
-    expect(options()).toHaveLength(4);
+    expect(options()).toHaveLength(5);
   });
 
   test("after confirming or cancelling delete, and Esc cancels the confirmation", () => {
@@ -285,7 +286,7 @@ describe("inline name validation", () => {
     expect(input).toHaveAccessibleDescription("Bir ad yazın.");
     fireEvent.submit(input.closest("form")!);
     expect(screen.getByText("Bir ad yazın.").closest("[aria-live]")).toBeInTheDocument();
-    expect(options()).toHaveLength(4);
+    expect(options()).toHaveLength(5);
   });
 
   test("names used by another layout are rejected case-insensitively", () => {
@@ -297,7 +298,7 @@ describe("inline name validation", () => {
     expect(screen.getByRole("button", { name: "Kaydet" })).toBeDisabled();
     expect(input).toHaveAccessibleDescription("Bu ad başka bir düzende kullanılıyor.");
     fireEvent.submit(input.closest("form")!);
-    expect(options()).toHaveLength(4);
+    expect(options()).toHaveLength(5);
   });
 
   test("renaming may keep the layout's own name", () => {
@@ -319,7 +320,7 @@ describe("inline name validation", () => {
     fireEvent.click(item("Kopyala"));
     menu();
     fireEvent.click(item("Kopyala"));
-    expect(options()).toEqual(["Görüşme", "Görüşme kopyası 2", "Görüşme kopyası", "Araştırma", "Transit", "Prashna"]);
+    expect(options()).toEqual(["Görüşme", "Görüşme kopyası 2", "Görüşme kopyası", "Araştırma", "Transit", "Prashna", "Klasik"]);
     menu();
     fireEvent.click(item("Farklı kaydet…"));
     expect(screen.getByRole("textbox", { name: "Düzen adı" })).toHaveValue("Görüşme kopyası 3");
@@ -331,9 +332,9 @@ describe("form target is pinned to the layout it was opened for", () => {
     setup();
     saveAsNamed("A");
     saveAsNamed("B");
-    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "A", "B"]);
+    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "Klasik", "A", "B"]);
   };
-  const switchAway = () => fireEvent.keyDown(window, { key: "5", code: "Digit5", metaKey: true });
+  const switchAway = () => fireEvent.keyDown(window, { key: "6", code: "Digit6", metaKey: true });
 
   test("rename: switching layouts while the form is open never renames another layout", () => {
     twoUserLayouts();
@@ -346,7 +347,7 @@ describe("form target is pinned to the layout it was opened for", () => {
       fireEvent.change(input, { target: { value: "Yeni" } });
       fireEvent.click(screen.getByRole("button", { name: "Kaydet" }));
     }
-    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "A", "B"]);
+    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "Klasik", "A", "B"]);
   });
 
   test("delete: switching layouts while the confirmation is open never deletes another layout", () => {
@@ -355,7 +356,7 @@ describe("form target is pinned to the layout it was opened for", () => {
     fireEvent.click(item("Sil…"));
     switchAway();
     for (const b of screen.queryAllByRole("button", { name: /düzenini sil/ })) fireEvent.click(b);
-    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "A", "B"]);
+    expect(options()).toEqual(["Görüşme", "Araştırma", "Transit", "Prashna", "Klasik", "A", "B"]);
   });
 
   test("the open form closes when the layout select changes", () => {
