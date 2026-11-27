@@ -9,12 +9,16 @@ use ephemeris::{Engine, SwissEph};
 use jyotish_core::{CalcSettings, ChartWarning, EphemerisRow};
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use store::{BirthData, FoldChoice, Place, TimeCertainty};
 use tauri::State;
 
 use super::{invalid, TOOLS_YEAR_RANGE};
 use crate::client_commands::blocking;
 use crate::commands::CommandError;
-use crate::muhurta_commands::{day_start_jd, offset_at, today, MuhurtaPlace, J2000_JD};
+use crate::muhurta_commands::{offset_at, today, MuhurtaPlace, J2000_JD};
+
+/// Saniye yuvarlamasına karşı ileri alma payı (gün): 1e-6 gün = 0,0864 s.
+const OFFSET_NUDGE_DAYS: f64 = 1e-6;
 
 /// Bir takvim ayı (yerin takvimi): `month` 1..=12.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -95,6 +99,43 @@ pub struct EphemerisMonthView {
     pub method: String,
 }
 
+/// Yerin takvim gününün ilk geçerli anı (UT JD): 00:00 varsa o; yaz saati gece yarısında
+/// başlıyorsa (00:00 yoksa) günün başladığı an, yani geçiş anı; gün yerde hiç yoksa `None`.
+/// 00:00 iki kez yaşanıyorsa (saat geri alınırsa) önceki an. `muhurta_commands::day_start_jd`
+/// öğle − 0,5 gün yedeğini kullanır ve boşlukta bir saat erken kalır; burada kullanılmaz.
+fn first_instant_of(date: atlas::Date, place: &MuhurtaPlace) -> Result<Option<f64>, CommandError> {
+    let resolve = |time: &str| {
+        store::resolve_birth(&BirthData {
+            date: date.to_string(),
+            time: Some(time.to_owned()),
+            time_certainty: TimeCertainty::Exact,
+            place: Place {
+                name: String::new(),
+                country: String::new(),
+                admin1: String::new(),
+                lat: place.lat,
+                lon: place.lon,
+                geoname_id: None,
+            },
+            tz: place.tz.clone(),
+            fold: Some(FoldChoice::Earlier),
+            notes: String::new(),
+        })
+        .map(|(_, r)| r.jd_ut)
+    };
+    if let Ok(midnight) = resolve("00:00") {
+        return Ok(Some(midnight));
+    }
+    // 00:00 yok: öğle varsa gün geçiş anında başlar, yoksa gün hiç yaşanmamıştır.
+    let Ok(noon) = resolve("12:00") else {
+        return Ok(None);
+    };
+    // Duvar saati öğle = UT öğle + ofset; geçiş anı, geçişten önceki ofsetle okunan duvar 00:00.
+    let after = f64::from(offset_at(place, noon).map_err(|_| invalid("place"))?);
+    let before = f64::from(offset_at(place, noon - 1.0).map_err(|_| invalid("place"))?);
+    Ok(Some(noon + (after - before) / 86_400.0 - 0.5))
+}
+
 /// `ephemeris_month` gövdesi; `now` testte sabitlenir. Bloklar.
 pub fn ephemeris_month_blocking(
     engine: &Engine,
@@ -122,19 +163,26 @@ pub fn ephemeris_month_blocking(
         return Err(invalid("month"));
     }
     let first = month.first_day()?;
-    let start_of = |date: atlas::Date| {
-        day_start_jd(&date.to_string(), &place, "month").map_err(|_| invalid("month"))
-    };
     let mut dates = Vec::with_capacity(31);
     let mut moments = Vec::with_capacity(32);
     let mut day = first;
     for _ in 0..first.days_in_month() {
-        moments.push(start_of(day)?);
-        dates.push(day);
+        // Yerde hiç var olmayan bir gün (saat dilimi günü atlamışsa) satırsız geçilir.
+        if let Some(jd) = first_instant_of(day, &place)? {
+            moments.push(jd);
+            dates.push(day);
+        }
         day = day.tomorrow().map_err(|_| invalid("month"))?;
     }
-    // Son satırı kapatan an: sonraki ayın ilk gününün başı.
-    moments.push(start_of(month.following().first_day()?)?);
+    // Son satırı kapatan an: sonraki ayın ilk var olan gününün başı.
+    let mut next_day = month.following().first_day()?;
+    let closing = loop {
+        if let Some(jd) = first_instant_of(next_day, &place)? {
+            break jd;
+        }
+        next_day = next_day.tomorrow().map_err(|_| invalid("month"))?;
+    };
+    moments.push(closing);
     let table = {
         let moments = moments.clone();
         engine.call(move |se: &mut SwissEph| {
@@ -147,7 +195,10 @@ pub fn ephemeris_month_blocking(
         .map(|(date, row)| {
             Ok(EphemerisDayView {
                 date: date.to_string(),
-                offset_secs: offset_at(&place, row.jd_ut).map_err(|_| invalid("place"))?,
+                // Satır tam geçiş anındaysa JD'nin kayan nokta hatası ofseti önceki saniyeden
+                // okutmasın diye yüz milisaniyeden azı kadar ileriden okunur.
+                offset_secs: offset_at(&place, row.jd_ut + OFFSET_NUDGE_DAYS)
+                    .map_err(|_| invalid("place"))?,
                 row,
             })
         })

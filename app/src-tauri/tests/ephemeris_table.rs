@@ -246,8 +246,11 @@ fn ephemeris_command_runs_on_the_engine_thread_and_maps_errors() {
         29
     );
 
-    // Yaz saati gece yarısında başlayan yer: São Paulo'da 2017-10-15 00:00 yoktur (saat 01:00'e
-    // atlar). O günün satırı günün başladığı andadır; önceki günle arası 23 saattir.
+    // Yaz saati gece yarısında başlayan yer: São Paulo'da 2017-10-15 00:00 yoktur (saat 00:00 -03
+    // iken 01:00 -02'ye atlar). O günün satırı günün ilk geçerli anıdır: 03:00 UT = 01:00 yerel.
+    // Beklenen anlar python3 zoneinfo ile türetildi (America/Sao_Paulo, her gün için ilk geçerli
+    // yerel an): 14 Ekim 03:00 UT, 15 Ekim 03:00 UT (01:00 -02), 16 Ekim 02:00 UT (00:00 -02).
+    // Aralar: 14->15 24 saat, 15->16 23 saat (indeks 13 ve 14).
     let sao_paulo = MuhurtaPlace {
         lat: -23.5475,
         lon: -46.6361,
@@ -255,16 +258,43 @@ fn ephemeris_command_runs_on_the_engine_thread_and_maps_errors() {
     };
     let october = view(&engine, Some(month(2017, 10)), sao_paulo, &settings);
     assert_eq!(october.days.len(), 31);
+    let fract_hours = |jd: f64| (jd + 0.5).fract() * 24.0;
+    assert_eq!(october.days[14].date, "2017-10-15");
+    assert_eq!(october.days[14].offset_secs, -7200);
+    assert!((fract_hours(october.days[13].row.jd_ut) - 3.0).abs() < 1e-6);
+    assert!((fract_hours(october.days[14].row.jd_ut) - 3.0).abs() < 1e-6);
+    assert!((fract_hours(october.days[15].row.jd_ut) - 2.0).abs() < 1e-6);
     let gaps: Vec<f64> = october
         .days
         .windows(2)
         .map(|w| (w[1].row.jd_ut - w[0].row.jd_ut) * 24.0)
         .collect();
-    assert!((gaps[13] - 23.0).abs() < 1e-6, "{}", gaps[13]);
+    assert!((gaps[14] - 23.0).abs() < 1e-6, "{}", gaps[14]);
     assert!(gaps
         .iter()
         .enumerate()
-        .all(|(i, g)| i == 13 || (g - 24.0).abs() < 1e-6));
+        .all(|(i, g)| i == 14 || (g - 24.0).abs() < 1e-6));
+
+    // Yerde hiç var olmayan gün: Pacific/Apia 2011-12-30 atlandı (29 Aralık 23:59 -10'dan 31
+    // Aralık 00:00 +14'e). Ay hata vermez, 30 satır döner ve 30 Aralık yoktur. İlk 31 Aralık
+    // anı 2011-12-30 10:00 UT (python3 zoneinfo). Satırlar arası 29->31: 24 saat.
+    let apia = MuhurtaPlace {
+        lat: -13.83,
+        lon: -171.76,
+        tz: TzChoice::Iana("Pacific/Apia".into()),
+    };
+    let samoa = view(&engine, Some(month(2011, 12)), apia.clone(), &settings);
+    assert_eq!(samoa.days.len(), 30);
+    assert!(samoa.days.iter().all(|d| d.date != "2011-12-30"));
+    let dates: Vec<&str> = samoa.days.iter().map(|d| d.date.as_str()).collect();
+    assert_eq!(dates[28], "2011-12-29");
+    assert_eq!(dates[29], "2011-12-31");
+    assert_eq!(samoa.days[29].offset_secs, 14 * 3600);
+    assert!((fract_hours(samoa.days[29].row.jd_ut) - 10.0).abs() < 1e-6);
+    let skip_gap = (samoa.days[29].row.jd_ut - samoa.days[28].row.jd_ut) * 24.0;
+    assert!((skip_gap - 24.0).abs() < 1e-6, "{skip_gap}");
+    // İşaretler atlanan günün üstünden ardışık satırları karşılaştırır.
+    cross_check(&engine, &samoa, apia, &settings);
     // Geçişten önceki ve sonraki günlerin ofseti: −03:00 ve −02:00. Geçiş anının kendisi (15
     // Ekim'in satırı) sınırdadır; ofseti burada sabitlenmez.
     assert_eq!(

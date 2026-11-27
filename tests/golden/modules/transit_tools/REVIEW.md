@@ -69,7 +69,12 @@ Vimshottari sırasının üç kez yazılmış biçimidir ve testte o sırayla ka
 
 1. **Satır.** Seçilen yerin takvim ayının her günü için bir satır; satırın anı o günün başıdır:
    yerin duvar saatiyle 00:00. Yaz saati gece yarısında başlıyorsa (00:00 yoksa) satır günün
-   başladığı andadır; o gün önceki satırdan 23 saat sonradır.
+   ilk geçerli anındadır, yani geçiş anında (São Paulo 2017-10-15: 03:00 UT = 01:00 yerel);
+   o gün önceki satırdan 24, sonraki satıra 23 saat uzaktadır. Saat geri alınırken 00:00 iki
+   kez yaşanıyorsa önceki an alınır. Saat dilimi bir günü tümden atlıyorsa (Pacific/Apia
+   2011-12-30, Pacific/Kiritimati 1994-12-31) o gün yerde yoktur: satırı yazılmaz, ay hata
+   vermez ve 29–30 satır döner; işaretler atlanan günün üstünden ardışık satırları karşılaştırır.
+   Ayı kapatan an, sonraki ayın ilk var olan gününün başıdır.
 2. **Konum.** Dokuz grahanın boylamı transit hesabıyla aynıdır: burç ve burç içi derece rasi
    çerçevesindedir (haritanın zodyak kipini izler, K5); nakshatra ve pada sidereal boylamdandır.
    Ayanamsa ve düğüm türü açık haritanın ayarıdır. Retro, boylam hızının eksi olmasıdır; Rahu ve
