@@ -118,14 +118,3 @@ değerlerle karşılaştırır ve aşağıya adını, tarihini ve bulduğu farkl
 | Gözden geçiren | Tarih | Sonuç |
 |---|---|---|
 | — | — | Bekliyor (Plan 25 Task 8) |
-````
-
-```bash
-grep -inE 'k(a|ā|aa)la|\bcala\b' tests/golden/modules/bhava/REVIEW.md
-cargo test -p jyotish-core --test modules_golden 2>&1 | grep -E "^test result"
-git add tests/golden/modules/bhava/REVIEW.md
-git diff --cached --stat
-git commit -m "docs(review): reading rules, pending choices and check items for the bhava table and the sudarshana chakra" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
-git status --short
-```
-Expected: tarama çıktısız; `17 passed`; bir dosya; `git status --short` boş.
