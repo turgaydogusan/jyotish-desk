@@ -829,6 +829,7 @@ export const en: Messages = {
     lagnaRow: "Lagna",
     approx: "approximate",
     karaka: "Karaka",
+    baladi: "Baladi",
   },
   errors: {
     dasha_empty: "The sub-periods of this period could not be loaded.",

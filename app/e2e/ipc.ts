@@ -130,6 +130,8 @@ export async function mockIpc(page: Page, { session, unknownTime = false, partne
         compute_shadbala: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.shadbala : null),
         // Yogalar: fikstürdeki iki gerçek sonuç (doğum saati bilinen ve bilinmeyen girdi).
         compute_yogas: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.yogas : fixture.yogas_time_unknown),
+        // Avasthalar: fikstürdeki iki gerçek sonuç (doğum saati bilinen ve bilinmeyen girdi).
+        compute_avasthas: (args) => ((args.input as { time_known: boolean }).time_known ? fixture.avasthas : fixture.avasthas_time_unknown),
         // Uyum: eş haritanın girdisi ve kısa kimliği; başka kimlik `null` döner (harita yok).
         // Rapor yeniden hesaplanmaz, rollerden seçilir: açık harita damat rolündeyse `report`,
         // gelin rolündeyse `report_swapped`; gelin rolündeki eşin doğum saati bilinmiyorsa

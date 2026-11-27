@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 import type { GrahaPosition } from "../bindings";
 import { useHighlight } from "../highlight/store";
 import { sameTarget, type HighlightTarget } from "../highlight/target";
+import { useAvasthas } from "../modules/useAvasthas";
 import { useJaimini } from "../modules/useJaimini";
 import { useSession } from "../session/store";
 import { useLayoutStore } from "../view/store";
 import { timeUnknown } from "../session/birth";
 import { Approx } from "./Approx";
+import { BALADI_NAMES } from "./avasthaLabels";
 import { APPROX_COLUMNS, grahaCellText, lagnaCellText, NUMERIC_COLUMNS as NUMERIC } from "./grahaCells";
 import { GRAHA_COLUMNS, grahaColumns, toggleColumn, type GrahaColumn } from "./grahaColumns";
 import { KARAKA_ROLES } from "./labels";
@@ -40,7 +42,9 @@ function grahaCell(t: TFunction, g: GrahaPosition, column: GrahaColumn, approx: 
  * `Chart.lagna`'dan. Saat bilinmiyorsa lagna satırı ve ev sütunu gizlenir, Ay'ın saate
  * bağlı değerleri "≈" ile işaretlenir. İsteğe bağlı "Karaka" sütunu (`settings.karaka`)
  * chara karaka rolünü `compute_jaimini`'den okur; açık değilken komut çağrılmaz. Sütun
- * `columns` listesinde değildir: baskı tablosu o listeyi kullanır ve değişmez (K10).
+ * `columns` listesinde değildir: baskı tablosu o listeyi kullanır ve değişmez (K10). İsteğe
+ * bağlı "Baladi" sütunu (`settings.baladi`) aynı kalıptır: değer `compute_avasthas`'tan okunur,
+ * açık değilken komut çağrılmaz; Rahu, Ketu ve lagna satırında boştur.
  */
 export function GrahaTablePanel({ panel }: PanelProps) {
   const { t } = useTranslation();
@@ -49,10 +53,13 @@ export function GrahaTablePanel({ panel }: PanelProps) {
   const highlight = useHighlight();
   const karakaOn = panel.settings.karaka === true;
   const jaimini = useJaimini(opened, karakaOn);
+  const baladiOn = panel.settings.baladi === true;
+  const avasthas = useAvasthas(opened, baladiOn);
 
   if (!opened) return <p className="panel-message">{t("panel.noChart")}</p>;
   if (opened.chart.grahas.length === 0) return <p className="panel-message">{t("table.empty")}</p>;
   const roles = new Map((jaimini.data?.karakas ?? []).map((k) => [k.graha, KARAKA_ROLES[k.role]]));
+  const baladi = new Map((avasthas.data?.grahas ?? []).map((a) => [a.graha, BALADI_NAMES[a.baladi]]));
 
   const unknown = timeUnknown(opened);
   const chosen = grahaColumns(panel.settings);
@@ -80,9 +87,14 @@ export function GrahaTablePanel({ panel }: PanelProps) {
             <input type="checkbox" checked={karakaOn} onChange={(e) => setPanelSettings(panel.id, { karaka: e.target.checked })} />
             {t("table.karaka")}
           </label>
+          <label>
+            <input type="checkbox" checked={baladiOn} onChange={(e) => setPanelSettings(panel.id, { baladi: e.target.checked })} />
+            {t("table.baladi")}
+          </label>
         </fieldset>
       </details>
       {jaimini.error && <PanelError error={jaimini.error} onRetry={jaimini.retry} />}
+      {avasthas.error && <PanelError error={avasthas.error} onRetry={avasthas.retry} />}
       <table className="graha-table">
         <thead>
           <tr>
@@ -93,6 +105,7 @@ export function GrahaTablePanel({ panel }: PanelProps) {
               </th>
             ))}
             {karakaOn && <th scope="col">{t("table.karaka")}</th>}
+            {baladiOn && <th scope="col">{t("table.baladi")}</th>}
           </tr>
         </thead>
         <tbody>
@@ -105,6 +118,7 @@ export function GrahaTablePanel({ panel }: PanelProps) {
                 </td>
               ))}
               {karakaOn && <td />}
+              {baladiOn && <td />}
             </tr>
           )}
           {opened.chart.grahas.map((g) => {
@@ -144,6 +158,16 @@ export function GrahaTablePanel({ panel }: PanelProps) {
                       <Approx on={approx} label={t("table.approx")}>
                         <abbr title={roles.get(g.graha)!.name}>{roles.get(g.graha)!.short}</abbr>
                         <span className="visually-hidden"> {roles.get(g.graha)!.name}</span>
+                      </Approx>
+                    )}
+                  </td>
+                )}
+                {baladiOn && (
+                  <td data-baladi={g.graha}>
+                    {/* Ay'ın basamağı yaklaşık dereceden çıkar: "≈" taşır (K2). Düğümlerde boştur. */}
+                    {baladi.has(g.graha) && (
+                      <Approx on={approx} label={t("table.approx")}>
+                        {baladi.get(g.graha)}
                       </Approx>
                     )}
                   </td>

@@ -828,6 +828,7 @@ export const tr = {
     lagnaRow: "Lagna",
     approx: "yaklaşık",
     karaka: "Karaka",
+    baladi: "Baladi",
   },
   errors: {
     dasha_empty: "Bu dönemin alt dönemleri alınamadı.",
