@@ -395,3 +395,38 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+/* Muhurta araması: süzgeç formu ve sonuç listesi. */
+.muhurta-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.muhurta-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+}
+.muhurta-checks label,
+.muhurta-form .module-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.muhurta-fold summary {
+  cursor: default;
+  color: var(--text-2);
+}
+.muhurta-progress {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.muhurta-form button[aria-disabled="true"] {
+  opacity: 0.6;
+}
+.muhurta-results {
+  max-height: 24em;
+  overflow: auto;
+}

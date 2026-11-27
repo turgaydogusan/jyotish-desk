@@ -15,6 +15,7 @@ import { DrishtiPanel } from "./DrishtiPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { MuhurtaDayPanel } from "./MuhurtaDayPanel";
+import { MuhurtaSearchPanel } from "./MuhurtaSearchPanel";
 import { PanchangPanel } from "./PanchangPanel";
 import { ShadbalaPanel } from "./ShadbalaPanel";
 import type { PanelDefinition } from "./types";
@@ -46,6 +47,7 @@ export const PANEL_REGISTRY: Record<KnownPanelKind, PanelDefinition> = {
   compat: { titleKey: "panel.compat", component: CompatPanel },
   // Muhurta (Plan 20).
   muhurta_day: { titleKey: "panel.muhurta_day", component: MuhurtaDayPanel },
+  muhurta_search: { titleKey: "panel.muhurta_search", component: MuhurtaSearchPanel },
 };
 
 const UNKNOWN: PanelDefinition = { titleKey: "panel.unknown", component: UnavailablePanel };

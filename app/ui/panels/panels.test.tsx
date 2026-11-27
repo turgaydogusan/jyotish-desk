@@ -19,6 +19,7 @@ import { DrishtiPanel } from "./DrishtiPanel";
 import { GrahaTablePanel } from "./GrahaTablePanel";
 import { JaiminiKarakasPanel } from "./JaiminiKarakasPanel";
 import { MuhurtaDayPanel } from "./MuhurtaDayPanel";
+import { MuhurtaSearchPanel } from "./MuhurtaSearchPanel";
 import { PanchangPanel } from "./PanchangPanel";
 import { panelDefinition, PANEL_REGISTRY } from "./registry";
 import { ShadbalaPanel } from "./ShadbalaPanel";
@@ -56,6 +57,7 @@ test("registry covers every catalog kind", () => {
   expect(PANEL_REGISTRY.yogas.component).toBe(YogasPanel);
   expect(PANEL_REGISTRY.compat.component).toBe(CompatPanel);
   expect(PANEL_REGISTRY.muhurta_day.component).toBe(MuhurtaDayPanel);
+  expect(PANEL_REGISTRY.muhurta_search.component).toBe(MuhurtaSearchPanel);
   // Kataloğun her türü uygulanmıştır: yer tutucu yoktur.
   for (const kind of PANEL_KINDS) expect(PANEL_REGISTRY[kind].component, kind).not.toBe(UnavailablePanel);
   expect(panelDefinition("yoga_list")).toMatchObject({ titleKey: "panel.unknown", component: UnavailablePanel });
