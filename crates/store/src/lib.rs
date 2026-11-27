@@ -12,6 +12,7 @@ pub mod exchange;
 pub mod jhd;
 mod layout;
 pub mod model;
+mod muhurta;
 mod notes;
 mod open;
 pub mod schema;
@@ -31,9 +32,10 @@ pub use exchange::{
 };
 pub use jhd::{parse_jhd, JhdChart, JhdImport};
 pub use model::{
-    BirthData, ChartKind, ChartRecord, Client, FoldChoice, Gender, MomentWarning, NewChart,
-    NewClient, Note, Place, ResolvedRecord, TimeCertainty, TzChoice,
+    BirthData, ChartKind, ChartRecord, Client, FoldChoice, Gender, HomePlace, MomentWarning,
+    NewChart, NewClient, Note, Place, ResolvedRecord, TimeCertainty, TzChoice,
 };
+pub use muhurta::{SavedMuhurtaFilter, MAX_MUHURTA_FILTERS, MUHURTA_FILTERS_SCHEMA_VERSION};
 pub use notes::{normalize_tags, TagCount, MAX_NOTE_BYTES, MAX_TAG_CHARS, RECENT_NOTES};
 pub use open::{OpenRecord, StoreWarning};
 pub use schema::SCHEMA_VERSION;

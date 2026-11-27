@@ -9,6 +9,6 @@ pub use db::{Atlas, AtlasError, Place};
 pub use jiff::civil::{Date, DateTime, Time};
 pub use jiff::Timestamp;
 pub use moment::{
-    is_known_time_zone, resolve_moment, tzdb_version, Fold, MomentError, MomentWarning,
+    is_known_time_zone, offset_at, resolve_moment, tzdb_version, Fold, MomentError, MomentWarning,
     ResolvedMoment, TzSpec,
 };

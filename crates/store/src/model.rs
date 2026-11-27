@@ -66,6 +66,16 @@ pub struct Place {
     pub geoname_id: Option<u32>,
 }
 
+/// Bulunulan yer (ileri modüller spec'i §10): gün panchangının ve prashnanın varsayılan yeri.
+/// Kişisel veridir: loglanmaz, hata parametresine girmez, dışa aktarıma yazılmaz. Saat dilimi
+/// yerin duvar saatini göstermek içindir (doğum verisindeki `tz` ile aynı seçim).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct HomePlace {
+    pub place: Place,
+    pub tz: TzChoice,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct BirthData {

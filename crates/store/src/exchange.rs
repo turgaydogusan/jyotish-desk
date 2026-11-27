@@ -870,4 +870,59 @@ mod tests {
             assert_eq!(link_of(&dst, &own), (None, CompatRoles::OpenIsGroom));
         }
     }
+
+    #[test]
+    fn the_home_place_and_saved_muhurta_filters_are_never_exported() {
+        use crate::model::{HomePlace, Place, TzChoice};
+        use crate::settings::AppPrefs;
+        use crate::SavedMuhurtaFilter;
+
+        let (mut s, _) = populated();
+        s.set_app_prefs(&AppPrefs {
+            home_place: Some(HomePlace {
+                place: Place {
+                    name: "Bulunulan Kasaba".into(),
+                    country: "Ülke".into(),
+                    admin1: "Bölge".into(),
+                    lat: 12.345_678,
+                    lon: 98.765_432,
+                    geoname_id: Some(424_242),
+                },
+                tz: TzChoice::Iana("Asia/Tokyo".into()),
+            }),
+            ..AppPrefs::default()
+        })
+        .unwrap();
+        s.save_muhurta_filters(&[SavedMuhurtaFilter {
+            name: "Saklı süzgeç".into(),
+            criteria: jyotish_core::MuhurtaCriteria::default(),
+        }])
+        .unwrap();
+        let json = s
+            .export_json(&ExportOptions {
+                include_notes: true,
+                client_ids: None,
+            })
+            .unwrap();
+        let csv = s.export_csv().unwrap();
+        for text in [&json, &csv] {
+            for secret in [
+                "Bulunulan Kasaba",
+                "12.345678",
+                "98.765432",
+                "424242",
+                "Asia/Tokyo",
+                "home_place",
+                "Saklı süzgeç",
+                "muhurta_filters",
+            ] {
+                assert!(!text.contains(secret), "{secret} in the export");
+            }
+        }
+        // İçe aktarma tercihlere dokunmaz.
+        let mut other = store();
+        other.import_json(&json).unwrap();
+        assert_eq!(other.app_prefs().unwrap().home_place, None);
+        assert_eq!(other.muhurta_filters().unwrap(), []);
+    }
 }

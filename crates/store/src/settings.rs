@@ -7,6 +7,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::charts::MAX_NAME_CHARS;
+use crate::model::{HomePlace, TzChoice};
 use crate::{Store, StoreError};
 
 /// Bir şema adımı: `v` sürümlü JSON'u `v + 1`'e çevirir. `schema_version` alanını
@@ -175,6 +177,29 @@ pub struct AppPrefs {
     pub locale: String,
     /// Yeni haritalara tam kopyası yazılan genel varsayılan (spec §4 "Ayar katmanları").
     pub calc_settings: CalcSettings,
+    /// Bulunulan yer (ileri modüller spec'i §10); seçilmediyse `None`. Alan şema sürümünü
+    /// değiştirmez: bu alanı taşımayan eski kayıt yersiz okunur.
+    pub home_place: Option<HomePlace>,
+}
+
+/// Sabit ofsetin sınırı (atlas ile aynı: ±18 saat).
+const MAX_FIXED_OFFSET_SECS: i32 = 18 * 3600;
+
+/// Bulunulan yerin denetimi: koordinatlar aralıkta, adlar `MAX_NAME_CHARS`'ı aşmıyor, saat
+/// dilimi çözülebilir (bilinen IANA kimliği ya da ±18 saat içinde sabit ofset).
+pub(crate) fn home_place_is_valid(h: &HomePlace) -> bool {
+    let p = &h.place;
+    // NaN ve sonsuz aralık dışındadır.
+    (-90.0..=90.0).contains(&p.lat)
+        && (-180.0..=180.0).contains(&p.lon)
+        && [&p.name, &p.country, &p.admin1]
+            .iter()
+            .all(|t| t.chars().count() <= MAX_NAME_CHARS)
+        && match &h.tz {
+            TzChoice::Iana(id) => atlas::is_known_time_zone(id),
+            TzChoice::Fixed(secs) => secs.abs() <= MAX_FIXED_OFFSET_SECS,
+            TzChoice::Lmt => true,
+        }
 }
 
 impl Default for AppPrefs {
@@ -183,6 +208,7 @@ impl Default for AppPrefs {
             schema_version: APP_PREFS_SCHEMA_VERSION,
             locale: "tr".into(),
             calc_settings: CalcSettings::default(),
+            home_place: None,
         }
     }
 }
@@ -223,6 +249,11 @@ impl Store {
             Some(load) => out.prefs.calc_settings = load.settings().clone(),
             None => {}
         }
+        // Okunamayan ya da geçersiz yer "seçilmemiş" sayılır; açılışı engellemez, uyarı vermez.
+        out.prefs.home_place = obj
+            .remove("home_place")
+            .and_then(|v| serde_json::from_value::<HomePlace>(v).ok())
+            .filter(home_place_is_valid);
         Ok(out)
     }
 
@@ -237,6 +268,14 @@ impl Store {
             return Err(StoreError::InvalidInput("locale"));
         }
         prefs.calc_settings.validate()?;
+        // Hata yalnızca alan adını taşır; yerin kendisi hata parametresine girmez.
+        if prefs
+            .home_place
+            .as_ref()
+            .is_some_and(|h| !home_place_is_valid(h))
+        {
+            return Err(StoreError::InvalidInput("home_place"));
+        }
         if let Some(raw) = self.app_state_get(APP_PREFS_KEY)? {
             if let Ok(Value::Object(obj)) = serde_json::from_str::<Value>(&raw) {
                 let found = stored_prefs_version(&obj);
@@ -476,6 +515,7 @@ mod tests {
             schema_version: 1,
             locale: "fr".into(),
             calc_settings: raman(),
+            home_place: None,
         };
         s.set_app_prefs(&p).unwrap();
         assert_eq!(s.app_prefs().unwrap(), p);
@@ -487,6 +527,104 @@ mod tests {
         .unwrap();
         assert_eq!(s.app_prefs().unwrap(), AppPrefs::default());
         s.app_state_set(APP_PREFS_KEY, "[1,2]").unwrap();
+        assert_eq!(s.app_prefs().unwrap(), AppPrefs::default());
+    }
+
+    fn istanbul() -> HomePlace {
+        HomePlace {
+            place: crate::model::Place {
+                name: "İstanbul".into(),
+                country: "Türkiye".into(),
+                admin1: "İstanbul".into(),
+                lat: 41.0138,
+                lon: 28.9497,
+                geoname_id: Some(745_044),
+            },
+            tz: TzChoice::Iana("Europe/Istanbul".into()),
+        }
+    }
+
+    #[test]
+    fn home_place_round_trips_and_old_or_broken_records_read_as_unset() {
+        let s = store();
+        let with_home = AppPrefs {
+            home_place: Some(istanbul()),
+            ..AppPrefs::default()
+        };
+        s.set_app_prefs(&with_home).unwrap();
+        assert_eq!(s.app_prefs().unwrap(), with_home);
+        // Sabit ofset ve yerel ortalama saat de saklanır; ad boş olabilir (elle girilen yer).
+        for tz in [TzChoice::Fixed(19_800), TzChoice::Lmt] {
+            let mut h = istanbul();
+            h.tz = tz;
+            h.place.name = String::new();
+            h.place.geoname_id = None;
+            let p = AppPrefs {
+                home_place: Some(h),
+                ..AppPrefs::default()
+            };
+            s.set_app_prefs(&p).unwrap();
+            assert_eq!(s.app_prefs().unwrap(), p);
+        }
+        // Yer kaldırılır.
+        s.set_app_prefs(&AppPrefs::default()).unwrap();
+        assert_eq!(s.app_prefs().unwrap().home_place, None);
+        // Alanı taşımayan eski kayıt (Plan 03–19) yersiz okunur; uyarı yoktur.
+        s.app_state_set(
+            APP_PREFS_KEY,
+            r#"{"schema_version":1,"locale":"en","calc_settings":{"schema_version":9}}"#,
+        )
+        .unwrap();
+        assert_eq!(s.app_prefs().unwrap().home_place, None);
+        // Bozuk ya da geçersiz yer "seçilmemiş" sayılır; diğer alanlar okunur.
+        let stored = |home: serde_json::Value| {
+            let mut v = serde_json::to_value(with_home.clone()).unwrap();
+            v["locale"] = json!("fr");
+            v["home_place"] = home;
+            s.app_state_set(APP_PREFS_KEY, &v.to_string()).unwrap();
+            s.app_prefs_load().unwrap()
+        };
+        let mut far = serde_json::to_value(istanbul()).unwrap();
+        far["place"]["lat"] = json!(123.0);
+        let mut zone = serde_json::to_value(istanbul()).unwrap();
+        zone["tz"] = json!({"Iana": "Mars/Olympus"});
+        for broken in [json!("İstanbul"), json!({"place": 1}), far, zone] {
+            let load = stored(broken);
+            assert_eq!(load.prefs.home_place, None);
+            assert_eq!(load.prefs.locale, "fr");
+            assert!(load.warnings.is_empty());
+        }
+        assert_eq!(
+            stored(serde_json::to_value(istanbul()).unwrap())
+                .prefs
+                .home_place,
+            Some(istanbul())
+        );
+    }
+
+    #[test]
+    fn an_invalid_home_place_is_refused_by_field_name_only() {
+        let s = store();
+        let refused = |edit: &dyn Fn(&mut HomePlace)| {
+            let mut h = istanbul();
+            edit(&mut h);
+            let e = s
+                .set_app_prefs(&AppPrefs {
+                    home_place: Some(h),
+                    ..AppPrefs::default()
+                })
+                .unwrap_err();
+            assert!(matches!(e, StoreError::InvalidInput("home_place")), "{e}");
+            // Hata metni yerin adını ya da koordinatını taşımaz.
+            let text = e.to_string();
+            assert!(!text.contains("stanbul") && !text.contains("41"), "{text}");
+        };
+        refused(&|h| h.place.lat = 90.5);
+        refused(&|h| h.place.lon = -180.5);
+        refused(&|h| h.place.lat = f64::NAN);
+        refused(&|h| h.place.name = "x".repeat(MAX_NAME_CHARS + 1));
+        refused(&|h| h.tz = TzChoice::Iana("Mars/Olympus".into()));
+        refused(&|h| h.tz = TzChoice::Fixed(18 * 3600 + 1));
         assert_eq!(s.app_prefs().unwrap(), AppPrefs::default());
     }
 

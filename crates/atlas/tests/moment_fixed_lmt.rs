@@ -159,3 +159,29 @@ fn tzdb_version_is_exposed() {
     assert_eq!(v.len(), 5, "{v}");
     assert!(v.starts_with("20"), "{v}");
 }
+
+#[test]
+fn offset_at_for_fixed_offsets_and_local_mean_time() {
+    let utc: atlas::Timestamp = "2026-11-26T12:00:00Z".parse().unwrap();
+    assert_eq!(
+        atlas::offset_at(&TzSpec::Fixed(19_800), 77.2, utc),
+        Ok(19_800)
+    );
+    assert_eq!(
+        atlas::offset_at(&TzSpec::Fixed(-3_600), 0.0, utc),
+        Ok(-3_600)
+    );
+    // 77,209° × 240 = 18 530,16 sn.
+    assert_eq!(atlas::offset_at(&TzSpec::Lmt, 77.209, utc), Ok(18_530));
+    assert_eq!(atlas::offset_at(&TzSpec::Lmt, -58.3816, utc), Ok(-14_012));
+    assert_eq!(
+        atlas::offset_at(&TzSpec::Fixed(18 * 3600 + 1), 0.0, utc),
+        Err(MomentError::OffsetOutOfRange(18 * 3600 + 1))
+    );
+    for lon in [f64::NAN, 180.5, -181.0] {
+        assert!(matches!(
+            atlas::offset_at(&TzSpec::Lmt, lon, utc),
+            Err(MomentError::LongitudeOutOfRange(_))
+        ));
+    }
+}

@@ -164,6 +164,11 @@ export type AppPrefs = {
 	locale: string,
 	/**  Yeni haritalara tam kopyası yazılan genel varsayılan (spec §4 "Ayar katmanları"). */
 	calc_settings: CalcSettings,
+	/**
+	 *  Bulunulan yer (ileri modüller spec'i §10); seçilmediyse `None`. Alan şema sürümünü
+	 *  değiştirmez: bu alanı taşımayan eski kayıt yersiz okunur.
+	 */
+	home_place: HomePlace | null,
 };
 
 export type ArgalaPair = {
@@ -550,6 +555,16 @@ export type GrahaShadbala = {
 export type GrahaWar = {
 	with: Graha,
 	winner: Graha,
+};
+
+/**
+ *  Bulunulan yer (ileri modüller spec'i §10): gün panchangının ve prashnanın varsayılan yeri.
+ *  Kişisel veridir: loglanmaz, hata parametresine girmez, dışa aktarıma yazılmaz. Saat dilimi
+ *  yerin duvar saatini göstermek içindir (doğum verisindeki `tz` ile aynı seçim).
+ */
+export type HomePlace = {
+	place: Place,
+	tz: TzChoice,
 };
 
 export type HouseSystem = "WholeSign" | 

@@ -201,6 +201,35 @@ fn lmt(
     Ok(moment(utc, offset_secs, "LMT".to_owned(), warnings))
 }
 
+/// `utc` anında `tz`'nin UTC ofseti, saniye (doğuda pozitif); gösterim içindir (bir anı o yerin
+/// duvar saatiyle yazmak). `resolve_moment` ile aynı kurallar: sabit ofset aralık denetiminden
+/// geçer; `Lmt` boylamdan hesaplanır; IANA bölgesinde tzdb'nin "LMT" kaydı yerin boylamıyla
+/// değiştirilir. Bir an hiçbir zaman belirsiz değildir: boşluk ve örtüşme burada oluşmaz.
+pub fn offset_at(tz: &TzSpec, lon_deg: f64, utc: Timestamp) -> Result<i32, MomentError> {
+    if !lon_deg.is_finite() || !(-180.0..=180.0).contains(&lon_deg) {
+        return Err(MomentError::LongitudeOutOfRange(lon_deg));
+    }
+    let lmt_secs = (lon_deg * 240.0).round() as i32;
+    match tz {
+        TzSpec::Fixed(secs) if secs.abs() > MAX_FIXED_OFFSET_SECS => {
+            Err(MomentError::OffsetOutOfRange(*secs))
+        }
+        TzSpec::Fixed(secs) => Ok(*secs),
+        TzSpec::Lmt => Ok(lmt_secs),
+        TzSpec::Iana(id) => {
+            let zone = tzdb()
+                .get(id)
+                .map_err(|_| MomentError::UnknownTimeZone(id.to_owned()))?;
+            let info = zone.to_offset_info(utc);
+            if info.abbreviation() == "LMT" && !info.dst().is_dst() {
+                Ok(lmt_secs)
+            } else {
+                Ok(info.offset().seconds())
+            }
+        }
+    }
+}
+
 fn moment(
     utc: Timestamp,
     offset_secs: i32,

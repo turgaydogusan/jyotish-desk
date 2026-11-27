@@ -1,5 +1,6 @@
 use atlas::{
-    is_known_time_zone, resolve_moment, Fold, MomentError, MomentWarning, Timestamp, TzSpec,
+    is_known_time_zone, offset_at, resolve_moment, Fold, MomentError, MomentWarning, Timestamp,
+    TzSpec,
 };
 use jiff::civil::{date, time};
 
@@ -394,4 +395,33 @@ fn unknown_time_with_iana_zone_keeps_both_warnings() {
         ]
     );
     assert_eq!(m.utc, ts("1960-01-01T10:00:00Z"));
+}
+
+#[test]
+fn offset_at_an_instant_follows_the_zone_rules_and_agrees_with_resolve_moment() {
+    // Tablodaki her an: çözülen UTC anındaki ofset, çözümün ofsetidir.
+    for &(zone, y, mo, d, h, mi, offset, _, utc) in TABLE {
+        let got = offset_at(&iana(zone), 0.0, ts(utc)).unwrap();
+        assert_eq!(got, offset, "{zone} {y}-{mo}-{d} {h}:{mi}");
+    }
+    // Yaz saati geçişi: Berlin 2014-10-26 01:00 UTC'de +02:00'den +01:00'e döner; bir an hiçbir
+    // zaman belirsiz değildir.
+    let berlin = iana("Europe/Berlin");
+    assert_eq!(
+        offset_at(&berlin, 13.4, ts("2014-10-26T00:59:59Z")).unwrap(),
+        7200
+    );
+    assert_eq!(
+        offset_at(&berlin, 13.4, ts("2014-10-26T01:00:00Z")).unwrap(),
+        3600
+    );
+    // tzdb'nin LMT kaydı yerin boylamıyla değiştirilir (1° = 240 sn).
+    assert_eq!(
+        offset_at(&iana("Europe/Istanbul"), 29.0, ts("1850-01-01T00:00:00Z")).unwrap(),
+        6960
+    );
+    assert_eq!(
+        offset_at(&iana("Mars/Olympus"), 0.0, ts("2026-01-01T00:00:00Z")),
+        Err(MomentError::UnknownTimeZone("Mars/Olympus".into()))
+    );
 }
