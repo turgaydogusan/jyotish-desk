@@ -57,6 +57,7 @@ doğum anı ve 365,25 günlük yıl kullanır, tarihleri el yıllarının biriki
 | `muhurta` | `eighth_min`, `rahu`, `yamaganda`, `gulika` (`segment`, `from_min`, `to_min`), `abhijit` (`from_min`, `to_min`), `abhijit_weekday_exception`, `hora_min`, `hora_lords` (24), `tithi_group`, `nakshatra_nature`, `tara` (`number`, `favourable`), `chandra` (`house`, `favourable`) | 7 |
 | `prashna` | `lagna` (`sign`, `deg_in_sign`, `kind`, `rising`, `lord`, dört `kendras`; lagna yoksa `null`), `focus` (`house`, `sign`, `lord`, `same_graha`, `links`, iki ev sayısı, `occupants`; odak evi ya da lagna yoksa `null`), `moon` (`sign`, `house`, `nakshatra`, `pada`, `tithi`, `paksha`, `aspected_by`) | 14 |
 | `avastha` (alt klasörler: `lajjitadi`, `shayanadi`) | `lajjitadi/`: `baladi`, `jagradadi`, `lajjitadi` (yedi graha; durum ve kuralı sağlayan grahalar), `absent`; `shayanadi/`: `basis` (`birth_nakshatra`, `ghatis`, `lagna_sign_number`), `grahas` (yedi graha: `state`, `nakshatra`, `navamsa`, `total`); Shayanadi hesaplanmıyorsa `expected` `null` | 7 + 6 |
+| `varsha` (alt klasörler: `muntha`, `mudda`) | `muntha/`: `sign`, `lord`, `natal_house`, `annual_house`, `lagna_sign`, `lagna_lord`, `natal_lagna_sign`, `natal_lagna_lord`; `mudda/`: `birth_nakshatra`, `remainder`, `first_lord`, `periods` (dokuz dönem: lord ve bitiş günü), `first_sub_periods` (ilk dönemin dokuz alt dönemi ya da `null`) | 5 + 9 |
 
 Shadbala örnekleri çalışma kâğıdıdır (tasarım belgesi §7 "Test"): `shadbala/WORKSHEET.md` her
 kalemin aritmetiğini adım adım yazar, JSON dosyaları aynı girdiyi ve sonuçları taşır. Tolerans
@@ -111,6 +112,18 @@ birinde "oluşmayan" olarak gösterildiğini, beş Baladi basamağının tek ve 
 Shayanadi durumunun ve artanın sıfır olduğu durumun örneklerde bulunduğunu sabitler. Okuma
 kuralları, motorun tabloları, sahibin onayını bekleyen varyant noktaları ve gözden geçirme kaydı
 `avastha/REVIEW.md`'dedir.
+
+Varshaphala örnekleri (yol haritası §4.14, Plan 27) ayrı bir test dosyasıyla yüklenir
+(`crates/jyotish-core/tests/varsha_golden.rs`) ve iki alt klasörde durur; ortak girdiyi
+kullanmazlar. `muntha/` örneklerinin girdisi iki lagna boylamı ve tamamlanan yıldır
+(`natal_lagna_lon`, `annual_lagna_lon`, `age`); `mudda/` örneklerinin girdisi Ay'ın sidereal
+boylamı, tamamlanan yıl ve yılın gün olarak uzunluğudur (`moon_lon`, `age`, `year_days`) ve
+bitişler yılın başından gün sayısıdır. Ayrı bir test dokuz lordun her birinin bir örnekte yılı
+açtığını, dokuz artan değerinin hepsinin, toplamın eksiye düştüğü durumun, 360 günlük ve dönüşten
+dönüşe yılın, alt dönemlerin, doğum yılının, tam on iki yılın ve Balık'tan Koç'a dönen sayımın
+örneklerde bulunduğunu sabitler. Dönüş anının örneği yoktur: gerçek motorla
+`app/src-tauri/tests/varsha.rs`'te denetlenir. Okuma kuralları, tablolar, sahibin onayını bekleyen
+varyant noktaları ve gözden geçirme kaydı `varsha/REVIEW.md`'dedir.
 
 Doğum anı ekleri (yol haritası §4.1–§4.3, Plan 23) ile bhava tablosu ve Sudarshana chakra
 (§4.5–§4.6, Plan 25) bu dizinde JSON örneği taşımaz: `natal_extras/` ve `bhava/` klasörlerinde
