@@ -379,7 +379,7 @@ pub struct ShadbalaAstro {
 
 Gündüz üçte birleri doğuş → batış, gece üçte birleri batış → sonraki doğuş, saat dilimleri doğuş → sonraki doğuş arasındadır; önceki günün batışı hiçbir kalemde kullanılmaz. Saf fonksiyon lagna yoksa ya da girdi tutarsızsa `None` döner. Tutarlılık (`ShadbalaAstro::is_consistent`): değerler sonlu; doğuş ≤ doğum < sonraki doğuş; doğuş < batış < sonraki doğuş; iki doğuş arası en çok 1,5 gün (`MAX_SUNRISE_GAP_DAYS`; daha uzun bir aralık "sonraki" doğuşun ertesi günün doğuşu olmadığını gösterir ve dilimler tanımsızdır).
 
-Komut: `compute_shadbala(input: ChartInput) -> Option<ShadbalaReport>`. `None` döner: doğum saati bilinmiyorsa (K2); doğum gününün doğuşu, batışı ya da sonraki doğuşu yoksa (kutup günü ya da gecesi). Ayar, an ve konum denetimi (`compute_chart`) her durumda yapılır ve hataları aynı kodlarla döner; yeni hata kodu yoktur. `None` uyarı taşıyamaz: "ilgili uyarı" temel haritanın `SunriseUnavailable` uyarısıdır (`Chart.meta.warnings`; harita başlığındaki rozet) ve arayüz nedeni kendi bildiğinden okur (doğum saati bilinmiyorsa onu, biliniyorsa gün doğumunun yokluğunu söyler). Dolu raporun `warnings` alanı temel haritanın yalnızca `LowPrecision` uyarısını taşır. Rahu ve Ketu için kalem fonksiyonları 0 döner; rapor onları içermez.
+Komut: `compute_shadbala(input: ChartInput) -> Option<ShadbalaReport>`. `None` döner: doğum saati bilinmiyorsa (K2); doğum gününün doğuşu, batışı ya da sonraki doğuşu yoksa (kutup günü ya da gecesi); harita sayı prashnasıysa (`input.lagna_number` dolu: lagna sayıdan gelir, dig balanın istediği meridyen tanımsızdır; §11; sayının kendisi yine denetlenir). Ayar, an ve konum denetimi (`compute_chart`) her durumda yapılır ve hataları aynı kodlarla döner; yeni hata kodu yoktur. `None` uyarı taşıyamaz: "ilgili uyarı" temel haritanın `SunriseUnavailable` uyarısıdır (`Chart.meta.warnings`; harita başlığındaki rozet) ve arayüz nedeni kendi bildiğinden okur (doğum saati bilinmiyorsa onu, biliniyorsa gün doğumunun yokluğunu söyler). Dolu raporun `warnings` alanı temel haritanın yalnızca `LowPrecision` uyarısını taşır. Rahu ve Ketu için kalem fonksiyonları 0 döner; rapor onları içermez.
 
 ### Arayüz
 
@@ -773,7 +773,7 @@ Komutlar:
 Soru anı için harita kurma ve o haritanın olgularını gösterme. Hesap Parashari motorunun aynısıdır; ayrı bir Prashna ekolünün (Tajika yogaları, Kerala ashtamangala) kuralları uygulanmaz.
 
 - **Zaman prashnası:** an = şimdi (ya da girilen an), yer = `home_place`. `compute_chart` ile aynı.
-- **Sayı prashnası (1–108):** grahalar anın grahalarıdır; lagna sayıdan gelir: `lagna_lon = (n − 1) × 3°20′ + 1°40′` (sidereal; n. navamsanın ortası). Evler bu lagnadan rasi evidir. Çekirdeğe `compute_chart_with_lagna(eph, jd_ut, lat, lon, settings, lagna_sidereal_lon)` eklenir.
+- **Sayı prashnası (1–108):** grahalar anın grahalarıdır; lagna sayıdan gelir: `lagna_lon = (n − 1) × 3°20′ + 1°40′` (sidereal; n. navamsanın ortası). Evler bu lagnadan rasi evidir. Sayı bir lagna verir, meridyen vermez: Shadbala ve Bhava bala (§7) sayı prashnasında hesaplanmaz (`compute_shadbala` `None` döner; iki panel nedenini söyler). Çekirdeğe `compute_chart_with_lagna(eph, jd_ut, lat, lon, settings, lagna_sidereal_lon)` eklenir.
 - **Odak evi:** astrolog sorunun evini seçer (1–12); modül konu çıkarmaz.
 
 **Olgular** (`PrashnaFacts`):
