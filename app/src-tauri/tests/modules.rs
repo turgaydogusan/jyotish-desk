@@ -3226,10 +3226,13 @@ fn event_checks(engine: &Engine, inputs: &[(String, ChartInput)], now: Timestamp
         "event_search (slow grahas, 120 years) {slow_total:?}, {} events",
         view.events.len()
     );
-    assert!(
-        slow_total <= Duration::from_secs(2),
-        "slow grahas {slow_total:?}"
-    );
+    // Şartname 2 s der (release); CI'ın dev (opt-level 0) derlemesi için 5 s.
+    let limit = if cfg!(debug_assertions) {
+        Duration::from_secs(5)
+    } else {
+        Duration::from_secs(2)
+    };
+    assert!(slow_total <= limit, "slow grahas {slow_total:?}");
 
     // Dilim bütçesi: araya giren harita hesabı en çok 300 ms bekler.
     for (name, spec) in [("moon", &lunations), ("slow", &slow)] {
